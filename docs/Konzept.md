@@ -1,6 +1,6 @@
 # Pool-Club — Konzept
 
-Stand: 19.09.2026, Entwurf 2. Ergebnis der Diskussion zur Zusammenführung von
+Stand: 19.09.2026, Entwurf 3. Ergebnis der Diskussion zur Zusammenführung von
 "Turnier light" (vier HTML-Dateien) und "Pool-TS" (Firebase, Tablets, TV).
 
 ## 1. Ziel
@@ -18,7 +18,9 @@ Export und Import zwischen Programmteilen entfallen.
 | Kosten | Supabase-Gratisstufe, Online-Halten per Zeitplan-Skript |
 | Betreiber | Stufe 1: Matthias. Später können Vereine eine eigene Supabase-Datenbank betreiben |
 | Mandanten | mehrere Vereine in einer Datenbank, strikt getrennt (`verein_id`) |
-| Vereinsübergreifende Turniere | sind vorgesehen (spätere Ausbaustufe) |
+| Erster Mandant | Verden; ein weiterer Verein ist vorerst nicht geplant, das Programm ist aber darauf vorbereitet |
+| Vereinsübergreifende Turniere | zu Beginn als normales Turnier mit Gästen; eigene Logik erst in Stufe 8 |
+| Adresse | zunächst GitHub Pages, Umzug auf eine eigene Domain später |
 | Offline-Betrieb | entfällt; im Vereinsheim mobiler WLAN-Router |
 | Raspberry Pi | wird abgelöst, Hosting im Netz |
 | Geräte | Notebook (Turnierleitung), Tablets an den Tischen, TV, Mitglieder zu Hause |
@@ -69,6 +71,12 @@ Module laufen im Browser und in der Edge Function gleich.
   gemeinsame oder gegen eine vereinseigene Datenbank laufen.
 - Eine vereinseigene Datenbank enthält einfach nur einen Verein. Das Programm
   unterscheidet die beiden Fälle nicht.
+
+**Vorbereitet auf den späteren Umzug der Adresse:** Der Basispfad der
+Web-App ist eine Einstellung. Beim Umzug auf eine eigene Domain ändern sich
+nur diese Einstellung und die erlaubten Rücksprung-Adressen der Anmeldung in
+Supabase (E-Mail-Links zeigen auf die Web-App). Die alte GitHub-Adresse kann
+danach auf die neue weiterleiten.
 
 Hinweis GitHub Pages: Kostenlos nur für öffentliche Repositories. Das ist
 unkritisch, weil der öffentliche Supabase-Schlüssel ohnehin im Browser landet;
@@ -302,10 +310,4 @@ Bis Stufe 6 bleiben die Turnier-light-Dateien im Einsatz.
 
 ## 12. Offene Fragen
 
-1. Welcher Verein ist der erste Mandant, und kommt der zweite gleich in
-   Stufe 1 dazu oder erst später?
-2. Gibt es in einem vereinsübergreifenden Turnier eine gemeinsame Wertung
-   (z.B. Mannschaftspunkte je Verein), oder ist es ein normales Turnier mit
-   Gästen?
-3. Adresse der Web-App: GitHub-Pages-Adresse
-   (`<konto>.github.io/pool-club`) oder eine eigene Domain?
+Zur Zeit keine. Das Konzept ist die Grundlage für Stufe 1.
