@@ -1,0 +1,124 @@
+:root {
+  --flaeche: #ffffff;
+  --flaeche-2: #f5f5f3;
+  --grund: #fafaf8;
+  --rand: #dcdcd6;
+  --text: #1d1d1b;
+  --text-leise: #6b6b66;
+  --akzent: #185fa5;
+  --akzent-hell: #e6f1fb;
+  --fehler: #a32d2d;
+  --gut: #0f6e56;
+  --radius: 8px;
+  color-scheme: light;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--grund);
+  color: var(--text);
+  font-family: system-ui, "Segoe UI", Arial, sans-serif;
+  font-size: 15px;
+}
+
+h1 { font-size: 22px; font-weight: 500; margin: 0 0 16px; }
+h2 { font-size: 18px; font-weight: 500; margin: 0; }
+
+input, select, button {
+  font: inherit;
+  color: inherit;
+  border-radius: var(--radius);
+  border: 1px solid var(--rand);
+  background: var(--flaeche);
+  padding: 7px 10px;
+}
+
+input:disabled, select:disabled { background: var(--flaeche-2); color: var(--text-leise); }
+button { cursor: pointer; background: var(--flaeche); }
+button:hover:not(:disabled) { background: var(--flaeche-2); }
+button:disabled { cursor: default; color: var(--text-leise); }
+
+.mitte { min-height: 100vh; display: grid; place-items: center; padding: 24px; }
+.karte {
+  width: 100%; max-width: 380px; background: var(--flaeche);
+  border: 1px solid var(--rand); border-radius: 12px; padding: 24px;
+}
+.karte form { display: flex; flex-direction: column; gap: 8px; }
+.karte label { font-size: 13px; color: var(--text-leise); }
+
+.hinweis { color: var(--text-leise); font-size: 13px; }
+.fehler { color: var(--fehler); font-size: 13px; }
+.meldung { color: var(--gut); font-size: 13px; }
+
+.rahmen { max-width: 1100px; margin: 0 auto; padding: 16px; }
+
+.kopfzeile {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  background: var(--flaeche); border: 1px solid var(--rand);
+  border-radius: 12px 12px 0 0; border-bottom: none; padding: 10px 14px;
+}
+.vereinsmarke { display: flex; align-items: center; gap: 10px; }
+.vereinsmarke .zeichen {
+  width: 28px; height: 28px; border-radius: 6px; display: grid; place-items: center;
+  background: var(--akzent-hell); color: var(--akzent); font-size: 12px;
+}
+.vereinsmarke .trenner {
+  border-left: 1px solid var(--rand); padding-left: 10px;
+  font-size: 13px; color: var(--text-leise);
+}
+.konto { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--text-leise); }
+.konto .rolle { background: var(--akzent-hell); color: var(--akzent); padding: 3px 8px; border-radius: var(--radius); }
+
+.zweispaltig {
+  display: grid; grid-template-columns: minmax(0, 280px) minmax(0, 1fr);
+  background: var(--flaeche); border: 1px solid var(--rand); border-radius: 0 0 12px 12px;
+  overflow: hidden;
+}
+
+.liste { border-right: 1px solid var(--rand); display: flex; flex-direction: column; }
+.listenkopf { padding: 10px; display: flex; flex-direction: column; gap: 8px; border-bottom: 1px solid var(--rand); }
+.listenkopf input { width: 100%; }
+.filterzeile { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font-size: 12px; padding: 3px 9px; color: var(--text-leise); }
+.chip.aktiv { background: var(--akzent-hell); color: var(--akzent); border-color: var(--akzent-hell); }
+
+.liste ul { list-style: none; margin: 0; padding: 0; flex: 1; }
+.liste li { border-bottom: 1px solid var(--rand); }
+.liste li.hinweis { padding: 12px; border-bottom: none; }
+
+.eintrag {
+  width: 100%; display: flex; align-items: center; gap: 10px; text-align: left;
+  border: none; border-radius: 0; background: transparent; padding: 9px 12px;
+}
+.eintrag.aktiv { background: var(--flaeche-2); }
+.eintrag .kuerzel {
+  width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--flaeche-2); color: var(--text-leise); font-size: 11px; flex: none;
+}
+.eintrag.aktiv .kuerzel { background: var(--akzent-hell); color: var(--akzent); }
+.eintrag .name { flex: 1; font-size: 14px; }
+.eintrag .marke { font-size: 11px; color: var(--text-leise); border: 1px solid var(--rand); border-radius: var(--radius); padding: 1px 6px; }
+
+.listenfuss { padding: 10px; border-top: 1px solid var(--rand); }
+.listenfuss button { width: 100%; }
+
+.bearbeiten { padding: 14px 16px; display: flex; flex-direction: column; gap: 14px; }
+.bearbeitenkopf { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+
+.felder { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.feld { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--text-leise); }
+.feld input, .feld select { width: 100%; font-size: 14px; color: var(--text); }
+
+.ankreuz { display: flex; align-items: flex-start; gap: 8px; font-size: 14px; }
+.ankreuz input { width: auto; margin-top: 3px; }
+.ankreuz small { display: block; font-size: 12px; color: var(--text-leise); }
+
+.geschuetzt { border: 1px solid var(--rand); border-radius: var(--radius); padding: 12px; display: flex; flex-direction: column; gap: 10px; margin: 0; }
+.geschuetzt legend { font-size: 13px; color: var(--text-leise); padding: 0 6px; }
+
+@media (max-width: 760px) {
+  .zweispaltig { grid-template-columns: minmax(0, 1fr); }
+  .liste { border-right: none; border-bottom: 1px solid var(--rand); }
+}
