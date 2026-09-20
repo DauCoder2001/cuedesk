@@ -1,4 +1,4 @@
-# CLAUDE.md — Pool-Club
+# CLAUDE.md — CueDesk
 
 Diese Datei wird bei jedem Start gelesen. Sie gilt fuer jede Aenderung in
 diesem Projekt. Das Konzept steht in `docs/Konzept.md`.
@@ -69,4 +69,4 @@ Firebase-Projekt "Pool-TS" ab. Mandantenfaehig, ein Verein je `verein_id`.
   Testdatenbank und gehoert nicht ins Repository (`.env.beispiel` zeigt den
   Aufbau).
 - Entwicklungsserver: `npm run dev` auf Port 5173. Im Claude-Desktop laeuft
-  er ueber die Konfiguration `pool-club` in `Documents/Claude/.claude/launch.json`.
+  er ueber die Konfiguration `cuedesk` in `Documents/Claude/.claude/launch.json`.

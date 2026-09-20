@@ -1,4 +1,4 @@
-# Pool-Club — Konzept
+# CueDesk — Konzept
 
 Stand: 19.09.2026, Entwurf 3. Ergebnis der Diskussion zur Zusammenführung von
 "Turnier light" (vier HTML-Dateien) und "Pool-TS" (Firebase, Tablets, TV).
@@ -32,7 +32,7 @@ Export und Import zwischen Programmteilen entfallen.
 | Pool-Protokoll | **kein** Protokoll je Rack; Pool-Statistik nur aus Partieergebnissen |
 | 14.1 | vor allem als Einzelspiel; vollständiges Aufnahme-Protokoll wird gespeichert und ausgewertet |
 | Sichtbarkeit Statistik | jedes Mitglied sieht nur die **eigene** Statistik, dazu die Ranglisten |
-| Name / Ordner | Pool-Club, `C:\Users\Haas\Documents\Claude Projekte\Pool-Club` |
+| Name / Ordner | CueDesk, `C:\Users\Haas\Documents\Claude Projekte\CueDesk` |
 
 ## 3. Architektur
 

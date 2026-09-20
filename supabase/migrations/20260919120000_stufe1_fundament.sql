@@ -1,5 +1,5 @@
 -- =============================================================
---  Pool-Club, Stufe 1: Fundament
+--  CueDesk, Stufe 1: Fundament
 --  Vereine, Benutzer, Rollen, Einladungen, Personen, Tische,
 --  Geraete mit Kopplung, Aenderungsprotokoll.
 --

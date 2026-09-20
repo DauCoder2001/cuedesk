@@ -24,6 +24,13 @@ export type Benutzer = {
   systemadmin: boolean;
   aktiv: boolean;
   erstellt_am: string;
+  angemeldet_am: string | null;
+};
+
+export type BenutzerRecht = {
+  benutzer_id: string;
+  verein_id: string;
+  darf_einladen: boolean;
 };
 
 export type BenutzerRolle = {
@@ -116,6 +123,7 @@ export type Database = {
       vereine: Tabelle<Verein>;
       benutzer: Tabelle<Benutzer>;
       benutzer_rollen: Tabelle<BenutzerRolle, BenutzerRolle>;
+      benutzer_rechte: Tabelle<BenutzerRecht, BenutzerRecht>;
       benutzer_personen: Tabelle<BenutzerPerson, BenutzerPerson>;
       personen: Tabelle<Person, Omit<Person, 'id' | 'erstellt_am' | 'geaendert_am'>>;
       personen_intern: Tabelle<PersonIntern, PersonIntern>;
@@ -129,9 +137,11 @@ export type Database = {
       ist_systemadmin: { Args: Record<string, never>; Returns: boolean };
       hat_rolle: { Args: { p_verein: string; p_rollen: Rolle[] }; Returns: boolean };
       ist_im_verein: { Args: { p_verein: string }; Returns: boolean };
+      darf_einladen: { Args: { p_verein: string }; Returns: boolean };
       geraet_verein: { Args: Record<string, never>; Returns: string };
       kopplung_anfordern: { Args: Record<string, never>; Returns: string };
       geraet_meldet_sich: { Args: Record<string, never>; Returns: undefined };
+      geraet_tisch_setzen: { Args: { p_tisch: string | null }; Returns: undefined };
       geraet_koppeln: {
         Args: { p_code: string; p_verein: string; p_name: string; p_tisch?: string };
         Returns: string;

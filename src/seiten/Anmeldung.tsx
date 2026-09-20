@@ -35,7 +35,7 @@ export default function Anmeldung() {
   return (
     <div className="mitte">
       <div className="karte">
-        <h1>Pool-Club</h1>
+        <h1>CueDesk</h1>
         {zustand === 'gesendet' ? (
           <p className="hinweis">
             Wir haben einen Anmeldelink an {email} geschickt. Der Link gilt eine Stunde.
