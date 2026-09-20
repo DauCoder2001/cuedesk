@@ -1,14 +1,32 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { supabase } from '../supabase';
 import { ANWENDUNGSADRESSE } from '../adresse';
 
+// Anmeldung per E-Mail. Die Mail enthaelt einen Link und einen sechsstelligen
+// Code. Der Code ist der sichere Weg, wenn ein Mailprogramm Links vorab
+// aufruft oder jemand zweimal klickt: ein Link gilt nur ein einziges Mal.
+
 export default function Anmeldung() {
   const [email, setEmail] = useState('');
-  const [zustand, setZustand] = useState<'ruhe' | 'sendet' | 'gesendet'>('ruhe');
+  const [zustand, setZustand] = useState<'ruhe' | 'sendet' | 'gesendet' | 'prueft'>('ruhe');
+  const [code, setCode] = useState('');
   const [fehler, setFehler] = useState<string | null>(null);
 
-  async function absenden(ereignis: FormEvent) {
+  // Kam der Besucher ueber einen verbrauchten oder abgelaufenen Link?
+  useEffect(() => {
+    const teile = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+    const art = teile.get('error_code');
+    if (!art) return;
+    setFehler(
+      art === 'otp_expired'
+        ? 'Der Anmeldelink war schon verbraucht oder ist abgelaufen. Fordere einen neuen an — oder benutze den Zahlencode aus der Mail.'
+        : teile.get('error_description') ?? 'Die Anmeldung hat nicht geklappt.'
+    );
+    window.history.replaceState(null, '', window.location.pathname);
+  }, []);
+
+  async function linkAnfordern(ereignis: FormEvent) {
     ereignis.preventDefault();
     const adresse = email.trim().toLowerCase();
     if (!adresse.includes('@')) {
@@ -33,16 +51,69 @@ export default function Anmeldung() {
     setZustand('gesendet');
   }
 
+  async function codePruefen(ereignis: FormEvent) {
+    ereignis.preventDefault();
+    const ziffern = code.replace(/\D/g, '');
+    if (ziffern.length !== 6) {
+      setFehler('Der Code besteht aus sechs Ziffern.');
+      return;
+    }
+    setFehler(null);
+    setZustand('prueft');
+    const { error } = await supabase.auth.verifyOtp({
+      email: email.trim().toLowerCase(),
+      token: ziffern,
+      type: 'email'
+    });
+    if (error) {
+      setZustand('gesendet');
+      setFehler('Der Code stimmt nicht oder ist abgelaufen.');
+      return;
+    }
+    // Bei Erfolg schaltet die Anwendung von selbst auf die Vereinsansicht um.
+  }
+
   return (
     <div className="mitte">
       <div className="karte">
         <h1>CueDesk</h1>
-        {zustand === 'gesendet' ? (
-          <p className="hinweis">
-            Wir haben einen Anmeldelink an {email} geschickt. Der Link gilt eine Stunde.
-          </p>
+
+        {zustand === 'gesendet' || zustand === 'prueft' ? (
+          <form onSubmit={codePruefen}>
+            <p className="hinweis">
+              Wir haben eine Mail an {email} geschickt. Klicke den Link darin einmal — oder tippe
+              den sechsstelligen Code ein.
+            </p>
+            <label htmlFor="code">Code aus der Mail</label>
+            <input
+              id="code"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              maxLength={6}
+              value={code}
+              placeholder="000000"
+              onChange={(e) => {
+                setCode(e.target.value);
+                setFehler(null);
+              }}
+            />
+            {fehler && <p className="fehler">{fehler}</p>}
+            <button type="submit" disabled={zustand === 'prueft'}>
+              {zustand === 'prueft' ? 'Wird geprüft' : 'Anmelden'}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setZustand('ruhe');
+                setCode('');
+                setFehler(null);
+              }}
+            >
+              Andere Adresse
+            </button>
+          </form>
         ) : (
-          <form onSubmit={absenden}>
+          <form onSubmit={linkAnfordern}>
             <label htmlFor="email">E-Mail-Adresse</label>
             <input
               id="email"
@@ -60,7 +131,7 @@ export default function Anmeldung() {
               {zustand === 'sendet' ? 'Wird gesendet' : 'Anmeldelink schicken'}
             </button>
             <p className="hinweis">
-              Es gibt kein Passwort. Du bekommst einen Link per E-Mail.
+              Es gibt kein Passwort. Du bekommst einen Link und einen Zahlencode per E-Mail.
             </p>
           </form>
         )}

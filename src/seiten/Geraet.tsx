@@ -64,8 +64,16 @@ export default function Geraet() {
     })();
   }, [standPruefen]);
 
+  // Gekoppelt meldet sich das Geraet jede Minute, ungekoppelt schaut es alle
+  // zehn Sekunden nach der Kopplung. Im Hintergrund ruht die Abfrage, damit
+  // ein vergessener Reiter nicht dauernd Anfragen stellt.
   useEffect(() => {
-    const uhr = window.setInterval(() => void standPruefen(), geraet ? 60000 : 5000);
+    const uhr = window.setInterval(
+      () => {
+        if (document.visibilityState === 'visible') void standPruefen();
+      },
+      geraet ? 60000 : 10000
+    );
     return () => window.clearInterval(uhr);
   }, [standPruefen, geraet]);
 
