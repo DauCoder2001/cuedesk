@@ -5,7 +5,7 @@ import Personen from './seiten/Personen';
 export default function App() {
   const { laedt, sitzung, benutzer, verein, rollen, abmelden } = useSitzung();
 
-  if (laedt) return <p className="hinweis">Laedt.</p>;
+  if (laedt) return <p className="hinweis">Lädt.</p>;
   if (!sitzung) return <Anmeldung />;
 
   return (

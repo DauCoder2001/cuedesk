@@ -11,7 +11,7 @@ export default function Anmeldung() {
     ereignis.preventDefault();
     const adresse = email.trim().toLowerCase();
     if (!adresse.includes('@')) {
-      setFehler('Bitte eine gueltige E-Mail-Adresse eingeben.');
+      setFehler('Bitte eine gültige E-Mail-Adresse eingeben.');
       return;
     }
     setFehler(null);

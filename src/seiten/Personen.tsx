@@ -205,7 +205,7 @@ export default function Personen() {
 
       <section className="bearbeiten">
         {!entwurf ? (
-          <p className="hinweis">Links eine Person auswaehlen oder eine neue anlegen.</p>
+          <p className="hinweis">Links eine Person auswählen oder eine neue anlegen.</p>
         ) : (
           <>
             <div className="bearbeitenkopf">
@@ -243,7 +243,7 @@ export default function Personen() {
                   onChange={(e) => setEntwurf({ ...entwurf, anzeigename: e.target.value })}
                 />
               </Feld>
-              <Feld beschriftung="Kuerzel">
+              <Feld beschriftung="Kürzel">
                 <input
                   value={entwurf.kuerzel ?? ''}
                   maxLength={4}
@@ -274,14 +274,14 @@ export default function Personen() {
                 onChange={(e) => setEntwurf({ ...entwurf, name_oeffentlich: e.target.checked })}
               />
               <span>
-                Name darf oeffentlich erscheinen
-                <small>Ohne Haken steht in Live-Anzeige und TV nur das Kuerzel.</small>
+                Name darf öffentlich erscheinen
+                <small>Ohne Haken steht in Live-Anzeige und TV nur das Kürzel.</small>
               </span>
             </label>
 
             {darfSehen && (
               <fieldset className="geschuetzt">
-                <legend>Nur fuer Sportwart und Vereins-Administrator</legend>
+                <legend>Nur für Sportwart und Vereins-Administrator</legend>
                 <div className="felder">
                   <Feld beschriftung="Eintritt">
                     <input
@@ -323,7 +323,7 @@ export default function Personen() {
                     disabled={!darfAendern}
                     onChange={(e) => setIntern({ ...intern, minderjaehrig: e.target.checked })}
                   />
-                  <span>Minderjaehrig</span>
+                  <span>Minderjährig</span>
                 </label>
                 <Feld beschriftung="Notiz">
                   <input

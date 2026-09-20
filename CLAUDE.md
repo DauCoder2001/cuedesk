@@ -5,8 +5,9 @@ diesem Projekt. Das Konzept steht in `docs/Konzept.md`.
 
 ## Sprache
 
-- Antworten auf Deutsch, Oberflaeche auf Deutsch.
-- Code-Kommentare auf Deutsch. Bezeichner und Dateinamen ohne Umlaute
+- Antworten auf Deutsch.
+- **Sichtbare Texte mit Umlauten** ("Kürzel", "auswählen", "für"). Nur
+  Bezeichner, Dateinamen und Code-Kommentare bleiben ohne Umlaute
   (`kuerzel`, `geaendert_am`, `Anmeldung.tsx`).
 - Nicht verwenden: Emojis, Fuellsaetze, Hinweise auf `git push`.
 
