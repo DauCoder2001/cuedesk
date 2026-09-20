@@ -52,8 +52,90 @@ export default function Altdaten() {
       setZuordnung(vorschlag);
     } catch (e) {
       setAnalyse(null);
-      setFehler('Die Datei liess sich nicht lesen: ' + (e as Error).message);
+      setFehler('Die Datei liess sich nicht lesen: ' + deutscherFehler((e as Error).message));
     }
+  }
+
+  // Teilnehmer eines Turniers schreiben. Doppelte werden ueberschrieben,
+  // damit ein wiederholter Lauf nicht scheitert.
+  async function teilnehmerSchreiben(
+    turnier: Analyse['turniere'][number],
+    turnierId: string,
+    personNachName: Map<string, string>,
+    vereinId: string
+  ) {
+    const namen = new Set<string>([
+      ...turnier.teilnehmer,
+      ...turnier.ranking.map((r) => r.name),
+      ...turnier.partien.flatMap((p) => [p.a, p.b])
+    ]);
+
+    const zeilen = [...namen]
+      .map((name) => {
+        const personId = personNachName.get(name);
+        if (!personId) return null;
+        return {
+          turnier_id: turnierId,
+          person_id: personId,
+          verein_id: vereinId,
+          endplatz: turnier.ranking.find((r) => r.name === name)?.platz ?? null,
+          gesetzt: false
+        };
+      })
+      .filter((zeile) => zeile !== null);
+
+    if (zeilen.length === 0) return;
+    const { error } = await supabase
+      .from('turnier_teilnehmer')
+      .upsert(zeilen, { onConflict: 'turnier_id,person_id' });
+    if (error) throw new Error(`Teilnehmer ${turnier.name}: ${error.message}`);
+  }
+
+  // Partien eines Turniers schreiben, Rueckgabe: wie viele es wurden.
+  async function partienSchreiben(
+    turnier: Analyse['turniere'][number],
+    turnierId: string,
+    personNachName: Map<string, string>,
+    vereinId: string
+  ) {
+    // Durch die Namenszusammenfuehrung koennen Partien entstehen, in denen
+    // beide Seiten dieselbe Person sind. Die lassen wir aus und melden es.
+    turnier.partien
+      .filter((partie) => personNachName.get(partie.a) === personNachName.get(partie.b))
+      .forEach((partie) =>
+        melde(
+          `Übersprungen in "${turnier.name}": ${partie.a} gegen ${partie.b} — nach dem Zusammenführen dieselbe Person.`
+        )
+      );
+
+    const zeilen = turnier.partien
+      .filter((partie) => personNachName.get(partie.a) !== personNachName.get(partie.b))
+      .map((partie) => ({
+        verein_id: vereinId,
+        turnier_id: turnierId,
+        disziplin: turnier.disziplin,
+        datum: turnier.datum,
+        phase: partie.phase ?? null,
+        gruppe: partie.phase?.startsWith('Gruppe')
+          ? partie.phase.replace('Gruppe', '').trim() || null
+          : null,
+        spieler_a: personNachName.get(partie.a)!,
+        spieler_b: personNachName.get(partie.b)!,
+        race_to: partie.raceTo ?? null,
+        vorgabe_a: partie.vorgabeA ?? 0,
+        vorgabe_b: partie.vorgabeB ?? 0,
+        ergebnis_a: partie.satzA,
+        ergebnis_b: partie.satzB,
+        status: 'beendet' as const,
+        rating_werten: partie.werten !== false,
+        rating_grund: partie.grund || null,
+        beendet: new Date(turnier.datum).toISOString()
+      }));
+
+    if (zeilen.length === 0) return 0;
+    const { error } = await supabase.from('partien').insert(zeilen);
+    if (error) throw new Error(`Partien ${turnier.name}: ${error.message}`);
+    return zeilen.length;
   }
 
   async function uebernehmen() {
@@ -136,8 +218,20 @@ export default function Altdaten() {
           .eq('datum', turnier.datum)
           .maybeSingle();
 
+        // Gibt es das Turnier schon, wird nur ergaenzt, was fehlt. So laesst
+        // sich ein abgebrochener Lauf einfach wiederholen.
         if (schonDa) {
-          uebersprungen += 1;
+          const { count } = await supabase
+            .from('partien')
+            .select('id', { count: 'exact', head: true })
+            .eq('turnier_id', schonDa.id);
+          if ((count ?? 0) > 0 || turnier.partien.length === 0) {
+            uebersprungen += 1;
+            continue;
+          }
+          const nachgetragen = await partienSchreiben(turnier, schonDa.id, personNachName, verein.id);
+          neuePartien += nachgetragen;
+          melde(`"${turnier.name}" war schon da, ${nachgetragen} fehlende Partien nachgetragen.`);
           continue;
         }
 
@@ -161,65 +255,8 @@ export default function Altdaten() {
         if (error || !neu) throw new Error(`Turnier ${turnier.name}: ${error?.message}`);
         neueTurniere += 1;
 
-        const teilnehmerNamen = new Set<string>([
-          ...turnier.teilnehmer,
-          ...turnier.ranking.map((r) => r.name),
-          ...turnier.partien.flatMap((p) => [p.a, p.b])
-        ]);
-
-        const teilnehmerZeilen = [...teilnehmerNamen]
-          .map((name) => {
-            const personId = personNachName.get(name);
-            if (!personId) return null;
-            const platz = turnier.ranking.find((r) => r.name === name)?.platz ?? null;
-            return {
-              turnier_id: neu.id,
-              person_id: personId,
-              verein_id: verein.id,
-              endplatz: platz,
-              gesetzt: false
-            };
-          })
-          .filter(Boolean) as {
-          turnier_id: string;
-          person_id: string;
-          verein_id: string;
-          endplatz: number | null;
-          gesetzt: boolean;
-        }[];
-
-        if (teilnehmerZeilen.length > 0) {
-          const { error: fehlerTeilnehmer } = await supabase
-            .from('turnier_teilnehmer')
-            .insert(teilnehmerZeilen);
-          if (fehlerTeilnehmer) throw new Error(`Teilnehmer ${turnier.name}: ${fehlerTeilnehmer.message}`);
-        }
-
-        const partienZeilen = turnier.partien.map((partie) => ({
-          verein_id: verein.id,
-          turnier_id: neu.id,
-          disziplin: turnier.disziplin,
-          datum: turnier.datum,
-          phase: partie.phase ?? null,
-          gruppe: partie.phase?.startsWith('Gruppe') ? partie.phase.replace('Gruppe', '').trim() || null : null,
-          spieler_a: personNachName.get(partie.a)!,
-          spieler_b: personNachName.get(partie.b)!,
-          race_to: partie.raceTo ?? null,
-          vorgabe_a: partie.vorgabeA ?? 0,
-          vorgabe_b: partie.vorgabeB ?? 0,
-          ergebnis_a: partie.satzA,
-          ergebnis_b: partie.satzB,
-          status: 'beendet' as const,
-          rating_werten: partie.werten !== false,
-          rating_grund: partie.grund || null,
-          beendet: new Date(turnier.datum).toISOString()
-        }));
-
-        if (partienZeilen.length > 0) {
-          const { error: fehlerPartien } = await supabase.from('partien').insert(partienZeilen);
-          if (fehlerPartien) throw new Error(`Partien ${turnier.name}: ${fehlerPartien.message}`);
-          neuePartien += partienZeilen.length;
-        }
+        await teilnehmerSchreiben(turnier, neu.id, personNachName, verein.id);
+        neuePartien += await partienSchreiben(turnier, neu.id, personNachName, verein.id);
       }
       melde(`${neueTurniere} Turniere und ${neuePartien} Partien übernommen.`);
       if (uebersprungen > 0) melde(`${uebersprungen} Turniere waren schon vorhanden und blieben unverändert.`);
@@ -258,7 +295,7 @@ export default function Altdaten() {
 
       melde('Fertig.');
     } catch (e) {
-      setFehler((e as Error).message);
+      setFehler(deutscherFehler((e as Error).message));
     } finally {
       setLaeuft(false);
     }
@@ -411,4 +448,23 @@ export default function Altdaten() {
       )}
     </div>
   );
+}
+
+// Meldungen der Datenbank sind englisch. Die haeufigen uebersetzen wir,
+// damit im Programm nichts Unverstaendliches steht.
+function deutscherFehler(text: string): string {
+  const regeln: [RegExp, string][] = [
+    [/violates check constraint "partien_check"/, "Eine Partie hat auf beiden Seiten dieselbe Person."],
+    [/duplicate key value violates unique constraint "turniere_name_datum"/, "Dieses Turnier gibt es schon (gleicher Name und gleiches Datum)."],
+    [/duplicate key value violates unique constraint "turniere_alt_id"/, "Dieses Turnier wurde schon einmal uebernommen."],
+    [/duplicate key value violates unique constraint/, "Dieser Eintrag ist schon vorhanden."],
+    [/violates foreign key constraint/, "Ein Verweis zeigt ins Leere — vermutlich fehlt eine Person."],
+    [/violates row-level security policy/, "Dafuer fehlen dir die Rechte."],
+    [/null value in column "(w+)"/, "Ein Pflichtfeld ist leer geblieben."],
+    [/Failed to fetch/, "Keine Verbindung zur Datenbank."]
+  ];
+  for (const [muster, deutsch] of regeln) {
+    if (muster.test(text)) return deutsch + " (" + text + ")";
+  }
+  return text;
 }

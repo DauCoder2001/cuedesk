@@ -192,3 +192,11 @@ button:disabled { cursor: default; color: var(--text-leise); }
 
 .protokoll { margin: 0; padding-left: 18px; font-size: 13px; color: var(--text-leise); }
 .protokoll li { margin: 2px 0; }
+
+.marke.quelle-eigene-daten { color: var(--gut); border-color: #bcd9cd; }
+.marke.quelle-vorlaeufig { color: #854f0b; border-color: #e8cfa3; }
+.marke.quelle-andere-disziplin { color: var(--akzent); border-color: #b9d4ee; }
+.tabelle td .marke { display: inline-block; }
+.tabelle.innen { margin: 6px 0; font-size: 13px; background: var(--flaeche-2); }
+.tabelle.innen td, .tabelle.innen th { padding: 4px 8px; }
+.tabelle small { color: var(--text-leise); }

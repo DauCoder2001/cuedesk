@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../supabase';
 import { ANWENDUNGSADRESSE } from '../adresse';
+import { funktionsFehlerText } from '../funktionsfehler';
 import { useSitzung } from '../sitzung';
 import type { Benutzer, Person, Rolle } from '../datenbank.types';
 
@@ -193,7 +194,7 @@ export default function BenutzerRollen() {
     setSendet(false);
 
     if (error) {
-      setFehler(error.message);
+      setFehler(await funktionsFehlerText(error));
       return;
     }
     if (data?.fehler) {
