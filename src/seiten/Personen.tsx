@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../supabase';
 import { useSitzung } from '../sitzung';
 import type { Person, PersonIntern, PersonenStatus } from '../datenbank.types';
+import { personName, kuerzelAus } from '../namen';
 
 type Entwurf = Omit<Person, 'id' | 'erstellt_am' | 'geaendert_am'> & { id: string | null };
 type EntwurfIntern = Omit<PersonIntern, 'person_id' | 'verein_id'>;
@@ -184,7 +185,7 @@ export default function Personen() {
               >
                 <span className="kuerzel">{person.kuerzel ?? kuerzelAus(person)}</span>
                 <span className="name">
-                  {person.nachname}, {person.vorname}
+                  {personName(person)}
                 </span>
                 {person.status !== 'mitglied' && (
                   <span className="marke">{STATUS_TEXT[person.status]}</span>
@@ -354,6 +355,3 @@ function Feld({ beschriftung, children }: { beschriftung: string; children: Reac
   );
 }
 
-function kuerzelAus(person: Person) {
-  return `${person.vorname.charAt(0)}${person.nachname.charAt(0)}`.toUpperCase();
-}

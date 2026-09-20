@@ -206,3 +206,11 @@ create trigger protokoll after insert or update or delete on public.turniere
   for each row execute function public.aenderung_protokollieren();
 create trigger protokoll after insert or update or delete on public.partien
   for each row execute function public.aenderung_protokollieren();
+
+-- Alte Kennungen aus der Serienwertung duerfen je Verein nur einmal vorkommen.
+-- Damit erkennt der Einlesevorgang beim zweiten Lauf, was schon da ist.
+create unique index serien_alt_id on public.serien (verein_id, alt_id) where alt_id is not null;
+create unique index turniere_alt_id on public.turniere (verein_id, alt_id) where alt_id is not null;
+
+-- Dasselbe Turnier darf auch nicht unter gleichem Namen und Datum doppelt entstehen.
+create unique index turniere_name_datum on public.turniere (verein_id, name, datum);
