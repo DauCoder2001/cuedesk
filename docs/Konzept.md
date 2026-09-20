@@ -311,3 +311,18 @@ Bis Stufe 6 bleiben die Turnier-light-Dateien im Einsatz.
 ## 12. Offene Fragen
 
 Zur Zeit keine. Das Konzept ist die Grundlage für Stufe 1.
+
+## 13. Betrieb
+
+| Ablauf (GitHub Actions) | Zeitpunkt | Braucht |
+|---|---|---|
+| `veroeffentlichen.yml` | bei jedem Push auf `main` | Repository-Variablen `VITE_SUPABASE_URL`, `VITE_SUPABASE_KEY` |
+| `datenbank-wachhalten.yml` | alle drei Tage | dieselben Variablen |
+| `sicherung.yml` | montags nachts | Geheimnisse `SUPABASE_DB_URL`, `SICHERUNG_TOKEN` |
+
+Adressen: Programm `https://daucoder2001.github.io/cuedesk/`, Geraeteansicht
+mit dem Zusatz `?geraet`. Die Sicherung liegt im privaten Repository
+`cuedesk-sicherung`, je Woche ein Ordner mit Schema, Daten und Konten; die
+letzten zwoelf Wochen bleiben erhalten.
+
+Mailversand: zunaechst Brevo ueber SMTP, spaeter der Mailanbieter des Vereins.

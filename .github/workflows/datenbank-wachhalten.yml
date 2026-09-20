@@ -1,0 +1,31 @@
+name: Datenbank wachhalten
+
+# Die Gratisstufe von Supabase pausiert ein Projekt nach sieben Tagen ohne
+# Zugriff. Dieser Ablauf stellt alle drei Tage eine echte Abfrage und haelt
+# das Projekt damit wach. Er braucht keine geheimen Daten: die Abfrage laeuft
+# mit dem oeffentlichen Schluessel und liest nur die Vereinsliste.
+
+on:
+  schedule:
+    - cron: '17 4 */3 * *'
+  workflow_dispatch:
+
+jobs:
+  anklopfen:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Abfrage stellen
+        env:
+          URL: ${{ vars.VITE_SUPABASE_URL }}
+          KEY: ${{ vars.VITE_SUPABASE_KEY }}
+        run: |
+          if [ -z "$URL" ] || [ -z "$KEY" ]; then
+            echo "VITE_SUPABASE_URL oder VITE_SUPABASE_KEY fehlt (Repository-Variablen)."
+            exit 1
+          fi
+          antwort=$(curl -sS -o /tmp/antwort.json -w '%{http_code}' \
+            "$URL/rest/v1/vereine?select=id&limit=1" \
+            -H "apikey: $KEY" -H "Authorization: Bearer $KEY")
+          echo "Antwort: $antwort"
+          head -c 200 /tmp/antwort.json
+          test "$antwort" = "200"

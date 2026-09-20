@@ -1,0 +1,67 @@
+name: Sicherung
+
+# Zieht woechentlich einen vollstaendigen Auszug der Datenbank und legt ihn
+# im privaten Repository cuedesk-sicherung ab. Die Gratisstufe von Supabase
+# sichert nichts von sich aus.
+#
+# Noetige Geheimnisse in diesem Repository
+# (Settings -> Secrets and variables -> Actions -> Secrets):
+#   SUPABASE_DB_URL   Verbindungszeichenfolge aus dem Supabase-Dashboard
+#                     (Connect -> Session pooler), mit eingesetztem Passwort
+#   SICHERUNG_TOKEN   Zugriffsschluessel mit Schreibrecht auf cuedesk-sicherung
+#
+# Der Auszug enthaelt Mitgliederdaten. Das Sicherungs-Repository muss
+# privat bleiben.
+
+on:
+  schedule:
+    - cron: '23 3 * * 1'
+  workflow_dispatch:
+
+jobs:
+  sichern:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Sicherungs-Repository holen
+        uses: actions/checkout@v4
+        with:
+          repository: DauCoder2001/cuedesk-sicherung
+          token: ${{ secrets.SICHERUNG_TOKEN }}
+          path: sicherung
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Auszug erstellen
+        env:
+          DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          set -e
+          datum=$(date +%Y-%m-%d)
+          ordner="sicherung/$datum"
+          mkdir -p "$ordner"
+          supabase db dump --db-url "$DB_URL" -f "$ordner/schema.sql"
+          supabase db dump --db-url "$DB_URL" --data-only -f "$ordner/daten.sql"
+          supabase db dump --db-url "$DB_URL" --data-only --schema auth -f "$ordner/konten.sql"
+          ls -lh "$ordner"
+
+      - name: Alte Auszuege ausduennen
+        run: |
+          cd sicherung
+          # Die letzten zwoelf Wochen bleiben vollstaendig erhalten.
+          ls -1d 20* 2>/dev/null | sort | head -n -12 | xargs -r rm -rf
+          ls -1d 20* 2>/dev/null | tail -n 3
+
+      - name: Ablegen
+        run: |
+          cd sicherung
+          git config user.name "CueDesk Sicherung"
+          git config user.email "noreply@github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "Keine Aenderung."
+          else
+            git commit -m "Sicherung vom $(date +%d.%m.%Y)"
+            git push
+          fi

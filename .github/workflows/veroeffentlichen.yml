@@ -1,0 +1,57 @@
+name: Veroeffentlichen
+
+# Baut CueDesk und stellt es auf GitHub Pages bereit.
+# Laeuft bei jedem Push auf main und auf Knopfdruck.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  bauen:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Bauen
+        env:
+          # Adresse und oeffentlicher Schluessel der Datenbank stehen als
+          # Repository-Variablen in GitHub (Settings -> Secrets and variables
+          # -> Actions -> Variables). Sie sind nicht geheim; geschuetzt wird
+          # ueber die Rechte in der Datenbank.
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_KEY: ${{ vars.VITE_SUPABASE_KEY }}
+          # Unterordner auf GitHub Pages. Bei eigener Domain auf "/" aendern.
+          VITE_BASIS: /cuedesk/
+        run: npm run build
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  bereitstellen:
+    needs: bauen
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.pages.outputs.page_url }}
+    steps:
+      - id: pages
+        uses: actions/deploy-pages@v4
