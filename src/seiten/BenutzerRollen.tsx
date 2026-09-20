@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../supabase';
+import { ANWENDUNGSADRESSE } from '../adresse';
 import { useSitzung } from '../sitzung';
 import type { Benutzer, Person, Rolle } from '../datenbank.types';
 
@@ -155,7 +156,7 @@ export default function BenutzerRollen() {
   async function erneutSchicken(adresse: string) {
     const { error } = await supabase.auth.signInWithOtp({
       email: adresse,
-      options: { shouldCreateUser: false, emailRedirectTo: window.location.origin }
+      options: { shouldCreateUser: false, emailRedirectTo: ANWENDUNGSADRESSE }
     });
     setFehler(error ? error.message : null);
     setMeldung(error ? null : 'Anmeldelink erneut verschickt.');
@@ -186,7 +187,7 @@ export default function BenutzerRollen() {
         neue_person: legtNeuAn
           ? { vorname: neuVorname.trim(), nachname: neuNachname.trim() }
           : null,
-        weiterleitung: window.location.origin
+        weiterleitung: ANWENDUNGSADRESSE
       }
     });
     setSendet(false);

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { supabase } from '../supabase';
+import { ANWENDUNGSADRESSE } from '../adresse';
 
 export default function Anmeldung() {
   const [email, setEmail] = useState('');
@@ -18,7 +19,7 @@ export default function Anmeldung() {
     setZustand('sendet');
     const { error } = await supabase.auth.signInWithOtp({
       email: adresse,
-      options: { shouldCreateUser: false, emailRedirectTo: window.location.origin }
+      options: { shouldCreateUser: false, emailRedirectTo: ANWENDUNGSADRESSE }
     });
     if (error) {
       setZustand('ruhe');
