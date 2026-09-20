@@ -48,6 +48,7 @@ export type Person = {
   kuerzel: string | null;
   status: PersonenStatus;
   name_oeffentlich: boolean;
+  rating_ausgeblendet: boolean;
   erstellt_am: string;
   geaendert_am: string;
 };
@@ -110,6 +111,117 @@ export type Aenderung = {
   nachher: unknown;
 };
 
+
+export type Disziplin = '8-ball' | '9-ball' | '10-ball' | 'multi-ball' | '14-1';
+export type TurnierModus = 'einzelgruppe' | 'zwei-gruppen' | 'gruppen-ko' | 'einzelspiel' | 'sonstiges';
+export type TurnierStatus = 'geplant' | 'laeuft' | 'beendet' | 'abgebrochen';
+export type PartieStatus = 'geplant' | 'laeuft' | 'beendet';
+export type RatingQuelle =
+  | 'eigene-daten' | 'vorlaeufig' | 'andere-disziplin'
+  | 'startwert' | 'vereinsschnitt' | 'von-hand' | 'gast';
+
+export type Serie = {
+  id: string;
+  verein_id: string;
+  name: string;
+  saison: string | null;
+  disziplin: Disziplin;
+  streicher: number;
+  bonus: number;
+  aktiv: boolean;
+  alt_id: string | null;
+  erstellt_am: string;
+};
+
+export type Turnier = {
+  id: string;
+  verein_id: string;
+  name: string;
+  datum: string;
+  disziplin: Disziplin;
+  modus: TurnierModus;
+  serie_id: string | null;
+  status: TurnierStatus;
+  rating_werten: boolean;
+  eingefroren_am: string | null;
+  einstellungen: Record<string, unknown>;
+  quelle: string;
+  alt_id: string | null;
+  importiert_am: string | null;
+  erstellt_am: string;
+};
+
+export type TurnierTeilnehmer = {
+  turnier_id: string;
+  person_id: string;
+  verein_id: string;
+  startnummer: number | null;
+  gruppe: string | null;
+  gesetzt: boolean;
+  endplatz: number | null;
+  rating_eingefroren: number | null;
+  rating_quelle: RatingQuelle | null;
+};
+
+export type Partie = {
+  id: string;
+  verein_id: string;
+  turnier_id: string | null;
+  disziplin: Disziplin;
+  datum: string;
+  phase: string | null;
+  gruppe: string | null;
+  runde: number | null;
+  paarung: number | null;
+  tisch_id: string | null;
+  spieler_a: string;
+  spieler_b: string;
+  race_to: number | null;
+  vorgabe_a: number;
+  vorgabe_b: number;
+  ergebnis_a: number | null;
+  ergebnis_b: number | null;
+  status: PartieStatus;
+  rating_werten: boolean;
+  rating_grund: string | null;
+  begonnen: string | null;
+  beendet: string | null;
+  eingetragen_von: string | null;
+  erstellt_am: string;
+};
+
+export type RatingEinstellungen = {
+  verein_id: string;
+  zeitraum_monate: number;
+  mindest_racks: number;
+  rueckgriff_monate: number;
+  gewicht: number;
+  staerke_prozent: number;
+  vereinsschnitt: number;
+};
+
+export type RatingStand = {
+  verein_id: string;
+  stichtag: string;
+  disziplin: string;
+  person_id: string;
+  wert: number;
+  racks: number;
+  quelle: RatingQuelle;
+};
+
+export type RatingPartie = {
+  id: string;
+  verein_id: string;
+  turnier_id: string | null;
+  disziplin: Disziplin;
+  datum: string;
+  spieler_a: string;
+  spieler_b: string;
+  racks_a: number;
+  racks_b: number;
+};
+
 type Tabelle<Zeile, Neu = Partial<Zeile>, Aenderung = Partial<Zeile>> = {
   Row: Zeile;
   Insert: Neu;
@@ -125,14 +237,20 @@ export type Database = {
       benutzer_rollen: Tabelle<BenutzerRolle, BenutzerRolle>;
       benutzer_rechte: Tabelle<BenutzerRecht, BenutzerRecht>;
       benutzer_personen: Tabelle<BenutzerPerson, BenutzerPerson>;
-      personen: Tabelle<Person, Omit<Person, 'id' | 'erstellt_am' | 'geaendert_am'>>;
+      personen: Tabelle<Person, Partial<Person> & Pick<Person, 'verein_id' | 'vorname' | 'nachname'>>;
       personen_intern: Tabelle<PersonIntern, PersonIntern>;
       einladungen: Tabelle<Einladung, Omit<Einladung, 'id' | 'erstellt_am' | 'angenommen_am'>>;
       tische: Tabelle<Tisch, Omit<Tisch, 'id'>>;
       geraete: Tabelle<Geraet>;
       aenderungen: Tabelle<Aenderung>;
+      serien: Tabelle<Serie, Omit<Serie, 'id' | 'erstellt_am'>>;
+      turniere: Tabelle<Turnier, Omit<Turnier, 'id' | 'erstellt_am'>>;
+      turnier_teilnehmer: Tabelle<TurnierTeilnehmer, TurnierTeilnehmer>;
+      partien: Tabelle<Partie, Omit<Partie, 'id' | 'erstellt_am'>>;
+      rating_einstellungen: Tabelle<RatingEinstellungen, RatingEinstellungen>;
+      rating_stand: Tabelle<RatingStand, RatingStand>;
     };
-    Views: Record<string, never>;
+    Views: { rating_partien: Tabelle<RatingPartie, never, never> };
     Functions: {
       ist_systemadmin: { Args: Record<string, never>; Returns: boolean };
       hat_rolle: { Args: { p_verein: string; p_rollen: Rolle[] }; Returns: boolean };

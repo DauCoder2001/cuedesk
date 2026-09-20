@@ -82,7 +82,8 @@ export default function Personen() {
       anzeigename: null,
       kuerzel: null,
       status: 'mitglied',
-      name_oeffentlich: false
+      name_oeffentlich: false,
+      rating_ausgeblendet: false
     });
   }
 
