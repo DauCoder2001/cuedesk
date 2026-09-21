@@ -5,7 +5,10 @@ import type { Geraet, Tisch } from '../datenbank.types';
 
 export default function TischeGeraete() {
   const { verein, darf } = useSitzung();
+  // Vereins-Admin verwaltet Tische und entkoppelt; Turnierleiter koppeln
+  // Tablets und aendern die Tischzuordnung.
   const darfVerwalten = darf('vereinsadmin');
+  const darfKoppeln = darf('vereinsadmin', 'turnierleiter');
 
   const [tische, setTische] = useState<Tisch[]>([]);
   const [geraete, setGeraete] = useState<Geraet[]>([]);
@@ -46,11 +49,7 @@ export default function TischeGeraete() {
       .from('tische')
       .insert({ verein_id: verein.id, nummer, bezeichnung: neueBezeichnung.trim() || null, aktiv: true });
     if (error) {
-      setFehler(
-        error.message.includes('duplicate key')
-          ? `Tisch ${nummer} gibt es schon.`
-          : error.message
-      );
+      setFehler(error.message.includes('duplicate key') ? `Tisch ${nummer} gibt es schon.` : error.message);
       return;
     }
     setNeueNummer('');
@@ -126,79 +125,92 @@ export default function TischeGeraete() {
   }
 
   if (!verein) return <p className="hinweis">Kein Verein zugeordnet.</p>;
-  if (!darfVerwalten) return <p className="hinweis">Für diesen Bereich fehlen dir die Rechte.</p>;
+  if (!darfKoppeln) return <p className="hinweis">Für diesen Bereich fehlen dir die Rechte.</p>;
 
   return (
     <div className="einspaltig">
       <section className="block">
         <h2>Tische</h2>
-        <table className="tabelle">
-          <thead>
-            <tr>
-              <th style={{ width: '70px' }}>Nr.</th>
-              <th>Bezeichnung</th>
-              <th style={{ width: '90px' }}>Aktiv</th>
-              <th style={{ width: '110px' }}></th>
-            </tr>
-          </thead>
-          <tbody>
-            {tische.map((tisch) => (
-              <tr key={tisch.id}>
-                <td>{tisch.nummer}</td>
-                <td>
-                  <input
-                    value={tisch.bezeichnung ?? ''}
-                    placeholder="ohne Bezeichnung"
-                    onChange={(e) =>
-                      setTische((bisher) =>
-                        bisher.map((eintrag) =>
-                          eintrag.id === tisch.id ? { ...eintrag, bezeichnung: e.target.value } : eintrag
-                        )
-                      )
-                    }
-                    onBlur={(e) => void tischAendern(tisch, { bezeichnung: e.target.value || null })}
-                  />
-                </td>
-                <td>
-                  <input
-                    type="checkbox"
-                    checked={tisch.aktiv}
-                    onChange={(e) => void tischAendern(tisch, { aktiv: e.target.checked })}
-                  />
-                </td>
-                <td className="rechts">
-                  <button type="button" onClick={() => void tischLoeschen(tisch)}>
-                    Löschen
-                  </button>
-                </td>
-              </tr>
-            ))}
-            {tische.length === 0 && (
-              <tr>
-                <td colSpan={4} className="hinweis">
-                  Noch kein Tisch angelegt.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+        {!darfVerwalten && (
+          <p className="hinweis">
+            {tische
+              .filter((t) => t.aktiv)
+              .map((t) => (t.bezeichnung ? `Tisch ${t.nummer} (${t.bezeichnung})` : `Tisch ${t.nummer}`))
+              .join(' · ') || 'Noch kein Tisch angelegt.'}{' '}
+            Tische anlegen und ändern kann der Vereins-Administrator.
+          </p>
+        )}
+        {darfVerwalten && (
+          <>
+            <table className="tabelle">
+              <thead>
+                <tr>
+                  <th style={{ width: '70px' }}>Nr.</th>
+                  <th>Bezeichnung</th>
+                  <th style={{ width: '90px' }}>Aktiv</th>
+                  <th style={{ width: '110px' }}></th>
+                </tr>
+              </thead>
+              <tbody>
+                {tische.map((tisch) => (
+                  <tr key={tisch.id}>
+                    <td>{tisch.nummer}</td>
+                    <td>
+                      <input
+                        value={tisch.bezeichnung ?? ''}
+                        placeholder="ohne Bezeichnung"
+                        onChange={(e) =>
+                          setTische((bisher) =>
+                            bisher.map((eintrag) =>
+                              eintrag.id === tisch.id ? { ...eintrag, bezeichnung: e.target.value } : eintrag
+                            )
+                          )
+                        }
+                        onBlur={(e) => void tischAendern(tisch, { bezeichnung: e.target.value || null })}
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type="checkbox"
+                        checked={tisch.aktiv}
+                        onChange={(e) => void tischAendern(tisch, { aktiv: e.target.checked })}
+                      />
+                    </td>
+                    <td className="rechts">
+                      <button type="button" onClick={() => void tischLoeschen(tisch)}>
+                        Löschen
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+                {tische.length === 0 && (
+                  <tr>
+                    <td colSpan={4} className="hinweis">
+                      Noch kein Tisch angelegt.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
 
-        <div className="zeile">
-          <input
-            style={{ width: '80px' }}
-            placeholder="Nr."
-            value={neueNummer}
-            onChange={(e) => setNeueNummer(e.target.value)}
-          />
-          <input
-            placeholder="Bezeichnung"
-            value={neueBezeichnung}
-            onChange={(e) => setNeueBezeichnung(e.target.value)}
-          />
-          <button type="button" onClick={() => void tischAnlegen()}>
-            Tisch anlegen
-          </button>
-        </div>
+            <div className="zeile">
+              <input
+                style={{ width: '80px' }}
+                placeholder="Nr."
+                value={neueNummer}
+                onChange={(e) => setNeueNummer(e.target.value)}
+              />
+              <input
+                placeholder="Bezeichnung"
+                value={neueBezeichnung}
+                onChange={(e) => setNeueBezeichnung(e.target.value)}
+              />
+              <button type="button" onClick={() => void tischAnlegen()}>
+                Tisch anlegen
+              </button>
+            </div>
+          </>
+        )}
       </section>
 
       <section className="block">
@@ -221,9 +233,11 @@ export default function TischeGeraete() {
                 </option>
               ))}
             </select>
-            <button type="button" onClick={() => void trennen(geraet)}>
-              Trennen
-            </button>
+            {darfVerwalten && (
+              <button type="button" onClick={() => void trennen(geraet)}>
+                Trennen
+              </button>
+            )}
           </div>
         ))}
         {geraete.length === 0 && <p className="hinweis">Noch kein Gerät gekoppelt.</p>}

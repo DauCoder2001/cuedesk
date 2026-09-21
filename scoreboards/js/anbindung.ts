@@ -17,6 +17,7 @@
 // (Veroeffentlichung im Repository "scoreboards") ist sie immer offline.
 
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { leisteZeigen } from './hinweisleiste';
 
 type Beobachter = (schnappschuss: { val: () => unknown }) => void;
 type Verweis = { pfad: string };
@@ -123,9 +124,27 @@ export async function starten(): Promise<{ betriebsart: Betriebsart; tisch: stri
             tisch = t;
           }
           tischNummer = tisch ? String(tisch.nummer) : ausAdresse ?? '1';
-          verbindung = { supabase, vereinId, tischId: tisch?.id ?? null, tischNummer };
+          verbindung = {
+            supabase,
+            vereinId,
+            tischId: tisch?.id ?? null,
+            tischNummer
+          };
           betriebsart = 'angebunden';
+          if (geraet) {
+            geraetKonto = { supabase, authId: nutzer.id };
+            kopplungBeobachten();
+          }
           return { betriebsart, tisch: tischNummer };
+        }
+
+        // Tablet, das beim Oeffnen schon entkoppelt war: laeuft offline weiter,
+        // zeigt aber die Leiste und kann neu gekoppelt werden.
+        if (nutzer.is_anonymous) {
+          geraetKonto = { supabase, authId: nutzer.id };
+          kopplung = 'entkoppelt';
+          leisteZeigen({ art: 'entkoppelt', code: null, neuKoppeln: () => void neuKoppeln() });
+          kopplungBeobachten();
         }
       }
     } catch (e) {
@@ -145,6 +164,120 @@ export function istAngebunden(): boolean {
 // Datum der gespeicherten Partie in der Protokollansicht, sonst null
 export function archivDatum(): string | null {
   return archiv ? new Date(`${archiv.datum}T12:00:00`).toLocaleDateString('de-DE') : null;
+}
+
+// ---------- Kopplung waehrend des Spiels beobachten ----------
+//
+// Wird das Tablet entkoppelt oder einem anderen Tisch zugeordnet, waehrend
+// ein Scoreboard offen ist, erscheint oben eine Hinweisleiste. Das Spiel
+// laeuft in jedem Fall weiter. Geprueft wird alle 30 Sekunden (bei
+// angezeigtem Kopplungscode alle 10), beim Zurueckholen in den Vordergrund
+// und sofort, wenn das Schreiben des Live-Stands scheitert.
+
+type Kopplung = 'gekoppelt' | 'entkoppelt' | 'andererTisch';
+let kopplung: Kopplung = 'gekoppelt';
+let geraetKonto: { supabase: SupabaseClient; authId: string } | null = null;
+let kopplungsCode: string | null = null;
+let pruefungLaeuft = false;
+
+function kopplungBeobachten() {
+  const takt = () => {
+    if (document.visibilityState === 'visible') void kopplungPruefen();
+    window.setTimeout(takt, kopplungsCode ? 10000 : 30000);
+  };
+  window.setTimeout(takt, 30000);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') void kopplungPruefen();
+  });
+}
+
+// Laeuft am Tisch gerade ein Spiel? Dann gibt es keinen Knopf zum Tischwechsel.
+function spielLaeuft(): boolean {
+  const z = letzterWert.get(`tables/${tischNummer}`) as Record<string, unknown> | null | undefined;
+  if (!z || z.locked) return false;
+  const zahl = (w: unknown) => (typeof w === 'number' ? w : 0);
+  const log = Array.isArray(z.log) ? z.log.length : 0;
+  return zahl(z.s1) !== 0 || zahl(z.s2) !== 0 || zahl(z.score1) !== 0 || zahl(z.score2) !== 0 || log > 0;
+}
+
+async function kopplungPruefen(): Promise<void> {
+  const konto = geraetKonto;
+  if (!konto || pruefungLaeuft) return;
+  pruefungLaeuft = true;
+  try {
+    const { data: g, error } = await konto.supabase
+      .from('geraete')
+      .select('tisch_id, aktiv')
+      .eq('auth_id', konto.authId)
+      .maybeSingle();
+    if (error) return; // Netz weg: nichts behaupten
+
+    if (!g || !g.aktiv) {
+      kopplung = 'entkoppelt';
+      leisteZeigen({ art: 'entkoppelt', code: kopplungsCode, neuKoppeln: () => void neuKoppeln() });
+      return;
+    }
+
+    kopplungsCode = null;
+    const v = verbindung;
+    if (!v) {
+      // Offline gestartet und inzwischen gekoppelt: neu laden verbindet das
+      // Scoreboard. Ein laufendes Spiel wird dabei nicht abgebrochen.
+      if (!spielLaeuft()) {
+        window.location.reload();
+        return;
+      }
+      kopplung = 'gekoppelt';
+      leisteZeigen({ art: 'wiederGekoppelt', neuLaden: () => window.location.reload() });
+      return;
+    }
+    if ((g.tisch_id ?? null) === v.tischId) {
+      kopplung = 'gekoppelt';
+      leisteZeigen({ art: 'keine' });
+      return;
+    }
+
+    kopplung = 'andererTisch';
+    const { data: t } = g.tisch_id
+      ? await v.supabase.from('tische').select('nummer').eq('id', g.tisch_id).maybeSingle()
+      : { data: null };
+    const neu = t ? String(t.nummer) : null;
+    leisteZeigen({
+      art: 'andererTisch',
+      neu,
+      alt: v.tischNummer,
+      wechseln:
+        neu && !spielLaeuft()
+          ? () => window.location.replace(`${window.location.pathname}?table=${neu}`)
+          : null
+    });
+  } finally {
+    pruefungLaeuft = false;
+  }
+}
+
+async function neuKoppeln() {
+  const konto = geraetKonto;
+  if (!konto) return;
+  const { data, error } = await konto.supabase.rpc('kopplung_anfordern');
+  if (error || !data) {
+    window.alert('Kein Kopplungscode erhalten: ' + (error?.message ?? 'unbekannt'));
+    return;
+  }
+  kopplungsCode = data as string;
+  leisteZeigen({ art: 'entkoppelt', code: kopplungsCode, neuKoppeln: () => void neuKoppeln() });
+}
+
+// Vor dem Speichern: ist das Tablet noch gekoppelt?
+async function nichtGekoppelt(ergebnis: string): Promise<string | null> {
+  if (!geraetKonto) return null;
+  await kopplungPruefen();
+  if (kopplung !== 'entkoppelt') return null;
+  return (
+    'Das Tablet ist nicht mehr mit CueDesk verbunden. Bitte das Ergebnis notieren (' +
+    ergebnis +
+    ') oder das Tablet neu koppeln und danach noch einmal auf „Neues Spiel“ tippen.'
+  );
 }
 
 // Wohin "Startseite" fuehrt
@@ -231,7 +364,10 @@ async function wegschreiben() {
     besitzer: (wert as { owner?: string }).owner ?? null,
     aktualisiert: new Date().toISOString()
   });
-  if (error) console.error('Live-Stand nicht gespeichert:', error.message);
+  if (error) {
+    console.error('Live-Stand nicht gespeichert:', error.message);
+    void kopplungPruefen();
+  }
 }
 
 export function onValue(verweis: Verweis, cb: Beobachter): () => void {
@@ -419,6 +555,13 @@ export type Spieler = { id: string; name: string };
 export async function spielerWaehlen(titel: string, vorgabe = ''): Promise<Spieler | null> {
   const v = verbindung;
   if (!v) return null;
+  if (geraetKonto) {
+    await kopplungPruefen();
+    if (kopplung === 'entkoppelt') {
+      window.alert('Das Tablet ist nicht mehr mit CueDesk verbunden. Die Mitgliederliste ist erst nach einer neuen Kopplung wieder erreichbar.');
+      return null;
+    }
+  }
 
   const { data } = await v.supabase
     .from('personen')
@@ -492,6 +635,8 @@ export async function ergebnisSpeichernPool(
   if (!zustand.player1Id || !zustand.player2Id) {
     return { ok: false, fehler: 'Beide Spieler müssen aus der Liste gewählt sein.' };
   }
+  const getrennt = await nichtGekoppelt(`${zustand.score1} : ${zustand.score2}`);
+  if (getrennt) return { ok: false, fehler: getrennt };
   const jetzt = Date.now();
   const { error } = await v.supabase.from('partien').insert({
     verein_id: v.vereinId,
@@ -528,6 +673,8 @@ export async function ergebnisSpeichern141(
   if (!zustand.player1Id || !zustand.player2Id) {
     return { ok: false, fehler: 'Beide Spieler müssen aus der Liste gewählt sein.' };
   }
+  const getrennt = await nichtGekoppelt(`${zustand.s1} : ${zustand.s2}`);
+  if (getrennt) return { ok: false, fehler: getrennt };
 
   const heute = new Date().toISOString().slice(0, 10);
   const dauer = zustand.startedAt

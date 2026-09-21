@@ -34,7 +34,7 @@ export default function App() {
     { wert: 'serien', name: 'Serien', sichtbar: true },
     { wert: 'statistik141', name: '14.1-Statistik', sichtbar: true },
     { wert: 'benutzer', name: 'Benutzer und Rollen', sichtbar: darf('vereinsadmin', 'sportwart') },
-    { wert: 'tische', name: 'Tische und Geräte', sichtbar: darf('vereinsadmin') },
+    { wert: 'tische', name: 'Tische und Geräte', sichtbar: darf('vereinsadmin', 'turnierleiter') },
     { wert: 'altdaten', name: 'Altdaten übernehmen', sichtbar: darf('vereinsadmin', 'sportwart') }
   ];
 
