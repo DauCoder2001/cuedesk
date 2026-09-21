@@ -24,6 +24,23 @@ Firebase-Projekt "Pool-TS" ab. Mandantenfaehig, ein Verein je `verein_id`.
 - Supabase: PostgreSQL, Auth, Realtime, Edge Functions.
 - Veroeffentlichung als statische Seite (zunaechst GitHub Pages).
 
+## Scoreboards (Ordner `scoreboards/`)
+
+- Die Scoreboards stammen aus Pool-TS und sind **erprobter Code in HTML und
+  JavaScript**. Sie werden nicht nach React umgebaut. CueDesk ist die
+  **einzige Stelle**, an der sie geaendert werden; die Offline-Fassung im
+  Repository `DauCoder2001/scoreboards` wird daraus erzeugt.
+- Das Regelwerk (Kugeln, Fouls, Drei-Foul-Regel, Spielende) steckt allein im
+  Scoreboard. Keine zweite Umsetzung davon anlegen.
+- Datenbankzugriffe laufen nur ueber `scoreboards/js/anbindung.ts`. Sie bietet
+  dieselben Funktionen wie frueher Firebase (`ref`, `set`, `onValue`, ...) und
+  entscheidet selbst: gekoppeltes Tablet = angebunden, sonst offline.
+  Mit `VITE_NUR_OFFLINE=1` gebaut ist sie immer offline.
+- Aenderungen am Scoreboard-Code klein halten und begruenden; die Datei muss
+  angebunden **und** offline funktionieren.
+- Klassische Skripte als `type="module"` einbinden, sonst fehlen sie nach dem
+  Bau.
+
 ## Datenbank
 
 - **Nur die Testdatenbank anfassen**: Projekt `ejcskkawxbbvltvoxdnw`

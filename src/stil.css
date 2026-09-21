@@ -203,3 +203,11 @@ button:disabled { cursor: default; color: var(--text-leise); }
 
 .tabelle .gestrichen { color: var(--text-leise); text-decoration: line-through; }
 .tabelle th small { display: block; font-weight: 400; font-size: 11px; }
+
+.spielwahl { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin-top: 8px; }
+.spielknopf {
+  display: inline-block; padding: 16px 26px; border-radius: 12px; color: #fff;
+  font-size: 20px; font-weight: 500; text-decoration: none;
+}
+.spielknopf.vierzehn { background: #27ae60; }
+.spielknopf.pool { background: #e67e22; }

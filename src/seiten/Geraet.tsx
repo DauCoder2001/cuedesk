@@ -120,7 +120,24 @@ export default function Geraet() {
                 ))}
               </select>
             </label>
-            <p className="hinweis">Die Spielansicht kommt in einer der nächsten Stufen.</p>
+            {tisch ? (
+              <div className="spielwahl">
+                <a
+                  className="spielknopf pool"
+                  href={`${import.meta.env.BASE_URL}scoreboards/Pool_Scoreboard.html?table=${tisch.nummer}`}
+                >
+                  8/9/10-Ball
+                </a>
+                <a
+                  className="spielknopf vierzehn"
+                  href={`${import.meta.env.BASE_URL}scoreboards/14.1_Scoreboard.html?table=${tisch.nummer}`}
+                >
+                  14.1 endlos
+                </a>
+              </div>
+            ) : (
+              <p className="hinweis">Zum Spielen zuerst einen Tisch wählen.</p>
+            )}
           </>
         ) : (
           <>

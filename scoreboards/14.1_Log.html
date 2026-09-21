@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="theme-color" content="#0d88d0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no, maximum-scale=1">
+<title>14.1 Protokoll</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; font-family: Arial, sans-serif; background: #eef0f3; color: #222; }
+
+  #toolbar {
+    background: #1f3b73; color: #fff; display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 16px; position: sticky; top: 0; z-index: 5;
+  }
+  #toolbar .title { font-size: 18px; font-weight: bold; }
+  #toolbar .actions { display: flex; gap: 8px; align-items: center; }
+  #toolbar a { color: #fff; font-size: 13px; text-decoration: none; opacity: .92; }
+  #toolbar button {
+    background: rgba(255,255,255,.16); color: #fff; border: none; border-radius: 7px;
+    padding: 7px 14px; font-size: 14px; cursor: pointer;
+  }
+
+  #sheet {
+    background: #fff; max-width: 800px; margin: 16px auto; border-radius: 10px; overflow: hidden;
+    box-shadow: 0 6px 24px rgba(0,0,0,.15);
+  }
+
+  #summary {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    padding: 12px 18px; border-bottom: 1px solid #e6e6e6;
+  }
+  .ls-p { flex: 1; text-align: center; }
+  .ls-name { font-size: 16px; font-weight: bold; }
+  .ls-score { font-size: 34px; font-weight: bold; line-height: 1; }
+  .ls-stats { font-size: 13px; color: #555; margin-top: 3px; }
+  .ls-attable { font-size: 12px; color: #1a7a1a; font-weight: bold; margin-top: 3px; }
+  .ls-target { text-align: center; color: #444; padding: 0 6px; }
+  .ls-target .ls-tv { font-size: 22px; font-weight: bold; }
+
+  table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 15px; text-align: center; }
+  th, td { padding: 6px 2px; }
+  thead th { border-bottom: 1px solid #ddd; }
+  .pz-sub th { font-size: 12px; color: #555; border-bottom: 1px solid #ccc; }
+  .pz-h1 { background: #fbeaea; color: #cc0000; }
+  .pz-h2 { background: #eaeefb; color: #1133cc; }
+  tbody tr:nth-child(even) { background: #fafafa; }
+  .pz-bl { border-left: 2px solid #ccc; }
+  .pz-no { color: #888; }
+  .pz-tot { font-weight: bold; }
+  .pz-f { color: #cc0000; font-weight: bold; }
+  .pz-f3 { color: #a30000; font-weight: bold; }
+  .pz-s { color: #1a7a1a; font-weight: bold; }
+  .pz-v { color: #1133cc; font-weight: bold; }
+  .pz-3frow { background: #fff0f0; }
+  .pz-hs { background: #fff6cc; font-weight: bold; border-radius: 4px; }
+  .pz-live td { background: #eef6ff; font-style: italic; }
+  .pz-live .pz-no { color: #1f3b73; font-style: normal; font-weight: bold; }
+  .pz-livecell { background: #eef6ff; font-style: italic; }
+  .pz-liveno { color: #1f3b73; font-weight: bold; }
+  .pz-liveno, .pz-live .pz-liveno { font-style: normal; }   /* Live-Pfeil ▶ aufrecht, nicht kursiv */
+  .pz-div td { background: #e9eef6; color: #1f3b73; font-size: 13px; font-weight: bold;
+    border-top: 1px solid #cfd6e2; border-bottom: 1px solid #cfd6e2; }
+  .pz-rack td { border-top: 1px solid #cfd6e2; }
+  td.pz-rackmark { background: #e9eef6; color: #1f3b73; font-weight: bold; font-size: 13px; border-radius: 4px; }
+  .pz-empty { color: #888; padding: 18px; }
+
+  #tablewrap { padding: 4px 14px 6px; }
+  #legend { display: flex; flex-wrap: wrap; gap: 8px 18px; padding: 10px 18px 16px;
+    border-top: 1px solid #eee; font-size: 12px; color: #666; }
+  #legend .pz-f { color: #cc0000; }
+  #legend .pz-f3 { color: #a30000; }
+  #legend .pz-hs { background: #fff6cc; padding: 1px 6px; border-radius: 4px; }
+  #legend #log-time { margin-left: auto; font-weight: bold; color: #1f3b73; }
+
+  #note { text-align: center; font-size: 12px; color: #888; padding: 0 0 18px; }
+
+  @media print {
+    @page { size: A4 portrait; margin: 12mm; }
+    body { background: #fff; }
+    #toolbar { display: none; }
+    #sheet { box-shadow: none; margin: 0; max-width: 100%; border-radius: 0; }
+    #note { display: none; }
+  }
+</style>
+<link rel="icon" type="image/svg+xml" href="./img/favicon.svg">
+</head>
+
+<body>
+  <div id="toolbar">
+    <div class="title" id="tbtitle">📋 14.1 Protokoll</div>
+    <div class="actions">
+      <a id="boardlink" href="#">↩ Zum Board</a>
+      <button type="button" onclick="window.print()">🖨 Drucken</button>
+      <button id="log-share" type="button">📤 Senden</button>
+    </div>
+  </div>
+
+  <div id="sheet">
+    <div id="summary"></div>
+    <div id="tablewrap"><table id="ptable"></table></div>
+    <div id="legend">
+      <span><b class="pz-f">/</b> 1. Foul</span>
+      <span><b class="pz-f">//</b> 2. Foul</span>
+      <span><b class="pz-f3">3F</b> drei Fouls (−15)</span>
+      <span><b class="pz-f">−2</b> Eröffnungsfoul</span>
+      <span><b style="color:#1a7a1a;">S</b> Sicherheit</span>
+      <span><b style="color:#1133cc;">V</b> Verschossen</span>
+      <span><b>HS</b> = Höchstserie <span class="pz-hs">(gelb markiert)</span></span>
+      <span><b style="color:#1f3b73;">▶</b> laufende Aufnahme</span>
+      <span id="log-time"></span>
+    </div>
+  </div>
+  <div id="note">Diese Seite aktualisiert sich automatisch (Live-Stand). Nur Ansicht – kein Schreibzugriff.</div>
+
+<script type="module">
+  // Read-only-Ansicht des 14.1-Protokolls. Schreibt NICHTS in die Datenbank.
+  // CueDesk: Anbindung mit denselben Funktionen wie frueher Firebase.
+  import { db, auth, ref, onValue, signInAnonymously, starten } from "./js/anbindung.ts";
+  import { keepScreenAwake } from "./js/wake-lock.js";
+  import { setupProtocolShare } from "./js/share-protocol.js";
+
+  signInAnonymously(auth).catch(err => console.error("Anmeldung fehlgeschlagen:", err));
+
+  keepScreenAwake();   // Bildschirm im Kiosk-Betrieb anhalten
+
+  // CueDesk: Tisch aus der Kopplung oder aus ?table=, offline Tisch 1.
+  const { tisch: tableId } = await starten();
+
+  document.getElementById("tbtitle").textContent = "📋 14.1 Protokoll — Tisch " + tableId;
+  document.getElementById("boardlink").href = "14.1_Scoreboard.html?table=" + encodeURIComponent(tableId);
+
+  // Teilen/Mail: Namen aus dem gerenderten Kopf, damit der Dateiname stimmt.
+  const spielerNamen = () =>
+    Array.from(document.querySelectorAll("#summary .ls-name")).map(e => e.textContent.trim()).join("-vs-");
+  try {
+    setupProtocolShare({
+      btnId: "log-share", summaryId: "summary", tableId: "ptable", legendId: "legend",
+      titel: () => "14.1 Protokoll - Tisch " + tableId,
+      dateiBasis: () => "14.1-Protokoll_Tisch" + tableId + "_" + spielerNamen()
+    });
+  } catch (e) { console.error("Teilen-Knopf nicht verfuegbar:", e); }
+
+  function escapeHtml(s) {
+    return String(s == null ? "" : s).replace(/[&<>"]/g, c =>
+      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  }
+
+  function playerSummary(name, score, hs, inn, color, atTable) {
+    const avg = (score / (inn || 1)).toFixed(1);
+    return '<div class="ls-p">' +
+      '<div class="ls-name" style="color:' + color + '">' + escapeHtml(name) + '</div>' +
+      '<div class="ls-score" style="color:' + color + '">' + score + '</div>' +
+      '<div class="ls-stats">HS ' + hs + ' · Aufn. ' + inn + ' · Ø ' + avg + '</div>' +
+      '<div class="ls-attable">' + (atTable ? '● am Tisch' : '&nbsp;') + '</div>' +
+      '</div>';
+  }
+
+  // Spielzeit aus dem zuletzt empfangenen Zustand; friert nach Spielende ueber endedAt ein.
+  let letzterStand = null;
+  function zeigeSpielzeit() {
+    const el = document.getElementById("log-time");
+    if (!el) return;
+    const s = letzterStand;
+    if (!s || !s.startedAt) { el.textContent = "Spielzeit —"; return; }
+    const min = Math.max(0, Math.floor(((s.endedAt || Date.now()) - s.startedAt) / 60000));
+    el.textContent = "Spielzeit " + Math.floor(min / 60) + ":" + String(min % 60).padStart(2, "0") + " h";
+  }
+  setInterval(zeigeSpielzeit, 30000);   // Minuten-Koernung, 30 s genuegen
+
+  function render(s) {
+    letzterStand = s;
+    zeigeSpielzeit();
+    const summary = document.getElementById("summary");
+    const table = document.getElementById("ptable");
+
+    if (!s || s.gameType !== "14.1") {
+      summary.innerHTML = '<div class="ls-p" style="color:#888;">An Tisch ' + escapeHtml(tableId) +
+        ' läuft gerade kein 14.1-Spiel.</div>';
+      table.innerHTML = "";
+      return;
+    }
+
+    const num = (v) => (typeof v === "number" ? v : 0);
+    summary.innerHTML =
+      playerSummary(s.player1 || "Spieler 1", num(s.s1), num(s.high1), num(s.inn1), "#cc0000", !s.locked && s.turn === 1) +
+      '<div class="ls-target"><div style="font-size:16.5px;font-weight:bold;">Ziel: ' + num(s.target) + ' Pkt.</div>' +
+        (num(s.targetInn) > 0 ? '<div style="font-size:16.5px;font-weight:bold;">' + num(s.targetInn) + ' Aufn.</div>' : '') + '</div>' +
+      playerSummary(s.player2 || "Spieler 2", num(s.s2), num(s.high2), num(s.inn2), "#1133cc", !s.locked && s.turn === 2);
+
+    const log = Array.isArray(s.log) ? s.log : [];
+    const high1 = num(s.high1), high2 = num(s.high2);
+
+    // Aufnahmen paaren: n-te Aufnahme von Rot + n-te von Blau in EINE Zeile "Aufn. n".
+    const paired = [];
+    const rowAt = (n) => paired[n] || (paired[n] = { n: n, p1: null, p2: null, live1: null, live2: null });
+    let c1 = 0, c2 = 0;
+    log.forEach(e => {
+      if (e.t === "rack") return;   // Rack-Grenze steht als Schraegstrich in der Punkte-Spalte
+      if (e.p === 1) rowAt(++c1).p1 = e; else rowAt(++c2).p2 = e;
+    });
+
+    // Laufende (noch nicht beendete) Aufnahme in die Zeile des Spielers am Tisch.
+    if (!s.locked) {
+      const lp = s.turn;
+      const run = num(lp === 1 ? s.run1 : s.run2);
+      const rp = Array.isArray(s.rackPts) ? s.rackPts : [];
+      const live = { segs: rp.concat(run - rp.reduce((a, b) => a + b, 0)), total: num(lp === 1 ? s.s1 : s.s2) };
+      const ln = (lp === 1 ? c1 : c2) + 1;
+      if (lp === 1) rowAt(ln).live1 = live; else rowAt(ln).live2 = live;
+    }
+
+    // Baut die drei Zellen (F, Pkt, Gesamt) einer Spielerseite. Pkt zeigt die Slash-Notation
+    // (Punkte je Rack) bei Mehr-Rack-Aufnahmen, sonst die Einzahl.
+    const side = (e, live, isP2, high) => {
+      const bl = isP2 ? "pz-bl" : "";
+      if (e) {
+        const isFoul = (e.kind === "foul" || e.kind === "foul3" || e.kind === "break");
+        const fcls = (e.kind === "foul3") ? "pz-f3" : ((e.kind === "foul" || e.kind === "break") ? "pz-f" : "");
+        const pktcls = isFoul ? fcls : "";
+        const hs = (e.pkt === high && e.pkt > 0) ? " pz-hs" : "";
+        const val = (e.segs && e.segs.length > 1) ? e.segs.join("/") : e.pkt;
+        // F-Spalte: S = Sicherheit (gruen), V = verschossen (blau), sonst das Foul-Zeichen (rot).
+        let markTxt = e.mark || "";
+        let markCls = fcls;
+        if (e.kind === "safety") { markTxt = "S"; markCls = "pz-s"; }
+        else if (e.kind === "run") { markTxt = "V"; markCls = "pz-v"; }
+        return '<td class="' + (bl + " " + markCls).trim() + '">' + markTxt + '</td>' +
+               '<td class="' + (pktcls + hs).trim() + '">' + val + '</td>' +
+               '<td class="pz-tot">' + e.total + '</td>';
+      }
+      if (live) {
+        const lval = (live.segs && live.segs.length > 1) ? live.segs.join("/") : live.segs[0];
+        return '<td class="' + (bl + " pz-livecell pz-liveno").trim() + '">▶</td>' +
+               '<td class="pz-livecell">' + lval + '</td>' +
+               '<td class="pz-tot pz-livecell">' + live.total + '</td>';
+      }
+      return '<td class="' + bl + '"></td><td></td><td></td>';
+    };
+
+    let rows = "";
+    for (let n = 1; n < paired.length; n++) {
+      const r = paired[n];
+      if (!r) continue;
+      const hasLive = !!(r.live1 || r.live2);
+      const pureLive = hasLive && !r.p1 && !r.p2;
+      const foul3 = (r.p1 && r.p1.kind === "foul3") || (r.p2 && r.p2.kind === "foul3");
+      const trcls = pureLive ? ' class="pz-live"' : (foul3 ? ' class="pz-3frow"' : "");
+      const noCls = (hasLive && !pureLive) ? "pz-no pz-liveno" : "pz-no";
+      const noTxt = "" + n;
+      rows += '<tr' + trcls + '><td class="' + noCls + '">' + noTxt + '</td>' +
+        side(r.p1, r.live1, false, high1) +
+        side(r.p2, r.live2, true, high2) + '</tr>';
+    }
+
+    if (!rows) rows = '<tr><td colspan="7" class="pz-empty">Noch keine Aufnahmen.</td></tr>';
+
+    table.innerHTML =
+      '<colgroup><col style="width:9%"><col style="width:8%"><col style="width:14%"><col style="width:15%">' +
+      '<col style="width:8%"><col style="width:14%"><col style="width:15%"></colgroup>' +
+      '<thead>' +
+        '<tr>' +
+          '<th>Aufn.</th>' +
+          '<th colspan="3" class="pz-h1">' + escapeHtml(s.player1 || "Spieler 1") + ' (Rot)</th>' +
+          '<th colspan="3" class="pz-h2 pz-bl">' + escapeHtml(s.player2 || "Spieler 2") + ' (Blau)</th>' +
+        '</tr>' +
+        '<tr class="pz-sub">' +
+          '<th>Nr.</th><th>F</th><th>Pkt.</th><th>Gesamt</th>' +
+          '<th class="pz-bl">F</th><th>Pkt.</th><th>Gesamt</th>' +
+        '</tr>' +
+      '</thead><tbody>' + rows + '</tbody>';
+  }
+
+  onValue(ref(db, 'tables/' + tableId), (snap) => render(snap.val()));
+</script>
+</body>
+</html>

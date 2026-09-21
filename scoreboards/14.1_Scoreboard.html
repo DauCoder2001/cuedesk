@@ -1,0 +1,1738 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="theme-color" content="#0d88d0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no, maximum-scale=1">
+<title>14.1 Scoreboard</title>
+
+<style>
+  :root {
+    --bg: #dddddd;
+    --header: #1f3b73;
+    --red: red;
+    --blue: blue;
+    --text: #333;
+    --active: rgba(0, 255, 0, 0.30);
+    --button-bg: #f0f0f0;
+    --button-border: #666;
+    --disabled-opacity: 0.55;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    font-family: Arial, sans-serif;
+    background: var(--bg);
+    touch-action: manipulation;
+    /* Kiosk: keine Text-/Element-Auswahl auf dem Tablet (iOS braucht die -webkit-Varianten) */
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  body {
+    overflow: hidden;
+  }
+
+  #app {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    height: 100dvh;       /* iOS: echte sichtbare Hoehe, auch mit Adressleiste */
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+
+  /* Header: 3 Spalten (links | Titel | rechts), Titel bleibt zentriert */
+  #header {
+    background: var(--header);
+    color: white;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 1vmin;
+    padding: 0.8vmin 2vmin;
+    font-weight: bold;
+    flex: 0 0 auto;
+  }
+
+  #hdr-title { font-size: 4vmin; text-align: center; white-space: nowrap; }
+  .hdr-left  { display: flex; align-items: center; gap: 2vmin;   justify-self: start; }
+  .hdr-right { display: flex; align-items: center; gap: 1.5vmin; justify-self: end; }
+
+  #clock {
+    font-size: 3vmin;
+    font-weight: bold;
+  }
+
+  /* Zur Tablet-Startseite */
+  #home-btn {
+    font-size: 3vmin;
+    line-height: 1;
+    padding: 0.4vmin 1.2vmin;
+    margin: 0;
+    border: none;
+    border-radius: 1vmin;
+    background: rgba(255,255,255,0.15);
+    color: #fff;
+    cursor: pointer;
+  }
+
+  /* Hilfe / Neues Match in der Kopfzeile (kompakt wie Demo/Home, helleres Blau) */
+  .hdr-btn {
+    font-size: 2.4vmin;
+    line-height: 1;
+    padding: 0.7vmin 1.5vmin;   /* gleiche Hoehe wie #home-btn (3.8vmin), Inhalt kleiner */
+    margin: 0;
+    border: none;
+    border-radius: 1vmin;
+    background: #3461a8;
+    color: #fff;
+    font-weight: bold;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  /* Ziel / Einstellungen */
+  #target {
+    text-align: center;
+    font-size: 3vmin;
+    font-weight: bold;
+    margin-top: 0.6vmin;
+    margin-bottom: 0.3vmin;
+    flex: 0 0 auto;
+  }
+
+  #target button {
+    font-size: 2.5vmin;
+    margin-left: 1vmin;
+    padding: 0.8vmin 1.8vmin;
+    border-radius: 0.8vmin;
+    border: 1px solid var(--button-border);
+    background: var(--button-bg);
+    cursor: pointer;
+  }
+
+  /* Spieler */
+  #players {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 1vmin 4vmin;
+    position: relative;
+    z-index: 5;
+    flex: 1 1 auto;          /* uebernimmt die Rolle des frueheren #scores */
+    min-height: 20vh;
+  }
+
+  /* Haelfte je Spieler; zentriert die (inhaltsbreite) Hervorhebung */
+  .player-box { flex: 1; display: flex; justify-content: center; min-width: 0; }
+
+  /* Gruene Aktiv-Flaeche: umschliesst Name, Stift, Statistik und Zaehler.
+     width:fit-content -> so breit wie der breiteste Teil, waechst mit langen Namen. */
+  .player-hl {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: fit-content;
+    max-width: 100%;
+    border-radius: 1.5vmin;
+    padding: 0.6vmin 1.5vmin 1vmin;
+    font-size: 6vmin;
+    font-weight: bold;
+  }
+
+  .player-left  { color: var(--red); }
+  .player-right { color: var(--blue); }
+
+  /* Name: konstantes Padding, damit die Aktiv-Markierung die Hoehe nicht aendert */
+  #p1, #p2 { padding: 0.3vmin 1vmin; }        /* Hoehe konstant halten */
+  .player-hl.active { background: var(--active); }
+
+  /* Name + Stift in einer Zeile */
+  .name-row { display: flex; align-items: center; justify-content: center; gap: 1.5vmin; }
+
+  /* Mittelspalte mit Seitenwechsel (auf Hoehe der Namen, ~20% kleiner) */
+  .player-mid { flex: 0 0 auto; align-self: stretch; display: flex; flex-direction: column;
+    align-items: center; padding-top: 1.2vmin; }
+  #swapBtn { font-size: 2.4vmin; padding: 0.8vmin 1.6vmin; margin: 0; white-space: nowrap; }
+  #swapBtn:disabled { opacity: var(--disabled-opacity); cursor: default; }
+
+  .edit-btn {
+    font-size: 2.5vmin;
+    padding: 0.7vmin 1.6vmin;
+    border-radius: 0.8vmin;
+    border: 1px solid var(--button-border);
+    background: var(--button-bg);
+    cursor: pointer;
+  }
+
+  /* Stats klein halten */
+  .stats {
+    font-size: 2.2vmin;
+    margin-top: 0.5vmin;
+    font-weight: normal;
+    color: var(--text);
+    line-height: 1.35;
+    white-space: nowrap;
+  }
+
+
+  .score {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 30vmin;
+    font-weight: bold;
+    user-select: none;
+    line-height: 1;
+  }
+
+  #s1 {
+    color: var(--red);
+  }
+
+  #s2 {
+    color: var(--blue);
+  }
+
+  #colon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12vmin;
+    font-weight: bold;
+    line-height: 1;
+    padding: 0 1vmin;
+    margin-top: 20.3vmin;   /* auf Ziffernmitte; alles vmin-basiert, traegt ueber Bildschirmgroessen */
+    position: relative;     /* Anker fuer das Mini-Protokoll */
+  }
+
+  /* Mini-Protokoll: Knopf und Tabelle haengen absolut am Doppelpunkt und stehen damit
+     vollstaendig ausserhalb des Flusses - die grossen Ziffern koennen sich beim Ein- und
+     Ausblenden nicht verschieben. Offen bleibt die Box des Doppelpunkts erhalten, nur
+     sein Zeichen wird unsichtbar. */
+  #miniLogBtn {
+    position: absolute; bottom: calc(100% + 0.8vmin); left: 50%; transform: translateX(-50%);
+    font-size: 2vmin; line-height: 1; font-weight: normal; padding: 0.5vmin 1.4vmin; margin: 0;
+    border-radius: 0.8vmin; border: 1px solid var(--button-border); background: var(--button-bg);
+    color: #555; cursor: pointer; opacity: 0.7;
+  }
+  #miniLogBtn:hover { opacity: 1; }
+  #colon.mini-offen { color: transparent; }
+
+  #mini-log {
+    /* an der Oberkante des Doppelpunkts verankert und nach unten wachsend - zentriert
+       wuerde die Tabelle bei fuenf Zeilen den Knopf darueber verdecken */
+    position: absolute; top: 0; left: 50%; transform: translateX(-50%); z-index: 10;
+    border-collapse: separate; border-spacing: 0;
+    font-size: 2.1vmin; font-weight: normal; line-height: 1.25; text-align: center;
+    color: var(--text); background: #fff; border: 1px solid #bbb; border-radius: 0.9vmin;
+    overflow: hidden; box-shadow: 0 0.4vmin 1.2vmin rgba(0,0,0,0.18);
+  }
+  #mini-log th, #mini-log td { padding: 0.55vmin 0.9vmin; border-bottom: 1px solid #e6e6e6; white-space: nowrap; }
+  #mini-log tr:last-child td { border-bottom: 0; }
+  #mini-log thead th { background: #f2f5fa; color: #1f3b73; font-size: 1.8vmin; font-weight: bold; }
+  #mini-log .ml-no { color: #555; font-weight: bold; }
+  #mini-log .ml-kommt { color: #b4b2a9; }            /* Nummer einer noch leeren Vorschauzeile */
+  #mini-log .pz-f  { color: #cc0000; font-weight: bold; }
+  #mini-log .pz-f3 { color: #a30000; font-weight: bold; }
+  #mini-log .pz-s  { color: #1a7a1a; font-weight: bold; }
+  #mini-log .pz-v  { color: #1133cc; font-weight: bold; }
+  #mini-log .ml-live { color: #1f3b73; font-style: italic; }
+  /* Helle Toene, damit die Textfarben des Protokolls darauf lesbar bleiben */
+  #mini-log tr.ml-schluss   td { background: #ffc9c9; }   /* letzte Aufnahme des Matches */
+  #mini-log tr.ml-vorletzte td { background: #ffeba8; }   /* die davor */
+
+  /* Kugelbereich */
+  #balls {
+    display: flex;
+    flex-wrap: nowrap;
+    justify-content: center;
+    align-items: center;
+    gap: 0.8vmin;
+    padding: 0.8vmin 1vmin 0.5vmin 1vmin;
+    margin-bottom: 3vmin;   /* Abstand zur unteren Button-Leiste -> Baelle etwas hoeher */
+    flex: 0 0 auto;
+    transition: opacity 0.2s ease;
+    /* Ballgroesse skaliert mit der Breite -> alle 15 passen in eine Zeile (max 9vmin) */
+    --bs: min(9vmin, calc((100vw - 4vmin) / 15 - 0.9vmin));
+  }
+
+  .ball {
+    width: var(--bs);
+    height: var(--bs);
+    border-radius: 50%;
+    border: none;
+    font-size: calc(var(--bs) * 0.34);
+    font-weight: bold;
+    cursor: pointer;
+    user-select: none;
+    touch-action: manipulation;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    position: relative;
+    background: var(--c, #ccc);
+    /* Kugel-Look: Schattierung unten/rechts + leichte Aufhellung oben links + Wurfschatten */
+    box-shadow:
+      inset -1.1vmin -1.4vmin 2.4vmin rgba(0,0,0,.45),
+      inset 0.5vmin 0.8vmin 1.4vmin rgba(255,255,255,.22),
+      0 0.35vmin 0.7vmin rgba(0,0,0,.35);
+  }
+  /* Glanzpunkt oben links wie auf einer polierten Kugel */
+  .ball::after {
+    content: '';
+    position: absolute;
+    top: 10%; left: 20%;
+    width: 28%; height: 18%;
+    border-radius: 50%;
+    background: radial-gradient(ellipse at center, rgba(255,255,255,.95), rgba(255,255,255,0) 70%);
+    pointer-events: none;
+  }
+  /* Weisser Nummernkreis in der Mitte */
+  .ball .num {
+    width: 52%; height: 52%;
+    border-radius: 50%;
+    background: #fdfdf2;
+    color: #111;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.8em;
+    box-shadow: inset 0 0 0.4vmin rgba(0,0,0,.3);
+  }
+  /* Halbe (9-15): weisse Kugel mit farbigem Mittelband */
+  .ball.stripe {
+    background: linear-gradient(to bottom,
+      #fdfdf2 0%, #fdfdf2 18%,
+      var(--c) 18%, var(--c) 82%,
+      #fdfdf2 82%, #fdfdf2 100%);
+  }
+
+  /* Poolfarben (an echte Kugelfarben angelehnt) */
+  .b1  { --c: #f6c411; }
+  .b2  { --c: #1958a8; }
+  .b3  { --c: #d22b1f; }
+  .b4  { --c: #4b2a82; }
+  .b5  { --c: #e96b10; }
+  .b6  { --c: #14613d; }
+  .b7  { --c: #6e1f1f; }
+  .b8  { --c: #111111; }
+  .b9  { --c: #f6c411; }
+  .b10 { --c: #1958a8; }
+  .b11 { --c: #d22b1f; }
+  .b12 { --c: #4b2a82; }
+  .b13 { --c: #e96b10; }
+  .b14 { --c: #14613d; }
+  .b15 { --c: #6e1f1f; }
+
+  /* Untere Leiste: Undo links, Aktionen mittig, Protokoll rechts (alle unten buendig) */
+  #bottom-bar {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1vmin;
+    padding: 0.4vmin 1.5vmin calc(1vmin + env(safe-area-inset-bottom)) 1.5vmin;   /* iOS: Home-Indikator freihalten */
+    flex: 0 0 auto;
+  }
+  #bottom-bar button { margin: 0; }
+  .bb-left, .bb-right { display: flex; align-items: flex-end; gap: 0.6vmin; flex: 0 0 auto; }
+  /* Undo + Protokoll ~10% kleiner als die Aktionsbuttons */
+  #undoBtn, #logBtn { font-size: 2.7vmin; padding: 0.9vmin 1.8vmin; }
+
+  button {
+    font-size: 3vmin;
+    padding: 1vmin 2vmin;
+    margin: 0.5vmin;
+    border-radius: 1vmin;
+    border: 1px solid var(--button-border);
+    background: var(--button-bg);
+    cursor: pointer;
+  }
+
+  .locked-ui {
+    pointer-events: none;
+    opacity: var(--disabled-opacity);
+  }
+
+  #status {
+    text-align: center;
+    font-size: 3vmin;
+    font-weight: bold;
+    min-height: 4vmin;
+    color: #444;
+    flex: 0 0 auto;
+  }
+
+  #status.game-over {
+    color: #a00000;
+  }
+
+  /* Portrait */
+  @media (orientation: portrait) {
+    .score {
+      font-size: 26vmin;
+    }
+
+    #colon {
+      font-size: 11vmin;
+    }
+
+    .stats {
+      font-size: 2.3vmin;
+    }
+
+    button {
+      font-size: 2.8vmin;
+    }
+  }
+
+  /* Sehr kleine Displays */
+  @media (max-height: 700px) {
+    .score {
+      font-size: 24vmin;
+    }
+
+    .stats {
+      font-size: 2vmin;
+    }
+  }
+
+  #btn-back-141 { display: none; background: #6c757d; color: #fff; }
+
+  /* Nachgeben-Overlay: ein anderes Geraet steuert diesen Tisch (verhindert Schreib-Krieg) */
+  #yield-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: #1f3b73;
+    color: #fff;
+    z-index: 120;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 6vmin;
+    box-sizing: border-box;
+  }
+  #yield-overlay h2 { font-size: 5vmin; margin: 0 0 2vmin; }
+  #yield-overlay p { font-size: 3vmin; margin: 0 0 4vmin; max-width: 80vmin; line-height: 1.4; }
+  #yield-overlay .row { display: flex; gap: 3vmin; flex-wrap: wrap; justify-content: center; }
+  #yield-overlay button { font-size: 3.5vmin; padding: 2vmin 4vmin; border-radius: 1.2vmin; border: none; cursor: pointer; }
+  #yield-home    { background: #28a745; color: #fff; }
+  #yield-reclaim { background: #6c757d; color: #fff; }
+
+  /* Foulzaehler je Spieler */
+  .fouls { font-size: 1.9vmin; margin-top: 0.4vmin; min-height: 2.2vmin; color: #b35900; font-weight: bold; }
+  .fouls.warn { color: #c00000; }
+
+  /* Eroeffnungsstoss-Hinweis im Status */
+  #status.break-hint { color: #1f3b73; }
+
+  /* Aufnahme-Ende-Aktionen (mittige Gruppe der unteren Leiste) */
+  #turn-actions { display: flex; flex-wrap: wrap; gap: 1vmin; justify-content: center; }
+  #turn-actions button { color: #fff; border: none; font-weight: bold; }
+  .act-miss   { background: #1f3b73; }
+  .act-foul   { background: #b00020; }
+  .act-safety { background: #2e7d32; }
+
+  /* Protokoll-Overlay */
+  #log-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.55);
+    z-index: 130; align-items: center; justify-content: center; padding: 2vmin; }
+  #log-card { background: #fff; color: #222; width: 100%; max-width: 760px; max-height: 94vh;
+    border-radius: 12px; overflow: hidden; display: flex; flex-direction: column;
+    box-shadow: 0 12px 40px rgba(0,0,0,.4); font-family: Arial, sans-serif; }
+  #log-head { background: #1f3b73; color: #fff; display: flex; align-items: center;
+    justify-content: space-between; padding: 10px 14px; }
+  #log-title { font-size: 18px; font-weight: bold; }
+  #log-head-actions { display: flex; align-items: center; gap: 8px; }
+  #log-head-actions a { color: #fff; font-size: 13px; text-decoration: none; opacity: .92; }
+  #log-head-actions button { background: rgba(255,255,255,.16); color: #fff; border: none;
+    border-radius: 7px; padding: 6px 12px; font-size: 14px; margin: 0; }
+  #log-summary { display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    padding: 10px 16px; border-bottom: 1px solid #e6e6e6; }
+  .ls-p { flex: 1; text-align: center; }
+  .ls-name { font-size: 15px; font-weight: bold; }
+  .ls-score { font-size: 30px; font-weight: bold; line-height: 1; }
+  .ls-stats { font-size: 12px; color: #555; margin-top: 2px; }
+  .ls-attable { font-size: 11px; color: #1a7a1a; font-weight: bold; margin-top: 2px; }
+  .ls-target { text-align: center; color: #444; padding: 0 6px; }
+  .ls-target .ls-tv { font-size: 20px; font-weight: bold; }
+  #log-scroll { overflow-y: auto; padding: 6px 12px; }
+  #log-table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 14px; text-align: center; }
+  #log-table th, #log-table td { padding: 5px 2px; }
+  #log-table thead th { position: sticky; background: #fff; z-index: 2; }
+  #log-table thead tr:first-child th { top: 0; z-index: 3; border-bottom: 1px solid #ddd; }
+  #log-table thead tr.pz-sub th { top: 28px; font-size: 11px; color: #555; border-bottom: 1px solid #ccc; }
+  #log-table .pz-h1 { background: #fbeaea; color: #cc0000; }
+  #log-table .pz-h2 { background: #eaeefb; color: #1133cc; }
+  #log-table .pz-corner { background: #fff; }
+  #log-table tbody tr:nth-child(even) { background: #fafafa; }
+  #log-table .pz-bl { border-left: 2px solid #ccc; }
+  #log-table .pz-no { color: #888; }
+  #log-table .pz-tot { font-weight: bold; }
+  #log-table .pz-f { color: #cc0000; font-weight: bold; }
+  #log-table .pz-f3 { color: #a30000; font-weight: bold; }
+  #log-table .pz-s { color: #1a7a1a; font-weight: bold; }
+  #log-table .pz-v { color: #1133cc; font-weight: bold; }
+  #log-table .pz-3frow { background: #fff0f0; }
+  #log-table .pz-hs { background: #fff6cc; font-weight: bold; border-radius: 4px; }
+  #log-table .pz-live td { background: #eef6ff; font-style: italic; }
+  #log-table .pz-live .pz-no { color: #1f3b73; font-style: normal; font-weight: bold; }
+  #log-table .pz-livecell { background: #eef6ff; font-style: italic; }
+  #log-table .pz-liveno { color: #1f3b73; font-weight: bold; }
+  #log-table .pz-liveno, #log-table .pz-live .pz-liveno { font-style: normal; }   /* Live-Pfeil ▶ aufrecht, nicht kursiv */
+  #log-table .pz-div td { background: #e9eef6; color: #1f3b73; font-size: 12px; font-weight: bold;
+    border-top: 1px solid #cfd6e2; border-bottom: 1px solid #cfd6e2; }
+  #log-table .pz-rack td { border-top: 1px solid #cfd6e2; }
+  #log-table td.pz-rackmark { background: #e9eef6; color: #1f3b73; font-weight: bold; font-size: 12px; border-radius: 4px; }
+  #log-table .pz-empty { color: #888; padding: 16px; }
+  #log-legend { display: flex; flex-wrap: wrap; gap: 8px 16px; padding: 8px 16px 12px;
+    border-top: 1px solid #eee; font-size: 12px; color: #666; }
+  #log-legend .pz-f { color: #cc0000; }
+  #log-legend .pz-f3 { color: #a30000; }
+  #log-legend .pz-hs { background: #fff6cc; padding: 1px 6px; border-radius: 4px; }
+  #log-legend #log-time { margin-left: auto; font-weight: bold; color: #1f3b73; }
+
+  /* Hilfe-Overlay */
+  #help-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.55);
+    z-index: 135; align-items: center; justify-content: center; padding: 2vmin; }
+  #help-card { background: #fff; color: #222; width: 100%; max-width: 680px; max-height: 92vh;
+    border-radius: 12px; overflow: hidden; display: flex; flex-direction: column;
+    box-shadow: 0 12px 40px rgba(0,0,0,.4); font-family: Arial, sans-serif; }
+  #help-head { background: #1f3b73; color: #fff; display: flex; align-items: center;
+    justify-content: space-between; padding: 10px 14px; }
+  #help-title { font-size: 18px; font-weight: bold; }
+  #help-head button { background: rgba(255,255,255,.16); color: #fff; border: none;
+    border-radius: 7px; padding: 6px 11px; font-size: 14px; margin: 0; cursor: pointer; }
+  #help-body { overflow-y: auto; padding: 4px 18px 16px; font-size: 15px; line-height: 1.5; color: #222; }
+  #help-body h3 { color: #1f3b73; font-size: 15px; margin: 14px 0 4px; }
+  #help-body ul { margin: 4px 0; padding-left: 20px; }
+  #help-body li { margin: 3px 0; }
+  #help-body p { margin: 4px 0; }
+
+  /* Druck: nur das Protokoll zeigen */
+  @media print {
+    body { overflow: visible; }
+    #app, #yield-overlay, #help-overlay { display: none !important; }
+    #log-overlay { display: block !important; position: static; background: #fff; padding: 0; }
+    #log-card { max-width: 100%; max-height: none; box-shadow: none; }
+    #log-head-actions { display: none; }
+    #log-scroll { overflow: visible; max-height: none; }
+  }
+</style>
+  <link rel="icon" type="image/svg+xml" href="./img/favicon.svg">
+  <!-- Eigene Dialoge (alert, confirmModal, promptModal). Als Modul eingebunden, damit
+     der Bau es mitnimmt; es laeuft trotzdem vor dem Hauptskript, weil es davor steht. -->
+<script type="module" src="./js/dialogs.js"></script>
+</head>
+
+<body>
+<div id="app">
+
+  <div id="header">
+    <div class="hdr-left">
+      <button id="home-btn" type="button" title="Zur Startseite">🏠</button>
+      <button id="helpBtn" class="hdr-btn" type="button" onclick="openHelp()">❓ Hilfe</button>
+      <button id="fsBtn" class="hdr-btn" type="button" title="Vollbild">⤢ Vollbild</button>
+    </div>
+    <div id="hdr-title">14.1 SCOREBOARD</div>
+    <div class="hdr-right">
+      <button id="newGameBtn" class="hdr-btn" type="button" onclick="newGame()">🔄 Neues Match</button>
+      <div id="clock"></div>
+    </div>
+  </div>
+
+  <div id="target">
+    Ziel: <span id="targetScore">60</span> Pkt. /
+    <span id="targetInn">20</span> Aufn.
+    <button id="targetBtn" type="button" onclick="setTarget()">⚙️</button>
+  </div>
+
+  <div id="players">
+    <div class="player-box">
+      <div class="player-hl" id="hl1">
+        <div class="name-row">
+          <div id="p1" class="player-left">Spieler 1</div>
+          <button class="edit-btn" id="editP1Btn" type="button" onclick="changeName(1)">✏️</button>
+        </div>
+        <div class="stats">
+          Run: <span id="run1">0</span> |
+          HS: <span id="high1">0</span><br>
+          Ø: <span id="avg1">0.0</span> |
+          Aufn.: <span id="inn1">0</span>
+          <div class="fouls" id="fouls1"></div>
+        </div>
+        <div id="s1" class="score">0</div>
+      </div>
+    </div>
+
+    <div class="player-mid">
+      <button id="swapBtn" type="button" onclick="swap()">↔ Seitenwechsel</button>
+      <div id="colon">:
+        <button id="miniLogBtn" type="button" title="Letzte Aufnahmen" onclick="toggleMiniLog()">☰</button>
+        <table id="mini-log" hidden></table>
+      </div>
+    </div>
+
+    <div class="player-box">
+      <div class="player-hl" id="hl2">
+        <div class="name-row">
+          <div id="p2" class="player-right">Spieler 2</div>
+          <button class="edit-btn" id="editP2Btn" type="button" onclick="changeName(2)">✏️</button>
+        </div>
+        <div class="stats">
+          Run: <span id="run2">0</span> |
+          HS: <span id="high2">0</span><br>
+          Ø: <span id="avg2">0.0</span> |
+          Aufn.: <span id="inn2">0</span>
+          <div class="fouls" id="fouls2"></div>
+        </div>
+        <div id="s2" class="score">0</div>
+      </div>
+    </div>
+  </div>
+
+
+  <div id="status"></div>
+
+  <div id="balls"></div>
+
+  <div id="bottom-bar">
+    <div class="bb-left">
+      <button id="undoBtn" type="button" onclick="undo()">↩️ Undo</button>
+      <button id="btn-back-141" type="button">↩ Zurück zum Turnier</button>
+    </div>
+    <div id="turn-actions">
+      <button id="missBtn" type="button" class="act-miss" onclick="missTurn()">➜ Verschossen</button>
+      <button id="foulBtn" type="button" class="act-foul" onclick="foul()">⚠ Foul −1</button>
+      <button id="breakFoulBtn" type="button" class="act-foul" onclick="breakFoul()">✖ Eröffnungsfoul −2</button>
+      <button id="safetyBtn" type="button" class="act-safety" onclick="safety()">🛡 Sicherheit</button>
+    </div>
+    <div class="bb-right">
+      <button id="logBtn" type="button" onclick="openLog()">📋 Protokoll</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- Nachgeben-Overlay: anderes Geraet hat den Tisch uebernommen / Tisch belegt -->
+<div id="yield-overlay">
+  <h2>🔁 Tisch wird woanders gesteuert</h2>
+  <p id="yield-text"></p>
+  <div class="row">
+    <button id="yield-home" type="button">🏠 Zur Startseite</button>
+    <button id="yield-reclaim" type="button">Hier übernehmen</button>
+  </div>
+</div>
+
+<!-- Protokoll-Overlay (Protokollzettel) -->
+<div id="log-overlay">
+  <div id="log-card">
+    <div id="log-head">
+      <div id="log-title">📋 Protokoll</div>
+      <div id="log-head-actions">
+        <a id="log-open-page" href="#" target="_blank" rel="noopener">Als Seite öffnen ↗</a>
+        <button id="log-print" type="button">🖨 Drucken</button>
+        <button id="log-share" type="button">📤 Senden</button>
+        <button id="log-close" type="button" aria-label="Schließen">✕</button>
+      </div>
+    </div>
+    <div id="log-summary"></div>
+    <div id="log-scroll"><table id="log-table"></table></div>
+    <div id="log-legend">
+      <span><b class="pz-f">/</b> 1. Foul</span>
+      <span><b class="pz-f">//</b> 2. Foul</span>
+      <span><b class="pz-f3">3F</b> drei Fouls (−15)</span>
+      <span><b class="pz-f">−2</b> Eröffnungsfoul</span>
+      <span><b style="color:#1a7a1a;">S</b> Sicherheit</span>
+      <span><b style="color:#1133cc;">V</b> Verschossen</span>
+      <span><b>HS</b> = Höchstserie <span class="pz-hs">(gelb markiert)</span></span>
+      <span><b style="color:#1f3b73;">▶</b> laufende Aufnahme</span>
+      <span id="log-time"></span>
+    </div>
+  </div>
+</div>
+
+<!-- Hilfe-Overlay (Kurzanleitung) -->
+<div id="help-overlay">
+  <div id="help-card">
+    <div id="help-head">
+      <div id="help-title">❓ Bedienung – 14.1 Board &amp; Aufbauhilfe</div>
+      <button id="help-close" type="button" aria-label="Schließen">✕</button>
+    </div>
+    <div id="help-body">
+      <h3>Punkte zählen</h3>
+      <p>Tippe die Kugel mit der Zahl, <b>wie viele Kugeln noch auf dem Tisch liegen</b>. Beispiel: vom vollen Tisch (15) auf die <b>10</b> getippt = <b>5 Punkte</b>. In der selben Aufnahme kannst du mehrmals tippen.</p>
+      <h3>Aufnahme beenden</h3>
+      <ul>
+        <li><b>➜ Verschossen</b> – regelgerechter Fehlversuch ohne Strafe; der Gegner kommt an die Aufnahme.</li>
+        <li><b>⚠ Foul −1</b> – Standardfoul: −1 Punkt, Wechsel. <b>Drei Fouls in Folge = zusätzlich −15.</b> Ab dem 2. Foul erscheint eine Warnung.</li>
+        <li><b>🛡 Sicherheit</b> – bewusst kein Treffer: 0 Punkte, Wechsel; versenkte Kugeln werden wieder aufgesetzt. Ein regelgerechter Sicherheitsstoß <b>bricht die Foulserie</b> – der Zähler geht auf 0.</li>
+        <li><b>✖ Eröffnungsfoul −2</b> – nur beim Anstoß: −2 Punkte; danach übernimmt der Gegner oder lässt wiederholen.</li>
+      </ul>
+
+      <h3>Beim Anstoß: welcher Foul-Knopf?</h3>
+      <p>Während des Eröffnungsstoßes stehen <b>beide</b> Foul-Knöpfe zur Wahl – sie bedeuten Verschiedenes:</p>
+      <ul>
+        <li><b>✖ Eröffnungsfoul −2</b> – der <b>Anstoß selbst war ungültig</b>: keine Kugel versenkt <i>und</i> nicht genug Objektkugeln an eine Bande gelaufen. <b>−2 Punkte</b>, und es <b>zählt nicht</b> für die Drei-Foul-Regel – der Foulzähler bleibt stehen. Der Gegner übernimmt den Tisch oder lässt wiederholen; beim Wiederholen stößt <b>derselbe</b> Spieler erneut an.</li>
+        <li><b>⚠ Foul −1</b> – der <b>Anstoß war gültig</b>, dabei ist aber ein normales Foul passiert, typischerweise die <b>gefallene Weiße</b>. Nur <b>−1 Punkt</b>, dafür <b>zählt es</b> als erstes Foul der Serie. Der Gegner übernimmt den Tisch mit <b>Ball in Hand aus dem Kopffeld</b>.</li>
+      </ul>
+      <p style="font-size:13px;color:#666;">Merke: Der härter bestrafte ungültige Anstoß schützt vor dem Foulzähler – der eigentlich gute Anstoß mit gefallener Weißer ist der klassische Beginn einer Foulserie.</p>
+      <h3>Anstoß &amp; Seiten</h3>
+      <p>Der <b>Eröffnungsstoß</b> zu Spielbeginn liegt immer beim <b>roten (linken)</b> Spieler. Mit <b>↔ Seitenwechsel</b> legst du <b>vor dem ersten Stoß</b> fest, wer links steht – und damit anstößt.</p>
+      <p>Sobald die Partie läuft, ist der Knopf <b>gesperrt</b>: Ein Seitenwechsel wäre dann nur noch eine Spiegelung der Anzeige. Entsteht später wieder eine Anstoßphase – nach der <b>Drei-Foul-Strafe</b> oder bei einem <b>wiederholten Eröffnungsstoß</b> – ist er erneut bedienbar, tauscht dann aber nur die Seiten: Der Anstoß <b>bleibt bei dem Spieler, dem er zusteht</b>.</p>
+      <h3>Gut zu wissen</h3>
+      <ul>
+        <li>Sind <b>14 Kugeln</b> versenkt, wird automatisch wieder aufgebaut – du spielst weiter.</li>
+        <li><b>↩️ Undo</b> nimmt den letzten Schritt zurück.</li>
+        <li><b>📋 Protokoll</b> zeigt den Spielzettel (F | Pkt. | Gesamt je Spieler) und lässt sich drucken.</li>
+        <li><b>⚙️</b> ändert die Zielpunkte · <b>✏️</b> die Namen · <b>🔄 Neues Match</b> startet neu.</li>
+      </ul>
+
+      <h3 style="border-top:1px solid #eee;padding-top:14px;margin-top:16px;">📐 Aufbauhilfe – Wiederaufbau nach 14 Bällen</h3>
+      <p>Sind 14 Bälle versenkt, werden sie wieder zum Dreieck aufgebaut – die <b>vorderste Position (Fußpunkt) bleibt frei</b>. Die <b>15. Kugel</b> (der Break-Ball) und die <b>Weiße</b> bleiben liegen. Stehen sie dem Aufbau im Weg, werden sie nach festen Regeln verlegt:</p>
+
+      <div style="font-size:12px;color:#666;margin:10px 0 4px;font-weight:bold;">Orientierung am Tisch</div>
+      <svg viewBox="0 0 360 196" width="100%" role="img" aria-label="Tisch mit Kopffeld, Kopflinie, Kopfpunkt, Mittelpunkt, Fußpunkt und Aufbaudreieck">
+        <rect x="4" y="4" width="352" height="188" rx="12" fill="#5a3618"/>
+        <rect x="18" y="18" width="324" height="160" rx="6" fill="#1f7a4d"/>
+        <circle cx="18" cy="18" r="7" fill="#141414"/><circle cx="180" cy="18" r="7" fill="#141414"/><circle cx="342" cy="18" r="7" fill="#141414"/>
+        <circle cx="18" cy="178" r="7" fill="#141414"/><circle cx="180" cy="178" r="7" fill="#141414"/><circle cx="342" cy="178" r="7" fill="#141414"/>
+        <line x1="99" y1="18" x2="99" y2="178" stroke="#eafff5" stroke-width="1" stroke-dasharray="4 3" opacity="0.7"/>
+        <polygon points="261,98 320,68 320,128" fill="rgba(255,255,255,.08)" stroke="#eafff5" stroke-width="1" stroke-dasharray="3 3" opacity="0.85"/>
+        <circle cx="261" cy="98" r="2.8" fill="#ffd27f"/>
+        <circle cx="99" cy="98" r="2.8" fill="#eafff5"/>
+        <circle cx="180" cy="98" r="2.8" fill="#eafff5"/>
+        <g font-family="Arial" font-size="10" fill="#eafff5" text-anchor="middle">
+          <text x="261" y="86">Fußpunkt</text>
+          <text x="99" y="86">Kopfpunkt</text>
+          <text x="180" y="86">Mittelpunkt</text>
+          <text x="99" y="33">Kopflinie</text>
+          <text x="56" y="160">Kopffeld</text>
+          <text x="291" y="150">Dreieck</text>
+        </g>
+      </svg>
+      <p style="font-size:12.5px;color:#555;margin:4px 0 0;"><b>Kopffeld</b> = Bereich hinter der Kopflinie; von dort wird die Weiße „aus dem Kopffeld" (Ball in Hand) gespielt.</p>
+
+      <div style="font-size:12px;color:#666;margin:16px 0 6px;font-weight:bold;">Die drei häufigen Fälle</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;">
+
+        <div style="border:1px solid #e3e3e3;border-radius:8px;overflow:hidden;">
+          <svg viewBox="0 0 220 130" width="100%" role="img" aria-label="Nur die 15. Kugel steht im Weg">
+            <defs><marker id="ah1" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#ffd27f"/></marker></defs>
+            <rect x="3" y="3" width="214" height="124" rx="9" fill="#5a3618"/>
+            <rect x="14" y="14" width="192" height="102" rx="4" fill="#1f7a4d"/>
+            <circle cx="14" cy="14" r="5" fill="#141414"/><circle cx="110" cy="14" r="5" fill="#141414"/><circle cx="206" cy="14" r="5" fill="#141414"/>
+            <circle cx="14" cy="116" r="5" fill="#141414"/><circle cx="110" cy="116" r="5" fill="#141414"/><circle cx="206" cy="116" r="5" fill="#141414"/>
+            <line x1="62" y1="14" x2="62" y2="116" stroke="#eafff5" stroke-width="1" stroke-dasharray="4 3" opacity="0.6"/>
+            <polygon points="158,65 192,46 192,84" fill="none" stroke="#eafff5" stroke-width="1" stroke-dasharray="3 3" opacity="0.8"/>
+            <circle cx="62" cy="65" r="6.5" fill="rgba(122,31,31,.35)" stroke="#7a1f1f" stroke-width="1.2" stroke-dasharray="2 2"/>
+            <line x1="170" y1="64" x2="74" y2="65" stroke="#ffd27f" stroke-width="1.4" stroke-dasharray="4 3" marker-end="url(#ah1)"/>
+            <circle cx="176" cy="63" r="6.5" fill="#7a1f1f" stroke="#3a0d0d" stroke-width="1"/><circle cx="176" cy="63" r="2.2" fill="#fde9c8"/>
+            <circle cx="120" cy="97" r="6.5" fill="#fff" stroke="#444" stroke-width="1"/>
+          </svg>
+          <div style="padding:8px 10px;font-size:13px;line-height:1.45;"><b>Nur die 15. Kugel</b> steht im Weg → sie kommt auf den <b>Kopfpunkt</b>. <span style="color:#666;">Ist der Kopfpunkt durch die Weiße belegt, auf den Mittelpunkt.</span></div>
+        </div>
+
+        <div style="border:1px solid #e3e3e3;border-radius:8px;overflow:hidden;">
+          <svg viewBox="0 0 220 130" width="100%" role="img" aria-label="Nur die Weiße steht im Weg">
+            <defs><marker id="ah2" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#ffd27f"/></marker></defs>
+            <rect x="3" y="3" width="214" height="124" rx="9" fill="#5a3618"/>
+            <rect x="14" y="14" width="192" height="102" rx="4" fill="#1f7a4d"/>
+            <circle cx="14" cy="14" r="5" fill="#141414"/><circle cx="110" cy="14" r="5" fill="#141414"/><circle cx="206" cy="14" r="5" fill="#141414"/>
+            <circle cx="14" cy="116" r="5" fill="#141414"/><circle cx="110" cy="116" r="5" fill="#141414"/><circle cx="206" cy="116" r="5" fill="#141414"/>
+            <line x1="62" y1="14" x2="62" y2="116" stroke="#eafff5" stroke-width="1" stroke-dasharray="4 3" opacity="0.6"/>
+            <polygon points="158,65 192,46 192,84" fill="none" stroke="#eafff5" stroke-width="1" stroke-dasharray="3 3" opacity="0.8"/>
+            <circle cx="40" cy="65" r="6.5" fill="rgba(255,255,255,.3)" stroke="#fff" stroke-width="1.2" stroke-dasharray="2 2"/>
+            <line x1="172" y1="68" x2="50" y2="65" stroke="#ffd27f" stroke-width="1.4" stroke-dasharray="4 3" marker-end="url(#ah2)"/>
+            <circle cx="178" cy="68" r="6.5" fill="#fff" stroke="#444" stroke-width="1"/>
+            <circle cx="132" cy="40" r="6.5" fill="#7a1f1f" stroke="#3a0d0d" stroke-width="1"/><circle cx="132" cy="40" r="2.2" fill="#fde9c8"/>
+          </svg>
+          <div style="padding:8px 10px;font-size:13px;line-height:1.45;"><b>Nur die Weiße</b> steht im Weg (15. Kugel außerhalb des Kopffeldes) → die <b>Weiße aus dem Kopffeld</b> (Ball in Hand).</div>
+        </div>
+
+        <div style="border:1px solid #e3e3e3;border-radius:8px;overflow:hidden;">
+          <svg viewBox="0 0 220 130" width="100%" role="img" aria-label="15. Kugel und Weiße stehen beide im Weg">
+            <defs><marker id="ah3" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#ffd27f"/></marker></defs>
+            <rect x="3" y="3" width="214" height="124" rx="9" fill="#5a3618"/>
+            <rect x="14" y="14" width="192" height="102" rx="4" fill="#1f7a4d"/>
+            <circle cx="14" cy="14" r="5" fill="#141414"/><circle cx="110" cy="14" r="5" fill="#141414"/><circle cx="206" cy="14" r="5" fill="#141414"/>
+            <circle cx="14" cy="116" r="5" fill="#141414"/><circle cx="110" cy="116" r="5" fill="#141414"/><circle cx="206" cy="116" r="5" fill="#141414"/>
+            <line x1="62" y1="14" x2="62" y2="116" stroke="#eafff5" stroke-width="1" stroke-dasharray="4 3" opacity="0.6"/>
+            <polygon points="158,65 192,46 192,84" fill="rgba(255,255,255,.16)" stroke="#eafff5" stroke-width="1" stroke-dasharray="3 3" opacity="0.85"/>
+            <circle cx="166" cy="65" r="3.6" fill="#d8a32a"/><circle cx="176" cy="58" r="3.6" fill="#c0392b"/><circle cx="176" cy="72" r="3.6" fill="#2d6cb0"/>
+            <circle cx="186" cy="51" r="3.6" fill="#3b7a3b"/><circle cx="186" cy="65" r="3.6" fill="#7a1f1f"/><circle cx="186" cy="79" r="3.6" fill="#d8a32a"/>
+            <circle cx="40" cy="65" r="6.5" fill="rgba(255,255,255,.3)" stroke="#fff" stroke-width="1.2" stroke-dasharray="2 2"/>
+            <line x1="150" y1="78" x2="50" y2="66" stroke="#ffd27f" stroke-width="1.4" stroke-dasharray="4 3" marker-end="url(#ah3)"/>
+            <circle cx="156" cy="80" r="6.5" fill="#fff" stroke="#444" stroke-width="1"/>
+          </svg>
+          <div style="padding:8px 10px;font-size:13px;line-height:1.45;"><b>Beide</b> stehen im Weg → <b>alle 15 Kugeln</b> neu aufbauen, die <b>Weiße aus dem Kopffeld</b>.</div>
+        </div>
+
+      </div>
+
+      <div style="font-size:12px;color:#666;margin:16px 0 4px;font-weight:bold;">Sonderfälle</div>
+      <ul>
+        <li>Liegt die <b>15. Kugel im Kopffeld</b> und die Weiße steht im Weg → die <b>Weiße kommt auf den Kopfpunkt</b> (ist dieser belegt, auf den Mittelpunkt).</li>
+        <li><b>15. und 14. Kugel zusammen versenkt</b> → <b>alle 15</b> Kugeln neu aufbauen.</li>
+        <li>Muss eine Kugel auf den <b>Kopfpunkt</b>, ist dieser aber belegt → sie kommt auf den <b>Mittelpunkt</b>.</li>
+      </ul>
+
+      <div style="margin-top:14px;font-size:12.5px;color:#666;display:flex;flex-wrap:wrap;gap:8px 16px;">
+        <span><span style="display:inline-block;width:11px;height:11px;border-radius:50%;background:#fff;border:1px solid #444;vertical-align:-1px;"></span> Weiße</span>
+        <span><span style="display:inline-block;width:11px;height:11px;border-radius:50%;background:#7a1f1f;vertical-align:-1px;"></span> 15. Kugel</span>
+        <span>gestrichelt = Zielposition · Pfeil = wird verlegt</span>
+      </div>
+
+      <h3 style="border-top:1px solid #eee;padding-top:14px;margin-top:16px;">📊 Die Werte unter den Namen</h3>
+      <p>Unter jedem Spieler stehen vier Werte, die das Board mitrechnet:</p>
+      <ul>
+        <li><b>Run</b> – Punkte der <b>laufenden</b> Aufnahme. Läuft weiter, solange der Spieler am Tisch ist – auch über einen Neuaufbau hinweg – und springt beim Aufnahmewechsel zurück auf 0.</li>
+        <li><b>HS</b> – <b>Höchstserie</b>: das beste Ergebnis einer <b>einzelnen</b> Aufnahme im laufenden Match. Foulpunkte derselben Aufnahme werden vorher abgezogen – 10 Bälle und danach ein Foul zählen als <b>9</b>. Im <b>📋 Protokoll</b> ist die HS gelb markiert.</li>
+        <li><b>Aufn.</b> – Zahl der <b>beendeten</b> Aufnahmen. Die laufende zählt erst mit, wenn sie durch <b>➜ Verschossen</b>, <b>⚠ Foul</b> oder <b>🛡 Sicherheit</b> endet.</li>
+        <li><b>Ø</b> – <b>Punkte ÷ beendete Aufnahmen</b>, auf eine Nachkommastelle gerundet. Die Punkte wachsen mit jeder Kugel, die Aufnahmen springen erst beim Wechsel – der Ø <b>steigt</b> deshalb während einer Serie und <b>fällt</b> beim Aufnahmewechsel wieder. Solange noch keine Aufnahme beendet ist, zeigt er einfach die bisherigen Punkte; durch Fouls kann er negativ werden.</li>
+        <li><b>Zielpunkte</b> – Mit dem Ball, der das Ziel erreicht, ist das Spiel aus. Werden mehr Kugeln angetippt als bis dahin nötig, zählt das Board nur bis zum Ziel – bei Ziel 100 und 99 Punkten also genau <b>einen</b> Ball, auch wenn die 8 angetippt wurde. So bleibt auch der Ø richtig.</li>
+        <li><b>☰ Letzte Aufnahmen</b> – Der kleine Knopf über dem Doppelpunkt blendet an dessen Stelle eine kompakte Tabelle ein: die letzten drei Aufnahmen (die laufende zählt mit) und darunter die nächsten, noch leeren. <b>Gelb</b> und <b>Rot</b> markieren die beiden <b>letzten Aufnahmen des Matches</b> – sie erscheinen also erst, wenn das Aufnahmen-Limit in Sicht kommt.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  // CueDesk: Anbindung mit denselben Funktionen wie frueher Firebase. Je nach
+  // Umgebung spricht sie mit CueDesk (gekoppeltes Tablet) oder arbeitet offline.
+  import {
+    db, auth, ref, set, onValue, push, serverTimestamp, signInAnonymously,
+    starten, istAngebunden, startseite, spielerWaehlen, ergebnisSpeichern141
+  } from "./js/anbindung.ts";
+  import { startIdleRedirect } from "./js/idle-timeout.js";
+  import { keepScreenAwake } from "./js/wake-lock.js";
+  import { setupFullscreenButton } from "./js/fullscreen.js";
+  import { setupProtocolShare } from "./js/share-protocol.js";
+
+  keepScreenAwake();          // Bildschirm im Kiosk-Betrieb anhalten
+  setupFullscreenButton();    // Vollbild-Button (blendet sich aus, wenn wirkungslos)
+
+  // Anonym anmelden – notwendig damit Firebase Security Rules Schreibzugriff erlauben
+  signInAnonymously(auth).catch(err => console.error("Anmeldung fehlgeschlagen:", err));
+
+  /* ===========================
+     Multi-Table über URL
+     =========================== */
+  // CueDesk: Der Tisch kommt aus der Kopplung des Tablets oder aus ?table=.
+  // Offline gilt ?table= oder Tisch 1.
+  const { tisch: tableId } = await starten();
+
+  // Referenz in der Firebase-Datenbank (z.B. "tables/1")
+  const dbRef = ref(db, 'tables/' + tableId);
+
+  /* ===========================
+     Verlauf für Undo (bleibt lokal auf dem jeweiligen Tablet)
+     =========================== */
+  let history = [];
+
+  /* ===========================
+     Spielstand (Standardwerte)
+     =========================== */
+  let state = {
+    player1: "Spieler 1",
+    player2: "Spieler 2",
+    s1: 0,
+    s2: 0,
+    run1: 0,
+    run2: 0,
+    rackPts: [],          // gelochte Baelle je Rack der laufenden Aufnahme (Slash-Notation)
+    high1: 0,
+    high2: 0,
+    inn1: 0,
+    inn2: 0,
+    consec1: 0,            // aufeinanderfolgende Standardfouls (4.11 Drei-Foul-Regel)
+    consec2: 0,
+    target: 60,
+    targetInn: 20,         // Aufnahmen-Limit (zusaetzliche Spielbegrenzung)
+    turn: 1,
+    ballsLeft: 15,
+    rackNo: 1,             // aktuelles Rack (fuer Protokoll-Trennzeilen)
+    pendingRebuilds: 0,    // noch nicht protokollierte Wiederaufbauten
+    phase: "break",        // 'break' = Eroeffnungsstoss offen, sonst 'play'
+    breaker: 1,            // Spieler, der den Eroeffnungsstoss ausfuehrt
+    locked: false,
+    winnerText: "",
+    log: []                // Aufnahme-/Rack-Eintraege fuer das Protokoll
+  };
+
+  // ---- Turnier-Awareness (analog Pool-Scoreboard) ----
+  let tournament = null;
+  let tableData = null;
+  let tournamentLoaded = false;
+  let claimed = false;         // hat dieses Board den Tisch bereits beansprucht?
+  let yielded = false;         // Tisch an anderes Geraet abgegeben -> nichts mehr schreiben
+  let yieldCount = 0;          // wie oft dieses Board verdraengt wurde (>=2 -> Uebernehmen sperren)
+  function tournamentActive() { return !!(tournament && tournament.status === 'running'); }
+
+  // Stabile Geraete-Kennung: erkennt ZWEI Geraete am selben Tisch (auch bei gleicher
+  // Spielart). Bewusst localStorage statt sessionStorage – ein Kiosk-/Browser-Neustart
+  // soll keinen Fehlalarm ausloesen, sondern denselben Tisch weiterbedienen duerfen.
+  const boardId = (() => {
+    let id = localStorage.getItem('boardId');
+    if (!id) {
+      id = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2));
+      localStorage.setItem('boardId', id);
+    }
+    return id;
+  })();
+
+  // Fehlende owner (Daten aus aelteren Versionen) gelten NICHT als Konflikt.
+  const isForeignBoard = (data) => !!(data && data.owner && data.owner !== boardId);
+
+  /* ===========================
+     Hilfsfunktionen & Firebase Sync
+     =========================== */
+  function pushHistory() {
+    history.push(JSON.stringify(state));
+  }
+
+  // Speichert die Daten nun sofort in der Cloud (mit eigener Geraete-Kennung)
+  function save() {
+    state.owner = boardId;
+    set(dbRef, state);
+  }
+
+  /* ===========================
+     Spielende prüfen
+     =========================== */
+  function checkEnd() {
+    if (state.locked) return;
+    const pointsReached = state.s1 >= state.target || state.s2 >= state.target;
+    // Aufnahmen-Limit: BEIDE Spieler spielen ihre Aufnahmen zu Ende (nicht wer die Zahl zuerst erreicht).
+    const inningsReached = state.targetInn > 0 && state.inn1 >= state.targetInn && state.inn2 >= state.targetInn;
+    if (!pointsReached && !inningsReached) return;   // weder Punkteziel noch Aufnahmen-Limit erreicht
+
+    // Beim Punkteziel ist die entscheidende Aufnahme noch OFFEN und wuerde spurlos
+    // verschwinden: buildProtocol() zeigt die Live-Zeile nur solange nicht gesperrt ist.
+    // Sie wird daher hier abgeschlossen - damit taucht sie im Protokoll auf und zaehlt
+    // bei "Aufn." und der Hoechstserie mit (beides macht logEntry()).
+    // Punkte steigen nur in hit(), pointsReached wird also genau dann neu wahr, wenn eine
+    // Aufnahme offen ist. inningsReached wird dagegen erst nach einem inn++ wahr, die
+    // Aufnahme ist dort bereits geschlossen - eine Zeile mit 0 Punkten waere falsch.
+    if (pointsReached) {
+      const pEnd = state.turn;
+      const runEnd = (pEnd === 1 ? state.run1 : state.run2);
+      logEntry(pEnd, runEnd, 0, "", "end");            // leere F-Spalte
+      flushRebuilds();
+      if (pEnd === 1) state.inn1++; else state.inn2++; // kein nextTurnInternal: kein Zugwechsel
+      state.run1 = 0; state.run2 = 0; state.rackPts = [];
+    }
+
+    state.locked = true;
+    state.endedAt = Date.now();   // Spielzeit einfrieren
+
+    // Sieger = mehr Punkte; bei Erreichen des Aufnahmen-Limits ist auch Unentschieden moeglich.
+    if (state.s1 > state.s2) {
+      state.winnerText = "Spiel beendet – Gewinner: " + state.player1;
+    } else if (state.s2 > state.s1) {
+      state.winnerText = "Spiel beendet – Gewinner: " + state.player2;
+    } else {
+      state.winnerText = "Spiel beendet – Unentschieden";
+    }
+
+    save();
+    render();
+    alert(state.winnerText);
+  }
+
+  /* ===========================
+     14.1 Regel-Engine (4.1–4.12)
+     =========================== */
+
+  // Schreibt einen Aufnahme-Eintrag ins Protokoll und aktualisiert die Hoechstserie (HS).
+  function logEntry(p, balls, foulPts, mark, kind) {
+    const pkt = balls - foulPts;                       // Aufnahmeresultat = Baelle - Foulpunkte
+    const total = (p === 1 ? state.s1 : state.s2);
+    if (p === 1) { if (pkt > state.high1) state.high1 = pkt; }
+    else         { if (pkt > state.high2) state.high2 = pkt; }
+    const rp = state.rackPts || [];
+    const segs = rp.concat(balls - rp.reduce((a, b) => a + b, 0));   // Punkte je Rack (letztes = offener Rest)
+    state.log.push({ t: "inn", p: p, balls: balls, pkt: pkt, total: total, mark: mark || "", kind: kind || "run", segs: segs, z: Date.now() });
+  }
+
+  // Haengt faellige Rack-Trennzeilen NACH der ausloesenden Aufnahme an.
+  function flushRebuilds() {
+    while (state.pendingRebuilds > 0) {
+      state.rackNo++;
+      state.log.push({ t: "rack", rackNo: state.rackNo, p: state.turn });
+      state.pendingRebuilds--;
+    }
+  }
+
+  // Setzt in dieser Aufnahme versenkte Baelle zurueck (Sicherheit / Foul am Break).
+  function respotRun(p) {
+    const run = (p === 1 ? state.run1 : state.run2);
+    if (run > 0) {
+      if (p === 1) state.s1 -= run; else state.s2 -= run;
+      state.ballsLeft = Math.min(15, state.ballsLeft + run);
+    }
+  }
+
+  // Kompletter Neuaufbau aller 15 Kugeln (nach Drei-Foul-Regel).
+  function rebuildFull() {
+    state.ballsLeft = 15;
+    state.pendingRebuilds++;
+  }
+
+  function nextTurnInternal() {
+    if (state.turn === 1) state.inn1++; else state.inn2++;
+    state.run1 = 0;
+    state.run2 = 0;
+    state.rackPts = [];
+    state.turn = (state.turn === 1 ? 2 : 1);
+  }
+
+  // Klick auf Kugel n = "es liegen noch n Kugeln" -> (ballsLeft - n) Punkte fuer die Aufnahme (4.7).
+  function hit(n) {
+    if (state.locked) return;
+    // Mit dem Ball, der das Ziel erreicht, ist das Spiel aus - was der Schreiber darueber
+    // hinaus antippt, zaehlt nicht (sonst stimmt auch der Durchschnitt nicht mehr).
+    const ziel = state.target > 0 ? state.target : Infinity;
+    const rest = ziel - (state.turn === 1 ? state.s1 : state.s2);
+    const gained = Math.min(state.ballsLeft - n, rest);
+    if (gained <= 0) return;               // oberste Kugel angeklickt = nichts versenkt
+    pushHistory();
+    markStart();   // Spielbeginn fuer Dauer-Erfassung
+    if (state.phase === "break") state.phase = "play";     // gefallene Kugel beendet die Eroeffnungsphase
+    if (state.turn === 1) { state.s1 += gained; state.run1 += gained; state.consec1 = 0; }
+    else                  { state.s2 += gained; state.run2 += gained; state.consec2 = 0; }
+    // folgt den GEZAEHLTEN Baellen: im Normalfall gleich n, bei einer Kappung mehr -
+    // dadurch entfaellt der Rack-Neuaufbau unten von selbst (Spiel ist ohnehin aus).
+    state.ballsLeft -= gained;   // legal versenkte Kugel bricht die Foulserie (4.11) -> Warnung weg
+    if (state.ballsLeft <= 1) {            // nur der Break-Ball liegt noch -> die 14 wieder aufbauen (4.4/4.2)
+      state.ballsLeft = 15;
+      state.pendingRebuilds++;
+      if (!state.rackPts) state.rackPts = [];
+      const runNow = (state.turn === 1 ? state.run1 : state.run2);
+      state.rackPts.push(runNow - state.rackPts.reduce((a, b) => a + b, 0));   // abgeraeumtes Rack schliessen (Slash-Segment)
+    }
+    save();
+  }
+
+  // Aufnahme regelgerecht beendet (verschossen) – kein Foul.
+  function missTurn() {
+    if (state.locked) return;
+    pushHistory();
+    markStart();
+    const p = state.turn;
+    const run = (p === 1 ? state.run1 : state.run2);
+    logEntry(p, run, 0, "", "run");
+    if (p === 1) state.consec1 = 0; else state.consec2 = 0;   // legaler Stoss loescht die Foulserie
+    flushRebuilds();
+    nextTurnInternal();
+    state.phase = "play";
+    save();
+  }
+
+  // Standardfoul (4.9): -1, Aufnahmewechsel; Drei-Foul-Regel (4.11) beachtet.
+  async function foul() {
+    if (state.locked) return;
+    pushHistory();
+    markStart();
+    const p = state.turn;
+    const run = (p === 1 ? state.run1 : state.run2);
+    const hadLegalBall = run > 0;                       // legal versenkter Ball bricht die Foulserie
+    if (p === 1) state.s1 -= 1; else state.s2 -= 1;
+    let consec;
+    if (p === 1) { state.consec1 = hadLegalBall ? 1 : state.consec1 + 1; consec = state.consec1; }
+    else         { state.consec2 = hadLegalBall ? 1 : state.consec2 + 1; consec = state.consec2; }
+
+    if (consec >= 3) {
+      // 4.11: zusaetzlich -15, Fouls geloescht, alle 15 neu, Verursacher stoesst neu an.
+      if (p === 1) { state.s1 -= 15; state.consec1 = 0; } else { state.s2 -= 15; state.consec2 = 0; }
+      logEntry(p, run, 16, "3F", "foul3");
+      rebuildFull();
+      flushRebuilds();
+      if (p === 1) state.inn1++; else state.inn2++;     // Aufnahme des Foulenden endet
+      state.run1 = 0; state.run2 = 0; state.rackPts = [];
+      // 4.11: der Verursacher stoesst neu an - nicht zwingend Rot
+      state.turn = p; state.phase = "break"; state.breaker = p;
+    } else {
+      logEntry(p, run, 1, consec === 1 ? "/" : "//", "foul");
+      flushRebuilds();
+      nextTurnInternal();
+      state.phase = "play";   // Gegner uebernimmt den Tisch, kein neuer Anstoss
+    }
+    save();
+  }
+
+  // Sicherheit (4.5/4.6): vor der Sicherheit legal versenkte Baelle zaehlen normal; die
+  // Sicherheit beendet nur die Aufnahme (kein zusaetzlicher Punkt) und wechselt die Aufnahme.
+  // Die angesagte Sicherheit ist ein REGELGERECHTER Stoss und bricht daher die Foulserie
+  // (4.11 zaehlt nur Fouls "ohne dazwischenliegenden regelgerechten Stoss") - genau wie
+  // missTurn(). Wer diesen Knopf drueckt, sagt dem Board, dass der Stoss gueltig war;
+  // ein ungueltiger Versuch waere "Foul". Entscheidend fuer die reine Sicherheit OHNE
+  // versenkte Kugel - sonst hat hit() den Zaehler ohnehin schon geloescht.
+  function safety() {
+    if (state.locked) return;
+    pushHistory();
+    markStart();
+    const p = state.turn;
+    const run = (p === 1 ? state.run1 : state.run2);
+    logEntry(p, run, 0, "", "safety");
+    if (p === 1) state.consec1 = 0; else state.consec2 = 0;   // regelgerechter Stoss bricht die Foulserie (4.11)
+    flushRebuilds();
+    nextTurnInternal();
+    state.phase = "play";
+    save();
+  }
+
+  // Eroeffnungsfoul (4.3/4.10): -2; Gegner uebernimmt oder laesst wiederholen.
+  // Zaehlt NICHT zur Drei-Foul-Regel (4.11 (1)).
+  async function breakFoul() {
+    if (state.locked) return;
+    pushHistory();
+    markStart();
+    const p = state.turn;
+    respotRun(p);                                     // am Break versenkte Kugel wird wieder aufgesetzt
+    if (p === 1) state.s1 -= 2; else state.s2 -= 2;
+    logEntry(p, 0, 2, "-2", "break");
+    const takeOver = await confirmModal(
+      "Eröffnungsfoul (−2).\n\nOK = Gegner übernimmt den Tisch.\nAbbrechen = Eröffnungsstoß wird wiederholt.");
+    if (takeOver) {
+      flushRebuilds();
+      nextTurnInternal();
+      state.phase = "play";
+    } else {
+      flushRebuilds();
+      if (p === 1) state.inn1++; else state.inn2++;   // Aufnahme des Anstossenden endet
+      state.run1 = 0; state.run2 = 0; state.rackPts = [];
+      // Wiederholung durch denselben Spieler, der das Eroeffnungsfoul begangen hat
+      state.turn = p; state.breaker = p; state.phase = "break";
+    }
+    save();
+  }
+
+  function undo() {
+    if (history.length === 0) return;
+    state = JSON.parse(history.pop());
+    save(); 
+  }
+
+  async function changeName(player) {
+    if (state.locked) return;
+    if (istAngebunden()) {
+      // CueDesk: Spieler aus der Mitgliederliste oder neuer Gast
+      const wahl = await spielerWaehlen(player === 1 ? "Spieler Rot" : "Spieler Blau");
+      if (!wahl) return;
+      if (player === 1) { state.player1 = wahl.name; state.player1Id = wahl.id; }
+      else              { state.player2 = wahl.name; state.player2Id = wahl.id; }
+      save();
+      return;
+    }
+    const name = (await promptModal("Neuer Name:") || '').trim();   // Leerzeichen trimmen -> keine Duplikate in der Statistik
+    if (!name) return;
+
+    if (player === 1) state.player1 = name;
+    else state.player2 = name;
+    
+    save();
+  }
+
+  async function setTarget() {
+    if (state.locked) return;
+    const t = await promptModal("Zielpunkte (max. 4-stellig):", state.target, { maxLength: 4, numeric: true });
+    if (t === null) return;
+    const i = await promptModal("Aufnahmen-Limit (max. 3-stellig):", state.targetInn, { maxLength: 3, numeric: true });
+    if (i === null) return;
+    const parsedT = parseInt(t, 10);
+    const parsedI = parseInt(i, 10);
+    if (!isNaN(parsedT) && parsedT > 0) state.target = parsedT;
+    if (!isNaN(parsedI) && parsedI > 0) state.targetInn = parsedI;
+    save();
+  }
+
+  async function newGame() {
+    // Pruefen, ob ueberhaupt gespielt wurde (mind. eine Aufnahme; Punkte koennen negativ sein)
+    if (istAngebunden() && (state.inn1 > 0 || state.inn2 > 0)) {
+      const abgebrochen = !state.locked;
+      const frage = abgebrochen
+        ? "Das Spiel ist noch nicht zu Ende.\n\nAls abgebrochen speichern? Die Aufnahmen zählen dann für die Statistik, das Spiel aber nicht als Sieg oder Niederlage."
+        : "Möchtest du dieses 14.1-Ergebnis speichern?";
+      if (await confirmModal(frage)) {
+        // Beide Spieler muessen Personen aus CueDesk sein
+        for (const seite of [1, 2]) {
+          if (!state["player" + seite + "Id"]) {
+            const wahl = await spielerWaehlen("Wer war " + state["player" + seite] + "?", state["player" + seite]);
+            if (!wahl) { alert("Ohne Spielerzuordnung wird nichts gespeichert."); return; }
+            state["player" + seite] = wahl.name;
+            state["player" + seite + "Id"] = wahl.id;
+          }
+        }
+        const erg = await ergebnisSpeichern141(state, { abgebrochen });
+        if (!erg.ok) { alert("Speichern fehlgeschlagen: " + erg.fehler); return; }
+      }
+    }
+
+    if (!await confirmModal("Neues Match starten? Alle aktuellen Punkte werden gelöscht!")) return;
+
+    // Reset-Code für 14.1 (alle Spielwerte; Namen + Ziel bleiben erhalten)
+    state.s1 = 0;
+    state.s2 = 0;
+    state.run1 = 0;
+    state.run2 = 0;
+    state.high1 = 0;
+    state.high2 = 0;
+    state.inn1 = 0;
+    state.inn2 = 0;
+    state.consec1 = 0;
+    state.consec2 = 0;
+    state.turn = 1;
+    state.ballsLeft = 15;     // Bälle wieder vollständig aufbauen
+    state.rackPts = [];       // aus der Offline-Fassung: sonst schleppt das neue Spiel Rack-Reste mit
+    history = [];             // aus der Offline-Fassung: Rueckgaengig darf nicht ins alte Spiel springen
+    state.rackNo = 1;
+    state.pendingRebuilds = 0;
+    state.phase = "break";    // neues Match beginnt mit Eröffnungsstoß
+    state.breaker = 1;
+    state.log = [];
+    state.locked = false;
+    state.winnerText = "";
+    state.startedAt = null;   // Dauer-Erfassung fuer neues Spiel zuruecksetzen
+    state.endedAt = null;
+
+    if (await confirmModal("Spielernamen ändern?")) {
+      // Leeres Feld und Abbrechen sauber trennen: promptModal liefert bei Abbruch null,
+      // bei OK immer einen String. Geleertes Feld -> Vorgabe statt alter Name.
+      if (istAngebunden()) {
+        const w1 = await spielerWaehlen("Spieler Rot");
+        if (w1) { state.player1 = w1.name; state.player1Id = w1.id; }
+        const w2 = await spielerWaehlen("Spieler Blau");
+        if (w2) { state.player2 = w2.name; state.player2Id = w2.id; }
+      } else {
+        const n1 = await promptModal("Name Spieler 1 (Rot):", state.player1);
+        if (n1 !== null) state.player1 = n1.trim() || "Spieler 1";
+        const n2 = await promptModal("Name Spieler 2 (Blau):", state.player2);
+        if (n2 !== null) state.player2 = n2.trim() || "Spieler 2";
+      }
+    }
+
+    save();
+    render();
+  }
+
+  function swap() {
+    if (state.locked) return;
+    if (state.phase !== "break") return;   // nur in der Anstossphase; Knopf ist sonst gesperrt
+    pushHistory();
+
+    [state.player1, state.player2] = [state.player2, state.player1];
+    [state.player1Id, state.player2Id] = [state.player2Id ?? null, state.player1Id ?? null];
+    [state.s1, state.s2] = [state.s2, state.s1];
+    [state.run1, state.run2] = [state.run2, state.run1];
+    [state.high1, state.high2] = [state.high2, state.high1];
+    [state.inn1, state.inn2] = [state.inn2, state.inn1];
+    [state.consec1, state.consec2] = [state.consec2, state.consec1];
+    if (!(state.log || []).length) {
+      // Spielbeginn (noch keine Aufnahme protokolliert): der Seitenwechsel waehlt den
+      // Anstoss aus - wer danach links steht, stoesst an.
+      state.turn = 1;
+      state.breaker = 1;
+    } else {
+      // Regelbedingte Anstossphase (Drei-Foul-Strafe, wiederholter Eroeffnungsstoss):
+      // der Anstoss gehoert einer bestimmten Person und folgt ihr auf die andere Seite.
+      state.turn = (state.turn === 1 ? 2 : 1);
+      state.breaker = (state.breaker === 1 ? 2 : 1);
+    }
+    // Protokoll-Spalten mitdrehen, damit Summen zur (getauschten) Seite passen
+    (state.log || []).forEach(e => { if (e.t === "inn" || (e.t === "rack" && e.p)) e.p = (e.p === 1 ? 2 : 1); });
+
+    save();
+  }
+
+  function drawBalls() {
+    const container = document.getElementById("balls");
+    container.innerHTML = "";
+
+    for (let i = 1; i <= 15; i++) {
+      if (i > state.ballsLeft) continue;
+
+      const b = document.createElement("button");
+      b.type = "button";
+      b.innerHTML = `<span class="num">${i}</span>`;
+      b.className = "ball b" + i + (i >= 9 ? " stripe" : "");
+      b.disabled = state.locked;
+      b.onclick = () => hit(i);         // Kugel i = "noch i Kugeln auf dem Tisch"
+      container.appendChild(b);
+    }
+    if (state.locked) container.classList.add("locked-ui");
+    else container.classList.remove("locked-ui");
+  }
+
+  function foulInfo(consec) {
+    if (consec <= 0) return { text: "", warn: false };
+    if (consec === 1) return { text: "1 Foul ( / )", warn: false };
+    if (consec === 2) return { text: "⚠ 2 Fouls – nächstes −15", warn: true };
+    return { text: "", warn: false };
+  }
+
+  function render() {
+    document.getElementById("p1").textContent = state.player1;
+    document.getElementById("p2").textContent = state.player2;
+    document.getElementById("s1").textContent = state.s1;
+    document.getElementById("s2").textContent = state.s2;
+    document.getElementById("run1").textContent = state.run1;
+    document.getElementById("run2").textContent = state.run2;
+    document.getElementById("high1").textContent = state.high1;
+    document.getElementById("high2").textContent = state.high2;
+    document.getElementById("inn1").textContent = state.inn1;
+    document.getElementById("inn2").textContent = state.inn2;
+    document.getElementById("avg1").textContent = (state.s1 / (state.inn1 || 1)).toFixed(1);
+    document.getElementById("avg2").textContent = (state.s2 / (state.inn2 || 1)).toFixed(1);
+    document.getElementById("targetScore").textContent = state.target;
+    document.getElementById("targetInn").textContent = state.targetInn;
+
+    // Foulzaehler je Spieler (Drei-Foul-Regel)
+    const f1 = foulInfo(state.consec1), f2 = foulInfo(state.consec2);
+    const fe1 = document.getElementById("fouls1"), fe2 = document.getElementById("fouls2");
+    fe1.textContent = f1.text; fe1.classList.toggle("warn", f1.warn);
+    fe2.textContent = f2.text; fe2.classList.toggle("warn", f2.warn);
+
+    const hl1 = document.getElementById("hl1");
+    const hl2 = document.getElementById("hl2");
+    hl1.classList.toggle("active", state.turn === 1);
+    hl2.classList.toggle("active", state.turn === 2);
+
+    const inBreak = !state.locked && state.phase === "break";
+    const activeName = (state.turn === 1 ? state.player1 : state.player2);
+    const status = document.getElementById("status");
+    if (state.locked) {
+      status.textContent = state.winnerText || "";
+      status.style.color = "";                       // Farbe kommt aus .game-over
+    } else if (inBreak) {
+      status.textContent = "🎱 Eröffnungsstoß: " + activeName;
+      status.style.color = (state.turn === 1 ? "#cc0000" : "#1133cc");
+    } else {
+      status.textContent = "🎱 An der Aufnahme: " + activeName;
+      status.style.color = (state.turn === 1 ? "#cc0000" : "#1133cc");
+    }
+    status.classList.toggle("game-over", !!state.locked);
+
+    // Break-/Play-abhaengige Buttons umschalten
+    document.getElementById("foulBtn").style.display = "inline-block";   // auch beim Anstoss: gueltiger Anstoss + Foul = -1
+    document.getElementById("breakFoulBtn").style.display = inBreak ? "inline-block" : "none";
+
+    // Sperren bei Spielende
+    ["editP1Btn","editP2Btn","targetBtn","missBtn","foulBtn","safetyBtn","breakFoulBtn"]
+      .forEach(id => { const el = document.getElementById(id); if (el) el.disabled = state.locked; });
+
+    // Seitenwechsel nur in der Anstossphase: waehrend der Partie waere er eine reine
+    // Spiegelung, und in einer regelbedingten Anstossphase duerfte er den Anstoss
+    // nicht neu verteilen.
+    const swapEl = document.getElementById("swapBtn");
+    if (swapEl) swapEl.disabled = state.locked || state.phase !== "break";
+
+    drawBalls();
+    if (logOpen) buildProtocol();   // offenes Protokoll-Overlay live mitziehen
+    buildMiniLog();                 // offenes Mini-Protokoll ebenso
+    checkEnd();
+  }
+
+  function updateClock() {
+    if (logOpen) zeigeSpielzeit();   // sonst stuende die Zeit ohne Zug still
+    document.getElementById("clock").textContent =
+      new Date().toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
+  }
+
+  /* ===========================
+     Event Listener binden
+     =========================== */
+  window.hit = hit;
+  window.changeName = changeName;
+  window.setTarget = setTarget;
+  window.missTurn = missTurn;
+  window.foul = foul;
+  window.safety = safety;
+  window.breakFoul = breakFoul;
+  window.openLog = openLog;
+  window.openHelp = openHelp;
+  window.undo = undo;
+  window.newGame = newGame;
+  window.swap = swap;
+  window.toggleMiniLog = toggleMiniLog;
+
+  /* ===========================
+     Protokoll-Overlay (Protokollzettel nach DOCX-Methode)
+     =========================== */
+  let logOpen = false;
+
+  function escapeHtml(s) {
+    return String(s == null ? "" : s).replace(/[&<>"]/g, c =>
+      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  }
+
+  function playerSummary(name, score, hs, inn, color, atTable) {
+    const avg = (score / (inn || 1)).toFixed(1);
+    return '<div class="ls-p">' +
+      '<div class="ls-name" style="color:' + color + '">' + escapeHtml(name) + '</div>' +
+      '<div class="ls-score" style="color:' + color + '">' + score + '</div>' +
+      '<div class="ls-stats">HS ' + hs + ' · Aufn. ' + inn + ' · Ø ' + avg + '</div>' +
+      '<div class="ls-attable">' + (atTable ? '● am Tisch' : '&nbsp;') + '</div>' +
+      '</div>';
+  }
+
+  // Spielzeit: startet mit der ERSTEN Aktion (auch Foul, Sicherheit, Verschossen,
+  // Eroeffnungsfoul) - nicht erst beim ersten versenkten Ball. Aufruf jeweils nach
+  // pushHistory(), damit Undo den Zustand davor sauber wiederherstellt.
+  function markStart() { if (!state.startedAt) state.startedAt = Date.now(); }
+
+  // Dauer als "1:23 h". Nach Spielende friert sie ueber state.endedAt ein.
+  function spielzeitText() {
+    if (!state.startedAt) return "Spielzeit —";
+    const min = Math.max(0, Math.floor(((state.endedAt || Date.now()) - state.startedAt) / 60000));
+    return "Spielzeit " + Math.floor(min / 60) + ":" + String(min % 60).padStart(2, "0") + " h";
+  }
+
+  function zeigeSpielzeit() {
+    const el = document.getElementById("log-time");
+    if (el) el.textContent = spielzeitText();
+  }
+  // Aufnahmen paaren: n-te Aufnahme von Rot + n-te von Blau in EINE Zeile "Aufn. n".
+  // Die laufende (noch nicht beendete) Aufnahme kommt in die Zeile des Spielers am Tisch.
+  // Quelle fuer das grosse Protokoll UND das Mini-Protokoll.
+  function pairInnings() {
+    const paired = [];
+    const rowAt = (n) => paired[n] || (paired[n] = { n: n, p1: null, p2: null, live1: null, live2: null });
+    let c1 = 0, c2 = 0;
+    (state.log || []).forEach(e => {
+      if (e.t === "rack") return;   // Rack-Grenze steht als Schraegstrich in der Punkte-Spalte
+      if (e.p === 1) rowAt(++c1).p1 = e; else rowAt(++c2).p2 = e;
+    });
+    if (!state.locked) {
+      const lp = state.turn;
+      const run = (lp === 1 ? state.run1 : state.run2);
+      const rp = state.rackPts || [];
+      const live = { segs: rp.concat(run - rp.reduce((a, b) => a + b, 0)), total: (lp === 1 ? state.s1 : state.s2) };
+      const ln = (lp === 1 ? c1 : c2) + 1;
+      if (lp === 1) rowAt(ln).live1 = live; else rowAt(ln).live2 = live;
+    }
+    return paired;
+  }
+
+  // Eine Spielerzelle des Mini-Protokolls: Zeichen aus der F-Spalte + Punktwert,
+  // Farben wie im grossen Protokoll.
+  function miniZelle(e, live) {
+    if (e) {
+      const isFoul = (e.kind === "foul" || e.kind === "foul3" || e.kind === "break");
+      const cls = (e.kind === "foul3") ? "pz-f3" : isFoul ? "pz-f"
+                : (e.kind === "safety") ? "pz-s" : (e.kind === "run") ? "pz-v" : "";
+      const mark = (e.kind === "safety") ? "S" : (e.kind === "run") ? "V" : (e.mark || "");
+      const val = (e.segs && e.segs.length > 1) ? e.segs.join("/") : e.pkt;
+      return '<td class="' + cls + '">' + (mark ? mark + " " : "") + val + '</td>';
+    }
+    if (live) {
+      const v = (live.segs && live.segs.length > 1) ? live.segs.join("/") : live.segs[0];
+      return '<td class="ml-live">▶ ' + v + '</td>';
+    }
+    return '<td></td>';
+  }
+
+  // Mini-Protokoll: die letzten drei Aufnahmen (die laufende zaehlt mit) und darunter
+  // bis zu zwei leere Vorschauzeilen, begrenzt auf das Aufnahmen-Limit.
+  // Gelb und Rot markieren die beiden LETZTEN Aufnahmen des Matches - sie wandern also
+  // nicht mit, sondern tauchen erst auf, wenn das Ende in Sicht kommt.
+  function buildMiniLog() {
+    const tbl = document.getElementById("mini-log");
+    if (!tbl || tbl.hidden) return;
+    const paired = pairInnings().filter(Boolean);
+    const zeilen = paired.slice(-3);
+    const limit = state.targetInn > 0 ? state.targetInn : 0;
+    let naechste = (paired.length ? paired[paired.length - 1].n : 0) + 1;
+    for (let i = 0; i < 2; i++, naechste++) {
+      if (limit && naechste > limit) break;
+      zeilen.push({ n: naechste, kommt: true });
+    }
+    let rows = "";
+    zeilen.forEach(r => {
+      const cls = (limit && r.n === limit) ? ' class="ml-schluss"'
+                : (limit && r.n === limit - 1) ? ' class="ml-vorletzte"' : "";
+      const no = '<td class="' + (r.kommt ? "ml-kommt" : "ml-no") + '">' + r.n + '</td>';
+      rows += '<tr' + cls + '>' + no + miniZelle(r.p1, r.live1) + miniZelle(r.p2, r.live2) + '</tr>';
+    });
+    tbl.innerHTML = '<thead><tr><th>Aufn.</th><th>Sp. 1</th><th>Sp. 2</th></tr></thead><tbody>' + rows + '</tbody>';
+  }
+
+  let miniOffen = false;
+  function toggleMiniLog() {
+    miniOffen = !miniOffen;
+    document.getElementById("mini-log").hidden = !miniOffen;
+    document.getElementById("colon").classList.toggle("mini-offen", miniOffen);
+    document.getElementById("miniLogBtn").textContent = miniOffen ? "✕" : "☰";
+    buildMiniLog();
+  }
+
+  function buildProtocol() {
+    const sum = document.getElementById("log-summary");
+    sum.innerHTML =
+      playerSummary(state.player1, state.s1, state.high1, state.inn1, "#cc0000", !state.locked && state.turn === 1) +
+      '<div class="ls-target"><div style="font-size:15px;font-weight:bold;">Ziel: ' + state.target + ' Pkt.</div>' +
+        (state.targetInn > 0 ? '<div style="font-size:15px;font-weight:bold;">' + state.targetInn + ' Aufn.</div>' : '') + '</div>' +
+      playerSummary(state.player2, state.s2, state.high2, state.inn2, "#1133cc", !state.locked && state.turn === 2);
+
+    const paired = pairInnings();
+
+    // Baut die drei Zellen (F, Pkt, Gesamt) einer Spielerseite. Pkt zeigt die Slash-Notation
+    // (Punkte je Rack) bei Mehr-Rack-Aufnahmen, sonst die Einzahl.
+    const side = (e, live, isP2, high) => {
+      const bl = isP2 ? "pz-bl" : "";
+      if (e) {
+        const isFoul = (e.kind === "foul" || e.kind === "foul3" || e.kind === "break");
+        const fcls = (e.kind === "foul3") ? "pz-f3" : ((e.kind === "foul" || e.kind === "break") ? "pz-f" : "");
+        const pktcls = isFoul ? fcls : "";
+        const hs = (e.pkt === high && e.pkt > 0) ? " pz-hs" : "";
+        const val = (e.segs && e.segs.length > 1) ? e.segs.join("/") : e.pkt;
+        // F-Spalte: S = Sicherheit (gruen), V = verschossen (blau), sonst das Foul-Zeichen (rot).
+        let markTxt = e.mark || "";
+        let markCls = fcls;
+        if (e.kind === "safety") { markTxt = "S"; markCls = "pz-s"; }
+        else if (e.kind === "run") { markTxt = "V"; markCls = "pz-v"; }
+        return '<td class="' + (bl + " " + markCls).trim() + '">' + markTxt + '</td>' +
+               '<td class="' + (pktcls + hs).trim() + '">' + val + '</td>' +
+               '<td class="pz-tot">' + e.total + '</td>';
+      }
+      if (live) {
+        const lval = (live.segs && live.segs.length > 1) ? live.segs.join("/") : live.segs[0];
+        return '<td class="' + (bl + " pz-livecell pz-liveno").trim() + '">▶</td>' +
+               '<td class="pz-livecell">' + lval + '</td>' +
+               '<td class="pz-tot pz-livecell">' + live.total + '</td>';
+      }
+      return '<td class="' + bl + '"></td><td></td><td></td>';
+    };
+
+    let rows = "";
+    for (let n = 1; n < paired.length; n++) {
+      const r = paired[n];
+      if (!r) continue;
+      const hasLive = !!(r.live1 || r.live2);
+      const pureLive = hasLive && !r.p1 && !r.p2;
+      const foul3 = (r.p1 && r.p1.kind === "foul3") || (r.p2 && r.p2.kind === "foul3");
+      const trcls = pureLive ? ' class="pz-live"' : (foul3 ? ' class="pz-3frow"' : "");
+      const noCls = (hasLive && !pureLive) ? "pz-no pz-liveno" : "pz-no";
+      const noTxt = "" + n;
+      rows += '<tr' + trcls + '><td class="' + noCls + '">' + noTxt + '</td>' +
+        side(r.p1, r.live1, false, state.high1) +
+        side(r.p2, r.live2, true, state.high2) + '</tr>';
+    }
+
+    if (!rows) rows = '<tr><td colspan="7" class="pz-empty">Noch keine Aufnahmen.</td></tr>';
+
+    document.getElementById("log-table").innerHTML =
+      '<colgroup><col style="width:9%"><col style="width:8%"><col style="width:14%"><col style="width:15%">' +
+      '<col style="width:8%"><col style="width:14%"><col style="width:15%"></colgroup>' +
+      '<thead>' +
+        '<tr>' +
+          '<th class="pz-corner">Aufn.</th>' +
+          '<th colspan="3" class="pz-h1">' + escapeHtml(state.player1) + ' (Rot)</th>' +
+          '<th colspan="3" class="pz-h2 pz-bl">' + escapeHtml(state.player2) + ' (Blau)</th>' +
+        '</tr>' +
+        '<tr class="pz-sub">' +
+          '<th>Nr.</th><th>F</th><th>Pkt.</th><th>Gesamt</th>' +
+          '<th class="pz-bl">F</th><th>Pkt.</th><th>Gesamt</th>' +
+        '</tr>' +
+      '</thead><tbody>' + rows + '</tbody>';
+
+    zeigeSpielzeit();
+  }
+
+  function openLog() {
+    logOpen = true;
+    const link = document.getElementById("log-open-page");
+    if (link) link.href = "14.1_Log.html?table=" + encodeURIComponent(tableId);
+    buildProtocol();
+    document.getElementById("log-overlay").style.display = "flex";
+  }
+  function closeLog() {
+    logOpen = false;
+    document.getElementById("log-overlay").style.display = "none";
+  }
+
+  document.getElementById("log-close").addEventListener("click", closeLog);
+  document.getElementById("log-print").addEventListener("click", () => window.print());
+
+  // Teilen/Mail: nutzt das bereits gerenderte Protokoll (Knopf sitzt darin).
+  // Gekapselt, damit ein Fehler im Zusatz nicht das Board am Starten hindert.
+  try {
+    setupProtocolShare({
+      btnId: "log-share", summaryId: "log-summary", tableId: "log-table", legendId: "log-legend",
+      titel: () => "14.1 Protokoll - Tisch " + tableId,
+      dateiBasis: () => "14.1-Protokoll_Tisch" + tableId + "_" + state.player1 + "-vs-" + state.player2
+    });
+  } catch (e) { console.error("Teilen-Knopf nicht verfuegbar:", e); }
+  document.getElementById("log-overlay").addEventListener("click", (e) => {
+    if (e.target.id === "log-overlay") closeLog();
+  });
+
+  /* Hilfe-Overlay */
+  function openHelp() { document.getElementById("help-overlay").style.display = "flex"; }
+  function closeHelp() { document.getElementById("help-overlay").style.display = "none"; }
+  document.getElementById("help-close").addEventListener("click", closeHelp);
+  document.getElementById("help-overlay").addEventListener("click", (e) => {
+    if (e.target.id === "help-overlay") closeHelp();
+  });
+
+/* ===========================
+     TURNIER-AWARENESS + ECHTZEIT-LISTENER (14.1)
+     =========================== */
+  function freshState141() {
+    return { player1:"Spieler 1", player2:"Spieler 2", player1Id:null, player2Id:null, s1:0, s2:0, run1:0, run2:0, rackPts:[],
+             high1:0, high2:0, inn1:0, inn2:0, consec1:0, consec2:0, target:60, targetInn:20, turn:1,
+             ballsLeft:15, rackNo:1, pendingRebuilds:0, phase:"break", breaker:1,
+             locked:false, winnerText:"", log:[], gameType:"14.1" };
+  }
+
+  function applyMode() {
+    // Kein Reservierungs-Overlay mehr – 14.1 wird direkt gespielt.
+    // "Zurueck zum Turnier" anbieten, solange ein Turnier laeuft (fuehrt zum Pool-Picker).
+    const backBtn = document.getElementById('btn-back-141');
+    if (backBtn) backBtn.style.display = tournamentActive() ? 'inline-block' : 'none';
+  }
+
+  // Verarbeitet den aktuellen Tisch-Stand. 14.1 wird direkt gespielt; ein laufendes
+  // Turnier-Match (Pool) auf diesem Tisch wird geschuetzt, nicht ueberschrieben.
+  function syncFromTable() {
+    const data = tableData;
+    if (yielded) { applyMode(); return; }   // Tisch abgegeben -> nichts mehr schreiben
+    if (data) {
+      if (data.gameType === "pool" && data.tournamentMatchId) {
+        // Auf diesem Tisch laeuft ein Turnierspiel -> schuetzen, kein Ueberschreiben.
+        showYieldOverlay(`An Tisch ${tableId} läuft gerade ein Turnierspiel. Bitte einen freien Tisch wählen.`, false);
+        return;
+      } else if (data.gameType === "pool") {
+        // Freier Pool-Tisch (kein Match)
+        if (claimed) {
+          // anderes Geraet hat auf 8/9/10 umgestellt -> nachgeben (kein Flacker-Krieg).
+          // Ab der 2. Verdraengung (echter Streit) "Hier uebernehmen" sperren -> Schleife endet.
+          yieldCount++;
+          const allow = yieldCount < 2;
+          showYieldOverlay(allow
+            ? `Tisch ${tableId} wurde an einem anderen Gerät auf 8/9/10-Ball umgestellt. ` +
+              `Damit sich die Geräte nicht gegenseitig überschreiben, ist dieses Board pausiert.`
+            : `Tisch ${tableId} wird an mehreren Geräten gesteuert. Bitte nur an EINEM Tablet ` +
+              `weiterspielen und den Tisch dort über die Startseite neu öffnen.`,
+            allow);
+          return;
+        }
+        // Spieler hat 14.1 gewaehlt -> Tisch auf 14.1 umstellen (Namen uebernehmen)
+        state = freshState141();
+        state.player1 = data.player1 || "Spieler 1";
+        state.player2 = data.player2 || "Spieler 2";
+        claimed = true;
+        save();
+      } else if (isForeignBoard(data)) {
+        // 14.1-Daten, aber ein ANDERES Geraet steuert diesen Tisch -> nicht mitschreiben.
+        if (claimed) {
+          yieldCount++;
+          const allow = yieldCount < 2;
+          showYieldOverlay(allow
+            ? `Tisch ${tableId} wird gerade an einem anderen Gerät gesteuert. ` +
+              `Damit sich die Geräte nicht gegenseitig überschreiben, ist dieses Board pausiert.`
+            : `Tisch ${tableId} wird an mehreren Geräten gesteuert. Bitte nur an EINEM Tablet ` +
+              `weiterspielen und den Tisch dort über die Startseite neu öffnen.`,
+            allow);
+        } else {
+          showYieldOverlay(`Tisch ${tableId} wird bereits an einem anderen Gerät gesteuert. ` +
+            `Hier nur übernehmen, wenn dieses Tablet den Tisch wirklich bedienen soll.`, true);
+        }
+        return;
+      } else {
+        // bereits 14.1-Daten -> uebernehmen (Defaults mergen, falls aelterer Stand ohne neue Felder)
+        claimed = true;
+        state = Object.assign(freshState141(), data);
+        if (!Array.isArray(state.log)) state.log = [];
+        state.gameType = "14.1";
+      }
+    } else {
+      // leerer Tisch -> 14.1-Default anlegen (Spieler hat 14.1 gewaehlt)
+      state = freshState141();
+      claimed = true;
+      save();
+    }
+    render();
+    applyMode();
+  }
+
+  onValue(dbRef, (snapshot) => { tableData = snapshot.val(); syncFromTable(); });
+
+  // Turnier-Status beobachten. WICHTIG: nur die UI aktualisieren (applyMode) –
+  // die Tisch-Logik steuert allein der tables-Listener (mit immer frischen Daten).
+  // Frueher rief dies syncFromTable() mit evtl. veralteten tableData auf; direkt
+  // nach einer eigenen Umwandlung (claimed=true, aber tableData noch "pool") hat
+  // sich das Board dadurch faelschlich selbst pausiert ("Tisch wird woanders gesteuert").
+  onValue(ref(db, 'tournament/active'), (snap) => {
+    tournament = snap.val();
+    tournamentLoaded = true;
+    applyMode();
+  });
+
+  // "Zurueck zum Turnier": Turnierspiele laufen ueber das Pool-Board (Picker). Das
+  // 14.1-Board hat keinen Picker -> Tisch freigeben und direkt zum Pool-Board.
+  document.getElementById('btn-back-141').addEventListener('click', async () => {
+    yielded = true;   // verhindert, dass unser onValue den freigegebenen Tisch neu beansprucht
+    try { await set(dbRef, null); } catch (e) {}
+    window.location.href = 'Pool_Scoreboard.html?table=' + tableId;
+  });
+
+  // Zur Tablet-Startseite zurueck (rein navigierend, kein DB-Schreibzugriff –
+  // der Tischstand bleibt in der Cloud und wird beim erneuten Oeffnen wiederhergestellt).
+  document.getElementById('home-btn').addEventListener('click', () => {
+    window.location.href = startseite();
+  });
+
+  /* ===========================
+     Nachgeben, wenn ein anderes Geraet den Tisch uebernimmt
+     =========================== */
+  function showYieldOverlay(msg, allowReclaim = true) {
+    yielded = true;
+    document.getElementById('yield-text').textContent = msg;
+    const rc = document.getElementById('yield-reclaim');
+    if (rc) rc.style.display = allowReclaim ? 'inline-block' : 'none';
+    document.getElementById('yield-overlay').style.display = 'flex';
+  }
+  async function reclaim() {
+    // Tisch hier bewusst (zurueck) auf 14.1 uebernehmen – das andere Board gibt dann nach.
+    if (!await confirmModal(`Tisch ${tableId} hier übernehmen? Das andere Gerät verliert die Kontrolle.`)) return;
+    document.getElementById('yield-overlay').style.display = 'none';
+    yielded = false; claimed = true;
+    const d = tableData || {};
+    if (d.gameType === "14.1") {
+      // Anderes Geraet am selben Tisch: laufenden 14.1-Stand samt Protokoll uebernehmen.
+      state = Object.assign(freshState141(), d);
+      if (!Array.isArray(state.log)) state.log = [];
+      state.gameType = "14.1";
+    } else {
+      // Fremde Spielart -> frisch aufsetzen, nur die Namen mitnehmen.
+      state = freshState141();
+      state.player1 = d.player1 || "Spieler 1";
+      state.player2 = d.player2 || "Spieler 2";
+    }
+    history = [];
+    save();   // stempelt die eigene boardId -> das andere Board gibt nach
+  }
+  document.getElementById('yield-home').addEventListener('click', () => {
+    window.location.href = startseite();
+  });
+  document.getElementById('yield-reclaim').addEventListener('click', reclaim);
+
+  setInterval(updateClock, 1000);
+  updateClock();
+
+  // Nach 4 h ohne Eingabe automatisch zurueck zur Startseite (Tisch bleibt vorgewaehlt)
+  startIdleRedirect(startseite(), 4 * 60 * 60 * 1000);
+</script>
+</body>
+</html>

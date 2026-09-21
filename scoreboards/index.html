@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<!--
+  CueDesk — Scoreboards, Startseite fuer den Betrieb ohne Anbindung
+  Copyright (c) 2026 Matthias Haas
+  SPDX-License-Identifier: MIT
+  Lizenz: MIT — siehe LICENSE im selben Ordner (https://opensource.org/licenses/MIT)
+-->
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="theme-color" content="#0d88d0">
+  <link rel="manifest" href="manifest.json">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no, maximum-scale=1">
+  <title>Billard-Scoreboards</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%231a1a1a'/%3E%3Ccircle cx='24' cy='22' r='8' fill='%23ffffff' opacity='0.18'/%3E%3Ccircle cx='32' cy='32' r='15' fill='%23fdfdf2'/%3E%3Ctext x='32' y='39' font-family='Arial, Helvetica, sans-serif' font-size='22' font-weight='bold' fill='%23111' text-anchor='middle'%3E8%3C/text%3E%3C/svg%3E">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: Arial, sans-serif; color: #fff;
+      margin: 0; min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; padding: 4vmin;
+      touch-action: manipulation;
+      /* "Ocean Blue" Billardtuch (Z9 Billiard Cloth): Farbe + diagonale Koeperbindung
+         (zwei Verlaeufe) + Stoff-Koernung (SVG-Rauschen inline) + Vignette */
+      background-color: #0d88d0;
+      background-image:
+        radial-gradient(135% 120% at 50% 28%, rgba(255,255,255,.05), rgba(0,0,0,0) 58%, rgba(0,0,0,.18)),
+        repeating-linear-gradient(45deg,  rgba(255,255,255,.045) 0 1px, rgba(255,255,255,0) 1px 4px),
+        repeating-linear-gradient(135deg, rgba(0,0,0,.05) 0 1px, rgba(0,0,0,0) 1px 4px),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='cloth'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23cloth)' opacity='0.30'/%3E%3C/svg%3E");
+      background-size: cover, 4px 4px, 4px 4px, 220px 220px;
+      background-repeat: no-repeat, repeat, repeat, repeat;
+      background-blend-mode: normal, normal, normal, soft-light;
+      background-attachment: fixed;
+    }
+    h1 { font-size: 6vmin; margin: 0 0 1vmin; text-align: center; text-shadow: 0 0.3vmin 0.8vmin rgba(0,0,0,.40); }
+    .sub { color: #eaf3fb; font-size: 3vmin; margin-bottom: 6vmin; text-align: center; text-shadow: 0 0.2vmin 0.6vmin rgba(0,0,0,.35); }
+    .boards { display: flex; gap: 4vmin; flex-wrap: wrap; justify-content: center; }
+    .board-btn {
+      font-size: 4.5vmin; font-weight: bold; padding: 4vmin 6vmin; border-radius: 2vmin;
+      border: none; cursor: pointer; color: #fff; line-height: 1.2;
+      text-decoration: none; display: inline-flex; align-items: center; gap: 1.2vmin;
+    }
+    /* Tuch-Sponsor (unten rechts) – transparentes Logo direkt auf dem Tuch */
+    .z9-badge { position: fixed; right: 3vmin; bottom: calc(3vmin + env(safe-area-inset-bottom)); display: flex; align-items: center; }
+    .z9-badge svg { width: 4.25vmin; height: 4.25vmin; display: block; filter: drop-shadow(0 0.2vmin 0.45vmin rgba(0,0,0,.45)); }
+  </style>
+</head>
+<body>
+
+  <h1>🎱 Tablet-Startseite</h1>
+  <div class="sub">Scoreboard öffnen</div>
+
+  <div class="boards">
+    <a class="board-btn" style="background:#e67e22" href="Pool_Scoreboard.html">🎱 8/9/10-Ball</a>
+    <a class="board-btn" style="background:#27ae60" href="14.1_Scoreboard.html">🎯 14.1 endlos</a>
+  </div>
+
+  <!-- Tuch-Sponsor: Z9 Billiard Cloth (Tuch "Ocean Blue") -->
+  <div class="z9-badge" title="Tuch-Sponsor: Z9 Billiard Cloth - Ocean Blue">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" aria-hidden="true">
+      <path d="M 86.8 313.1 A 160 160 0 1 1 313.1 313.1" fill="none" stroke="#1E7B38" stroke-width="8" stroke-linecap="round" />
+      <text x="200" y="245" font-family="Georgia, 'Times New Roman', serif" font-size="190" font-weight="bold" font-style="italic" text-anchor="middle" fill="#000000">Z9</text>
+      <text x="315" y="355" font-family="Arial, sans-serif" font-size="22" text-anchor="middle" fill="#000000">&#174;</text>
+    </svg>
+  </div>
+
+</body>
+</html>

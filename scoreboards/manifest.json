@@ -1,0 +1,10 @@
+{
+  "name": "Billard-Scoreboards",
+  "short_name": "Billard",
+  "description": "Offline-Scoreboards fuer Pool (8/9/10-Ball) und 14.1 endlos",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0d88d0",
+  "theme_color": "#0d88d0"
+}

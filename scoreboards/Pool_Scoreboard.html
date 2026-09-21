@@ -1,0 +1,1352 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="theme-color" content="#0d88d0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no, maximum-scale=1">
+<title>8/9/10-Ball Scoreboard</title>
+
+<style>
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #dddddd;
+  overflow: hidden;
+  touch-action: manipulation;   /* aus der Offline-Fassung: kein Zoom bei schnellem Doppeltipp */
+  height: 100vh;
+  height: 100dvh;   /* iOS: echte sichtbare Hoehe, auch mit Adressleiste */
+  display: flex;
+  flex-direction: column;
+  /* Kiosk: keine Text-/Element-Auswahl auf dem Tablet (iOS braucht die -webkit-Varianten) */
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Header (Grid wie 14.1: links Home+Hilfe, Mitte Titel, rechts Neues Match+Uhr) */
+#header {
+  background: #1f3b73;
+  color: white;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 1vmin;
+  padding: 0.8vmin 2vmin;
+  font-weight: bold;
+}
+
+#hdr-title { font-size: 4vmin; text-align: center; white-space: nowrap; }
+.hdr-left  { display: flex; align-items: center; gap: 2vmin;   justify-self: start; }
+.hdr-right { display: flex; align-items: center; gap: 1.5vmin; justify-self: end; }
+
+#clock {
+  font-size: 3vmin;
+  font-weight: bold;
+}
+
+/* Zur Tablet-Startseite */
+#home-btn {
+  font-size: 3vmin;
+  line-height: 1;
+  padding: 0.4vmin 1.2vmin;
+  margin: 0;
+  border: none;
+  border-radius: 1vmin;
+  background: rgba(255,255,255,0.15);
+  color: #fff;
+  cursor: pointer;
+}
+
+/* Hilfe / Neues Match in der Kopfzeile (kompakt, helleres Blau, wie 14.1) */
+.hdr-btn {
+  font-size: 2.4vmin;
+  line-height: 1;
+  padding: 0.7vmin 1.5vmin;   /* gleiche Hoehe wie #home-btn (3.8vmin), Inhalt kleiner */
+  margin: 0;
+  border: none;
+  border-radius: 1vmin;
+  background: #3461a8;
+  color: #fff;
+  font-weight: bold;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+/* Break-Anzeige */
+#break-info {
+  text-align: center;
+  font-size: 4vmin;
+  font-weight: bold;
+  margin-top: 1vmin;
+}
+
+#break-text {
+  color: red;
+}
+
+/* Ausspielziel (Race to) – nur Frei-Modus, Optik wie 14.1-Ziel */
+#pool-target {
+  display: none;
+  text-align: center;
+  font-size: 3vmin;
+  font-weight: bold;
+  margin-top: 0.4vmin;
+}
+#pool-target button {
+  font-size: 2.5vmin;
+  margin: 0 0 0 1vmin;
+  padding: 0.8vmin 1.8vmin;
+  border-radius: 0.8vmin;
+  border: 1px solid #666;
+  background: #f0f0f0;
+  cursor: pointer;
+}
+
+/* Spieler */
+#players {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1vmin 4vmin;
+  font-size: 6.9vmin;
+  font-weight: bold;
+  position: relative;
+  z-index: 5;
+}
+
+.player-box {
+  flex: 1;
+  text-align: center;
+  min-width: 0;   /* ohne dies reisst ein langer nowrap-Name seine Haelfte auf */
+}
+
+/* Namen bleiben einzeilig; zu lange Namen verkleinert namenEinpassen(),
+   darunter (4vmin) wird abgeschnitten. */
+/* feste Zeilenhoehe: der Stiftknopf bleibt auf gleicher Hoehe, auch wenn ein
+   Name verkleinert wurde */
+#p1, #p2 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+           height: 8vmin; line-height: 8vmin; }
+
+.player-left { color: red; }
+.player-right { color: blue; }
+
+/* display: block nimmt den Knopf aus der Grundlinien-Ausrichtung - sonst bleibt der
+   Abstand am Strut der Namenszeile haengen und ein kleineres Margin wirkt gar nicht;
+   margin auto haelt ihn zentriert. */
+.edit-btn {
+  font-size: 2.5vmin;
+  display: block;
+  margin: 0.4vmin auto 0;
+  cursor: pointer;
+}
+
+/* Score Hauptbereich */
+/* Tippflaechen: die Klick-Listener haengen an #s1/#s2, also an der ganzen Grid-Zelle.
+   Die Polsterung HIER schneidet Flaeche weg (tote Zonen am Rand und auf dem Doppelpunkt),
+   die Polsterung in #s1/#s2/#colon verschiebt nur den Inhalt und laesst die Zelle voll.
+   - Mittelspalte 12vmin = senkrechte tote Zone auf dem Doppelpunkt
+   - aussen 8vmin seitlich / 12vmin unten Abstand zu Bildschirmrand und unterer Leiste
+   - Ausgleich, damit die Ziffern unter den ✏️-Buttons bleiben:
+     L = 4 − seitlich + Mitte/2 = 4 − 8 + 6 = 2vmin
+   - Ziffern 9,65vmin ueber der Mitte: (unten 12 + innen 7,3) / 2 */
+#scores {
+  display: grid;
+  grid-template-columns: 1fr 12vmin 1fr;
+  padding: 0 8vmin 12vmin;
+  flex: 1 1 auto;
+  min-height: 20vh;
+  position: relative;
+  z-index: 1;
+}
+
+.score {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 34.5vmin; /* Dynamisch, Option B */
+  font-weight: bold;
+  user-select: none;
+}
+
+#s1 { color: red;  padding: 0 0 7.3vmin 2vmin; }
+#s2 { color: blue; padding: 0 2vmin 7.3vmin 0; }
+
+/* Doppelpunkt */
+#colon {
+  font-size: 13.8vmin;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-bottom: 7.3vmin;   /* mit den Ziffern mit nach oben */
+}
+
+/* Untere Leiste (wie 14.1): Undo + Spiel abbrechen links, Seitenwechsel mittig,
+   Protokoll rechts */
+#bottom-bar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1vmin;
+  padding: 0.4vmin 1.5vmin calc(1vmin + env(safe-area-inset-bottom)) 1.5vmin;   /* iOS: Home-Indikator freihalten */
+  position: relative;
+  z-index: 10;
+  flex: 0 0 auto;
+}
+#bottom-bar button { margin: 0; }
+/* Links und rechts teilen sich den Rest zu gleichen Teilen, damit die Mitte
+   unabhaengig von deren Breite exakt in der Bar-Mitte sitzt */
+.bb-left, .bb-right { display: flex; align-items: flex-end; gap: 0.6vmin; flex: 1 1 0; }
+.bb-right { justify-content: flex-end; }
+.bb-center { display: flex; align-items: flex-end; justify-content: center; gap: 1vmin; flex: 0 0 auto; }
+/* Undo + Protokoll + Spiel abbrechen + Zurück zum Turnier etwas kleiner (wie 14.1) */
+#undoBtn, #logBtn, #btn-abort, #btn-back { font-size: 2.7vmin; padding: 0.9vmin 1.8vmin; border: 1px solid #666; }
+/* Seitenwechsel 20% kleiner als Standardbuttons */
+#btn-swap { font-size: 2.8vmin; padding: 1.2vmin 2vmin; }
+
+button {
+  font-size: 3.5vmin;
+  padding: 1.5vmin 2.5vmin;
+  margin: 1vmin;
+  border-radius: 1vmin;
+  border: none;
+  background: #f0f0f0;
+}
+
+button:disabled { opacity: 0.4; }
+
+/* Bestätigungs-Panel (Turnier: Race-to erreicht) – kompaktes, fixiertes Overlay oben */
+#confirm-panel {
+  display: none;
+  position: fixed;
+  left: 50%;
+  top: 6.5vh;
+  transform: translateX(-50%);
+  z-index: 90;
+  text-align: center;
+  background: #fff7e6;
+  border: 0.3vmin solid #e67e22;
+  border-radius: 1.2vmin;
+  padding: 1.2vmin 2.5vmin;
+  box-shadow: 0 0.5vmin 2vmin rgba(0,0,0,0.35);
+  max-width: 92vw;
+}
+#confirm-text { font-size: 2.8vmin; font-weight: bold; color: #1f3b73; margin-bottom: 0.6vmin; }
+#confirm-panel .hint { display: block; font-size: 1.8vmin; color: #666; margin-top: 0.5vmin; }
+#btn-confirm, #btn-newmatch { background: #28a745; color: #fff; font-size: 2.8vmin; padding: 1vmin 2.5vmin; margin: 0.5vmin; }
+
+/* Picker-Overlay (Turnier: Spielauswahl) */
+#picker {
+  display: none;
+  position: fixed; inset: 0;
+  background: #1f3b73;
+  z-index: 100;
+  justify-content: center;
+  align-items: flex-start;
+  overflow-y: auto;
+  padding: 4vmin;
+  box-sizing: border-box;
+}
+#picker-box {
+  background: #fff;
+  border-radius: 2vmin;
+  padding: 3vmin;
+  width: 100%;
+  max-width: 90vmin;
+}
+#picker-box h2 { color: #1f3b73; margin: 0 0 2vmin; text-align: center; font-size: 4.5vmin; }
+#picker-filter { width: 100%; padding: 1.5vmin; font-size: 3vmin; margin-bottom: 2vmin; border: 1px solid #cbd5e1; border-radius: 1vmin; box-sizing: border-box; }
+#picker-list { display: flex; flex-direction: column; gap: 1.5vmin; }
+.pick-item {
+  font-size: 3.5vmin; padding: 2.2vmin; border: none; border-radius: 1.2vmin;
+  background: #e8f0fe; color: #1f3b73; cursor: pointer; width: 100%;
+}
+.pick-item:hover { background: #d3e3fd; }
+.pick-item.busy { background: #eee; color: #999; cursor: not-allowed; }
+.pick-vs { color: #888; margin: 0 1.2vmin; font-size: 2.8vmin; }
+.busy-note { font-size: 2.2vmin; color: #c0392b; }
+#btn-free { margin-top: 3vmin; width: 100%; background: #6c757d; color: #fff; }
+
+/* Nachgeben-Overlay: ein anderes Geraet steuert diesen Tisch (verhindert Schreib-Krieg) */
+#yield-overlay {
+  display: none;
+  position: fixed; inset: 0;
+  background: #1f3b73;
+  color: #fff;
+  z-index: 120;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: 6vmin;
+  box-sizing: border-box;
+}
+#yield-overlay h2 { font-size: 5vmin; margin: 0 0 2vmin; }
+#yield-overlay p { font-size: 3vmin; margin: 0 0 4vmin; max-width: 80vmin; line-height: 1.4; }
+#yield-overlay .row { display: flex; gap: 3vmin; flex-wrap: wrap; justify-content: center; }
+#yield-home    { background: #28a745; color: #fff; font-size: 3.5vmin; padding: 2vmin 4vmin; }
+#yield-reclaim { background: #6c757d; color: #fff; font-size: 3.5vmin; padding: 2vmin 4vmin; }
+
+/* Hilfe-Overlay (Inhalt folgt spaeter) – Optik wie 14.1 */
+#help-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.55);
+  z-index: 135; align-items: center; justify-content: center; padding: 2vmin; }
+#help-card { background: #fff; color: #222; width: 100%; max-width: 680px; max-height: 92vh;
+  border-radius: 12px; overflow: hidden; display: flex; flex-direction: column;
+  box-shadow: 0 12px 40px rgba(0,0,0,.4); font-family: Arial, sans-serif; }
+#help-head { background: #1f3b73; color: #fff; display: flex; align-items: center;
+  justify-content: space-between; padding: 10px 14px; }
+#help-title { font-size: 18px; font-weight: bold; }
+#help-head button { background: rgba(255,255,255,.16); color: #fff; border: none;
+  border-radius: 7px; padding: 6px 11px; font-size: 14px; margin: 0; cursor: pointer; }
+#help-head-actions { display: flex; align-items: center; gap: 8px; }
+/* Einstellungs-Dialog (Race to + Anstoss) – ergaenzt die .app-dlg-*-Klassen aus js/dialogs.js.
+   Die Auswahl muss ".app-dlg-box ..." mitfuehren: die dortige Regel ".app-dlg-box button"
+   ist spezifischer als eine einzelne Klasse und wuerde sonst Farbe und Rahmen ueberschreiben. */
+.set-dlg-label { font-size: 15px; line-height: 1.5; margin-top: 16px; }
+.set-dlg-hint { font-size: 13px; color: #666; margin-top: 6px; }
+.app-dlg-box .set-dlg-break { background: #3461a8; color: #fff; font-weight: bold; font-size: 14px;
+  border: 1px solid transparent; border-radius: 7px; padding: 9px 18px; margin-top: 6px; cursor: pointer; }
+.app-dlg-box .set-dlg-break:hover { background: #2a4f8a; }
+.app-dlg-box .set-dlg-break.on { border-color: #ffd27f; }
+#help-body { overflow-y: auto; padding: 4px 18px 16px; font-size: 15px; line-height: 1.5;
+  color: #222; min-height: 18vh; }
+#help-body h3 { color: #1f3b73; font-size: 15px; margin: 14px 0 4px; }
+#help-body ul { margin: 4px 0; padding-left: 20px; }
+#help-body li { margin: 3px 0; }
+#help-body p { margin: 4px 0; }
+.ball-ico { vertical-align: -4px; margin-right: 2px; }
+
+/* Protokoll-Overlay: letzte 10 Spiele an diesem Tisch – Optik wie 14.1 */
+#log-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.55);
+  z-index: 130; align-items: center; justify-content: center; padding: 2vmin; }
+#log-card { background: #fff; color: #222; width: 100%; max-width: 640px; max-height: 92vh;
+  border-radius: 12px; overflow: hidden; display: flex; flex-direction: column;
+  box-shadow: 0 12px 40px rgba(0,0,0,.4); font-family: Arial, sans-serif; }
+#log-head { background: #1f3b73; color: #fff; display: flex; align-items: center;
+  justify-content: space-between; padding: 10px 14px; }
+#log-title { font-size: 18px; font-weight: bold; }
+#log-head button { background: rgba(255,255,255,.16); color: #fff; border: none;
+  border-radius: 7px; padding: 6px 12px; font-size: 14px; margin: 0; cursor: pointer; }
+#log-scroll { overflow-y: auto; padding: 6px 12px 12px; }
+#log-table { width: 100%; border-collapse: collapse; font-size: 14px; text-align: center; }
+#log-table th, #log-table td { padding: 6px 4px; }
+#log-table thead th { color: #555; font-size: 12px; border-bottom: 1px solid #ccc; }
+#log-table tbody tr:nth-child(even) { background: #fafafa; }
+.badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: bold; color: #fff; }
+.badge-pool { background: #e67e22; }
+.badge-141 { background: #27ae60; }
+.p1c { color: #cc0000; font-weight: bold; }
+.p2c { color: #1133cc; font-weight: bold; }
+.log-empty { color: #888; text-align: center; padding: 18px; }
+</style>
+
+  <link rel="icon" type="image/svg+xml" href="./img/favicon.svg">
+  <!-- Eigene Dialoge (alert, confirmModal, promptModal). Als Modul eingebunden, damit
+     der Bau es mitnimmt; es laeuft trotzdem vor dem Hauptskript, weil es davor steht. -->
+  <script type="module" src="./js/dialogs.js"></script>
+</head>
+
+<body>
+
+<div id="header">
+  <div class="hdr-left">
+    <button id="home-btn" type="button" title="Zur Startseite">🏠</button>
+    <button id="helpBtn" class="hdr-btn" type="button">❓ Hilfe</button>
+    <button id="fsBtn" class="hdr-btn" type="button" title="Vollbild">⤢ Vollbild</button>
+  </div>
+  <div id="hdr-title">8/9/10-Ball SCOREBOARD</div>
+  <div class="hdr-right">
+    <button id="btn-newgame" class="hdr-btn" type="button" onclick="newGame()">🔄 Neues Match</button>
+    <div id="clock"></div>
+  </div>
+</div>
+
+<div id="break-info">
+  <span id="break-text">Next Break: Rot</span>
+</div>
+
+<div id="pool-target">
+  Race to: <span id="raceToVal">—</span>
+  <button id="raceToBtn" type="button" title="Einstellungen: Race to und Anstoß" onclick="setRaceTo()">⚙️</button>
+</div>
+
+<div id="players">
+  <div class="player-box">
+    <div id="p1" class="player-left">Spieler 1</div>
+    <button class="edit-btn" onclick="changeName(1)">✏️</button>
+  </div>
+
+  <div class="player-box">
+    <div id="p2" class="player-right">Spieler 2</div>
+    <button class="edit-btn" onclick="changeName(2)">✏️</button>
+  </div>
+</div>
+
+<div id="scores">
+  <div id="s1" class="score">0</div>
+  <div id="colon">:</div>
+  <div id="s2" class="score">0</div>
+</div>
+
+<div id="confirm-panel">
+  <div id="confirm-text"></div>
+  <button id="btn-confirm">✅ Ergebnis bestätigen</button>
+  <button id="btn-newmatch" onclick="newGame()">🔄 Neues Match</button>
+  <span class="hint">Falsch gezählt? Mit ↩️ Undo korrigieren.</span>
+</div>
+
+<div id="bottom-bar">
+  <div class="bb-left">
+    <button id="undoBtn" type="button">↩️ Undo</button>
+    <button id="btn-abort" style="display:none;">✖ Spiel abbrechen</button>
+    <button id="btn-back" style="display:none;">↩ Zurück zum Turnier</button>
+  </div>
+  <div class="bb-center">
+    <button id="btn-swap" onclick="swap()">↔ Seitenwechsel</button>
+  </div>
+  <div class="bb-right">
+    <button id="logBtn" type="button">📋 Protokoll</button>
+  </div>
+</div>
+
+<!-- Turnier-Picker (Spielauswahl) -->
+<div id="picker">
+  <div id="picker-box">
+    <h2>🎱 Spiel auswählen — Tisch <span id="picker-table"></span></h2>
+    <select id="picker-filter"><option value="">— alle offenen Spiele —</option></select>
+    <div id="picker-list"></div>
+    <button id="btn-free">🎮 Frei spielen (ohne Turnier)</button>
+  </div>
+</div>
+
+<!-- Nachgeben-Overlay: anderes Geraet hat den Tisch uebernommen -->
+<div id="yield-overlay">
+  <h2>🔁 Tisch wird woanders gesteuert</h2>
+  <p id="yield-text"></p>
+  <div class="row">
+    <button id="yield-home" type="button">🏠 Zur Startseite</button>
+    <button id="yield-reclaim" type="button">Hier übernehmen</button>
+  </div>
+</div>
+
+<!-- Hilfe-Overlay (Inhalt folgt spaeter) -->
+<div id="help-overlay">
+  <div id="help-card">
+    <div id="help-head">
+      <div id="help-title">❓ Regeln – 8/9/10-Ball (Kurzfassung)</div>
+      <div id="help-head-actions">
+        <button id="helpCloseBtn" type="button">✕ Schließen</button>
+      </div>
+    </div>
+    <div id="help-body">
+      <h3>So bedienst du das Board</h3>
+      <ul>
+        <li><b>Punkte zählen</b> – Tippe auf die <b>große Zahl</b> des Spielers, der den Satz gewonnen hat. Das zählt einen Satz und stellt zugleich den nächsten Anstoß um.</li>
+        <li><b>Anstoß &amp; Seiten</b> – Der erste Anstoß liegt beim <b>roten (linken)</b> Spieler. Mit <b>↔ Seitenwechsel</b> legst du fest, wer links steht – und damit anstößt. Der Seitenwechsel tauscht Namen <b>und</b> Punktestand mit; die Anzeige <i>Next Break</i> bleibt an der Seite, es wechselt also die Person, die anstößt.</li>
+        <li><b>Einstellungen</b> – Mit <b>⚙️</b> neben <i>Race to</i> öffnest du die Einstellungen für <b>Race to</b> und <b>Anstoß</b>. Beides wird erst mit <b>OK</b> übernommen.</li>
+        <li><b>Race to</b> – Wie viele Sätze zum Sieg nötig sind; leer lassen heißt kein Ziel (Anzeige „—“). Ist das Ziel erreicht, sperrt das Board weiteres Zählen und zeigt den Sieger.</li>
+        <li><b>Wechsel-Break / Winner-Break</b> – Der Knopf <i>Anstoß</i> in den Einstellungen schaltet um: bei <b>Wechsel-Break</b> (Standard) wechselt der Anstoß nach jedem Satz, bei <b>Winner-Break</b> stößt an, wer den Satz gewonnen hat. Im Winner-Break steht hinter <i>Next Break</i> zusätzlich „· Winner-Break“. <b>🔄 Neues Match</b> setzt wieder auf Wechsel-Break zurück.</li>
+        <li><b>Korrigieren</b> – <b>↩️ Undo</b> nimmt den letzten Schritt zurück – Punkt oder Seitenwechsel –, auch noch nach Erreichen des Ziels. Undo wirkt nur auf diesem Tablet.</li>
+        <li><b>Namen</b> – Mit <b>✏️</b> neben dem Namen änderst du ihn.</li>
+        <li><b>Im Turnierbetrieb</b> gilt immer Wechsel-Break, das <i>Race to</i> kommt aus dem Turnier und die Namen stehen fest – der Break-Knopf und <b>⚙️</b> wirken dann nicht. Ist das Ziel erreicht, erscheint <b>✅ Ergebnis bestätigen</b>.</li>
+        <li><b>📋 Protokoll</b> zeigt die <b>letzten 10 beendeten Spiele an diesem Tisch</b> (Datum, Uhrzeit, Spielart, Begegnung, Ergebnis) – nicht den Verlauf des laufenden Spiels.</li>
+      </ul>
+
+      <h3 style="border-top:1px solid #eee;padding-top:14px;margin-top:16px;">Allgemeine Regeln (für 8-, 9- und 10-Ball)</h3>
+      <ul>
+        <li><b>Anstoß:</b> Der Spielball liegt frei im <b>Kopffeld</b>. Beim Break muss eine Kugel fallen oder mindestens 4 Objektkugeln eine Bande berühren.</li>
+        <li><b>Korrekter Stoß:</b> Nach dem Kontakt muss mindestens eine Kugel eine Bande berühren oder versenkt werden.</li>
+        <li>⚠ <b>Strafe bei Foul:</b> Der Gegner erhält Ball in Hand auf dem gesamten Tisch (Ausnahme: 8-Ball-Anstoß, siehe unten).</li>
+        <li>⚠ <b>Standardfouls:</b> Weiße fällt in eine Tasche oder springt vom Tisch · keine Kugel getroffen · keine Bande nach dem Ballkontakt · Kugel mit Körper, Kleidung oder Queue berührt.</li>
+      </ul>
+
+      <div style="font-size:12px;color:#666;margin:12px 0 4px;font-weight:bold;">Orientierung am Tisch</div>
+      <svg viewBox="0 0 360 196" width="100%" role="img" aria-label="Tisch mit Kopffeld, Kopflinie, Kopfpunkt, Mittelpunkt, Fußpunkt und Aufbaudreieck">
+        <rect x="4" y="4" width="352" height="188" rx="12" fill="#5a3618"/>
+        <rect x="18" y="18" width="324" height="160" rx="6" fill="#1f7a4d"/>
+        <circle cx="18" cy="18" r="7" fill="#141414"/><circle cx="180" cy="18" r="7" fill="#141414"/><circle cx="342" cy="18" r="7" fill="#141414"/>
+        <circle cx="18" cy="178" r="7" fill="#141414"/><circle cx="180" cy="178" r="7" fill="#141414"/><circle cx="342" cy="178" r="7" fill="#141414"/>
+        <line x1="99" y1="18" x2="99" y2="178" stroke="#eafff5" stroke-width="1" stroke-dasharray="4 3" opacity="0.7"/>
+        <polygon points="261,98 320,68 320,128" fill="rgba(255,255,255,.08)" stroke="#eafff5" stroke-width="1" stroke-dasharray="3 3" opacity="0.85"/>
+        <circle cx="261" cy="98" r="2.8" fill="#ffd27f"/>
+        <circle cx="99" cy="98" r="2.8" fill="#eafff5"/>
+        <circle cx="180" cy="98" r="2.8" fill="#eafff5"/>
+        <g font-family="Arial" font-size="10" fill="#eafff5" text-anchor="middle">
+          <text x="261" y="86">Fußpunkt</text>
+          <text x="99" y="86">Kopfpunkt</text>
+          <text x="180" y="86">Mittelpunkt</text>
+          <text x="99" y="33">Kopflinie</text>
+          <text x="56" y="160">Kopffeld</text>
+          <text x="291" y="150">Dreieck</text>
+        </g>
+      </svg>
+
+      <h3 style="border-top:1px solid #eee;padding-top:14px;margin-top:16px;"><svg class="ball-ico" width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9" fill="#111"/><circle cx="10" cy="10" r="5.2" fill="#fdfdf2"/><text x="10" y="12.5" font-size="6.5" text-anchor="middle" fill="#111" font-weight="bold" font-family="Arial">8</text></svg> 8-Ball (Ansagespiel)</h3>
+      <ul>
+        <li><b>Ziel:</b> Ein Spieler spielt die „Vollen", der andere die „Halben". Wer zuerst alle eigenen Kugeln und danach die schwarze <b>8</b> korrekt versenkt, gewinnt.</li>
+        <li><b>Aufbau:</b> Vorderste Kugel auf dem Fußpunkt, die 8 in der Mitte; in den hinteren Ecken je eine Volle und eine Halbe.</li>
+        <li><b>Spielablauf:</b> Vor dem Stoß ansagen, welche Kugel in welche Tasche (außer beim Anstoß). Die Weiße trifft zuerst eine Kugel der eigenen Gruppe (Ausnahme: offener Tisch).</li>
+        <li><b>Offener Tisch:</b> Nach dem Anstoß ist der Tisch offen; die Gruppenwahl entscheidet der erste angesagte, korrekte Treffer.</li>
+        <li><b>Fehlstoß:</b> Fällt eine Kugel anders oder unangesagt, wechselt die Aufnahme – die Kugel bleibt im Loch.</li>
+        <li>⚠ <b>Spezielle Fouls:</b> Weiße trifft zuerst eine gegnerische Kugel oder die 8.</li>
+        <li><b>Anstoß-Foul (Ausnahme):</b> Ball in Hand nur im <b>Kopffeld</b>, und es dürfen nur Kugeln außerhalb des Kopffelds angespielt werden.</li>
+        <li><b>Partieverlust:</b> Die 8 fällt, obwohl noch eigene Kugeln liegen · die 8 fällt in eine nicht angesagte Tasche · die 8 wird beim Foul mitversenkt · die 8 springt vom Tisch. (Fällt die 8 beim Anstoß, wird sie wieder aufgebaut oder neu angestoßen.)</li>
+      </ul>
+
+      <h3><svg class="ball-ico" width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><clipPath id="b9c"><circle cx="10" cy="10" r="9"/></clipPath><g clip-path="url(#b9c)"><rect x="0" y="0" width="20" height="20" fill="#fdfdf2"/><rect x="0" y="5.5" width="20" height="9" fill="#f6c411"/></g><circle cx="10" cy="10" r="9" fill="none" stroke="#d9d9c8" stroke-width="0.7"/><circle cx="10" cy="10" r="5.2" fill="#fdfdf2"/><text x="10" y="12.5" font-size="6.5" text-anchor="middle" fill="#111" font-weight="bold" font-family="Arial">9</text></svg> 9-Ball (kein Ansagespiel)</h3>
+      <ul>
+        <li><b>Ziel:</b> Wer die <b>9</b> korrekt versenkt, gewinnt.</li>
+        <li><b>Aufbau:</b> Als Raute – die 1 vorne auf dem Fußpunkt, die 9 in der Mitte, der Rest beliebig.</li>
+        <li><b>Spielablauf:</b> Kein Ansagespiel – jeder korrekt versenkte Ball zählt. Die Weiße muss immer zuerst die Kugel mit der niedrigsten Nummer treffen.</li>
+        <li><b>Anstoß:</b> Die 1 muss zuerst getroffen werden.</li>
+        <li><b>Push Out:</b> Direkt nach korrektem Anstoß ansagbar – keine Banden-/Kugelberührung nötig. Der Gegner spielt weiter oder gibt die Aufnahme zurück.</li>
+        <li>⚠ <b>Spezielle Fouls:</b> Weiße trifft nicht zuerst die niedrigste Kugel. Versenkte Objektkugeln bleiben in den Taschen (Ausnahme: die 9 wird wieder aufgesetzt).</li>
+        <li><b>Partieende:</b> Gewonnen, wenn die 9 bei korrektem Stoß fällt (auch per Kombination). Verloren bei drei Fouls in Folge (das dritte muss vorher angekündigt werden).</li>
+      </ul>
+
+      <h3><svg class="ball-ico" width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><clipPath id="b10c"><circle cx="10" cy="10" r="9"/></clipPath><g clip-path="url(#b10c)"><rect x="0" y="0" width="20" height="20" fill="#fdfdf2"/><rect x="0" y="5.5" width="20" height="9" fill="#1958a8"/></g><circle cx="10" cy="10" r="9" fill="none" stroke="#d9d9c8" stroke-width="0.7"/><circle cx="10" cy="10" r="5.2" fill="#fdfdf2"/><text x="10" y="12.4" font-size="5.4" text-anchor="middle" fill="#111" font-weight="bold" font-family="Arial">10</text></svg> 10-Ball (Ansagespiel)</h3>
+      <ul>
+        <li><b>Ziel:</b> Wer die <b>10</b> korrekt versenkt, gewinnt.</li>
+        <li><b>Aufbau:</b> Als Dreieck – die 1 vorne auf dem Fußpunkt, die 10 in der Mitte, die 2 und 3 in den hinteren Ecken.</li>
+        <li><b>Spielablauf:</b> Reines Ansagespiel – Kugel und Tasche vor dem Stoß benennen (außer beim Anstoß). Die Weiße muss immer zuerst die niedrigste Kugel treffen.</li>
+        <li><b>Anstoß:</b> Die 1 muss zuerst getroffen werden.</li>
+        <li><b>Fehlstoß:</b> Trifft die angesagte Kugel die falsche Tasche oder fällt eine unangesagte Kugel, darf der Gegner übernehmen oder weiterspielen lassen.</li>
+        <li><b>Push Out:</b> Direkt nach korrektem Anstoß ansagbar – keine Banden-/Kugelberührung nötig.</li>
+        <li>⚠ <b>Spezielle Fouls:</b> Weiße trifft nicht zuerst die niedrigste Kugel. Versenkte Objektkugeln bleiben in den Taschen (Ausnahme: die 10 wird wieder aufgesetzt).</li>
+        <li><b>Partieende:</b> Gewonnen, wenn die 10 als letzte verbleibende Kugel korrekt angesagt und versenkt wird. Verloren bei drei Fouls in Folge.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- Protokoll-Overlay: letzte 10 Spiele an diesem Tisch -->
+<div id="log-overlay">
+  <div id="log-card">
+    <div id="log-head">
+      <div id="log-title">📋 Protokoll — Tisch <span id="log-table-no"></span></div>
+      <button id="logCloseBtn" type="button">✕ Schließen</button>
+    </div>
+    <div id="log-scroll"><table id="log-table"></table></div>
+  </div>
+</div>
+
+<script type="module">
+  // CueDesk: Anbindung mit denselben Funktionen wie frueher Firebase. Je nach
+  // Umgebung spricht sie mit CueDesk (gekoppeltes Tablet) oder arbeitet offline.
+  import {
+    db, auth, ref, set, update, onValue, push, get, serverTimestamp, runTransaction, signInAnonymously,
+    starten, istAngebunden, startseite, spielerWaehlen, disziplinWaehlen, ergebnisSpeichernPool
+  } from "./js/anbindung.ts";
+  import { startIdleRedirect } from "./js/idle-timeout.js";
+  import { keepScreenAwake } from "./js/wake-lock.js";
+  import { setupFullscreenButton } from "./js/fullscreen.js";
+
+  keepScreenAwake();          // Bildschirm im Kiosk-Betrieb anhalten
+  setupFullscreenButton();    // Vollbild-Button (blendet sich aus, wenn wirkungslos)
+
+  // Anonym anmelden – notwendig damit Firebase Security Rules Schreibzugriff erlauben
+  signInAnonymously(auth).catch(err => console.error("Anmeldung fehlgeschlagen:", err));
+
+  /* ===========================
+     Multi-Table über URL
+     =========================== */
+  // CueDesk: Der Tisch kommt aus der Kopplung des Tablets oder aus ?table=.
+  // Offline gilt ?table= oder Tisch 1.
+  const { tisch: tableId } = await starten();
+
+  // Referenz in der Firebase-Datenbank (z.B. "tables/1")
+  const dbRef = ref(db, 'tables/' + tableId);
+
+  /* ===========================
+     Spielstand (Standardwerte für Pool)
+     =========================== */
+  // Wir fügen ein "gameType" Flag hinzu, damit der TV weiß,
+  // dass dieser Tisch gerade Pool spielt und nicht 14.1.
+  let state = {
+    gameType: "pool",
+    player1: "Spieler 1",
+    player2: "Spieler 2",
+    score1: 0,
+    score2: 0,
+    nextBreak: 1
+  };
+
+  // ---- Turnier-Zustand (Stufe 2) ----
+  let tournament = null;       // tournament/active
+  let tableData = null;        // letzter tables/<id>-Wert
+  let freeOverride = false;    // "Frei spielen" aktiv?
+  let tournamentLoaded = false; // wurde tournament/active schon mind. einmal geladen?
+  let claimed = false;         // hat dieses Board den Tisch bereits beansprucht?
+  let yielded = false;         // Tisch an anderes Geraet abgegeben -> nichts mehr schreiben
+  let yieldCount = 0;          // wie oft dieses Board verdraengt wurde (>=2 -> Uebernehmen sperren)
+
+  // Stabile Geraete-Kennung: erkennt ZWEI Geraete am selben Tisch (auch bei gleicher
+  // Spielart). Bewusst localStorage statt sessionStorage – ein Kiosk-/Browser-Neustart
+  // soll keinen Fehlalarm ausloesen, sondern denselben Tisch weiterbedienen duerfen.
+  const boardId = (() => {
+    let id = localStorage.getItem('boardId');
+    if (!id) {
+      id = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2));
+      localStorage.setItem('boardId', id);
+    }
+    return id;
+  })();
+
+  // Konflikt = anderes Geraet steuert diesen Tisch (fremde owner) ODER andere Spielart.
+  // Fehlende owner (Daten aus aelteren Versionen) gelten NICHT als Konflikt.
+  const isForeignBoard = (data) => !!(data && data.owner && data.owner !== boardId);
+
+  function tournamentActive() { return !!(tournament && tournament.status === 'running'); }
+  function isMatch() { return tournamentActive() && !freeOverride && !!(tableData && tableData.tournamentMatchId); }
+  function currentRaceTo() {
+    if (isMatch()) return (tableData && tableData.raceTo) || (tournament && tournament.raceTo) || 0;
+    return state.raceTo || 0;   // Frei-Modus-Ziel (optional von den Spielern gesetzt)
+  }
+  function matchOver() { const r = currentRaceTo(); return r > 0 && (state.score1 >= r || state.score2 >= r); }
+
+  /* ===========================
+     Hilfsfunktionen & Firebase Sync
+     =========================== */
+
+  // Speichert die Daten nun sofort in der Cloud (mit eigener Geraete-Kennung)
+  function save() {
+    state.owner = boardId;
+    set(dbRef, state);
+  }
+
+  function updateBreakDisplay() {
+    const el = document.getElementById("break-text");
+    el.style.color = state.nextBreak === 1 ? "red" : "blue";
+    el.textContent = "Next Break: " + (state.nextBreak === 1 ? "Rot" : "Blau");
+    if ((state.breakMode || 'alternating') === 'winner') {
+      const sfx = document.createElement("span");
+      sfx.textContent = " · Winner-Break";
+      sfx.style.cssText = "color:#8a5a12;font-size:0.7em;";
+      el.appendChild(sfx);
+    }
+  }
+
+  /* Namen bleiben einzeilig: passt der Name nicht in seine Haelfte, wird nur dieser
+     Name proportional kleiner gesetzt. So bleiben beide Seiten gleich hoch und die
+     Stiftknoepfe auf einer Linie. Gemessen wird der Textknoten (Range), nicht der
+     Kasten des <div> - der ist durch .player-box immer volle Haelftenbreite. */
+  function namenEinpassen() {
+    const basis = 6.9, min = 4;                          // vmin, basis = Wert aus #players
+    const vmin = Math.min(innerWidth, innerHeight) / 100;
+    ["p1", "p2"].forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.style.fontSize = basis + "vmin";                // erst zuruecksetzen, dann messen
+      const platz = el.parentElement.clientWidth - 2 * vmin;   // 2vmin Luft zur Mitte
+      const r = document.createRange(); r.selectNodeContents(el);
+      const breite = r.getBoundingClientRect().width;
+      if (breite > platz) el.style.fontSize = Math.max(min, basis * platz / breite) + "vmin";
+    });
+  }
+
+  function render() {
+    document.getElementById("p1").textContent = state.player1;
+    document.getElementById("p2").textContent = state.player2;
+    document.getElementById("s1").textContent = state.score1;
+    document.getElementById("s2").textContent = state.score2;
+    updateBreakDisplay();
+    document.getElementById("raceToVal").textContent = state.raceTo > 0 ? state.raceTo : "—";
+    namenEinpassen();
+  }
+
+  window.addEventListener("resize", namenEinpassen);   // Drehung und Vollbild
+
+  function toggleBreak() {
+    state.nextBreak = (state.nextBreak === 1 ? 2 : 1);
+  }
+
+  /* Einstellungen (Ausspielziel + Anstoss-Modus) in EINEM Dialog. Eigener Dialog statt
+     promptModal: die Funktion in js/dialogs.js ist geteilt (14.1, Zentrale) und soll
+     keinen Pool-spezifischen Schalter bekommen. Aufbau und Klassen sind dieselben,
+     damit die Optik stimmt. Beides wird erst mit OK uebernommen. */
+  const BREAK_TEXTE = {
+    alternating: { label: 'Wechsel-Break', hinweis: 'Der Anstoß wechselt nach jedem Satz.' },
+    winner:      { label: 'Winner-Break',  hinweis: 'Wer den Satz gewinnt, stößt auch den nächsten an.' }
+  };
+
+  function settingsModal(raceTo, breakMode) {
+    return new Promise((resolve) => {
+      const ov = document.createElement('div');
+      ov.className = 'app-dlg-overlay';
+      ov.innerHTML =
+        '<div class="app-dlg-box" role="dialog" aria-modal="true">' +
+          '<div class="app-dlg-title">🎱 8/9/10-Ball Scoreboard</div>' +
+          '<div class="app-dlg-msg">Race to (Sätze; leer = kein Ziel):</div>' +
+          '<input type="text" class="app-dlg-input" inputmode="numeric" maxlength="3">' +
+          '<div class="set-dlg-label">Anstoß:</div>' +
+          '<button type="button" class="set-dlg-break"></button>' +
+          '<div class="set-dlg-hint"></div>' +
+          '<div class="app-dlg-actions">' +
+            '<button type="button" class="app-dlg-cancel">Abbrechen</button>' +
+            '<button type="button" class="app-dlg-ok">OK</button>' +
+          '</div>' +
+        '</div>';
+      document.body.appendChild(ov);
+
+      const inp = ov.querySelector('.app-dlg-input');
+      inp.value = raceTo > 0 ? String(raceTo) : '';
+      inp.addEventListener('input', () => { inp.value = inp.value.replace(/\D/g, '').slice(0, 3); });
+
+      let modus = (breakMode === 'winner') ? 'winner' : 'alternating';
+      const bBtn = ov.querySelector('.set-dlg-break');
+      const bHint = ov.querySelector('.set-dlg-hint');
+      const zeige = () => {
+        bBtn.textContent = BREAK_TEXTE[modus].label;
+        bHint.textContent = BREAK_TEXTE[modus].hinweis;
+        bBtn.classList.toggle('on', modus === 'winner');
+      };
+      bBtn.addEventListener('click', () => {
+        modus = (modus === 'winner') ? 'alternating' : 'winner';
+        zeige();
+      });
+      zeige();
+
+      const fertig = (wert) => { ov.remove(); document.removeEventListener('keydown', onKey); resolve(wert); };
+      function onKey(e) { if (e.key === 'Escape') fertig(null); }
+      ov.querySelector('.app-dlg-ok').addEventListener('click', () => fertig({ raceTo: inp.value, breakMode: modus }));
+      ov.querySelector('.app-dlg-cancel').addEventListener('click', () => fertig(null));
+      inp.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); fertig({ raceTo: inp.value, breakMode: modus }); }
+      });
+      ov.addEventListener('click', (e) => { if (e.target === ov) fertig(null); });
+      document.addEventListener('keydown', onKey);
+      setTimeout(() => { inp.focus(); inp.select(); }, 30);
+    });
+  }
+
+  // Ausspielziel und Anstoss-Modus im Frei-Modus setzen (im Turnier beides fest)
+  async function setRaceTo() {
+    if (isMatch()) return;   // im Turnier gilt das Match-Race-to
+    const erg = await settingsModal(state.raceTo || 0, state.breakMode || 'alternating');
+    if (erg === null) return;                       // Abbrechen aendert nichts
+    const n = parseInt(erg.raceTo, 10);
+    state.raceTo = (!isNaN(n) && n > 0) ? n : 0;
+    state.breakMode = erg.breakMode;
+    save();
+    render();
+  }
+
+  /* ===========================
+     Verlauf fuer Undo (bleibt lokal auf diesem Tablet, wie beim 14.1-Board)
+     =========================== */
+  let history = [];
+  function pushHistory() { history.push(JSON.stringify(state)); }
+
+  // Undo ersetzt die -1-Buttons: nimmt den letzten Punkt / Seitenwechsel zurueck.
+  // Bewusst auch bei erreichtem "Race to" erlaubt (Korrektur des letzten Punkts).
+  function undo() {
+    if (history.length === 0) return;
+    state = JSON.parse(history.pop());
+    save();
+  }
+
+  function add(player) {
+    if (matchOver()) return;            // im Turnier nach Erreichen von "Race to" gesperrt
+    pushHistory();
+    if (!state.startedAt) state.startedAt = Date.now();   // Spielbeginn fuer Dauer-Erfassung (erster Punkt)
+    if (player === 1) state.score1++;
+    else state.score2++;
+
+    const bm = isMatch() ? 'alternating' : (state.breakMode || 'alternating');   // im Turnier immer Wechsel-Break
+    if (bm === 'winner') state.nextBreak = player;   // Winner-Break: Gewinner bricht
+    else toggleBreak();                              // Wechsel-Break (Default)
+    save();
+  }
+
+  function swap() {
+    pushHistory();
+    [state.player1, state.player2] = [state.player2, state.player1];
+    [state.player1Id, state.player2Id] = [state.player2Id ?? null, state.player1Id ?? null];
+    [state.score1, state.score2] = [state.score2, state.score1];
+    save();
+  }
+
+  async function changeName(player) {
+    if (isMatch()) return;              // im Turniermodus keine Namensänderung
+    if (istAngebunden()) {
+      // CueDesk: Spieler aus der Mitgliederliste oder neuer Gast
+      const wahl = await spielerWaehlen(player === 1 ? "Spieler Rot" : "Spieler Blau");
+      if (!wahl) return;
+      if (player === 1) { state.player1 = wahl.name; state.player1Id = wahl.id; }
+      else              { state.player2 = wahl.name; state.player2Id = wahl.id; }
+      save();
+      return;
+    }
+    let name = (await promptModal("Neuer Name:") || '').trim();   // Leerzeichen trimmen -> keine Duplikate in der Statistik
+    if (!name) return;
+    if (player === 1) state.player1 = name;
+    else state.player2 = name;
+    save();
+  }
+
+async function newGame() {
+    // Wenn bereits Punkte erzielt wurden, fragen wir nach dem Archivieren
+    if (istAngebunden() && (state.score1 > 0 || state.score2 > 0)) {
+      // Abgebrochen ist ein Spiel mit Race-to, das niemand erreicht hat.
+      const abgebrochen = currentRaceTo() > 0 && !matchOver();
+      const frage = abgebrochen
+        ? "Das Spiel ist noch nicht zu Ende.\n\nAls abgebrochen speichern? Es zählt dann nicht als Sieg oder Niederlage."
+        : "Möchtest du dieses Ergebnis speichern?";
+      if (await confirmModal(frage)) {
+        // Beide Spieler muessen Personen aus CueDesk sein
+        for (const seite of [1, 2]) {
+          if (!state["player" + seite + "Id"]) {
+            const wahl = await spielerWaehlen("Wer war " + state["player" + seite] + "?", state["player" + seite]);
+            if (!wahl) { alert("Ohne Spielerzuordnung wird nichts gespeichert."); return; }
+            state["player" + seite] = wahl.name;
+            state["player" + seite + "Id"] = wahl.id;
+          }
+        }
+        const disziplin = await disziplinWaehlen(state.disziplin);
+        if (!disziplin) return;
+        state.disziplin = disziplin;   // fuer das naechste Spiel vorbelegt
+        const erg = await ergebnisSpeichernPool(state, { abgebrochen, disziplin });
+        if (!erg.ok) { alert("Speichern fehlgeschlagen: " + erg.fehler); return; }
+      }
+    }
+
+    if (!await confirmModal("Neues Match starten (Punkte zurücksetzen)?")) return;
+
+    state.score1 = 0;
+    state.score2 = 0;
+    state.nextBreak = 1;
+    state.breakMode = 'alternating';   // Break-Modus faellt bei neuem Match auf Standard zurueck
+    state.startedAt = null;   // Dauer-Erfassung fuer neues Spiel zuruecksetzen
+
+    if (await confirmModal("Spieler neu eingeben?")) {
+      // Leeres Feld und Abbrechen sauber trennen: promptModal liefert bei Abbruch null,
+      // bei OK immer einen String. Geleertes Feld -> Vorgabe statt alter Name.
+      if (istAngebunden()) {
+        const w1 = await spielerWaehlen("Spieler Rot");
+        if (w1) { state.player1 = w1.name; state.player1Id = w1.id; }
+        const w2 = await spielerWaehlen("Spieler Blau");
+        if (w2) { state.player2 = w2.name; state.player2Id = w2.id; }
+      } else {
+        const n1 = await promptModal("Name Spieler Rot:", state.player1);
+        if (n1 !== null) state.player1 = n1.trim() || "Spieler 1";
+        const n2 = await promptModal("Name Spieler Blau:", state.player2);
+        if (n2 !== null) state.player2 = n2.trim() || "Spieler 2";
+      }
+    }
+
+    save();
+  }
+
+  /* ===========================
+     Event Listener binden
+     =========================== */
+  // Da wir Module verwenden, müssen wir die Funktionen global verfügbar machen.
+  window.swap = swap;
+  window.changeName = changeName;
+  window.newGame = newGame;
+  window.setRaceTo = setRaceTo;
+
+  // Die Klick-Listener für die großen Zähler
+  document.getElementById("s1").addEventListener("click", () => add(1));
+  document.getElementById("s2").addEventListener("click", () => add(2));
+
+/* ===========================
+     START / ECHTZEIT-LISTENER (POOL)
+     =========================== */
+  onValue(dbRef, (snapshot) => {
+    const data = snapshot.val();
+    tableData = data;
+    if (yielded) { applyMode(); return; }   // Tisch abgegeben -> nichts mehr schreiben
+    if (data) {
+      // Konflikt: andere Spielart in der Cloud ODER ein anderes Geraet steuert den Tisch.
+      const wrongType    = data.gameType !== "pool";
+      const foreignBoard = isForeignBoard(data);
+
+      if (wrongType || foreignBoard) {
+        if (claimed) {
+          // Wir hatten den Tisch schon -> ein anderes Geraet hat ihn uebernommen
+          // (Spielart umgestellt oder selbst beansprucht). Nachgeben statt
+          // zurueckschreiben (kein Flacker-Krieg). Ab der 2. Verdraengung
+          // (echter Streit) "Hier uebernehmen" sperren -> Schleife endet.
+          yieldCount++;
+          const allow = yieldCount < 2;
+          const grund = wrongType
+            ? `Tisch ${tableId} wurde an einem anderen Gerät auf ${niceType(data.gameType)} umgestellt.`
+            : `Tisch ${tableId} wird gerade an einem anderen Gerät gesteuert.`;
+          showYieldOverlay(allow
+            ? `${grund} Damit sich die Geräte nicht gegenseitig überschreiben, ist dieses Board pausiert.`
+            : `Tisch ${tableId} wird an mehreren Geräten gesteuert. Bitte nur an EINEM Tablet ` +
+              `weiterspielen und den Tisch dort über die Startseite neu öffnen.`,
+            allow);
+          return;
+        }
+        if (foreignBoard) {
+          // Frisch hier, aber ein anderes Geraet bedient den Tisch bereits:
+          // NICHT stillschweigend uebernehmen – sonst zwei Boards am selben Tisch.
+          showYieldOverlay(`Tisch ${tableId} wird bereits an einem anderen Gerät gesteuert. ` +
+            `Hier nur übernehmen, wenn dieses Tablet den Tisch wirklich bedienen soll.`, true);
+          return;
+        }
+        // wrongType ohne fremdes Geraet -> erstmalige Uebernahme (frisch von der Startseite)
+        state.player1 = data.player1 || "Spieler 1";
+        state.player2 = data.player2 || "Spieler 2";
+        state.gameType = "pool";
+        claimed = true;
+        save();
+      } else {
+        claimed = true;
+        state = data;
+      }
+      render();
+    } else {
+      // Tisch ist leer
+      if (!tournamentLoaded) {
+        render();   // Turnierstatus noch unbekannt -> abwarten, nichts schreiben
+      } else if (tournamentActive() && !freeOverride) {
+        render();   // Turnier läuft -> Picker übernimmt, kein Default
+      } else {
+        // sicher Frei-Modus: Standard-Spielstand anlegen wie bisher
+        state = { gameType: "pool", player1: "Spieler 1", player2: "Spieler 2", score1: 0, score2: 0, nextBreak: 1 };
+        claimed = true;
+        save();
+        render();
+      }
+    }
+    applyMode();
+  });
+
+  /* ===========================
+     TURNIERMODUS (Stufe 2)
+     =========================== */
+  const pickerEl       = document.getElementById('picker');
+  const pickerListEl   = document.getElementById('picker-list');
+  const pickerFilterEl = document.getElementById('picker-filter');
+  const confirmPanel   = document.getElementById('confirm-panel');
+  const confirmText    = document.getElementById('confirm-text');
+  document.getElementById('picker-table').textContent = tableId;
+
+  // Welche Spieler stecken gerade in einem laufenden Match? (zum Ausgrauen)
+  function busyPlayers() {
+    const busy = new Set();
+    if (tournament && tournament.schedule) {
+      Object.values(tournament.schedule).forEach(m => {
+        if (m.status === 'running') { busy.add(m.player1); busy.add(m.player2); }
+      });
+    }
+    return busy;
+  }
+
+  // Filter-Dropdown mit Namen befüllen, die noch offene Spiele haben
+  function rebuildFilterOptions() {
+    const names = new Set();
+    if (tournament && tournament.schedule) {
+      Object.values(tournament.schedule).forEach(m => {
+        if (m.status === 'pending') {
+          if (m.player1 && !String(m.player1).includes('FREILOS')) names.add(m.player1);
+          if (m.player2 && !String(m.player2).includes('FREILOS')) names.add(m.player2);
+        }
+      });
+    }
+    const current = pickerFilterEl.value;
+    const sorted = [...names].sort((a, b) => a.localeCompare(b));
+    pickerFilterEl.innerHTML = '<option value="">— alle offenen Spiele —</option>' +
+      sorted.map(n => `<option value="${n}">${n}</option>`).join('');
+    if (sorted.includes(current)) pickerFilterEl.value = current;
+  }
+
+  function renderPicker() {
+    rebuildFilterOptions();
+    if (!tournament || !tournament.schedule) {
+      pickerListEl.innerHTML = '<p style="text-align:center;">Kein Spielplan vorhanden.</p>';
+      return;
+    }
+    if (tournament.paused) {
+      pickerListEl.innerHTML = '<p style="text-align:center; font-size:4vh; color:#b8860b; font-weight:bold;">⏸️ Turnier pausiert</p>'
+        + '<p style="text-align:center; color:#888;">Es kann gerade kein Spiel ausgewählt werden. Bitte auf die Fortsetzung durch die Turnierleitung warten.</p>';
+      return;
+    }
+    const busy = busyPlayers();
+    const filter = pickerFilterEl.value;
+    let pend = Object.entries(tournament.schedule)
+      .filter(([id, m]) => m.status === 'pending')
+      .map(([id, m]) => ({ id, ...m }));
+    if (filter) pend = pend.filter(m => m.player1 === filter || m.player2 === filter);
+    const isFL = (n) => String(n).includes('FREILOS');
+    pend.forEach(m => {
+      m._waiting = (m.player1 == null || m.player2 == null);   // KO: Vorrunde noch nicht entschieden
+      m._freilos = !m._waiting && (isFL(m.player1) || isFL(m.player2));
+      m._playable = !m._waiting && (m._freilos || (!busy.has(m.player1) && !busy.has(m.player2)));
+    });
+    pend.sort((a, b) => {
+      if (a._playable !== b._playable) return a._playable ? -1 : 1;   // spielbar zuerst
+      if (a._waiting !== b._waiting) return a._waiting ? 1 : -1;       // wartende zuletzt
+      return 0;
+    });
+
+    if (pend.length === 0) {
+      pickerListEl.innerHTML = '<p style="text-align:center; color:#888;">Keine offenen Spiele.</p>';
+      return;
+    }
+    const raceTo = (tournament && tournament.raceTo) || 0;
+    pickerListEl.innerHTML = pend.map(m => {
+      if (m._waiting) {
+        // KO-Spiel, dessen Spieler noch nicht feststehen -> ausgegraut, nicht waehlbar
+        return `<button class="pick-item busy" disabled><span>🏆 ${m.title || 'KO-Spiel'}</span>`
+          + ` <span class="busy-note">— wartet auf Vorrunde</span></button>`;
+      }
+      if (m._freilos) {
+        // Freilos: kampflos gewertet, kein Spiel am Tisch
+        const real = isFL(m.player1) ? m.player2 : m.player1;
+        return `<button class="pick-item pick-freilos" data-id="${m.id}" data-freilos="1">`
+          + `<span class="pick-p1">${real}</span><span class="pick-vs">—</span><span class="pick-p2">Freilos</span>`
+          + ` <span class="busy-note" style="color:#888;">(kampflos ${m.raceTo || raceTo}:0)</span></button>`;
+      }
+      const note = m._playable ? '' : ' <span class="busy-note">(Spieler aktiv)</span>';
+      // Abweichendes Race to (Final-/KO-Phase) am Spiel anzeigen
+      const rtNote = m.raceTo && m.raceTo !== raceTo ? ` <span class="busy-note" style="color:#888;">(Race to ${m.raceTo})</span>` : '';
+      // Bei aktivem Namensfilter den gefilterten Spieler immer links anzeigen (nur Anzeige)
+      let left = m.player1, right = m.player2;
+      if (filter && m.player2 === filter) { left = m.player2; right = m.player1; }
+      return `<button class="pick-item${m._playable ? '' : ' busy'}" data-id="${m.id}" ${m._playable ? '' : 'disabled'}>`
+        + `<span class="pick-p1">${left}</span><span class="pick-vs">vs</span><span class="pick-p2">${right}</span>${rtNote}${note}</button>`;
+    }).join('');
+    pickerListEl.querySelectorAll('.pick-item:not(.busy)').forEach(btn => {
+      if (btn.dataset.freilos) {
+        btn.addEventListener('click', () => resolveFreilos(btn.getAttribute('data-id')));
+      } else {
+        btn.addEventListener('click', () => startMatch(btn.getAttribute('data-id')));
+      }
+    });
+  }
+
+  // Spiel am Tisch starten – Transaktion verhindert Doppelstart
+  async function startMatch(matchId) {
+    if (tournament && tournament.paused) { alert("Turnier ist pausiert – aktuell kann kein Spiel gestartet werden."); return; }
+    const matchRef = ref(db, `tournament/active/schedule/${matchId}`);
+    let res;
+    try {
+      res = await runTransaction(matchRef, (m) => {
+        if (!m || m.status !== 'pending') return;   // bereits vergeben -> abbrechen
+        if (m.player1 == null || m.player2 == null) return;   // KO: Spieler stehen noch nicht fest
+        m.status = 'running'; m.table = tableId; m.startedAt = Date.now();
+        return m;
+      });
+    } catch (e) { alert("Fehler beim Starten: " + e.message); return; }
+    if (!res.committed) { alert("Dieses Spiel läuft bereits an einem anderen Tisch."); return; }
+    const m = res.snapshot.val();
+    await set(dbRef, {
+      gameType: "pool", player1: m.player1, player2: m.player2,
+      score1: 0, score2: 0, nextBreak: 1,
+      tournamentMatchId: matchId, group: m.group, raceTo: m.raceTo || tournament.raceTo,
+      owner: boardId
+    });
+    // Anzeige/Screen-Wechsel übernimmt onValue(dbRef)
+  }
+
+  // Freilos kampflos werten (RaceTo:0) – ohne Spiel am Tisch, direkt ins Archiv
+  async function resolveFreilos(matchId) {
+    const m = tournament && tournament.schedule ? tournament.schedule[matchId] : null;
+    if (!m || m.status !== 'pending') return;
+    const raceTo = m.raceTo || tournament.raceTo || 0;
+    const p1IsFreilos = String(m.player1).includes('FREILOS');
+    const real = p1IsFreilos ? m.player2 : m.player1;
+    if (!await confirmModal(`${real} gewinnt kampflos ${raceTo}:0 (Freilos)?`)) return;
+
+    const key = push(ref(db, 'results')).key;
+    const now = new Date();
+
+    // Freilos atomar beanspruchen: sonst koennten zwei Tablets dasselbe Freilos
+    // gleichzeitig werten -> zwei Archiv-Eintraege. Wie bei confirmMatch gilt:
+    // erst der Anspruch, dann der results-Write (Rules erlauben anonym kein Loeschen).
+    let res;
+    try {
+      res = await runTransaction(ref(db, `tournament/active/schedule/${matchId}`), (cur) => {
+        if (!cur || cur.status !== 'pending') return;   // bereits gewertet oder vergeben
+        cur.status = 'completed'; cur.resultId = key;
+        return cur;
+      });
+    } catch (e) { alert("Fehler: " + e.message); return; }
+    if (!res.committed) { alert("Dieses Freilos wurde bereits gewertet."); return; }
+
+    const u = {};
+    u['results/' + key] = {
+      table: tableId, gameType: "pool",
+      player1: m.player1, player2: m.player2,
+      score1: p1IsFreilos ? 0 : raceTo,
+      score2: p1IsFreilos ? raceTo : 0,
+      date: now.toLocaleDateString("de-DE"),
+      timestamp: now.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" }),
+      serverTimestamp: serverTimestamp(),
+      tournamentId: tournament.id, matchId: matchId, group: m.group,
+      durationSec: 0
+    };
+    try { await update(ref(db), u); } catch (e) { alert("Fehler: " + e.message); }
+  }
+
+  // Besitzt DIESER Tisch das Spiel gerade? Schuetzt vor verspaeteten Offline-Writes,
+  // die den frischen Anspruch eines anderen Tisches ueberschreiben wuerden.
+  const ownsMatch = (m) => !!m && m.status === 'running' && String(m.table) === String(tableId);
+
+  // Ergebnis bestätigen -> Anspruch sichern, dann archivieren + Tisch freigeben
+  async function confirmMatch() {
+    if (!matchOver()) return;
+    const matchId = tableData.tournamentMatchId;
+    const group   = tableData.group;
+    const tId     = tournament.id;
+    const key     = push(ref(db, 'results')).key;
+    const now     = new Date();
+    // Dauer ab erstem Punkt (state.startedAt, von add() gesetzt; ueberlebt Sync/Reload via save())
+    const durationSec = state.startedAt ? Math.max(0, Math.round((Date.now() - state.startedAt) / 1000)) : null;
+
+    // 1) Spiel atomar abschliessen – nur wenn es noch diesem Tisch gehoert.
+    //    Bewusst VOR dem results-Write: Eine verwaiste Archiv-Zeile koennte das
+    //    Tablet nicht mehr entfernen (Rules erlauben anonym nur das Anlegen).
+    let res;
+    try {
+      res = await runTransaction(ref(db, `tournament/active/schedule/${matchId}`), (m) => {
+        if (!ownsMatch(m)) return;   // fremder Tisch / bereits abgeschlossen -> abbrechen
+        m.status = 'completed'; m.resultId = key;
+        return m;
+      });
+    } catch (e) { alert("Fehler beim Speichern: " + e.message); return; }
+
+    if (!res.committed) {
+      alert("Dieses Spiel wurde bereits abgeschlossen oder gehört jetzt zu einem anderen Tisch.\n\nEs wurde nichts gespeichert; der Tisch ist wieder frei.");
+      try { await set(dbRef, null); } catch (e) {}
+      return;
+    }
+
+    // 2) Ergebnis archivieren, Tisch freigeben, KO fortschreiben
+    const u = {};
+    u['results/' + key] = {
+      table: tableId, gameType: "pool",
+      player1: state.player1, player2: state.player2,
+      score1: state.score1, score2: state.score2,
+      date: now.toLocaleDateString("de-DE"),
+      timestamp: now.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" }),
+      serverTimestamp: serverTimestamp(),
+      tournamentId: tId, matchId: matchId, group: group,
+      durationSec: durationSec
+    };
+    u['tables/' + tableId] = null;   // Tisch freigeben -> Picker
+
+    // KO: Sieger (und Halbfinal-Verlierer) direkt ins Folgespiel eintragen –
+    // laeuft am Tisch (angemeldet) mit, unabhaengig von der Live-Seite.
+    const koM = tournament && tournament.schedule && tournament.schedule[matchId];
+    if (koM && koM.phase === 'ko') {
+      const winner = state.score1 >= state.score2 ? state.player1 : state.player2;
+      const loser  = state.score1 >= state.score2 ? state.player2 : state.player1;
+      if (koM.winnerTo) {
+        u['tournament/active/schedule/' + koM.winnerTo.match + '/player' + koM.winnerTo.slot] = winner;
+        u['tournament/active/schedule/' + koM.winnerTo.match + '/status'] = 'pending';   // verwaisten 'running'-Status heilen
+      }
+      if (koM.loserTo) {
+        u['tournament/active/schedule/' + koM.loserTo.match + '/player' + koM.loserTo.slot] = loser;
+        u['tournament/active/schedule/' + koM.loserTo.match + '/status'] = 'pending';
+      }
+    }
+
+    try { await update(ref(db), u); } catch (e) { alert("Fehler beim Speichern: " + e.message); }
+  }
+
+  // Spiel abbrechen -> zurück in den Plan (nur, wenn es noch diesem Tisch gehoert)
+  async function abortMatch() {
+    if (!isMatch()) return;
+    if (!await confirmModal("Spiel abbrechen und zurück in den Spielplan legen?")) return;
+    const matchId = tableData.tournamentMatchId;
+    let res;
+    try {
+      res = await runTransaction(ref(db, `tournament/active/schedule/${matchId}`), (m) => {
+        if (!ownsMatch(m)) return;   // gehoert nicht (mehr) diesem Tisch -> nichts anfassen
+        m.status = 'pending'; m.table = null; m.startedAt = null;
+        return m;
+      });
+    } catch (e) { alert("Fehler: " + e.message); return; }
+    if (!res.committed) {
+      alert("Dieses Spiel gehört nicht mehr zu diesem Tisch.\n\nDer Spielplan bleibt unverändert; nur der Tisch wurde freigegeben.");
+    }
+    try { await set(dbRef, null); } catch (e) { alert("Fehler: " + e.message); }
+  }
+
+  // "Frei spielen" / "Zurück zum Turnier"
+  function enableFreeMode() {
+    freeOverride = true;
+    state = { gameType: "pool", player1: "Spieler 1", player2: "Spieler 2", score1: 0, score2: 0, nextBreak: 1 };
+    save();
+    applyMode();
+  }
+  async function backToTournament() {
+    freeOverride = false;
+    try { await set(dbRef, null); } catch (e) {}
+    applyMode();
+  }
+
+  document.getElementById('btn-confirm').addEventListener('click', confirmMatch);
+  document.getElementById('btn-abort').addEventListener('click', abortMatch);
+  document.getElementById('btn-free').addEventListener('click', enableFreeMode);
+  document.getElementById('btn-back').addEventListener('click', backToTournament);
+  pickerFilterEl.addEventListener('change', renderPicker);
+
+  // Zur Tablet-Startseite zurueck (rein navigierend, kein DB-Schreibzugriff).
+  // Im laufenden Turnier-Match kurz rueckfragen – das Match bleibt am Tisch erhalten.
+  document.getElementById('home-btn').addEventListener('click', async () => {
+    if (isMatch() && !await confirmModal("Zurück zur Startseite? Das laufende Match bleibt am Tisch gespeichert.")) return;
+    window.location.href = startseite();
+  });
+
+  /* ===========================
+     Hilfe-Overlay (Inhalt folgt spaeter)
+     =========================== */
+  document.getElementById('helpBtn').addEventListener('click', () => {
+    document.getElementById('help-overlay').style.display = 'flex';
+  });
+  document.getElementById('helpCloseBtn').addEventListener('click', () => {
+    document.getElementById('help-overlay').style.display = 'none';
+  });
+
+  /* ===========================
+     Protokoll: letzte 10 Spiele an diesem Tisch (aus dem results-Archiv)
+     =========================== */
+  document.getElementById('log-table-no').textContent = tableId;
+
+  async function openLog() {
+    const tbl = document.getElementById('log-table');
+    tbl.innerHTML = '<tbody><tr><td class="log-empty">Lade…</td></tr></tbody>';
+    document.getElementById('log-overlay').style.display = 'flex';
+    let all = {};
+    try {
+      all = (await get(ref(db, 'results'))).val() || {};
+    } catch (e) {
+      tbl.innerHTML = '<tbody><tr><td class="log-empty">Fehler beim Laden.</td></tr></tbody>';
+      return;
+    }
+    const list = Object.values(all)
+      .filter(r => String(r.table) === String(tableId))
+      .sort((a, b) => (b.serverTimestamp || 0) - (a.serverTimestamp || 0))
+      .slice(0, 10);
+    if (list.length === 0) {
+      tbl.innerHTML = '<tbody><tr><td class="log-empty">Noch keine Spiele an diesem Tisch.</td></tr></tbody>';
+      return;
+    }
+    const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c =>
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    tbl.innerHTML =
+      '<thead><tr><th>Datum</th><th>Uhrzeit</th><th>Spielart</th><th>Begegnung</th><th>Ergebnis</th></tr></thead><tbody>' +
+      list.map(r => {
+        const isPool = r.gameType === 'pool';
+        // Pool-Ergebnisse: score1/score2, 14.1: s1/s2 (Muster wie in der Auswertung)
+        const a = r.score1 !== undefined ? r.score1 : r.s1;
+        const b = r.score2 !== undefined ? r.score2 : r.s2;
+        return `<tr><td>${esc(r.date || '')}</td><td>${esc(r.timestamp || '')}</td>` +
+          `<td><span class="badge ${isPool ? 'badge-pool' : 'badge-141'}">${isPool ? 'Pool' : '14.1'}</span></td>` +
+          `<td><span class="p1c">${esc(r.player1)}</span> vs. <span class="p2c">${esc(r.player2)}</span></td>` +
+          `<td><b>${a} : ${b}</b></td></tr>`;
+      }).join('') + '</tbody>';
+  }
+  document.getElementById('logBtn').addEventListener('click', openLog);
+  document.getElementById('logCloseBtn').addEventListener('click', () => {
+    document.getElementById('log-overlay').style.display = 'none';
+  });
+
+  // Undo (unten links) – ersetzt die -1-Buttons
+  document.getElementById('undoBtn').addEventListener('click', undo);
+
+  /* ===========================
+     Nachgeben, wenn ein anderes Geraet den Tisch uebernimmt
+     =========================== */
+  function niceType(t) { return t === 'pool' ? '8/9/10-Ball' : (t === '14.1' ? '14.1' : (t || 'eine andere Spielart')); }
+  function showYieldOverlay(msg, allowReclaim = true) {
+    yielded = true;
+    document.getElementById('yield-text').textContent = msg;
+    const rc = document.getElementById('yield-reclaim');
+    if (rc) rc.style.display = allowReclaim ? 'inline-block' : 'none';
+    document.getElementById('yield-overlay').style.display = 'flex';
+  }
+  async function reclaim() {
+    // Tisch hier bewusst (zurueck) auf Pool uebernehmen – das andere Board gibt dann nach.
+    if (!await confirmModal(`Tisch ${tableId} hier übernehmen? Das andere Gerät verliert die Kontrolle.`)) return;
+    document.getElementById('yield-overlay').style.display = 'none';
+    yielded = false; claimed = true;
+    const d = tableData || {};
+    // Liegt bereits ein Pool-Stand vor (anderes Geraet am selben Tisch), diesen samt
+    // laufendem Turnierspiel uebernehmen. Nur bei fremder Spielart neu aufsetzen.
+    state = (d.gameType === "pool")
+      ? { ...d }
+      : { gameType: "pool", player1: d.player1 || "Spieler 1", player2: d.player2 || "Spieler 2", score1: 0, score2: 0, nextBreak: 1 };
+    save();   // stempelt die eigene boardId -> das andere Board gibt nach
+  }
+  document.getElementById('yield-home').addEventListener('click', () => {
+    window.location.href = startseite();
+  });
+  document.getElementById('yield-reclaim').addEventListener('click', reclaim);
+
+  function showBtn(id, visible) { document.getElementById(id).style.display = visible ? 'inline-block' : 'none'; }
+
+  // Steuert, welcher Screen/Buttons sichtbar sind
+  function applyMode() {
+    const tActive  = tournamentActive();
+    const hasMatch = !!(tableData && tableData.tournamentMatchId);
+    let mode;
+    if (tActive && !freeOverride && !hasMatch) mode = 'picker';
+    else if (tActive && !freeOverride && hasMatch) mode = 'match';
+    else mode = 'free';
+
+    pickerEl.style.display = (mode === 'picker') ? 'flex' : 'none';
+    if (mode === 'picker') renderPicker();
+
+    const over = (mode !== 'picker') && matchOver();
+    confirmPanel.style.display = over ? 'block' : 'none';
+    if (over) {
+      const w = state.score1 > state.score2 ? state.player1 : state.player2;
+      confirmText.textContent = `🏁 ${w} gewinnt ${state.score1}:${state.score2}`;
+    }
+    // Panel-Aktion je Modus: Turnier bestaetigen vs. Frei-Modus neues Match
+    showBtn('btn-confirm',  over && mode === 'match');
+    showBtn('btn-newmatch', over && mode === 'free');
+    // Ausspielziel-Anzeige nur im Frei-Modus
+    document.getElementById('pool-target').style.display = (mode === 'free') ? 'block' : 'none';
+
+    showBtn('btn-swap',    mode !== 'picker');
+    showBtn('btn-newgame', mode === 'free');
+    showBtn('btn-abort',   mode === 'match');
+    showBtn('btn-back',    mode === 'free' && tActive);
+
+    const hdrText = document.getElementById('hdr-title');
+    if (mode === 'match')              hdrText.textContent = `TURNIER · Tisch ${tableId} · Race to ${currentRaceTo()}`;
+    else if (mode === 'free' && tActive) hdrText.textContent = `FREI-MODUS · Tisch ${tableId}`;
+    else                                 hdrText.textContent = '8/9/10-Ball SCOREBOARD';
+  }
+
+  // tournament/active live beobachten
+  onValue(ref(db, 'tournament/active'), (snap) => {
+    tournament = snap.val();
+    tournamentLoaded = true;
+    // Falls Tisch leer und sicher kein Turnier läuft: Frei-Default nachträglich anlegen
+    if (tableData == null && !tournamentActive() && !freeOverride && !yielded) {
+      state = { gameType: "pool", player1: "Spieler 1", player2: "Spieler 2", score1: 0, score2: 0, nextBreak: 1 };
+      claimed = true;
+      save();
+    }
+    applyMode();
+  });
+
+  /* ===========================
+     Uhr (oben rechts im Header)
+     =========================== */
+  function updateClock() {
+    document.getElementById("clock").textContent =
+      new Date().toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
+  }
+  setInterval(updateClock, 1000);
+  updateClock();
+
+  // Nach 4 h ohne Eingabe automatisch zurueck zur Startseite (Tisch bleibt vorgewaehlt)
+  startIdleRedirect(startseite(), 4 * 60 * 60 * 1000);
+
+</script>
+
+</body>
+</html>
