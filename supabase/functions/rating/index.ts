@@ -33,6 +33,35 @@ function heute() {
   return new Date().toISOString().slice(0, 10);
 }
 
+// Rolle aus einem JWT lesen, ohne ihn zu pruefen (das macht danach der Server).
+function rolleImJwt(zeichen: string): string | null {
+  const teile = zeichen.split('.');
+  if (teile.length !== 3) return null;
+  try {
+    const nutzlast = JSON.parse(atob(teile[1].replace(/-/g, '+').replace(/_/g, '/')));
+    return typeof nutzlast.role === 'string' ? nutzlast.role : null;
+  } catch {
+    return null;
+  }
+}
+
+// Ist das mitgeschickte Zeichen ein Dienstschluessel? Ein Textvergleich mit
+// der Umgebung der Funktion reicht nicht: Supabase kennt zwei Schreibweisen
+// (JWT und sb_secret_...), und die Umgebung enthaelt nicht zwingend dieselbe
+// wie das Dashboard. Deshalb wird die Wirkung geprueft: Der Schluessel muss
+// eine Aktion ausfuehren koennen, die nur mit Dienstrechten gelingt.
+async function istDienstschluessel(url: string, zeichen: string): Promise<boolean> {
+  const moeglich = zeichen.startsWith('sb_secret_') || rolleImJwt(zeichen) === 'service_role';
+  if (!moeglich) return false;
+  try {
+    const probe = createClient(url, zeichen, { auth: { persistSession: false } });
+    const { error } = await probe.auth.admin.listUsers({ page: 1, perPage: 1 });
+    return !error;
+  } catch {
+    return false;
+  }
+}
+
 Deno.serve(async (anfrage) => {
   if (anfrage.method === 'OPTIONS') return new Response('ok', { headers: KOPFZEILEN });
   if (anfrage.method !== 'POST') return antwort({ fehler: 'Nur POST' }, 405);
@@ -43,7 +72,7 @@ Deno.serve(async (anfrage) => {
 
   const anmeldung = anfrage.headers.get('Authorization') ?? '';
   const zeichen = anmeldung.replace('Bearer ', '').trim();
-  const vomZeitplan = zeichen === dienstSchluessel;
+  const vomZeitplan = zeichen === dienstSchluessel || (await istDienstschluessel(url, zeichen));
 
   let daten: { verein_id?: string; stichtag?: string } = {};
   try {

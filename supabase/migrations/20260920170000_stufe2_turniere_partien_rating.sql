@@ -214,3 +214,8 @@ create unique index turniere_alt_id on public.turniere (verein_id, alt_id) where
 
 -- Dasselbe Turnier darf auch nicht unter gleichem Namen und Datum doppelt entstehen.
 create unique index turniere_name_datum on public.turniere (verein_id, name, datum);
+
+-- Teilnehmerzahl laut Turnier. Sie bestimmt die Punkte der Serienwertung.
+-- Bei uebernommenen Altturnieren kann sie hoeher sein als die Zahl der
+-- Teilnehmerzeilen, weil zusammengefuehrte Namen nur einmal zaehlen.
+alter table public.turniere add column teilnehmerzahl integer check (teilnehmerzahl >= 0);

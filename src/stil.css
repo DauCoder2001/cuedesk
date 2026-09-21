@@ -200,3 +200,6 @@ button:disabled { cursor: default; color: var(--text-leise); }
 .tabelle.innen { margin: 6px 0; font-size: 13px; background: var(--flaeche-2); }
 .tabelle.innen td, .tabelle.innen th { padding: 4px 8px; }
 .tabelle small { color: var(--text-leise); }
+
+.tabelle .gestrichen { color: var(--text-leise); text-decoration: line-through; }
+.tabelle th small { display: block; font-weight: 400; font-size: 11px; }

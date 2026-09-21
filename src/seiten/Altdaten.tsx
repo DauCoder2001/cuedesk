@@ -221,6 +221,13 @@ export default function Altdaten() {
         // Gibt es das Turnier schon, wird nur ergaenzt, was fehlt. So laesst
         // sich ein abgebrochener Lauf einfach wiederholen.
         if (schonDa) {
+          // Teilnehmerzahl nachtragen, falls sie beim ersten Lauf fehlte
+          await supabase
+            .from('turniere')
+            .update({ teilnehmerzahl: turnier.teilnehmerzahl })
+            .eq('id', schonDa.id)
+            .is('teilnehmerzahl', null);
+
           const { count } = await supabase
             .from('partien')
             .select('id', { count: 'exact', head: true })
@@ -243,6 +250,7 @@ export default function Altdaten() {
             datum: turnier.datum,
             disziplin: turnier.disziplin,
             modus: turnier.modus,
+            teilnehmerzahl: turnier.teilnehmerzahl,
             serie_id: turnier.serieAltId ? serieNachAltId.get(turnier.serieAltId) ?? null : null,
             status: 'beendet',
             rating_werten: turnier.werten,

@@ -140,6 +140,7 @@ export type Turnier = {
   datum: string;
   disziplin: Disziplin;
   modus: TurnierModus;
+  teilnehmerzahl: number | null;
   serie_id: string | null;
   status: TurnierStatus;
   rating_werten: boolean;

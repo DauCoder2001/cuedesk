@@ -55,6 +55,7 @@ export type AltDatei = {
 
 export type AltTurnier = {
   altId: string;
+  teilnehmerzahl: number;
   name: string;
   datum: string;
   disziplin: Disziplin;
@@ -128,6 +129,7 @@ export function auswerten(datei: AltDatei): Analyse {
         disziplin: disziplinVon(turnier.disziplin),
         modus: modusVon(turnier.modus),
         serieAltId: gehoert ? serie.id : null,
+        teilnehmerzahl: turnier.teilnehmer ?? (turnier.ranking ?? []).length,
         werten: true,
         ranking: (turnier.ranking ?? []).map((r) => ({ platz: r.platz, name: aufloesen(r.name) })),
         teilnehmer: [],
@@ -150,6 +152,9 @@ export function auswerten(datei: AltDatei): Analyse {
       vorhanden.partien = partien;
       vorhanden.teilnehmer = teilnehmer;
       vorhanden.werten = archiv.werten !== false;
+      // Die groessere Zahl gilt: in der Serie steht die urspruengliche
+      // Teilnehmerzahl, im Archiv die Namen nach dem Zusammenfuehren.
+      vorhanden.teilnehmerzahl = Math.max(vorhanden.teilnehmerzahl, teilnehmer.length);
       vorhanden.altId = archiv.id;
     } else {
       turniere.set(key, {
@@ -159,6 +164,7 @@ export function auswerten(datei: AltDatei): Analyse {
         disziplin: disziplinVon(archiv.disziplin),
         modus: modusVon(archiv.modus),
         serieAltId: archiv.serieId ?? null,
+        teilnehmerzahl: teilnehmer.length,
         werten: archiv.werten !== false,
         ranking: [],
         teilnehmer,

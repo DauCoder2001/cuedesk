@@ -7,8 +7,9 @@ import TischeGeraete from './seiten/TischeGeraete';
 import Geraet from './seiten/Geraet';
 import Altdaten from './seiten/Altdaten';
 import Rating from './seiten/Rating';
+import Serien from './seiten/Serien';
 
-type Bereich = 'personen' | 'rating' | 'benutzer' | 'tische' | 'altdaten';
+type Bereich = 'personen' | 'rating' | 'serien' | 'benutzer' | 'tische' | 'altdaten';
 
 // Tablets und TV rufen die Adresse mit ?geraet auf und bekommen die
 // Geraeteansicht statt der Anmeldung.
@@ -29,6 +30,7 @@ export default function App() {
   const bereiche: { wert: Bereich; name: string; sichtbar: boolean }[] = [
     { wert: 'personen', name: 'Personen', sichtbar: true },
     { wert: 'rating', name: 'Rating', sichtbar: true },
+    { wert: 'serien', name: 'Serien', sichtbar: true },
     { wert: 'benutzer', name: 'Benutzer und Rollen', sichtbar: darf('vereinsadmin', 'sportwart') },
     { wert: 'tische', name: 'Tische und Geräte', sichtbar: darf('vereinsadmin') },
     { wert: 'altdaten', name: 'Altdaten übernehmen', sichtbar: darf('vereinsadmin', 'sportwart') }
@@ -66,6 +68,7 @@ export default function App() {
       <main>
         {bereich === 'personen' && <Personen />}
         {bereich === 'rating' && <Rating />}
+        {bereich === 'serien' && <Serien />}
         {bereich === 'benutzer' && <BenutzerRollen />}
         {bereich === 'tische' && <TischeGeraete />}
         {bereich === 'altdaten' && <Altdaten />}
