@@ -211,3 +211,23 @@ button:disabled { cursor: default; color: var(--text-leise); }
 }
 .spielknopf.vierzehn { background: #27ae60; }
 .spielknopf.pool { background: #e67e22; }
+
+/* 14.1-Statistik */
+.statkopf { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.statkopf .ankreuz { align-items: center; }
+.statkopf .ankreuz input { margin-top: 0; }
+.statzweier { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
+.verteilung { display: flex; flex-direction: column; gap: 5px; font-size: 13px; }
+.verteilungszeile { display: grid; grid-template-columns: 46px 1fr 34px; gap: 8px; align-items: center; }
+.verteilungszeile span:first-child { color: var(--text-leise); }
+.verteilungszeile .rechts { text-align: right; }
+.balkenbahn { background: var(--flaeche-2); border-radius: 4px; height: 12px; }
+.balken { background: var(--akzent); border-radius: 4px; height: 12px; min-width: 2px; }
+.verlauf { width: 100%; height: auto; display: block; }
+.verlauf .gitter { stroke: var(--rand); stroke-width: 1; }
+.verlauf .achse { font-size: 11px; fill: var(--text-leise); }
+.verlauf .punkt { fill: #85b7eb; }
+.verlauf .linie { fill: none; stroke: var(--akzent); stroke-width: 2; }
+.tabelle .marke { font-size: 11px; border: 1px solid var(--rand); border-radius: var(--radius); padding: 1px 6px; color: var(--text-leise); }
+.marke.ausgang-sieg { color: var(--gut); border-color: #bcd9cd; }
+.marke.ausgang-niederlage { color: var(--fehler); border-color: #e7bcbc; }

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { aufnahmenAusProtokoll } from '../scoreboards/js/protokoll-141';
+import { aufnahmenAusProtokoll, protokollAusAufnahmen } from '../scoreboards/js/protokoll-141';
 import type { LogEintrag } from '../scoreboards/js/protokoll-141';
 
 // Protokoll, wie es das 14.1-Scoreboard in state.log schreibt.
@@ -54,5 +54,18 @@ describe('Protokoll in Aufnahmen umrechnen', () => {
   test('leeres oder fehlendes Protokoll ergibt keine Zeilen', () => {
     expect(aufnahmenAusProtokoll([], 'a', 'b')).toEqual([]);
     expect(aufnahmenAusProtokoll(undefined as unknown as LogEintrag[], 'a', 'b')).toEqual([]);
+  });
+});
+
+describe('Aufnahmen zurueck ins Protokoll (Ansicht gespeicherter Partien)', () => {
+  test('Hin- und Rueckweg ergeben dasselbe Protokoll', () => {
+    const zeilen = aufnahmenAusProtokoll(log, 'rot', 'blau');
+    const zurueck = protokollAusAufnahmen([...zeilen].reverse(), 'rot');
+    // Rack-Trennzeilen tragen im Original den Spieler, die Ansicht braucht ihn nicht.
+    // Fehlende Segmente werden beim Speichern zu [balls].
+    const erwartet = log.map((e) =>
+      e.t === 'rack' ? { t: 'rack', rackNo: e.rackNo } : { ...e, segs: e.segs ?? [e.balls] }
+    );
+    expect(zurueck).toEqual(erwartet);
   });
 });

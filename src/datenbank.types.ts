@@ -115,7 +115,7 @@ export type Aenderung = {
 export type Disziplin = '8-ball' | '9-ball' | '10-ball' | 'multi-ball' | '14-1';
 export type TurnierModus = 'einzelgruppe' | 'zwei-gruppen' | 'gruppen-ko' | 'einzelspiel' | 'sonstiges';
 export type TurnierStatus = 'geplant' | 'laeuft' | 'beendet' | 'abgebrochen';
-export type PartieStatus = 'geplant' | 'laeuft' | 'beendet';
+export type PartieStatus = 'geplant' | 'laeuft' | 'beendet' | 'abgebrochen';
 export type RatingQuelle =
   | 'eigene-daten' | 'vorlaeufig' | 'andere-disziplin'
   | 'startwert' | 'vereinsschnitt' | 'von-hand' | 'gast';
@@ -191,6 +191,34 @@ export type Partie = {
   erstellt_am: string;
 };
 
+export type Partie141 = {
+  partie_id: string;
+  verein_id: string;
+  ziel_punkte: number;
+  ziel_aufnahmen: number;
+  aufnahmen_a: number;
+  aufnahmen_b: number;
+  hoechstserie_a: number;
+  hoechstserie_b: number;
+  dauer_sek: number | null;
+};
+
+export type Aufnahme141 = {
+  id: number;
+  partie_id: string;
+  verein_id: string;
+  lfd_nr: number;
+  spieler: string;
+  baelle: number;
+  punkte: number;
+  gesamt: number;
+  art: 'serie' | 'sicherheit' | 'foul' | 'foul3' | 'eroeffnungsfoul' | 'ende';
+  markierung: '' | '/' | '//' | '3F' | '-2';
+  rack_segmente: number[];
+  rack_nr: number;
+  zeitpunkt: string | null;
+};
+
 export type RatingEinstellungen = {
   verein_id: string;
   zeitraum_monate: number;
@@ -248,6 +276,8 @@ export type Database = {
       turniere: Tabelle<Turnier, Partial<Turnier> & Pick<Turnier, 'verein_id' | 'name' | 'datum'>>;
       turnier_teilnehmer: Tabelle<TurnierTeilnehmer, Partial<TurnierTeilnehmer> & Pick<TurnierTeilnehmer, 'turnier_id' | 'person_id' | 'verein_id'>>;
       partien: Tabelle<Partie, Partial<Partie> & Pick<Partie, 'verein_id' | 'datum' | 'spieler_a' | 'spieler_b'>>;
+      partien_141: Tabelle<Partie141, Partial<Partie141> & Pick<Partie141, 'partie_id' | 'verein_id'>>;
+      aufnahmen_141: Tabelle<Aufnahme141, Omit<Aufnahme141, 'id'>>;
       rating_einstellungen: Tabelle<RatingEinstellungen, Partial<RatingEinstellungen> & Pick<RatingEinstellungen, 'verein_id'>>;
       rating_stand: Tabelle<RatingStand, RatingStand>;
     };

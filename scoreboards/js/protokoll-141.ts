@@ -89,3 +89,40 @@ export function aufnahmenAusProtokoll(
   }
   return zeilen;
 }
+
+// Rueckweg fuer die Protokollansicht gespeicherter Partien: aus den
+// Datenbankzeilen wieder state.log bauen. Rack-Trennzeilen entstehen dort,
+// wo sich rack_nr erhoeht (die Ansicht zeigt sie ohnehin nur als Schraegstrich).
+const ARTEN_ZURUECK: Record<AufnahmeZeile['art'], string> = {
+  serie: 'run',
+  sicherheit: 'safety',
+  foul: 'foul',
+  foul3: 'foul3',
+  eroeffnungsfoul: 'break',
+  ende: 'end'
+};
+
+export function protokollAusAufnahmen(zeilen: AufnahmeZeile[], spieler1: string): LogEintrag[] {
+  const log: LogEintrag[] = [];
+  let rackNr = 1;
+  const sortiert = [...zeilen].sort((a, b) => a.lfd_nr - b.lfd_nr);
+  for (const z of sortiert) {
+    const p: 1 | 2 = z.spieler === spieler1 ? 1 : 2;
+    while (z.rack_nr > rackNr) {
+      rackNr += 1;
+      log.push({ t: 'rack', rackNo: rackNr });
+    }
+    log.push({
+      t: 'inn',
+      p,
+      balls: z.baelle,
+      pkt: z.punkte,
+      total: z.gesamt,
+      mark: z.markierung,
+      kind: ARTEN_ZURUECK[z.art],
+      segs: z.rack_segmente,
+      ...(z.zeitpunkt ? { z: Date.parse(z.zeitpunkt) } : {})
+    });
+  }
+  return log;
+}

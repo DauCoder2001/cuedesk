@@ -119,7 +119,7 @@
 <script type="module">
   // Read-only-Ansicht des 14.1-Protokolls. Schreibt NICHTS in die Datenbank.
   // CueDesk: Anbindung mit denselben Funktionen wie frueher Firebase.
-  import { db, auth, ref, onValue, signInAnonymously, starten } from "./js/anbindung.ts";
+  import { db, auth, ref, onValue, signInAnonymously, starten, archivDatum } from "./js/anbindung.ts";
   import { keepScreenAwake } from "./js/wake-lock.js";
   import { setupProtocolShare } from "./js/share-protocol.js";
 
@@ -132,6 +132,16 @@
 
   document.getElementById("tbtitle").textContent = "📋 14.1 Protokoll — Tisch " + tableId;
   document.getElementById("boardlink").href = "14.1_Scoreboard.html?table=" + encodeURIComponent(tableId);
+
+  // CueDesk: gespeicherte Partie aus der 14.1-Statistik (?partie=). Kein Live-Stand,
+  // kein Weg zum Board.
+  const gespeichertAm = archivDatum();
+  if (gespeichertAm) {
+    document.title = "14.1 Protokoll " + gespeichertAm;
+    document.getElementById("tbtitle").textContent = "📋 14.1 Protokoll — " + gespeichertAm + " · Tisch " + tableId;
+    document.getElementById("boardlink").style.display = "none";
+    document.getElementById("note").textContent = "Gespeicherte Partie vom " + gespeichertAm + ". Nur Ansicht.";
+  }
 
   // Teilen/Mail: Namen aus dem gerenderten Kopf, damit der Dateiname stimmt.
   const spielerNamen = () =>

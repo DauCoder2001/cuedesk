@@ -10,6 +10,8 @@
 //                 Ergebnisse mit komplettem Protokoll in CueDesk.
 //   offline     - ueberall sonst: Stand nur im Browser, Namen als Freitext,
 //                 nichts wird gespeichert. Entspricht der alten Offline-Fassung.
+//   archiv      - Protokollansicht einer gespeicherten 14.1-Partie
+//                 (14.1_Log.html?partie=<id>, aus der 14.1-Statistik). Nur lesen.
 //
 // Die Betriebsart ergibt sich von selbst. Mit VITE_NUR_OFFLINE=1 gebaut
 // (Veroeffentlichung im Repository "scoreboards") ist sie immer offline.
@@ -19,7 +21,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 type Beobachter = (schnappschuss: { val: () => unknown }) => void;
 type Verweis = { pfad: string };
 
-export type Betriebsart = 'angebunden' | 'offline';
+export type Betriebsart = 'angebunden' | 'offline' | 'archiv';
 
 type Verbindung = {
   supabase: SupabaseClient;
@@ -31,6 +33,7 @@ type Verbindung = {
 let verbindung: Verbindung | null = null;
 let betriebsart: Betriebsart = 'offline';
 let tischNummer = '1';
+let archiv: { supabase: SupabaseClient; partieId: string; datum: string } | null = null;
 
 // ---------- Start: Betriebsart und Tisch bestimmen ----------
 
@@ -48,8 +51,33 @@ function sitzungImBrowser(): boolean {
 
 // Muss vor allem anderen einmal aufgerufen werden (Top-Level-await im Scoreboard).
 export async function starten(): Promise<{ betriebsart: Betriebsart; tisch: string }> {
-  const roh = new URLSearchParams(window.location.search).get('table');
+  const parameter = new URLSearchParams(window.location.search);
+  const roh = parameter.get('table');
   const ausAdresse = roh && /^[1-9]\d*$/.test(roh) ? roh : null;
+
+  // Gespeicherte Partie ansehen: jede angemeldete Person, die sie lesen darf
+  const partieId = parameter.get('partie');
+  if (partieId && import.meta.env.VITE_NUR_OFFLINE !== '1' && sitzungImBrowser()) {
+    try {
+      const { supabase } = await import('../../src/supabase');
+      const { data: partie } = await supabase
+        .from('partien')
+        .select('id, datum, tisch_id')
+        .eq('id', partieId)
+        .maybeSingle();
+      if (partie) {
+        const { data: tisch } = partie.tisch_id
+          ? await supabase.from('tische').select('nummer').eq('id', partie.tisch_id).maybeSingle()
+          : { data: null };
+        tischNummer = tisch ? String(tisch.nummer) : '–';
+        archiv = { supabase, partieId: partie.id, datum: partie.datum };
+        betriebsart = 'archiv';
+        return { betriebsart, tisch: tischNummer };
+      }
+    } catch (e) {
+      console.warn('Partie nicht lesbar:', e);
+    }
+  }
 
   if (import.meta.env.VITE_NUR_OFFLINE !== '1' && sitzungImBrowser()) {
     try {
@@ -112,6 +140,11 @@ export async function starten(): Promise<{ betriebsart: Betriebsart; tisch: stri
 
 export function istAngebunden(): boolean {
   return betriebsart === 'angebunden';
+}
+
+// Datum der gespeicherten Partie in der Protokollansicht, sonst null
+export function archivDatum(): string | null {
+  return archiv ? new Date(`${archiv.datum}T12:00:00`).toLocaleDateString('de-DE') : null;
 }
 
 // Wohin "Startseite" fuehrt
@@ -215,6 +248,11 @@ export function onValue(verweis: Verweis, cb: Beobachter): () => void {
   const tisch = tischAusPfad(verweis.pfad);
   if (!tisch) return () => liste.delete(cb);
 
+  if (archiv) {
+    void archivZustand(archiv).then((wert) => melden(verweis.pfad, wert));
+    return () => liste.delete(cb);
+  }
+
   if (!istAngebunden()) {
     let gespeichert: unknown = null;
     try {
@@ -264,6 +302,54 @@ async function liveBeobachten(pfad: string) {
       }
     )
     .subscribe();
+}
+
+// Stand einer gespeicherten 14.1-Partie in der Form, die das Scoreboard
+// schreibt - so zeigt 14.1_Log.html sie unveraendert an.
+async function archivZustand(a: NonNullable<typeof archiv>): Promise<unknown> {
+  const [partieAntwort, zusatzAntwort, aufnahmenAntwort] = await Promise.all([
+    a.supabase
+      .from('partien')
+      .select('spieler_a, spieler_b, ergebnis_a, ergebnis_b, begonnen, beendet')
+      .eq('id', a.partieId)
+      .single(),
+    a.supabase.from('partien_141').select('*').eq('partie_id', a.partieId).maybeSingle(),
+    a.supabase
+      .from('aufnahmen_141')
+      .select('lfd_nr, spieler, baelle, punkte, gesamt, art, markierung, rack_segmente, rack_nr, zeitpunkt')
+      .eq('partie_id', a.partieId)
+      .order('lfd_nr')
+  ]);
+  const p = partieAntwort.data;
+  if (!p) return null;
+  const zusatz = zusatzAntwort.data;
+
+  const { data: personen } = await a.supabase
+    .from('personen')
+    .select('id, vorname, nachname, anzeigename')
+    .in('id', [p.spieler_a, p.spieler_b]);
+  const name = (id: string) => {
+    const x = (personen ?? []).find((q) => q.id === id);
+    return x ? x.anzeigename || `${x.vorname} ${x.nachname}`.trim() : '?';
+  };
+
+  return {
+    gameType: '14.1',
+    player1: name(p.spieler_a),
+    player2: name(p.spieler_b),
+    s1: p.ergebnis_a ?? 0,
+    s2: p.ergebnis_b ?? 0,
+    high1: zusatz?.hoechstserie_a ?? 0,
+    high2: zusatz?.hoechstserie_b ?? 0,
+    inn1: zusatz?.aufnahmen_a ?? 0,
+    inn2: zusatz?.aufnahmen_b ?? 0,
+    target: zusatz?.ziel_punkte ?? 0,
+    targetInn: zusatz?.ziel_aufnahmen ?? 0,
+    locked: true,
+    startedAt: p.begonnen ? Date.parse(p.begonnen) : null,
+    endedAt: p.beendet ? Date.parse(p.beendet) : null,
+    log: protokollAusAufnahmen((aufnahmenAntwort.data ?? []) as AufnahmeZeile[], p.spieler_a)
+  };
 }
 
 // Ergebnisse gehen nicht mehr ueber "push", sondern ueber ergebnisSpeichern141
@@ -430,8 +516,8 @@ export async function ergebnisSpeichernPool(
 // ---------- Ergebnis 14.1 speichern ----------
 
 export { aufnahmenAusProtokoll } from './protokoll-141';
-import { aufnahmenAusProtokoll } from './protokoll-141';
-import type { Zustand141 } from './protokoll-141';
+import { aufnahmenAusProtokoll, protokollAusAufnahmen } from './protokoll-141';
+import type { AufnahmeZeile, Zustand141 } from './protokoll-141';
 
 export async function ergebnisSpeichern141(
   zustand: Zustand141,
