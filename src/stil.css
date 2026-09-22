@@ -190,6 +190,11 @@ button:disabled { cursor: default; color: var(--text-leise); }
 .kennzahlen strong { display: block; font-size: 22px; font-weight: 500; }
 .kennzahlen small { display: block; font-size: 11px; color: var(--text-leise); }
 
+.formzeile { display: flex; flex-wrap: wrap; gap: 4px; margin: 0 0 6px; }
+.formmarke { width: 22px; height: 22px; border-radius: 6px; font-size: 12px; line-height: 22px; text-align: center; background: var(--flaeche-2); }
+.formmarke.sieg { background: #d9f2e5; color: #146b45; }
+.formmarke.niederlage { background: #fbe0e0; color: #8f2a2a; }
+
 .protokoll { margin: 0; padding-left: 18px; font-size: 13px; color: var(--text-leise); }
 .protokoll li { margin: 2px 0; }
 

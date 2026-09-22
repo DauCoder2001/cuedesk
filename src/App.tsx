@@ -8,11 +8,22 @@ import Geraet from './seiten/Geraet';
 import Altdaten from './seiten/Altdaten';
 import Rating from './seiten/Rating';
 import Serien from './seiten/Serien';
+import StatistikPool from './seiten/StatistikPool';
 import Statistik141 from './seiten/Statistik141';
 import Live from './seiten/Live';
 import Turniere from './seiten/Turniere';
 
-type Bereich = 'live' | 'turniere' | 'personen' | 'rating' | 'serien' | 'statistik141' | 'benutzer' | 'tische' | 'altdaten';
+type Bereich =
+  | 'live'
+  | 'turniere'
+  | 'personen'
+  | 'rating'
+  | 'serien'
+  | 'statistikPool'
+  | 'statistik141'
+  | 'benutzer'
+  | 'tische'
+  | 'altdaten';
 
 // Tablets und TV rufen die Adresse mit ?geraet auf und bekommen die
 // Geraeteansicht statt der Anmeldung.
@@ -36,6 +47,7 @@ export default function App() {
     { wert: 'personen', name: 'Personen', sichtbar: true },
     { wert: 'rating', name: 'Rating', sichtbar: true },
     { wert: 'serien', name: 'Serien', sichtbar: true },
+    { wert: 'statistikPool', name: 'Pool-Statistik', sichtbar: true },
     { wert: 'statistik141', name: '14.1-Statistik', sichtbar: true },
     { wert: 'benutzer', name: 'Benutzer und Rollen', sichtbar: darf('vereinsadmin', 'sportwart') },
     { wert: 'tische', name: 'Tische und Geräte', sichtbar: darf('vereinsadmin', 'turnierleiter') },
@@ -77,6 +89,7 @@ export default function App() {
         {bereich === 'personen' && <Personen />}
         {bereich === 'rating' && <Rating />}
         {bereich === 'serien' && <Serien />}
+        {bereich === 'statistikPool' && <StatistikPool />}
         {bereich === 'statistik141' && <Statistik141 />}
         {bereich === 'benutzer' && <BenutzerRollen />}
         {bereich === 'tische' && <TischeGeraete />}

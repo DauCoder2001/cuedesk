@@ -1823,6 +1823,7 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
                       nameB={anzeige(p.spieler_b)}
                       tisch={p.tisch_id ? tische.get(p.tisch_id) ?? null : null}
                       bearbeitbar={bearbeitbar && !(istGruppenspiel(p) && mehrgruppig && gruppenGesperrt) && !koGesperrt(p)}
+                      mitVerlauf={darfLeiten}
                       speichern={(a, b) => void ergebnisSetzen(p, a, b)}
                       verlauf={() => void verlaufZeigen(p)}
                     />
@@ -2331,6 +2332,7 @@ function Spielzeile(props: {
   nameB: string;
   tisch: number | null;
   bearbeitbar: boolean;
+  mitVerlauf: boolean; // die Aenderungsliste duerfen nur Leitungsrollen lesen
   speichern: (a: number | null, b: number | null) => void;
   verlauf: () => void;
 }) {
@@ -2400,9 +2402,11 @@ function Spielzeile(props: {
       </td>
       <td className={fertig ? 'livelaeuft' : 'hinweis'}>{status}</td>
       <td className="rechts">
-        <button type="button" className="klein" title="Verlauf" onClick={props.verlauf}>
-          Verlauf
-        </button>
+        {props.mitVerlauf && (
+          <button type="button" className="klein" title="Verlauf" onClick={props.verlauf}>
+            Verlauf
+          </button>
+        )}
       </td>
     </tr>
   );
