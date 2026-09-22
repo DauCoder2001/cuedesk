@@ -9,8 +9,9 @@ import Altdaten from './seiten/Altdaten';
 import Rating from './seiten/Rating';
 import Serien from './seiten/Serien';
 import Statistik141 from './seiten/Statistik141';
+import Live from './seiten/Live';
 
-type Bereich = 'personen' | 'rating' | 'serien' | 'statistik141' | 'benutzer' | 'tische' | 'altdaten';
+type Bereich = 'live' | 'personen' | 'rating' | 'serien' | 'statistik141' | 'benutzer' | 'tische' | 'altdaten';
 
 // Tablets und TV rufen die Adresse mit ?geraet auf und bekommen die
 // Geraeteansicht statt der Anmeldung.
@@ -18,7 +19,7 @@ const istGeraet = new URLSearchParams(window.location.search).has('geraet');
 
 export default function App() {
   const { laedt, sitzung, benutzer, verein, rollen, abmelden, darf } = useSitzung();
-  const [bereich, setBereich] = useState<Bereich>('personen');
+  const [bereich, setBereich] = useState<Bereich>('live');
 
   // Anonyme Anmeldungen gehoeren immer zu einem Geraet, auch ohne ?geraet in
   // der Adresse. Sonst landet ein Tablet in der Mitgliederansicht.
@@ -29,6 +30,7 @@ export default function App() {
   if (!sitzung) return <Anmeldung />;
 
   const bereiche: { wert: Bereich; name: string; sichtbar: boolean }[] = [
+    { wert: 'live', name: 'Live', sichtbar: true },
     { wert: 'personen', name: 'Personen', sichtbar: true },
     { wert: 'rating', name: 'Rating', sichtbar: true },
     { wert: 'serien', name: 'Serien', sichtbar: true },
@@ -68,6 +70,7 @@ export default function App() {
         </div>
       </header>
       <main>
+        {bereich === 'live' && <Live />}
         {bereich === 'personen' && <Personen />}
         {bereich === 'rating' && <Rating />}
         {bereich === 'serien' && <Serien />}

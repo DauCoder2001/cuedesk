@@ -191,6 +191,14 @@ export type Partie = {
   erstellt_am: string;
 };
 
+export type LiveStand = {
+  tisch_id: string;
+  verein_id: string;
+  zustand: unknown; // Stand, wie das Scoreboard ihn schreibt
+  besitzer: string | null;
+  aktualisiert: string;
+};
+
 export type Partie141 = {
   partie_id: string;
   verein_id: string;
@@ -276,6 +284,7 @@ export type Database = {
       turniere: Tabelle<Turnier, Partial<Turnier> & Pick<Turnier, 'verein_id' | 'name' | 'datum'>>;
       turnier_teilnehmer: Tabelle<TurnierTeilnehmer, Partial<TurnierTeilnehmer> & Pick<TurnierTeilnehmer, 'turnier_id' | 'person_id' | 'verein_id'>>;
       partien: Tabelle<Partie, Partial<Partie> & Pick<Partie, 'verein_id' | 'datum' | 'spieler_a' | 'spieler_b'>>;
+      live_stand: Tabelle<LiveStand, Partial<LiveStand> & Pick<LiveStand, 'tisch_id' | 'verein_id'>>;
       partien_141: Tabelle<Partie141, Partial<Partie141> & Pick<Partie141, 'partie_id' | 'verein_id'>>;
       aufnahmen_141: Tabelle<Aufnahme141, Omit<Aufnahme141, 'id'>>;
       rating_einstellungen: Tabelle<RatingEinstellungen, Partial<RatingEinstellungen> & Pick<RatingEinstellungen, 'verein_id'>>;

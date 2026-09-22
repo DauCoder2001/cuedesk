@@ -10,6 +10,8 @@
 //                 Ergebnisse mit komplettem Protokoll in CueDesk.
 //   offline     - ueberall sonst: Stand nur im Browser, Namen als Freitext,
 //                 nichts wird gespeichert. Entspricht der alten Offline-Fassung.
+//   zuschauer   - angemeldetes Mitglied ohne Leitungsrolle: sieht die Live-
+//                 Staende (Protokoll live), schreibt aber nichts.
 //   archiv      - Protokollansicht einer gespeicherten 14.1-Partie
 //                 (14.1_Log.html?partie=<id>, aus der 14.1-Statistik). Nur lesen.
 //
@@ -18,11 +20,12 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { leisteZeigen } from './hinweisleiste';
+import { VERALTET_NACH_MS } from '../../src/live';
 
 type Beobachter = (schnappschuss: { val: () => unknown }) => void;
 type Verweis = { pfad: string };
 
-export type Betriebsart = 'angebunden' | 'offline' | 'archiv';
+export type Betriebsart = 'angebunden' | 'zuschauer' | 'offline' | 'archiv';
 
 type Verbindung = {
   supabase: SupabaseClient;
@@ -94,15 +97,18 @@ export async function starten(): Promise<{ betriebsart: Betriebsart; tisch: stri
           .maybeSingle();
 
         let vereinId: string | null = geraet?.verein_id ?? null;
+        let nurLesen = false;
         if (!vereinId) {
-          // Angemeldete Turnierleitung im Browser
+          // Angemeldete Turnierleitung im Browser, sonst Mitglied als Zuschauer
           const { data: rollen } = await supabase
             .from('benutzer_rollen')
             .select('verein_id, rolle')
             .eq('benutzer_id', nutzer.id);
-          vereinId =
-            (rollen ?? []).find((r) => ['vereinsadmin', 'sportwart', 'turnierleiter'].includes(r.rolle))
-              ?.verein_id ?? null;
+          const leitung = (rollen ?? []).find((r) =>
+            ['vereinsadmin', 'sportwart', 'turnierleiter'].includes(r.rolle)
+          );
+          vereinId = leitung?.verein_id ?? rollen?.[0]?.verein_id ?? null;
+          nurLesen = !leitung;
         }
 
         if (vereinId) {
@@ -130,7 +136,7 @@ export async function starten(): Promise<{ betriebsart: Betriebsart; tisch: stri
             tischId: tisch?.id ?? null,
             tischNummer
           };
-          betriebsart = 'angebunden';
+          betriebsart = nurLesen ? 'zuschauer' : 'angebunden';
           if (geraet) {
             geraetKonto = { supabase, authId: nutzer.id };
             kopplungBeobachten();
@@ -331,6 +337,8 @@ export async function set(verweis: Verweis, wert: unknown): Promise<void> {
   // Wie bei Firebase: die eigene Aenderung sofort an die eigenen Beobachter.
   melden(verweis.pfad, wert);
 
+  if (betriebsart === 'zuschauer') return; // Zuschauer schreiben nichts
+
   if (!istAngebunden()) {
     try {
       if (wert === null) localStorage.removeItem(speicherSchluessel(tisch));
@@ -375,9 +383,21 @@ export function onValue(verweis: Verweis, cb: Beobachter): () => void {
   liste.add(cb);
   beobachter.set(verweis.pfad, liste);
 
-  // Turnierstatus: bis die CueDesk-Turniere angebunden sind, laeuft keins.
-  if (verweis.pfad === 'tournament/active') {
+  // Turnierstatus und TV-Umschaltung: bis die CueDesk-Turniere angebunden
+  // sind, laeuft keins. TV-Einstellungen gibt es nicht (Standardrand 3 %).
+  if (
+    verweis.pfad === 'tournament/active' ||
+    verweis.pfad.startsWith('tournament/') ||
+    verweis.pfad === 'system/tvSettings'
+  ) {
     queueMicrotask(() => cb({ val: () => null }));
+    return () => liste.delete(cb);
+  }
+
+  // Alle Tische auf einmal (TV-Ansicht)
+  if (verweis.pfad === 'tables') {
+    if (verbindung) void alleTischeBeobachten();
+    else queueMicrotask(() => cb({ val: () => null }));
     return () => liste.delete(cb);
   }
 
@@ -389,7 +409,7 @@ export function onValue(verweis: Verweis, cb: Beobachter): () => void {
     return () => liste.delete(cb);
   }
 
-  if (!istAngebunden()) {
+  if (!istAngebunden() && betriebsart !== 'zuschauer') {
     let gespeichert: unknown = null;
     try {
       const roh = localStorage.getItem(speicherSchluessel(tisch));
@@ -403,6 +423,68 @@ export function onValue(verweis: Verweis, cb: Beobachter): () => void {
 
   void liveBeobachten(verweis.pfad);
   return () => liste.delete(cb);
+}
+
+// Aktive Tische des Vereins, aufsteigend (die TV-Ansicht baut daraus ihr Raster)
+export async function tischNummern(): Promise<number[]> {
+  const v = verbindung;
+  if (!v) return [1, 2, 3, 4];
+  const { data } = await v.supabase
+    .from('tische')
+    .select('nummer')
+    .eq('verein_id', v.vereinId)
+    .eq('aktiv', true)
+    .order('nummer');
+  return (data ?? []).map((t) => t.nummer as number);
+}
+
+async function alleTischeBeobachten() {
+  const v = verbindung;
+  if (!v) return;
+  const { data: tische } = await v.supabase.from('tische').select('id, nummer').eq('verein_id', v.vereinId);
+  const nummerVon = new Map((tische ?? []).map((t) => [t.id as string, String(t.nummer)]));
+  const staende = new Map<string, { zustand: unknown; aktualisiert: string }>();
+
+  const weitergeben = () => {
+    const grenze = Date.now() - VERALTET_NACH_MS;
+    const alle: Record<string, unknown> = {};
+    staende.forEach((stand, nummer) => {
+      if (Date.parse(stand.aktualisiert) >= grenze) alle[nummer] = stand.zustand;
+    });
+    melden('tables', alle);
+  };
+
+  const { data } = await v.supabase
+    .from('live_stand')
+    .select('tisch_id, zustand, aktualisiert')
+    .eq('verein_id', v.vereinId);
+  (data ?? []).forEach((z) => {
+    const nummer = nummerVon.get(z.tisch_id as string);
+    if (nummer) staende.set(nummer, { zustand: z.zustand, aktualisiert: z.aktualisiert as string });
+  });
+  weitergeben();
+  // Liegengebliebene Staende auch ohne neue Ereignisse ausblenden
+  window.setInterval(weitergeben, 60000);
+
+  v.supabase
+    .channel(`live-alle-${v.vereinId}`)
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'live_stand', filter: `verein_id=eq.${v.vereinId}` },
+      (ereignis) => {
+        const zeile = (ereignis.eventType === 'DELETE' ? ereignis.old : ereignis.new) as {
+          tisch_id: string;
+          zustand?: unknown;
+          aktualisiert?: string;
+        };
+        const nummer = nummerVon.get(zeile.tisch_id);
+        if (!nummer) return;
+        if (ereignis.eventType === 'DELETE') staende.delete(nummer);
+        else staende.set(nummer, { zustand: zeile.zustand, aktualisiert: zeile.aktualisiert ?? new Date().toISOString() });
+        weitergeben();
+      }
+    )
+    .subscribe();
 }
 
 async function liveBeobachten(pfad: string) {

@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <title>CueDesk – TV-Ansicht</title>
+  <style>
+    /* Dunkles Theme für den Fernseher blendet weniger und wirkt modern */
+    body {
+      background: #111;
+      color: white;
+      font-family: Arial, sans-serif;
+      margin: 0;
+      height: 100vh;
+      overflow: hidden;
+    }
+    /* Auto-Fit-Rahmen: das 2x2-Raster (#tv-stage) wird per JS auf den sichtbaren
+       Bereich skaliert – vor allem fuer den Overscan-Sicherheitsrand. */
+    #tv-viewport { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }
+    #tv-stage {
+      width: 100vw; height: 100vh;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: 1fr 1fr;
+      gap: 15px;
+      padding: 15px;
+      box-sizing: border-box;
+      transform-origin: center center;
+    }
+    .table-card { 
+      background: #222; 
+      border-radius: 15px; 
+      padding: 20px; 
+      display: flex; 
+      flex-direction: column; 
+      justify-content: center; 
+      text-align: center; 
+      box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    }
+    .table-title { 
+      font-size: 3.5vh; 
+      color: #888; 
+      margin-bottom: auto; 
+      font-weight: bold;
+    }
+    .game-badge {
+      font-size: 2vh;
+      background: #333;
+      padding: 3px 10px;
+      border-radius: 5px;
+      vertical-align: middle;
+      margin-left: 10px;
+      color: #ccc;
+    }
+    .matchup { 
+      display: flex; 
+      justify-content: space-between; 
+      align-items: center; 
+      font-size: 5vh; 
+      font-weight: bold; 
+      margin: 20px 0;
+    }
+    .p1, .p2 {
+      flex: 1;
+      /* Lange Namen sauber umbrechen statt das Layout zu sprengen */
+      font-size: clamp(2.2vh, 4vh, 4.5vh);
+      line-height: 1.1;
+      overflow-wrap: break-word;
+      word-break: break-word;
+      hyphens: auto;
+      /* Maximal 3 Zeilen, danach "..." */
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .p1 { color: #ff4444; text-align: right; }
+    .p2 { color: #4488ff; text-align: left; }
+    .score { 
+      font-size: 10vh; 
+      display: flex; 
+      justify-content: center; 
+      align-items: center; 
+      flex: 0 0 auto;
+      margin: 0 20px; 
+      background: #000;
+      padding: 10px 20px;
+      border-radius: 10px;
+    }
+    .score span { padding: 0 15px; }
+    .colon { color: #555; }
+    .stats { 
+      font-size: 2.5vh; 
+      color: #aaa; 
+      margin-top: auto; 
+    }
+    .inactive { color: #555; font-size: 4vh; margin: auto; }
+  </style>
+  <link rel="icon" type="image/svg+xml" href="./img/favicon.svg">
+</head>
+<body>
+
+  <!-- CueDesk: Die Kacheln entstehen aus der Tischliste des Vereins (siehe Skript). -->
+  <div id="tv-viewport"><div id="tv-stage"></div></div>
+
+  <script type="module">
+    // CueDesk: Anbindung mit denselben Funktionen wie frueher Firebase. Das
+    // Fernsehgeraet ist wie ein Tablet gekoppelt, nur ohne Tisch.
+    import { db, ref, onValue, starten, tischNummern } from "./js/anbindung.ts";
+    import { keepScreenAwake } from "./js/wake-lock.js";
+    import { startTvAutofit } from "./js/tv-autofit.js";
+
+    await starten();
+
+    // Raster nach Zahl der aktiven Tische: 1-2 nebeneinander, 3-4 als 2x2, 5-6 als 3x2 usw.
+    const nummern = await tischNummern();
+    const stage = document.getElementById('tv-stage');
+    const spalten = nummern.length <= 2 ? Math.max(1, nummern.length) : nummern.length <= 4 ? 2 : 3;
+    const zeilen = Math.max(1, Math.ceil(nummern.length / spalten));
+    stage.style.gridTemplateColumns = 'repeat(' + spalten + ', 1fr)';
+    stage.style.gridTemplateRows = 'repeat(' + zeilen + ', 1fr)';
+    stage.innerHTML = nummern.map((n) =>
+      '<div id="table-' + n + '" class="table-card"><div class="inactive">Warte auf Tisch ' + n + '...</div></div>'
+    ).join('');
+
+    // Namen kommen aus CueDesk (auch am Tablet angelegte Gaeste) - nie als HTML einsetzen
+    const esc = (t) => String(t == null ? '' : t).replace(/[&<>"]/g, (c) =>
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+    keepScreenAwake();   // Bildschirm im Kiosk-Betrieb anhalten (Anzeige ohne Interaktion)
+
+    // Overscan-Sicherheitsrand aus system/tvSettings (Raster ist konstant gross,
+    // daher genuegen Start + Resize + Overscan-Aenderung – kein Refit je Render).
+    let overscanPct = 3;
+    const refit = startTvAutofit(document.getElementById('tv-stage'), () => overscanPct);
+    onValue(ref(db, 'system/tvSettings'), (snap) => {
+      const p = snap.val() && Number(snap.val().overscanPct);
+      overscanPct = Number.isFinite(p) ? p : 3;
+      refit();
+    });
+
+    // CueDesk: Die automatische Umschaltung je nach Turnierphase kommt mit den
+    // Turnieren (Stufe 5).
+
+    // Turnierstatus mitlesen -> "Freies Spiel"-Badge waehrend eines Turniers
+    let tournamentRunning = false;
+    let lastTablesData = null;
+
+    onValue(ref(db, 'tournament/active/status'), (snap) => {
+      tournamentRunning = snap.val() === 'running';
+      renderTables();
+    });
+
+    const tablesRef = ref(db, 'tables');
+
+    onValue(tablesRef, (snapshot) => {
+      lastTablesData = snapshot.val();
+      renderTables();
+    });
+
+    function renderTables() {
+      const data = lastTablesData;
+
+      for (const i of nummern) {
+        const container = document.getElementById(`table-${i}`);
+        const tableData = data ? data[i] : null;
+        
+        if (tableData) {
+          const isPool = tableData.gameType === "pool";
+          
+          if (isPool) {
+            // ==========================================
+            // DARSTELLUNG FÜR 8-/9-/10-BALL (POOL)
+            // ==========================================
+            const nextBreakName = tableData.nextBreak === 1 ? tableData.player1 : tableData.player2;
+            const breakColor = tableData.nextBreak === 1 ? "#ff4444" : "#4488ff";
+            let extraBadge = '';
+            if (tableData.raceTo) extraBadge = ` <span class="game-badge">Race to ${tableData.raceTo}</span>`;
+            else if (tournamentRunning && !tableData.tournamentMatchId) extraBadge = ` <span class="game-badge" style="background:#6c757d;">Freies Spiel</span>`;
+
+            container.innerHTML = `
+              <div class="table-title">Tisch ${i} <span class="game-badge">Pool</span>${extraBadge}</div>
+              <div class="matchup">
+                <div class="p1">${esc(tableData.player1 || "Spieler 1")}</div>
+                <div class="score">
+                  <span style="color:#ff4444">${tableData.score1 || 0}</span> 
+                  <span class="colon">:</span> 
+                  <span style="color:#4488ff">${tableData.score2 || 0}</span>
+                </div>
+                <div class="p2">${esc(tableData.player2 || "Spieler 2")}</div>
+              </div>
+              <div class="stats">
+                Nächster Anstoß: <strong style="color:${breakColor}">${esc(nextBreakName)}</strong>
+              </div>
+            `;
+          } else {
+            // ==========================================
+            // DARSTELLUNG FÜR 14.1 ENDLOS
+            // ==========================================
+            const activePlayer = tableData.turn === 1 ? tableData.player1 : tableData.player2;
+            const activeColor = tableData.turn === 1 ? "#ff4444" : "#4488ff";
+            // Höchste Aufnahmen-Zahl ermitteln
+            const maxInn = Math.max(tableData.inn1 || 0, tableData.inn2 || 0);
+            const freeBadge141 = tournamentRunning ? ` <span class="game-badge" style="background:#6c757d;">Freies Spiel</span>` : '';
+
+            container.innerHTML = `
+              <div class="table-title">Tisch ${i} <span class="game-badge">14.1</span>${freeBadge141}</div>
+              <div class="matchup">
+                <div class="p1">${esc(tableData.player1 || "Spieler 1")}</div>
+                <div class="score">
+                  <span style="color:#ff4444">${tableData.s1 || 0}</span> 
+                  <span class="colon">:</span> 
+                  <span style="color:#4488ff">${tableData.s2 || 0}</span>
+                </div>
+                <div class="p2">${esc(tableData.player2 || "Spieler 2")}</div>
+              </div>
+              <div class="stats">
+                Am Tisch: <strong style="color:${activeColor}">${esc(activePlayer)}</strong> &nbsp;|&nbsp;
+                Ziel: ${tableData.target || 40} Pkt. / ${tableData.targetInn || 20} Aufn. &nbsp;|&nbsp;
+                Aufnahme: ${maxInn}
+              </div>
+            `;
+          }
+        } else {
+          // Falls noch keine Daten für diesen Tisch existieren
+          container.innerHTML = `
+            <div class="table-title">Tisch ${i}</div>
+            <div class="inactive">Tisch nicht besetzt</div>
+          `;
+        }
+      }
+    }
+  </script>
+</body>
+</html>

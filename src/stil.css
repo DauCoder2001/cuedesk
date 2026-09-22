@@ -231,3 +231,18 @@ button:disabled { cursor: default; color: var(--text-leise); }
 .tabelle .marke { font-size: 11px; border: 1px solid var(--rand); border-radius: var(--radius); padding: 1px 6px; color: var(--text-leise); }
 .marke.ausgang-sieg { color: var(--gut); border-color: #bcd9cd; }
 .marke.ausgang-niederlage { color: var(--fehler); border-color: #e7bcbc; }
+.spielknopf.tv { background: #1f3b73; }
+
+/* Live-Tische */
+.livetische { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; }
+.livekachel { border: 1px solid var(--rand); border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; justify-content: space-between; gap: 14px; min-height: 190px; }
+.livekopf { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; color: var(--text-leise); }
+.livekopf .marke { font-size: 11px; border: 1px solid var(--rand); border-radius: var(--radius); padding: 1px 6px; margin-left: 6px; }
+.livelaeuft { color: var(--gut); }
+.livestand { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px; font-size: 17px; font-weight: 500; padding: 16px 0; }
+.livestand .rechts { text-align: right; }
+.livestand .zahl { font-size: 34px; }
+.livestand .rot { color: #cc0000; }
+.livestand .blau { color: #1133cc; }
+.livefuss { font-size: 12px; color: var(--text-leise); }
+.livefrei { text-align: center; color: var(--text-leise); font-size: 13px; padding: 14px 0; flex: 1; display: grid; place-items: center; }

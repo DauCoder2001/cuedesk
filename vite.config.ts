@@ -21,7 +21,8 @@ export default defineConfig(() => ({
         scoreboards: resolve(__dirname, 'scoreboards/index.html'),
         vierzehnEins: resolve(__dirname, 'scoreboards/14.1_Scoreboard.html'),
         vierzehnEinsProtokoll: resolve(__dirname, 'scoreboards/14.1_Log.html'),
-        pool: resolve(__dirname, 'scoreboards/Pool_Scoreboard.html')
+        pool: resolve(__dirname, 'scoreboards/Pool_Scoreboard.html'),
+        tv: resolve(__dirname, 'scoreboards/tv.html')
       }
     }
   }

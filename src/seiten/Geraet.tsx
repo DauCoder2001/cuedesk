@@ -136,7 +136,14 @@ export default function Geraet() {
                 </a>
               </div>
             ) : (
-              <p className="hinweis">Zum Spielen zuerst einen Tisch wählen.</p>
+              <>
+                <p className="hinweis">Zum Spielen einen Tisch wählen. Ohne Tisch dient das Gerät als Anzeige:</p>
+                <div className="spielwahl">
+                  <a className="spielknopf tv" href={`${import.meta.env.BASE_URL}scoreboards/tv.html`}>
+                    TV-Ansicht
+                  </a>
+                </div>
+              </>
             )}
           </>
         ) : (
