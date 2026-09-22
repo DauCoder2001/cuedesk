@@ -3,8 +3,8 @@ import type { FormEvent } from 'react';
 import { supabase } from '../supabase';
 import { ANWENDUNGSADRESSE } from '../adresse';
 
-// Anmeldung per E-Mail. Die Mail enthaelt einen Link und einen sechsstelligen
-// Code. Der Code ist der sichere Weg, wenn ein Mailprogramm Links vorab
+// Anmeldung per E-Mail. Die Mail enthaelt einen Link und einen Zahlencode
+// (Laenge in Supabase einstellbar, 6 bis 10 Ziffern). Der Code ist der sichere Weg, wenn ein Mailprogramm Links vorab
 // aufruft oder jemand zweimal klickt: ein Link gilt nur ein einziges Mal.
 
 export default function Anmeldung() {
@@ -54,8 +54,8 @@ export default function Anmeldung() {
   async function codePruefen(ereignis: FormEvent) {
     ereignis.preventDefault();
     const ziffern = code.replace(/\D/g, '');
-    if (ziffern.length !== 6) {
-      setFehler('Der Code besteht aus sechs Ziffern.');
+    if (ziffern.length < 6 || ziffern.length > 10) {
+      setFehler('Bitte den Zahlencode aus der Mail vollständig eingeben.');
       return;
     }
     setFehler(null);
@@ -82,16 +82,16 @@ export default function Anmeldung() {
           <form onSubmit={codePruefen}>
             <p className="hinweis">
               Wir haben eine Mail an {email} geschickt. Klicke den Link darin einmal — oder tippe
-              den sechsstelligen Code ein.
+              den Zahlencode ein.
             </p>
             <label htmlFor="code">Code aus der Mail</label>
             <input
               id="code"
               inputMode="numeric"
               autoComplete="one-time-code"
-              maxLength={6}
+              maxLength={12}
               value={code}
-              placeholder="000000"
+              placeholder="Zahlencode"
               onChange={(e) => {
                 setCode(e.target.value);
                 setFehler(null);

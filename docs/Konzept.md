@@ -325,4 +325,6 @@ mit dem Zusatz `?geraet`. Die Sicherung liegt im privaten Repository
 `cuedesk-sicherung`, je Woche ein Ordner mit Schema, Daten und Konten; die
 letzten zwoelf Wochen bleiben erhalten.
 
-Mailversand: zunaechst Brevo ueber SMTP, spaeter der Mailanbieter des Vereins.
+Mailversand: ueber das IONOS-Postfach der Domain `cuedesk.de` (SMTP `smtp.ionos.de`,
+Port 465). Brevo wird nicht gebraucht. Die Mailvorlagen stehen in
+`docs/Mailvorlagen.md`.
