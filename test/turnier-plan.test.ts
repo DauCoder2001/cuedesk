@@ -44,6 +44,9 @@ test('Beschriftung mit Gruppe und Phase 2', () => {
   expect(abschnittName({ runde: 2, gruppe: 'B', phase: 'gruppe' })).toBe('Gruppe B · Runde 2');
   expect(abschnittName({ runde: null, gruppe: null, phase: 'phase2' })).toBe('Phase 2');
   expect(abschnittName({ runde: 3 })).toBe('Runde 3');
+  expect(abschnittName({ runde: 2, gruppe: 'qf3', phase: 'ko' })).toBe('Viertelfinale 3');
+  expect(abschnittName({ runde: 4, gruppe: 'bro', phase: 'ko' })).toBe('Spiel um Platz 3');
+  expect(abschnittName({ runde: null, gruppe: null, phase: 'phase3' })).toBe('Phase 3');
 });
 
 describe('Ergebnis vom Tablet', () => {

@@ -10,18 +10,42 @@ import { herunterladen } from '../pdf';
 import { angefangen, auslosen, bergerRunden, hoechstwert, rangliste, spielBeendet } from '../turnier';
 import type { Gleichstand, RanglistenPartie, Zeile } from '../turnier';
 import { endtabelleZweiGruppen, gruppenRangliste, phase2Paare, verteilen, zielGroessen, zuVieleGesetzt } from '../gruppen';
+import {
+  KO_GRUPPEN,
+  KO_MAX,
+  KO_MIN,
+  endtabelleKo,
+  folgespiele,
+  koAufloesen,
+  koSpiele,
+  nachGruppenleistung,
+  nichtQualifiziert,
+  phase3Paare,
+  setzliste,
+  standardGruppenzahl,
+  weiterOptionen,
+  weiterPassend
+} from '../ko';
+import type { KoRunde, Leistung } from '../ko';
+import KoBaum from './KoBaum';
 import { DISZIPLIN_TEXT, MODUS_TEXT, STATUS_TEXT } from './Turniere';
 import type { TurnierEinstellungen } from './Turniere';
 import type { Partie, Person, RatingQuelle, Turnier, TurnierTeilnehmer } from '../datenbank.types';
 
-// Ein Turnier im Modus Einzelgruppe oder Zwei Gruppen: Teilnehmer, Auslosung,
-// Spielplan, Tabellen, bei zwei Gruppen die Platzierungsduelle (Phase 2) und
-// der Abschluss. Uebernommene Altturniere werden nur angezeigt.
+// Ein Turnier im Modus Einzelgruppe, Zwei Gruppen oder Gruppen mit KO:
+// Teilnehmer, Auslosung, Spielplan, Tabellen, bei zwei Gruppen die
+// Platzierungsduelle (Phase 2), bei Gruppen mit KO die KO-Runde und die
+// Platzierungsspiele (Phase 3), dazu der Abschluss. Uebernommene Altturniere
+// werden nur angezeigt.
 
-const GRUPPEN = ['A', 'B'];
 // Grenzen wie im Turnierplan Gruppen v64
 const ZWEI_GRUPPEN_MIN = 4;
 const ZWEI_GRUPPEN_MAX = 16;
+// KO-Runde: Rundennummer im Spielplan
+const KO_RUNDE_NR: Record<KoRunde, number> = { R16: 1, QF: 2, SF: 3, FIN: 4, BRO: 4 };
+const KO_ABSCHNITT: Record<string, string> = { af: 'Achtelfinale', qf: 'Viertelfinale', sf: 'Halbfinale', fin: 'Finale und Platz 3', bro: 'Finale und Platz 3' };
+const istGruppenspiel = (p: Partie) => !p.phase || p.phase === 'gruppe';
+const istGruppenzeile = (zeile: string) => /^[A-D]$/.test(zeile);
 
 type Aenderungszeile = { zeitpunkt: string; nachher: Partial<Partie> | null; aktion: string };
 type Rueckgaengig = { partieId: string; vorher: Pick<Partie, 'ergebnis_a' | 'ergebnis_b' | 'status' | 'beendet'> };
@@ -60,6 +84,8 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
   const [stapel, setStapel] = useState<Rueckgaengig[]>([]);
   const [rueckfrage, fragen] = useRueckfrage();
   const [, setTakt] = useState(0);
+  // KO-Abgleich fuer den Echtzeit-Kanal; wird bei jedem Zeichnen neu gesetzt
+  const abgleichRef = useRef<(liste: Partie[]) => Promise<void>>(async () => {});
 
   // Zeitprognose haengt an der Uhr, nicht nur an Eingaben
   useEffect(() => {
@@ -115,7 +141,10 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
     let zeitgeber: number | null = null;
     const partienNeu = async () => {
       const { data } = await supabase.from('partien').select('*').eq('turnier_id', turnierId).order('runde').order('paarung');
-      if (data) setPartien(data);
+      if (data) {
+        setPartien(data);
+        void abgleichRef.current(data);
+      }
     };
     const kanal = supabase
       .channel(`turnier-leitung-${turnierId}`)
@@ -151,25 +180,44 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
   const posVon = useMemo(() => new Map(aufstellung.map((t, i) => [t.person_id, i])), [aufstellung]);
 
   const zwei = turnier?.modus === 'zwei-gruppen';
+  const mitKo = turnier?.modus === 'gruppen-ko';
+  const mehrgruppig = zwei || mitKo;
   const race2 = einstellungen.racePhase2 ?? raceTo;
+  const race3 = einstellungen.racePhase3 ?? raceTo;
   const beendetBei = (p: Partie) => spielBeendet(p.ergebnis_a, p.ergebnis_b, p.race_to ?? raceTo);
 
-  // Gruppenspiele (Einzelgruppe: alle) und Platzierungsduelle getrennt
-  const gruppenPartien = useMemo(() => partien.filter((p) => p.phase !== 'phase2'), [partien]);
-  const duelle = useMemo(
-    () => partien.filter((p) => p.phase === 'phase2').sort((a, b) => (a.paarung ?? 0) - (b.paarung ?? 0)),
-    [partien]
+  // Gruppen mit KO: vor der Auslosung nach der Teilnehmerzahl, danach fest
+  const gruppenzahl = mitKo ? einstellungen.gruppenzahl ?? standardGruppenzahl(teilnehmer.length) : 2;
+  const gruppenNamen = useMemo(
+    () => (zwei ? ['A', 'B'] : mitKo ? KO_GRUPPEN.slice(0, gruppenzahl) : []),
+    [zwei, mitKo, gruppenzahl]
   );
+  const weiter = mitKo ? weiterPassend(teilnehmer.length, gruppenzahl, einstellungen.weiter) : null;
+  const paarung = gruppenzahl === 2 && (weiter ?? 0) * gruppenzahl === 8 ? einstellungen.paarung ?? 1 : 1;
+  const koFest = einstellungen.ko ?? null;
+  const rk = einstellungen.raceKo;
+  const raceFuer = useCallback(
+    (runde: KoRunde) =>
+      (runde === 'R16' ? rk?.R16 : runde === 'QF' ? rk?.QF : runde === 'FIN' ? rk?.FIN : rk?.SF) ?? raceTo,
+    [rk?.R16, rk?.QF, rk?.SF, rk?.FIN, raceTo]
+  );
+
+  // Gruppenspiele (Einzelgruppe: alle), Platzierungsduelle, KO und Phase 3 getrennt
+  const gruppenPartien = useMemo(() => partien.filter(istGruppenspiel), [partien]);
+  const nachPaarung = (a: Partie, b: Partie) => (a.paarung ?? 0) - (b.paarung ?? 0);
+  const duelle = useMemo(() => partien.filter((p) => p.phase === 'phase2').sort(nachPaarung), [partien]);
+  const koPartien = useMemo(() => partien.filter((p) => p.phase === 'ko'), [partien]);
+  const p3Partien = useMemo(() => partien.filter((p) => p.phase === 'phase3').sort(nachPaarung), [partien]);
 
   // Gruppenmitglieder als Positionen der Startliste; die Startnummern sind je
   // Gruppe fortlaufend vergeben, die Reihenfolge ist damit die der Auslosung.
   const gruppen = useMemo(() => {
-    const karte: Record<string, number[]> = Object.fromEntries(GRUPPEN.map((g) => [g, [] as number[]]));
+    const karte: Record<string, number[]> = Object.fromEntries(gruppenNamen.map((g) => [g, [] as number[]]));
     aufstellung.forEach((t, i) => {
       if (t.gruppe && karte[t.gruppe]) karte[t.gruppe].push(i);
     });
     return karte;
-  }, [aufstellung]);
+  }, [aufstellung, gruppenNamen]);
 
   const eingabe: RanglistenPartie[] = useMemo(
     () =>
@@ -193,15 +241,88 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
   const gruppenTabellen = useMemo(
     () =>
       Object.fromEntries(
-        GRUPPEN.map((g) => [g, gruppenRangliste(gruppen[g] ?? [], eingabe, einstellungen.handReihenfolge ?? {})])
+        gruppenNamen.map((g) => [g, gruppenRangliste(gruppen[g] ?? [], eingabe, einstellungen.handReihenfolge ?? {})])
       ),
-    [gruppen, eingabe, einstellungen.handReihenfolge]
+    [gruppenNamen, gruppen, eingabe, einstellungen.handReihenfolge]
   );
 
   const offeneSpiele = partien.filter((p) => !beendetBei(p)).length;
   const offenInGruppe = (g: string) => gruppenPartien.filter((p) => p.gruppe === g && !beendetBei(p)).length;
   const offeneGruppenspiele = gruppenPartien.filter((p) => !beendetBei(p)).length;
-  const irgendeinErgebnis = partien.some((p) => angefangen(p.ergebnis_a, p.ergebnis_b, p.vorgabe_a, p.vorgabe_b));
+  const begonnen = (p: Partie) => angefangen(p.ergebnis_a, p.ergebnis_b, p.vorgabe_a, p.vorgabe_b);
+  const irgendeinErgebnis = partien.some(begonnen);
+  // Steht in der Folgephase ein Ergebnis, sind die Gruppenspiele gesperrt (v64)
+  const gruppenGesperrt = partien.some((p) => !istGruppenspiel(p) && begonnen(p));
+
+  // ---------- Gruppen mit KO ----------
+
+  const personVon = useCallback((pos: number) => aufstellung[pos]?.person_id ?? '', [aufstellung]);
+  const gruppenListen = useMemo(
+    () => gruppenNamen.map((g) => (gruppen[g] ?? []).map(personVon)),
+    [gruppenNamen, gruppen, personVon]
+  );
+  const ordnung = useCallback((id: string) => posVon.get(id) ?? 999, [posVon]);
+
+  // Stand eines KO-Spiels: nur wenn die Partie zu den Spielern im Baum passt
+  const koStaende = useCallback(
+    (liste: Partie[]) => (id: string, p1: string, p2: string) => {
+      const x = liste.find((p) => p.phase === 'ko' && p.gruppe === id && p.spieler_a === p1 && p.spieler_b === p2);
+      return x ? { s1: x.ergebnis_a ?? x.vorgabe_a, s2: x.ergebnis_b ?? x.vorgabe_b } : { s1: null, s2: null };
+    },
+    []
+  );
+  const baum = useMemo(
+    () => (koFest ? koAufloesen(koFest, koStaende(koPartien), raceFuer) : null),
+    [koFest, koStaende, koPartien, raceFuer]
+  );
+
+  // Gruppenleistung fuer KO-Verlierer und Nichtqualifizierte; der Gruppenplatz
+  // stammt aus der beim KO-Start fixierten Reihenfolge (v74 collectGroupPerformance)
+  const leistung = useMemo(() => {
+    const karte = new Map<string, Leistung>();
+    gruppenNamen.forEach((g) => {
+      const zeilen = gruppenTabellen[g]?.zeilen ?? [];
+      const fest = koFest?.reihung[g] ?? zeilen.map((z) => personVon(z.pos));
+      zeilen.forEach((z) => {
+        const id = personVon(z.pos);
+        const platz = fest.indexOf(id);
+        karte.set(id, { gruppe: g, platz: platz >= 0 ? platz + 1 : 99, punkte: z.punkte, diff: z.diff, gewonnen: z.gewonnen });
+      });
+    });
+    return karte;
+  }, [gruppenNamen, gruppenTabellen, koFest, personVon]);
+
+  const endtabelleMitKo = useMemo(() => {
+    if (!koFest || !baum) return [];
+    const p3 = einstellungen.phase3;
+    return endtabelleKo(
+      koFest,
+      baum,
+      leistung,
+      gruppenListen,
+      ordnung,
+      p3
+        ? {
+            reihung: p3.reihung,
+            abPlatz: p3.abPlatz,
+            race: race3,
+            staende: phase3Paare(p3.reihung).paare.map((_, i) => {
+              const d = p3Partien.find((x) => x.paarung === i + 1);
+              return { s1: d ? d.ergebnis_a ?? d.vorgabe_a : null, s2: d ? d.ergebnis_b ?? d.vorgabe_b : null };
+            })
+          }
+        : null
+    );
+  }, [koFest, baum, leistung, gruppenListen, ordnung, einstellungen.phase3, p3Partien, race3]);
+
+  // Ein KO-Ergebnis ist gesperrt, sobald im Folgespiel gespielt wird (v74)
+  const koGesperrt = (p: Partie) =>
+    p.phase === 'ko' &&
+    koFest !== null &&
+    folgespiele(koFest.gruppenzahl * koFest.weiter, p.gruppe ?? '').some((id) => {
+      const f = koPartien.find((x) => x.gruppe === id);
+      return f !== undefined && (begonnen(f) || f.tisch_id !== null);
+    });
 
   // Zwei Gruppen: Endtabelle aus den Duellen; ein unberuehrtes Duell steht
   // auf der Vorgabe (wie in v64 vorbelegt)
@@ -219,7 +340,8 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
     );
   }, [zwei, einstellungen.phase2, duelle, race2]);
 
-  // Abschnitte des Spielplans: Runden, bei zwei Gruppen je Gruppe, dazu Phase 2
+  // Abschnitte des Spielplans: Runden, bei Gruppen je Gruppe, dazu Phase 2,
+  // die KO-Runden und Phase 3
   const abschnitte = useMemo(() => {
     const karte = new Map<string, { schluessel: string; zeile: string; titel: string; ordnung: string; partien: Partie[] }>();
     partien.forEach((p) => {
@@ -227,7 +349,11 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
       const [schluessel, zeile, titel, ordnung] =
         p.phase === 'phase2'
           ? ['P2', 'P2', 'Phase 2', 'Z']
-          : p.gruppe
+          : p.phase === 'phase3'
+            ? ['P3', 'P3', 'Phase 3', 'Z3']
+            : p.phase === 'ko'
+              ? [`K${r}`, 'KO', KO_ABSCHNITT[(p.gruppe ?? '').replace(/\d+$/, '')] ?? 'KO', `Y${r}`]
+              : p.gruppe
             ? [`${p.gruppe}-${r}`, p.gruppe, `Runde ${r}`, `${p.gruppe}${String(r).padStart(3, '0')}`]
             : [`r${r}`, '', `Runde ${r}`, String(r).padStart(3, '0')];
       const a = karte.get(schluessel) ?? { schluessel, zeile, titel, ordnung, partien: [] };
@@ -251,6 +377,9 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
     if (person(id)?.status === 'gast') return { wert: 500, quelle: 'gast' as RatingQuelle };
     return ratings.get(id) ?? { wert: 500, quelle: 'vereinsschnitt' as RatingQuelle };
   };
+  const grenzen: [number, number] = zwei ? [ZWEI_GRUPPEN_MIN, ZWEI_GRUPPEN_MAX] : [KO_MIN, KO_MAX];
+  const offeneStichkaempfe = () =>
+    gruppenNamen.flatMap((g) => gruppenTabellen[g].gleichstaende.filter((x) => !x.entschieden)).length;
   // Setzungen vor der Auslosung: Teilnehmer -> Gruppe
   const gesetztKarte = () =>
     Object.fromEntries(teilnehmer.filter((t) => t.gesetzt && t.gruppe).map((t) => [t.person_id, t.gruppe as string]));
@@ -316,30 +445,32 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
 
   async function auslosenUndStarten() {
     if (!turnier) return;
-    if (zwei) {
-      if (teilnehmer.length < ZWEI_GRUPPEN_MIN || teilnehmer.length > ZWEI_GRUPPEN_MAX) {
-        return setFehler(`Zwei Gruppen: ${ZWEI_GRUPPEN_MIN} bis ${ZWEI_GRUPPEN_MAX} Teilnehmer.`);
+    if (mehrgruppig) {
+      const [min, max] = grenzen;
+      if (teilnehmer.length < min || teilnehmer.length > max) {
+        return setFehler(`${MODUS_TEXT[turnier.modus]}: ${min} bis ${max} Teilnehmer.`);
       }
-      const zuviel = zuVieleGesetzt(teilnehmer.length, gesetztKarte(), GRUPPEN);
+      if (mitKo && weiter === null) return setFehler('Für diese Teilnehmer- und Gruppenzahl gibt es kein passendes KO-Feld.');
+      const zuviel = zuVieleGesetzt(teilnehmer.length, gesetztKarte(), gruppenNamen);
       if (zuviel.length > 0) return setFehler(`In Gruppe ${zuviel.join(', ')} sind zu viele Spieler fest gesetzt.`);
     } else if (teilnehmer.length < 3) {
       return setFehler('Für ein Turnier braucht es mindestens drei Teilnehmer.');
     }
-    const frage = zwei
-      ? `${teilnehmer.length} Teilnehmer auf zwei Gruppen auslosen und das Turnier starten?`
+    const frage = mehrgruppig
+      ? `${teilnehmer.length} Teilnehmer auf ${gruppenNamen.length} Gruppen auslosen und das Turnier starten?`
       : `${teilnehmer.length} Teilnehmer auslosen und das Turnier starten?`;
     if (!(await fragen(frage, 'Auslosen'))) return;
     setArbeitet(true);
     setFehler(null);
 
-    // Einzelgruppe: eine Gruppe in ausgeloster Reihenfolge. Zwei Gruppen:
-    // Gesetzte in ihre Gruppe, die uebrigen ausgelost (v64). Die Startnummern
-    // laufen je Gruppe fortlaufend, A zuerst.
-    const verteilung: Record<string, string[]> = zwei
+    // Einzelgruppe: eine Gruppe in ausgeloster Reihenfolge. Mehrere Gruppen:
+    // Gesetzte in ihre Gruppe, die uebrigen ausgelost (v64, v74). Die
+    // Startnummern laufen je Gruppe fortlaufend, A zuerst.
+    const verteilung: Record<string, string[]> = mehrgruppig
       ? verteilen(
           [...teilnehmer].sort((a, b) => anzeige(a.person_id).localeCompare(anzeige(b.person_id), 'de')).map((t) => t.person_id),
           gesetztKarte(),
-          GRUPPEN
+          gruppenNamen
         )
       : { '': auslosen(teilnehmer.map((t) => t.person_id)) };
     const gerechnet = Object.entries(verteilung).flatMap(([gruppe, ids]) =>
@@ -398,7 +529,11 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
         status: 'laeuft',
         eingefroren_am: new Date().toISOString(),
         teilnehmerzahl: gerechnet.length,
-        einstellungen: { ...einstellungen, tvAnsicht: 'auslosung' }
+        einstellungen: {
+          ...einstellungen,
+          tvAnsicht: 'auslosung',
+          ...(mitKo ? { gruppenzahl, weiter: weiter ?? undefined, paarung } : {})
+        }
       })
       .eq('id', turnier.id);
     if (error) setFehler(error.message);
@@ -462,8 +597,10 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
         { partieId: p.id, vorher: { ergebnis_a: p.ergebnis_a, ergebnis_b: p.ergebnis_b, status: p.status, beendet: p.beendet } }
       ]);
     }
-    setPartien((liste) => liste.map((x) => (x.id === p.id ? { ...x, ...neu } : x)));
+    const liste = partien.map((x) => (x.id === p.id ? { ...x, ...neu } : x));
+    setPartien(liste);
     if (!leer) await turnierBegonnen();
+    await koAbgleichen(liste);
   }
 
   // Erstes Ergebnis: Beginn fuer die Zeitprognose merken, TV von der
@@ -541,10 +678,11 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
   // Endtabelle, vor Phase 2 Gruppe A, dann Gruppe B. Die Werte stammen aus der
   // Gruppenphase. (Der eigene Bericht fuer Gruppenturniere folgt in Teil C.)
   function berichtZeilen(): { zeile: Zeile; platz: number }[] {
-    if (!zwei) return tabelle.zeilen.map((zeile, i) => ({ zeile, platz: i + 1 }));
-    const alle = GRUPPEN.flatMap((g) => gruppenTabellen[g].zeilen);
-    if (endtabelle.length === 0) return alle.map((zeile, i) => ({ zeile, platz: i + 1 }));
-    return endtabelle.flatMap((z) => {
+    if (!mehrgruppig) return tabelle.zeilen.map((zeile, i) => ({ zeile, platz: i + 1 }));
+    const alle = gruppenNamen.flatMap((g) => gruppenTabellen[g].zeilen);
+    const ende: { wer: string | null; platz: number }[] = zwei ? endtabelle : endtabelleMitKo;
+    if (ende.length === 0) return alle.map((zeile, i) => ({ zeile, platz: i + 1 }));
+    return ende.flatMap((z) => {
       const zeile = alle.find((x) => aufstellung[x.pos]?.person_id === z.wer);
       return zeile ? [{ zeile, platz: z.platz }] : [];
     });
@@ -557,7 +695,12 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
     const anfang = zeiten([einstellungen.beginn, ...partien.map((x) => x.begonnen), ...partien.map((x) => x.beendet)]);
     const schluss = zeiten(partien.map((x) => x.beendet));
     // Zwei Gruppen vor Phase 2: die Duelle zaehlen schon mit (v64 phase2Duelle)
+    // Gruppen mit KO: alle KO-Spiele, die noch keine Partie haben (Phase 3 ist freiwillig)
     const kommend = zwei && !einstellungen.phase2 ? Math.min(gruppen.A.length, gruppen.B.length) : 0;
+    const feldJetzt = koFest ? koFest.gruppenzahl * koFest.weiter : (weiter ?? 0) * gruppenzahl;
+    const koKommend = mitKo
+      ? koSpiele(feldJetzt).filter((k) => !koPartien.some((x) => x.gruppe === k.id)).map((k) => raceFuer(k.runde))
+      : [];
     return prognose(
       [
         ...partien.map((x) => ({
@@ -567,7 +710,8 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
           vorgabeB: x.vorgabe_b,
           raceTo: x.race_to ?? raceTo
         })),
-        ...Array.from({ length: kommend }, () => ({ standA: null, standB: null, vorgabeA: 0, vorgabeB: 0, raceTo: race2 }))
+        ...Array.from({ length: kommend }, () => ({ standA: null, standB: null, vorgabeA: 0, vorgabeB: 0, raceTo: race2 })),
+        ...koKommend.map((race) => ({ standA: null, standB: null, vorgabeA: 0, vorgabeB: 0, raceTo: race }))
       ],
       anfang.length ? Math.min(...anfang) : null,
       schluss.length ? Math.max(...schluss) : null
@@ -582,6 +726,7 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
     setStapel((s) => s.slice(0, -1));
     setPartien((liste) => liste.map((x) => (x.id === letzter.partieId ? { ...x, ...letzter.vorher } : x)));
     setMeldung('Letzte Eingabe zurückgenommen.');
+    await koAbgleichen(partien.map((x) => (x.id === letzter.partieId ? { ...x, ...letzter.vorher } : x)));
   }
 
   async function verlaufZeigen(p: Partie) {
@@ -663,7 +808,7 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
     if (offeneGruppenspiele > 0) {
       return setFehler(`Phase 2 kann noch nicht starten: ${offeneGruppenspiele} Gruppenspiele sind nicht beendet.`);
     }
-    const offen = GRUPPEN.flatMap((g) => gruppenTabellen[g].gleichstaende.filter((x) => !x.entschieden)).length;
+    const offen = offeneStichkaempfe();
     if (
       offen > 0 &&
       !(await fragen(
@@ -719,18 +864,185 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
     await laden();
   }
 
+  // ---------- Gruppen mit KO ----------
+
+  // Einstellungen vor der Auslosung (Gruppenzahl) bzw. vor dem KO-Start
+  async function koEinstellen(aenderung: TurnierEinstellungen) {
+    await einstellungenSetzen(aenderung);
+  }
+
+  const ratingWerte = () => new Map(teilnehmer.map((t) => [t.person_id, t.rating_eingefroren ?? 500]));
+
+  // KO-Baum und Partien abgleichen: ein Spiel bekommt seine Partie, sobald
+  // beide Spieler feststehen. Aendert sich ein Ergebnis davor, wechseln die
+  // Spieler einer noch nicht begonnenen Folgepartie mit; eine Partie ohne
+  // feststehende Spieler entfaellt wieder. Das Notebook der Turnierleitung
+  // erledigt das, auch fuer Ergebnisse von den Tablets.
+  async function koAbgleichen(liste: Partie[], fest = koFest) {
+    if (!turnier || !fest || turnier.status !== 'laeuft' || !darfLeiten) return;
+    const b = koAufloesen(fest, koStaende(liste), raceFuer);
+    const werte = ratingWerte();
+    const ruhend = (x: Partie) => !begonnen(x) && x.status !== 'laeuft' && x.tisch_id === null;
+    let geaendert = false;
+    for (const [i, spiel] of koSpiele(fest.gruppenzahl * fest.weiter).entries()) {
+      const m = b[spiel.id];
+      const vorhanden = liste.find((x) => x.phase === 'ko' && x.gruppe === spiel.id);
+      if (m.bereit && m.p1 && m.p2) {
+        const [vA, vB] = vorgabePaar(werte.get(m.p1) ?? 500, werte.get(m.p2) ?? 500, m.race);
+        if (!vorhanden) {
+          const { error } = await supabase.from('partien').insert({
+            verein_id: turnier.verein_id,
+            turnier_id: turnier.id,
+            disziplin: turnier.disziplin,
+            datum: turnier.datum,
+            phase: 'ko',
+            gruppe: spiel.id,
+            runde: KO_RUNDE_NR[spiel.runde],
+            paarung: i + 1,
+            spieler_a: m.p1,
+            spieler_b: m.p2,
+            race_to: m.race,
+            vorgabe_a: vA,
+            vorgabe_b: vB,
+            status: 'geplant'
+          });
+          // 23505: ein zweites Notebook war schneller
+          if (error && error.code !== '23505') return setFehler(error.message);
+          geaendert = true;
+        } else if ((vorhanden.spieler_a !== m.p1 || vorhanden.spieler_b !== m.p2) && ruhend(vorhanden)) {
+          await supabase
+            .from('partien')
+            .update({ spieler_a: m.p1, spieler_b: m.p2, vorgabe_a: vA, vorgabe_b: vB, ergebnis_a: null, ergebnis_b: null, status: 'geplant', beendet: null })
+            .eq('id', vorhanden.id);
+          geaendert = true;
+        }
+      } else if (vorhanden && ruhend(vorhanden)) {
+        await supabase.from('partien').delete().eq('id', vorhanden.id);
+        geaendert = true;
+      }
+    }
+    if (geaendert) {
+      const { data } = await supabase.from('partien').select('*').eq('turnier_id', turnier.id).order('runde').order('paarung');
+      if (data) setPartien(data);
+    }
+  }
+  abgleichRef.current = koAbgleichen;
+
+  // KO-Runde: Gruppenreihenfolge fixieren, Setzliste bilden, erste Runde
+  // anlegen (v74 startKO)
+  async function koStarten() {
+    if (!turnier || weiter === null) return;
+    if (offeneGruppenspiele > 0) {
+      return setFehler(`Die KO-Runde kann noch nicht starten: ${offeneGruppenspiele} Gruppenspiele sind nicht beendet.`);
+    }
+    const reihung: Record<string, string[]> = Object.fromEntries(
+      gruppenNamen.map((g) => [g, gruppenTabellen[g].zeilen.map((z) => personVon(z.pos))])
+    );
+    const zuKlein = gruppenNamen.find((g) => reihung[g].length < weiter);
+    if (zuKlein) return setFehler(`Gruppe ${zuKlein} hat nur ${reihung[zuKlein].length} Spieler, es werden aber ${weiter} Qualifikanten benötigt.`);
+    const offen = offeneStichkaempfe();
+    const frage =
+      offen > 0
+        ? `In den Gruppen gibt es ${offen} ungeklärte Platzierung(en) (Stichkampf offen). Die angezeigte Reihenfolge wird fixiert. Trotzdem starten?`
+        : `KO-Runde mit ${weiter * gruppenNamen.length} Spielern starten? Die Gruppenplätze werden fixiert.`;
+    if (!(await fragen(frage, offen > 0 ? 'Trotzdem starten' : 'KO-Runde starten'))) return;
+    setArbeitet(true);
+    const ko = { seeds: setzliste(reihung, gruppenzahl, weiter), option: paarung, gruppenzahl, weiter, reihung };
+    const neu = { ...einstellungen, ko };
+    const { error } = await supabase.from('turniere').update({ einstellungen: neu }).eq('id', turnier.id);
+    if (error) {
+      setArbeitet(false);
+      return setFehler(error.message);
+    }
+    setTurnier({ ...turnier, einstellungen: neu });
+    await koAbgleichen(partien, ko);
+    setArbeitet(false);
+    setAbschnitt(null);
+  }
+
+  async function koZuruecksetzen() {
+    if (!turnier) return;
+    const frage = 'KO-Runde zurücksetzen? Setzliste und alle KO-Ergebnisse gehen verloren, Phase 3 ebenso. Die Gruppenphase bleibt erhalten.';
+    if (!(await fragen(frage, 'Zurücksetzen'))) return;
+    const { error } = await supabase.from('partien').delete().eq('turnier_id', turnier.id).in('phase', ['ko', 'phase3']);
+    if (error) return setFehler(error.message);
+    const neu = { ...einstellungen };
+    delete neu.ko;
+    delete neu.phase3;
+    await supabase.from('turniere').update({ einstellungen: neu }).eq('id', turnier.id);
+    setAbschnitt(null);
+    setMeldung('KO-Runde zurückgesetzt.');
+    await laden();
+  }
+
+  // Phase 3: Nichtqualifizierte nach Gruppenleistung gereiht, paarweise (v74 startPhase3)
+  async function phase3Starten() {
+    if (!turnier || !koFest) return;
+    const rest = nichtQualifiziert(gruppenListen, koFest.seeds);
+    if (rest.length < 2) return setFehler('Für Phase 3 werden mindestens zwei Spieler benötigt, die die KO-Runde nicht erreicht haben.');
+    const abPlatz = koFest.gruppenzahl * koFest.weiter + 1;
+    const frage = `Phase 3 starten? Sie spielt die Plätze ${abPlatz} bis ${abPlatz + rest.length - 1} aus (Race to ${race3}).`;
+    if (!(await fragen(frage, 'Phase 3 starten'))) return;
+    setArbeitet(true);
+    const reihung = nachGruppenleistung(rest, leistung, ordnung);
+    const werte = ratingWerte();
+    const zeilen = phase3Paare(reihung).paare.map(([x, y], i) => {
+      const [vA, vB] = vorgabePaar(werte.get(x) ?? 500, werte.get(y) ?? 500, race3);
+      return {
+        verein_id: turnier.verein_id,
+        turnier_id: turnier.id,
+        disziplin: turnier.disziplin,
+        datum: turnier.datum,
+        phase: 'phase3',
+        paarung: i + 1,
+        spieler_a: x,
+        spieler_b: y,
+        race_to: race3,
+        vorgabe_a: vA,
+        vorgabe_b: vB,
+        status: 'geplant' as const
+      };
+    });
+    const { error } = await supabase.from('partien').insert(zeilen);
+    if (error) {
+      setArbeitet(false);
+      return setFehler(error.message);
+    }
+    await einstellungenSetzen({ phase3: { reihung, abPlatz } });
+    setArbeitet(false);
+    setAbschnitt('P3');
+    await laden();
+  }
+
+  async function phase3Zuruecksetzen() {
+    if (!turnier) return;
+    const frage = 'Phase 3 zurücksetzen? Die Ergebnisse der Platzierungsspiele gehen verloren. Die unteren Plätze werden danach wieder aus der Gruppenwertung berechnet.';
+    if (!(await fragen(frage, 'Zurücksetzen'))) return;
+    const { error } = await supabase.from('partien').delete().eq('turnier_id', turnier.id).eq('phase', 'phase3');
+    if (error) return setFehler(error.message);
+    const neu = { ...einstellungen };
+    delete neu.phase3;
+    await supabase.from('turniere').update({ einstellungen: neu }).eq('id', turnier.id);
+    setAbschnitt(null);
+    setMeldung('Phase 3 zurückgesetzt.');
+    await laden();
+  }
+
   async function abschliessen() {
     if (!turnier) return;
     if (zwei && !einstellungen.phase2) return setFehler('Zuerst Phase 2 starten und ausspielen.');
+    if (mitKo && !(baum?.fin.fertig && baum.bro.fertig)) return setFehler('Zuerst die KO-Runde bis zum Finale ausspielen.');
     if (offeneSpiele > 0) return setFehler(`Es sind noch ${offeneSpiele} Spiele offen.`);
-    const offen = zwei ? [] : tabelle.gleichstaende.filter((g) => !g.entschieden);
+    const offen = mehrgruppig ? [] : tabelle.gleichstaende.filter((g) => !g.entschieden);
     if (offen.length > 0 && !(await fragen('Ein Stichkampf ist noch nicht entschieden. Trotzdem abschließen?'))) return;
     const frage = 'Turnier abschließen?\nEndplätze werden gespeichert, das Rating wird neu berechnet.';
     if (!(await fragen(frage, 'Abschließen'))) return;
     setArbeitet(true);
     const plaetze: [string, number][] = zwei
       ? endtabelle.map((z) => [z.wer, z.platz])
-      : tabelle.zeilen.map((z, i) => [aufstellung[z.pos].person_id, i + 1]);
+      : mitKo
+        ? endtabelleMitKo.flatMap((z) => (z.wer ? [[z.wer, z.platz] as [string, number]] : []))
+        : tabelle.zeilen.map((z, i) => [aufstellung[z.pos].person_id, i + 1]);
     for (const [personId, platz] of plaetze) {
       await supabase
         .from('turnier_teilnehmer')
@@ -791,6 +1103,11 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
     abschnitte[0];
   const alleFertig = partien.length > 0 && offeneSpiele === 0;
   const zeilenDerAbschnitte = [...new Set(abschnitte.map((a) => a.zeile))];
+  // Gruppenplaetze fixiert (Phase 2 oder KO-Runde gestartet)
+  const fixiert = Boolean(einstellungen.phase2 || koFest);
+  const feld = koFest ? koFest.gruppenzahl * koFest.weiter : (weiter ?? 0) * gruppenzahl;
+  const nichtImKo = koFest ? nichtQualifiziert(gruppenListen, koFest.seeds) : [];
+  const offenP3 = p3Partien.filter((x) => !beendetBei(x)).length;
 
   // Wer im angezeigten Abschnitt spielfrei ist
   const spielfreiText = (() => {
@@ -799,6 +1116,11 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
       const p2 = einstellungen.phase2;
       return p2 ? phase2Paare(p2.A, p2.B).spielfrei.map(anzeige).join(', ') : '';
     }
+    if (aktiv.zeile === 'P3') {
+      const solo = einstellungen.phase3 ? phase3Paare(einstellungen.phase3.reihung).solo : null;
+      return solo ? anzeige(solo) : '';
+    }
+    if (aktiv.zeile === 'KO') return '';
     const kreis = aktiv.zeile ? (gruppen[aktiv.zeile] ?? []) : aufstellung.map((_, i) => i);
     if (kreis.length % 2 === 0) return '';
     const spielen = new Set(aktiv.partien.flatMap((p) => [p.spieler_a, p.spieler_b]));
@@ -811,10 +1133,13 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
 
   // Setzungen vor der Auslosung
   const gesetztVorher = gesetztKarte();
-  const zuviel = zwei ? zuVieleGesetzt(teilnehmer.length, gesetztVorher, GRUPPEN) : [];
-  const ziel = zielGroessen(teilnehmer.length, GRUPPEN);
-  const teilnehmerOk = zwei
-    ? teilnehmer.length >= ZWEI_GRUPPEN_MIN && teilnehmer.length <= ZWEI_GRUPPEN_MAX && zuviel.length === 0
+  const zuviel = mehrgruppig ? zuVieleGesetzt(teilnehmer.length, gesetztVorher, gruppenNamen) : [];
+  const ziel = zielGroessen(teilnehmer.length, gruppenNamen);
+  const teilnehmerOk = mehrgruppig
+    ? teilnehmer.length >= grenzen[0] &&
+      teilnehmer.length <= grenzen[1] &&
+      zuviel.length === 0 &&
+      (!mitKo || weiter !== null)
     : teilnehmer.length >= 3;
 
   const tabellenname = (pos: number) => anzeige(aufstellung[pos]?.person_id ?? '');
@@ -836,7 +1161,12 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
                 year: 'numeric'
               })}{' '}
               · {DISZIPLIN_TEXT[turnier.disziplin]} · {MODUS_TEXT[turnier.modus]}
-              {turnier.quelle !== 'import' && (zwei ? ` · Race to ${raceTo}, Phase 2 Race to ${race2}` : ` · Race to ${raceTo}`)}
+              {turnier.quelle !== 'import' &&
+                (zwei
+                  ? ` · Race to ${raceTo}, Phase 2 Race to ${race2}`
+                  : mitKo
+                    ? ` · Race to ${raceTo}, KO ${raceFuer('QF')}/${raceFuer('SF')}/${raceFuer('FIN')}`
+                    : ` · Race to ${raceTo}`)}
               {va.aktiv && ` · Vorgabe ${va.staerke} %${va.obergrenze > 0 ? `, höchstens ${va.obergrenze}` : ''}`}
               {!turnier.rating_werten && ' · zählt nicht fürs Rating'}
             </p>
@@ -927,7 +1257,7 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
                         {r.wert}
                         {QUELLE_KURZ[r.quelle] && <span className="marke">{QUELLE_KURZ[r.quelle]}</span>}
                       </td>
-                      {zwei && (
+                      {mehrgruppig && (
                         <td className="rechts">
                           {bearbeitbar ? (
                             <select
@@ -936,7 +1266,7 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
                               onChange={(e) => void setzen(t.person_id, e.target.value)}
                             >
                               <option value="">–</option>
-                              {GRUPPEN.map((g) => (
+                              {gruppenNamen.map((g) => (
                                 <option key={g} value={g}>
                                   gesetzt {g}
                                 </option>
@@ -994,17 +1324,40 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
                   Turnier löschen
                 </button>
               </div>
-              {zwei ? (
+              {mitKo && (
+                <div className="zeile">
+                  <label>
+                    Gruppen{' '}
+                    <select
+                      value={gruppenzahl}
+                      disabled={!bearbeitbar}
+                      onChange={(e) => void koEinstellen({ gruppenzahl: Number(e.target.value) })}
+                    >
+                      <option value={2}>2</option>
+                      <option value={4}>4</option>
+                    </select>
+                  </label>
+                  <KoFeldWahl
+                    anzahl={teilnehmer.length}
+                    gruppenzahl={gruppenzahl}
+                    weiter={weiter}
+                    paarung={paarung}
+                    bearbeitbar={bearbeitbar}
+                    setzen={(x) => void koEinstellen(x)}
+                  />
+                </div>
+              )}
+              {mehrgruppig ? (
                 <>
                   {zuviel.length > 0 && (
                     <p className="fehler">
                       Zu viele Setzungen in Gruppe {zuviel.join(', ')}. Möglich sind{' '}
-                      {GRUPPEN.map((g) => `${g}: ${ziel[g]}`).join(', ')} Spieler.
+                      {gruppenNamen.map((g) => `${g}: ${ziel[g]}`).join(', ')} Spieler.
                     </p>
                   )}
                   <p className="hinweis">
-                    {ZWEI_GRUPPEN_MIN} bis {ZWEI_GRUPPEN_MAX} Teilnehmer. Beim Auslosen kommen gesetzte Spieler in ihre
-                    Gruppe, alle übrigen werden verteilt; bei ungerader Zahl bekommt Gruppe A einen Spieler mehr. Der
+                    {grenzen[0]} bis {grenzen[1]} Teilnehmer. Beim Auslosen kommen gesetzte Spieler in ihre Gruppe, alle
+                    übrigen werden verteilt; geht die Zahl nicht auf, bekommen die vorderen Gruppen einen Spieler mehr. Der
                     Spielplan entsteht je Gruppe, die Ratings werden eingefroren. Gäste starten mit 500.
                   </p>
                 </>
@@ -1027,7 +1380,7 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
                   <tr>
                     <th>Nr.</th>
                     <th>Name</th>
-                    {zwei && <th>Gruppe</th>}
+                    {mehrgruppig && <th>Gruppe</th>}
                     <th className="rechts">Rating</th>
                   </tr>
                 </thead>
@@ -1039,9 +1392,9 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
                         {anzeige(t.person_id)}
                         {person(t.person_id)?.status === 'gast' && <span className="marke">Gast</span>}
                       </td>
-                      {zwei && (
+                      {mehrgruppig && (
                         <td>
-                          {bearbeitbar && !irgendeinErgebnis && !einstellungen.phase2 ? (
+                          {bearbeitbar && !irgendeinErgebnis && !fixiert ? (
                             <select
                               title="Gruppe wechseln (als Tausch mit einem Spieler der anderen Gruppe)"
                               value={t.gruppe ?? ''}
@@ -1050,7 +1403,7 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
                                 setTausch({ raus: t.person_id, von: t.gruppe ?? '', nach: e.target.value })
                               }
                             >
-                              {GRUPPEN.map((g) => (
+                              {gruppenNamen.map((g) => (
                                 <option key={g} value={g}>
                                   {g}
                                 </option>
@@ -1100,7 +1453,8 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
               </div>
               {zeilenDerAbschnitte.map((zeile) => (
                 <div key={zeile} className="filterzeile">
-                  {zeile && zeile !== 'P2' && <span className="hinweis">Gruppe {zeile}:</span>}
+                  {istGruppenzeile(zeile) && <span className="hinweis">Gruppe {zeile}:</span>}
+                  {zeile === 'KO' && <span className="hinweis">KO-Runde:</span>}
                   {abschnitte
                     .filter((a) => a.zeile === zeile)
                     .map((a) => (
@@ -1110,7 +1464,7 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
                         className={a.schluessel === aktiv?.schluessel ? 'chip aktiv' : 'chip'}
                         onClick={() => setAbschnitt(a.schluessel)}
                       >
-                        {zeile && zeile !== 'P2' ? a.titel.replace('Runde ', '') : a.titel}
+                        {istGruppenzeile(zeile) ? a.titel.replace('Runde ', '') : a.titel}
                         {a.partien.every(beendetBei) ? ' ✓' : ''}
                       </button>
                     ))}
@@ -1135,7 +1489,7 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
                       nameA={anzeige(p.spieler_a)}
                       nameB={anzeige(p.spieler_b)}
                       tisch={p.tisch_id ? tische.get(p.tisch_id) ?? null : null}
-                      bearbeitbar={bearbeitbar}
+                      bearbeitbar={bearbeitbar && !(istGruppenspiel(p) && mehrgruppig && gruppenGesperrt) && !koGesperrt(p)}
                       speichern={(a, b) => void ergebnisSetzen(p, a, b)}
                       verlauf={() => void verlaufZeigen(p)}
                     />
@@ -1144,26 +1498,30 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
               </table>
               {spielfreiText && (
                 <p className="hinweis">
-                  Spielfrei{aktiv?.zeile === 'P2' ? '' : ` in ${aktiv?.zeile ? `Gruppe ${aktiv.zeile}, ` : ''}${aktiv?.titel}`}:{' '}
+                  {aktiv?.zeile === 'P3' ? 'Ohne Gegner' : 'Spielfrei'}
+                  {aktiv && !['P2', 'P3'].includes(aktiv.zeile) ? ` in ${aktiv.zeile ? `Gruppe ${aktiv.zeile}, ` : ''}${aktiv.titel}` : ''}:{' '}
                   {spielfreiText}
                 </p>
               )}
             </section>
           </div>
 
-          {zwei ? (
+          {mehrgruppig ? (
             <>
+              {gruppenGesperrt && (
+                <p className="hinweis">Die Gruppenspiele sind gesperrt, weil in der Folgephase schon gespielt wird.</p>
+              )}
               <div className="turnierzweier">
-                {GRUPPEN.map((g) => (
+                {gruppenNamen.map((g) => (
                   <section key={g} className="block">
                     <h2>
                       Gruppe {g}
-                      {turnier.status === 'laeuft' && !einstellungen.phase2 ? ' (live)' : ''}
+                      {turnier.status === 'laeuft' && !fixiert ? ' (live)' : ''}
                     </h2>
                     <Tabelle
                       zeilen={gruppenTabellen[g].zeilen}
                       gleichstaende={gruppenTabellen[g].gleichstaende}
-                      stichkampf={offenInGruppe(g) === 0 && !einstellungen.phase2}
+                      stichkampf={offenInGruppe(g) === 0 && !fixiert}
                       name={tabellenname}
                       bearbeitbar={bearbeitbar}
                       setzen={(k, r) => void handReihenfolgeSetzen(k, r)}
@@ -1171,14 +1529,15 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
                     <p className="hinweis">
                       {offenInGruppe(g) > 0
                         ? `Noch ${offenInGruppe(g)} Spiele offen. Ein Stichkampf wird erst angeboten, wenn alle Spiele der Gruppe beendet sind.`
-                        : einstellungen.phase2
-                          ? 'Gruppenplätze für Phase 2 fixiert.'
+                        : fixiert
+                          ? `Gruppenplätze für ${zwei ? 'Phase 2' : 'die KO-Runde'} fixiert.`
                           : 'Reihenfolge: Punkte, Satzdifferenz, direkter Vergleich, danach Stichkampf.'}
                     </p>
                   </section>
                 ))}
               </div>
 
+              {zwei && (
               <section className="block">
                 <div className="bearbeitenkopf">
                   <h2>Phase 2: Platzierungsduelle (Race to {race2})</h2>
@@ -1234,6 +1593,123 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
                   </>
                 )}
               </section>
+              )}
+
+              {mitKo && (
+                <>
+                  <section className="block">
+                    <div className="bearbeitenkopf">
+                      <h2>KO-Runde ({feld} Spieler)</h2>
+                      {bearbeitbar && !koFest && (
+                        <button type="button" onClick={() => void koStarten()} disabled={arbeitet || offeneGruppenspiele > 0 || weiter === null}>
+                          KO-Runde starten
+                        </button>
+                      )}
+                      {bearbeitbar && koFest && (
+                        <button type="button" className="gefahrknopf" onClick={() => void koZuruecksetzen()}>
+                          KO-Runde zurücksetzen
+                        </button>
+                      )}
+                    </div>
+                    {!koFest || !baum ? (
+                      <>
+                        <div className="zeile">
+                          <KoFeldWahl
+                            anzahl={aufstellung.length}
+                            gruppenzahl={gruppenzahl}
+                            weiter={weiter}
+                            paarung={paarung}
+                            bearbeitbar={bearbeitbar}
+                            setzen={(x) => void koEinstellen(x)}
+                          />
+                        </div>
+                        <p className="hinweis">
+                          {offeneGruppenspiele > 0
+                            ? `Noch ${offeneGruppenspiele} Gruppenspiele nicht beendet. Die KO-Runde kann erst danach starten.`
+                            : 'Alle Gruppenspiele beendet. Der Start fixiert die Gruppenplätze und bildet die Setzliste.'}
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <KoBaum
+                          baum={baum}
+                          feld={feld}
+                          anzeige={anzeige}
+                          raceFuer={raceFuer}
+                          gesperrt={(id) => {
+                            const x = koPartien.find((k) => k.gruppe === id);
+                            return x !== undefined && koGesperrt(x);
+                          }}
+                        />
+                        <p className="hinweis">
+                          Die Ergebnisse stehen im Spielplan unter „KO-Runde“. Ein Spiel erscheint dort und an den Tablets,
+                          sobald beide Spieler feststehen. Dafür muss diese Seite an einem Gerät der Turnierleitung geöffnet
+                          sein.
+                        </p>
+                      </>
+                    )}
+                  </section>
+
+                  {koFest && (
+                    <section className="block">
+                      <div className="bearbeitenkopf">
+                        <h2>Phase 3: Platzierungsspiele (Race to {race3})</h2>
+                        {bearbeitbar && !einstellungen.phase3 && nichtImKo.length >= 2 && (
+                          <button type="button" onClick={() => void phase3Starten()} disabled={arbeitet}>
+                            Phase 3 starten
+                          </button>
+                        )}
+                        {bearbeitbar && einstellungen.phase3 && (
+                          <button type="button" className="gefahrknopf" onClick={() => void phase3Zuruecksetzen()}>
+                            Phase 3 zurücksetzen
+                          </button>
+                        )}
+                      </div>
+                      <p className="hinweis">
+                        {einstellungen.phase3
+                          ? offenP3 > 0
+                            ? `Phase 3 läuft, noch ${offenP3} Spiele offen. Die Spiele stehen im Spielplan unter „Phase 3“.`
+                            : 'Phase 3 ist abgeschlossen. Die unteren Plätze der Endtabelle stammen aus diesen Spielen.'
+                          : nichtImKo.length === 0
+                            ? 'Alle Teilnehmer stehen im KO-Feld. Phase 3 entfällt.'
+                            : nichtImKo.length === 1
+                              ? 'Nur ein Spieler hat die KO-Runde nicht erreicht. Für Phase 3 werden mindestens zwei benötigt.'
+                              : `Optional. ${nichtImKo.length} Spieler haben die KO-Runde nicht erreicht. Phase 3 spielt die Plätze ${feld + 1} bis ${feld + nichtImKo.length} aus, je ein Spiel pro Teilnehmer. Ohne Start gilt die Gruppenwertung.`}
+                      </p>
+                    </section>
+                  )}
+
+                  {koFest && (
+                    <section className="block">
+                      <h2>Endtabelle</h2>
+                      <table className="tabelle">
+                        <thead>
+                          <tr>
+                            <th>Pl.</th>
+                            <th>Name</th>
+                            <th>Gruppe</th>
+                            <th>Wie</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {endtabelleMitKo.map((z, i) => (
+                            <tr key={z.wer ?? `offen-${i}`} className={z.offen ? '' : 'gespielt'}>
+                              <td>{z.zeigePlatz ? z.platz : ''}</td>
+                              <td>{z.wer ? anzeige(z.wer) : '–'}</td>
+                              <td>{z.wer && leistung.get(z.wer) ? `${leistung.get(z.wer)?.gruppe}${leistung.get(z.wer)?.platz}` : ''}</td>
+                              <td className="hinweis">{z.wie}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      <p className="hinweis">
+                        Plätze 1 bis 4 aus Finale und Spiel um Platz 3, danach die Verlierer jeder Runde nach
+                        Gruppenleistung; Gleichgute teilen sich einen Platz.
+                      </p>
+                    </section>
+                  )}
+                </>
+              )}
             </>
           ) : (
             <section className="block">
@@ -1314,6 +1790,46 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
         </div>
       )}
     </div>
+  );
+}
+
+// Auswahl "Weiter je Gruppe" und Paarungsschema (v74 fillQualSelect). Das
+// Paarungsschema gibt es nur bei zwei Gruppen und einem KO-Feld mit acht Spielern.
+function KoFeldWahl(props: {
+  anzahl: number;
+  gruppenzahl: number;
+  weiter: number | null;
+  paarung: number;
+  bearbeitbar: boolean;
+  setzen: (x: TurnierEinstellungen) => void;
+}) {
+  const werte = weiterOptionen(props.anzahl, props.gruppenzahl);
+  if (werte.length === 0 || props.weiter === null) {
+    return <span className="hinweis">Für diese Teilnehmer- und Gruppenzahl gibt es kein passendes KO-Feld.</span>;
+  }
+  return (
+    <>
+      <label>
+        Weiter je Gruppe{' '}
+        <select value={props.weiter} disabled={!props.bearbeitbar} onChange={(e) => props.setzen({ weiter: Number(e.target.value) })}>
+          {werte.map((w) => (
+            <option key={w} value={w}>
+              {w}
+            </option>
+          ))}
+        </select>{' '}
+        <span className="hinweis">(KO-Feld: {props.weiter * props.gruppenzahl})</span>
+      </label>
+      {props.gruppenzahl === 2 && props.weiter * props.gruppenzahl === 8 && (
+        <label>
+          Viertelfinale{' '}
+          <select value={props.paarung} disabled={!props.bearbeitbar} onChange={(e) => props.setzen({ paarung: Number(e.target.value) })}>
+            <option value={1}>Standard: A1–B4, B2–A3, B1–A4, A2–B3</option>
+            <option value={2}>Über Kreuz: A1–B4, A2–B3, B1–A4, B2–A3</option>
+          </select>
+        </label>
+      )}
+    </>
   );
 }
 

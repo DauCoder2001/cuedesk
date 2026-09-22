@@ -36,6 +36,14 @@ export type TurnierEinstellungen = {
   racePhase2?: number; // Zwei Gruppen: Platzierungsduelle
   phase2?: { A: string[]; B: string[] }; // Zwei Gruppen: beim Start von Phase 2 fixierte Gruppenreihenfolge
   tausch?: { raus: string; rein: string; von: string; nach: string; zeit: string }[]; // Gruppentausch von Hand
+  // Gruppen mit KO
+  gruppenzahl?: number; // 2 oder 4, fest ab der Auslosung
+  weiter?: number; // Spieler je Gruppe in der KO-Runde
+  paarung?: number; // 1 Standard, 2 ueber Kreuz (nur zwei Gruppen, KO-Feld 8)
+  raceKo?: { R16?: number; QF?: number; SF?: number; FIN?: number }; // Halbfinale gilt auch fuer Platz 3
+  racePhase3?: number;
+  ko?: { seeds: string[]; option: number; gruppenzahl: number; weiter: number; reihung: Record<string, string[]> };
+  phase3?: { reihung: string[]; abPlatz: number };
   vorgabe?: { aktiv: boolean; staerke: number; obergrenze: number };
   handReihenfolge?: Record<string, number[]>;
   pausiert?: boolean; // Tablets starten keine neuen Spiele
@@ -62,6 +70,7 @@ export default function Turniere() {
   const [modus, setModus] = useState<TurnierModus>('einzelgruppe');
   const [raceTo, setRaceTo] = useState('5');
   const [racePhase2, setRacePhase2] = useState('5');
+  const [raceKo, setRaceKo] = useState({ R16: '5', QF: '5', SF: '5', FIN: '5', P3: '5' });
   const [serieId, setSerieId] = useState('');
   const [vorgabeAn, setVorgabeAn] = useState(true);
   const [staerke, setStaerke] = useState('75');
@@ -95,9 +104,16 @@ export default function Turniere() {
     if (modus === 'zwei-gruppen' && (!Number.isInteger(race2) || race2 < 1 || race2 > 25)) {
       return setFehler('Race to für Phase 2 zwischen 1 und 25.');
     }
+    const ko = Object.fromEntries(Object.entries(raceKo).map(([k, v]) => [k, Number(v)]));
+    if (modus === 'gruppen-ko' && Object.values(ko).some((x) => !Number.isInteger(x) || x < 1 || x > 25)) {
+      return setFehler('Race to je Runde zwischen 1 und 25.');
+    }
     const einstellungen: TurnierEinstellungen = {
       raceTo: race,
       ...(modus === 'zwei-gruppen' ? { racePhase2: race2 } : {}),
+      ...(modus === 'gruppen-ko'
+        ? { raceKo: { R16: ko.R16, QF: ko.QF, SF: ko.SF, FIN: ko.FIN }, racePhase3: ko.P3 }
+        : {}),
       vorgabe: {
         aktiv: vorgabeAn,
         staerke: Math.min(100, Math.max(0, Number(staerke) || 0)),
@@ -177,10 +193,11 @@ export default function Turniere() {
                 <select value={modus} onChange={(e) => setModus(e.target.value as TurnierModus)}>
                   <option value="einzelgruppe">Einzelgruppe (jeder gegen jeden)</option>
                   <option value="zwei-gruppen">Zwei Gruppen mit Platzierungsduellen</option>
+                  <option value="gruppen-ko">Gruppen mit KO-Runde</option>
                 </select>
               </label>
               <label className="feld">
-                <span>{modus === 'zwei-gruppen' ? 'Race to Gruppenphase' : 'Race to'}</span>
+                <span>{modus === 'einzelgruppe' ? 'Race to' : 'Race to Gruppenphase'}</span>
                 <input inputMode="numeric" value={raceTo} onChange={(e) => setRaceTo(e.target.value)} />
               </label>
               {modus === 'zwei-gruppen' && (
@@ -189,6 +206,21 @@ export default function Turniere() {
                   <input inputMode="numeric" value={racePhase2} onChange={(e) => setRacePhase2(e.target.value)} />
                 </label>
               )}
+              {modus === 'gruppen-ko' &&
+                (
+                  [
+                    ['R16', 'Race to Achtelfinale'],
+                    ['QF', 'Race to Viertelfinale'],
+                    ['SF', 'Race to Halbfinale und Platz 3'],
+                    ['FIN', 'Race to Finale'],
+                    ['P3', 'Race to Phase 3']
+                  ] as const
+                ).map(([k, text]) => (
+                  <label key={k} className="feld">
+                    <span>{text}</span>
+                    <input inputMode="numeric" value={raceKo[k]} onChange={(e) => setRaceKo({ ...raceKo, [k]: e.target.value })} />
+                  </label>
+                ))}
               <label className="feld">
                 <span>Serie</span>
                 <select value={serieId} onChange={(e) => setSerieId(e.target.value)}>

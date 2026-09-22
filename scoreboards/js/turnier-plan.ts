@@ -67,9 +67,20 @@ export function planStatus(p: Pick<PlanPartie, 'status' | 'tisch_id'>): PlanEint
   return 'pending';
 }
 
+// KO-Spiele heissen nach ihrer Kennung (qf1 = Viertelfinale 1)
+const KO_NAME: Record<string, (id: string) => string> = {
+  af: (id) => `Achtelfinale ${id.slice(2)}`,
+  qf: (id) => `Viertelfinale ${id.slice(2)}`,
+  sf: (id) => `Halbfinale ${id.slice(2)}`,
+  fin: () => 'Finale',
+  bro: () => 'Spiel um Platz 3'
+};
+
 // Beschriftung am Tablet: Runde, bei Gruppen mit Gruppe, Platzierungsduelle als Phase 2
 export function abschnittName(p: Pick<PlanPartie, 'runde' | 'gruppe' | 'phase'>): string {
   if (p.phase === 'phase2') return 'Phase 2';
+  if (p.phase === 'phase3') return 'Phase 3';
+  if (p.phase === 'ko') return KO_NAME[(p.gruppe ?? '').replace(/\d+$/, '')]?.(p.gruppe ?? '') ?? 'KO-Runde';
   const runde = p.runde ? `Runde ${p.runde}` : '';
   return p.gruppe ? `Gruppe ${p.gruppe}${runde ? ` · ${runde}` : ''}` : runde;
 }
