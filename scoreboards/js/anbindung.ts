@@ -600,7 +600,7 @@ async function turnierLaden(): Promise<void> {
   const gestern = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
   const { data: kandidaten } = await v.supabase
     .from('turniere')
-    .select('id, name, datum, disziplin, status, einstellungen')
+    .select('id, name, datum, disziplin, modus, status, einstellungen')
     .eq('verein_id', v.vereinId)
     .in('status', ['laeuft', 'beendet'])
     .gte('datum', gestern)
@@ -623,7 +623,7 @@ async function turnierLaden(): Promise<void> {
       .order('paarung'),
     v.supabase.from('personen').select('id, vorname, nachname, anzeigename').eq('verein_id', v.vereinId),
     v.supabase.from('tische').select('id, nummer').eq('verein_id', v.vereinId),
-    v.supabase.from('turnier_teilnehmer').select('person_id, startnummer').eq('turnier_id', t.id)
+    v.supabase.from('turnier_teilnehmer').select('person_id, startnummer, gruppe, endplatz').eq('turnier_id', t.id)
   ]);
   const namen = new Map(
     (personenAntwort.data ?? []).map((x) => [x.id, x.anzeigename || `${x.vorname} ${x.nachname}`.trim()])
@@ -637,10 +637,13 @@ async function turnierLaden(): Promise<void> {
     handReihenfolge?: Record<string, number[]>;
   };
   const partien = (partienAntwort.data ?? []) as (PlanPartie & { ergebnis_a: number | null; ergebnis_b: number | null })[];
-  const startliste = (teilnehmerAntwort.data ?? [])
+  const aufstellung = (teilnehmerAntwort.data ?? [])
     .filter((x) => x.startnummer !== null)
     .sort((a, b) => (a.startnummer ?? 0) - (b.startnummer ?? 0))
-    .map((x) => x.person_id as string);
+    .map((x) => ({ id: x.person_id as string, gruppe: x.gruppe as string | null, endplatz: x.endplatz as number | null }));
+  // TV-Auslosung: Gruppen als Nummern 1 bis 4 (Pool-TS: mode two/four)
+  const gruppenzahl = new Set(aufstellung.map((x) => x.gruppe).filter(Boolean)).size;
+  const modus = gruppenzahl >= 3 ? 'four' : gruppenzahl === 2 ? 'two' : 'single';
   const disziplin = ({ '8-ball': '8-Ball', '9-ball': '9-Ball', '10-ball': '10-Ball' } as Record<string, string>)[t.disziplin] ?? t.disziplin;
 
   aktuellesTurnier =
@@ -653,18 +656,20 @@ async function turnierLaden(): Promise<void> {
           raceTo: einstellungen.raceTo ?? 0,
           schedule: tabletSpielplan(partien, name, (id) => nummern.get(id) ?? null),
           // fuer die TV-Auslosung
-          mode: 'single',
+          mode: modus,
           type: t.name,
           discipline: disziplin,
           eventDate: new Date(`${t.datum}T12:00:00`).toLocaleDateString('de-DE'),
-          players: Object.fromEntries(startliste.map((id) => [id, { name: name(id), group: 1 }]))
+          players: Object.fromEntries(
+            aufstellung.map((x) => [x.id, { name: name(x.id), group: x.gruppe ? 'ABCD'.indexOf(x.gruppe) + 1 : 1 }])
+          )
         }
       : null;
   tvAnsicht = einstellungen.tvAnsicht ?? 'live';
   tvArchiv = {
     [t.id]: tvErgebnis(
-      { name: t.name, disziplin, raceTo: einstellungen.raceTo ?? 0, datum: t.datum },
-      startliste,
+      { name: t.name, disziplin, raceTo: einstellungen.raceTo ?? 0, datum: t.datum, beendet: t.status === 'beendet' },
+      aufstellung,
       partien,
       einstellungen.handReihenfolge ?? {},
       name

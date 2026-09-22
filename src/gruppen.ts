@@ -6,7 +6,7 @@
 // Spieler werden wie in turnier.ts ueber ihre Position in der Startliste
 // angesprochen (0 = Startnummer 1).
 
-import { rangliste, spielBeendet } from './turnier';
+import { bergerRunden, rangliste, spielBeendet } from './turnier';
 import type { Gleichstand, HandReihenfolge, RanglistenPartie, Stand, Zeile } from './turnier';
 
 // ---------- Verteilung auf die Gruppen ----------
@@ -147,4 +147,37 @@ export function endtabelleZweiGruppen<T>(
     });
   });
   return zeilen;
+}
+
+// ---------- Spieler nachtragen ----------
+
+export type PlanAenderung = { id: string; runde: number; paarung: number };
+export type PlanNeu<T> = { a: T; b: T; runde: number; paarung: number };
+
+// Spielplan einer Gruppe (Einzelgruppe: des Turniers) nach dem Nachtragen neu
+// aufbauen: Berger-Kreis ueber die Mitglieder, der Nachzuegler zuletzt. Jedes
+// bisherige Spiel behaelt seine Partie samt Ergebnis und bekommt nur Runde und
+// Paarung neu, die Spiele des Nachzueglers kommen hinzu (v60 und v64
+// addLatePlayer mit collectScoresByPair und rebuildScoresFromPairs).
+export function nachtragenPlan<T>(
+  mitglieder: T[],
+  bestehend: { id: string; spieler_a: T; spieler_b: T }[]
+): { aendern: PlanAenderung[]; neu: PlanNeu<T>[] } {
+  const schluessel = (x: T, y: T) => {
+    const i = mitglieder.indexOf(x);
+    const j = mitglieder.indexOf(y);
+    return i < j ? `${i}:${j}` : `${j}:${i}`;
+  };
+  const vorhanden = new Map(bestehend.map((p) => [schluessel(p.spieler_a, p.spieler_b), p]));
+  const aendern: PlanAenderung[] = [];
+  const neu: PlanNeu<T>[] = [];
+  bergerRunden(mitglieder.length).forEach((paare, r) =>
+    paare.forEach(([a, b], g) => {
+      if (b === -1) return;
+      const alt = vorhanden.get(schluessel(mitglieder[a], mitglieder[b]));
+      if (alt) aendern.push({ id: alt.id, runde: r + 1, paarung: g + 1 });
+      else neu.push({ a: mitglieder[a], b: mitglieder[b], runde: r + 1, paarung: g + 1 });
+    })
+  );
+  return { aendern, neu };
 }

@@ -5,11 +5,20 @@ import { personName } from '../namen';
 import { vorgabe } from '../vorgabe';
 import { useRueckfrage } from '../rueckfrage';
 import { prognose, prognoseText } from '../zeitprognose';
-import { berichtDateiname, berichtPdf } from '../turnierbericht';
+import { berichtDateiname, berichtPdf, gruppenBerichtPdf } from '../turnierbericht';
+import type { BerichtBlock } from '../turnierbericht';
 import { herunterladen } from '../pdf';
 import { angefangen, auslosen, bergerRunden, hoechstwert, rangliste, spielBeendet } from '../turnier';
 import type { Gleichstand, RanglistenPartie, Zeile } from '../turnier';
-import { endtabelleZweiGruppen, gruppenRangliste, phase2Paare, verteilen, zielGroessen, zuVieleGesetzt } from '../gruppen';
+import {
+  endtabelleZweiGruppen,
+  gruppenRangliste,
+  nachtragenPlan,
+  phase2Paare,
+  verteilen,
+  zielGroessen,
+  zuVieleGesetzt
+} from '../gruppen';
 import {
   KO_GRUPPEN,
   KO_MAX,
@@ -23,6 +32,7 @@ import {
   phase3Paare,
   setzliste,
   standardGruppenzahl,
+  startplatzNamen,
   weiterOptionen,
   weiterPassend
 } from '../ko';
@@ -80,6 +90,7 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
   const [gastName, setGastName] = useState('');
   const [abschnitt, setAbschnitt] = useState<string | null>(null);
   const [tausch, setTausch] = useState<{ raus: string; von: string; nach: string } | null>(null);
+  const [nachtrag, setNachtrag] = useState<{ ziel: string; suche: string; gast: string } | null>(null);
   const [verlauf, setVerlauf] = useState<{ partie: Partie; zeilen: Aenderungszeile[] } | null>(null);
   const [stapel, setStapel] = useState<Rueckgaengig[]>([]);
   const [rueckfrage, fragen] = useRueckfrage();
@@ -420,9 +431,19 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
   }
 
   async function gastAnlegen() {
-    if (!turnier) return;
-    const text = gastName.trim().replace(/\s+/g, ' ');
-    if (text.length < 2) return setFehler('Bitte den Namen des Gastes eingeben.');
+    const id = await gastErzeugen(gastName);
+    if (!id) return;
+    setGastName('');
+    await teilnehmerHinzu(id);
+  }
+
+  async function gastErzeugen(name: string): Promise<string | null> {
+    if (!turnier) return null;
+    const text = name.trim().replace(/\s+/g, ' ');
+    if (text.length < 2) {
+      setFehler('Bitte den Namen des Gastes eingeben.');
+      return null;
+    }
     const teile = text.split(' ');
     const nachname = teile.length > 1 ? (teile.pop() as string) : '';
     const { data, error } = await supabase
@@ -431,14 +452,14 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
       .select('id')
       .single();
     if (error || !data) {
-      return setFehler(
+      setFehler(
         error?.message.includes('row-level security')
-          ? 'Gäste anlegen dürfen bisher nur Vereins-Admin und Sportwart.'
+          ? 'Gäste anlegen dürfen nur Vereins-Admin, Sportwart und Turnierleiter.'
           : error?.message ?? 'Gast nicht angelegt.'
       );
+      return null;
     }
-    setGastName('');
-    await teilnehmerHinzu(data.id);
+    return data.id;
   }
 
   // ---------- Auslosung ----------
@@ -634,58 +655,228 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
       month: '2-digit',
       year: 'numeric'
     });
-    const bytes = berichtPdf({
-      titel: turnier.name,
-      kopf:
-        `${DISZIPLIN_TEXT[turnier.disziplin]} · Race to ${raceTo} · ${aufstellung.length} Spieler · ${datumText}${zeit}` +
-        (va.aktiv ? ` · Handicap ${va.staerke} %${va.obergrenze > 0 ? `, Obergrenze ${va.obergrenze}` : ''}` : ''),
-      vorlaeufig: turnier.status !== 'beendet',
-      zeilen: berichtZeilen().map(({ zeile, platz }) => ({
-        platz,
-        name: anzeige(aufstellung[zeile.pos]?.person_id ?? ''),
-        punkte: zeile.punkte,
-        gewonnen: zeile.gewonnen,
-        verloren: zeile.verloren,
-        diff: zeile.diff,
-        rating: mitRating ? aufstellung[zeile.pos]?.rating_eingefroren ?? null : null
-      })),
-      stichkampf: alleFertig && !zwei
-        ? tabelle.gleichstaende.map(
-            (g) =>
-              `Platz ${g.start + 1}-${g.start + g.mitglieder.length}: ${
-                g.entschieden ? 'Reihenfolge durch die Turnierleitung festgelegt' : 'Stichkampf offen, vorläufige Reihenfolge'
-              }.`
-          )
-        : [],
-      runden: abschnitte.map((a) => ({
-        name: a.zeile === 'P2' ? 'Phase 2' : a.zeile ? `Gruppe ${a.zeile} · ${a.titel}` : a.titel,
-        spiele: a.partien.map((s) => ({
-          nameA: anzeige(s.spieler_a),
-          nameB: anzeige(s.spieler_b),
-          standA: s.ergebnis_a,
-          standB: s.ergebnis_b,
-          vorgabeA: s.vorgabe_a,
-          vorgabeB: s.vorgabe_b,
-          ratingA: mitRating ? ratingVonPerson(s.spieler_a) : null,
-          ratingB: mitRating ? ratingVonPerson(s.spieler_b) : null
-        }))
-      }))
+    const handicap = va.aktiv ? ` · Handicap ${va.staerke} %${va.obergrenze > 0 ? `, Obergrenze ${va.obergrenze}` : ''}` : '';
+    const spiel = (s: Partie) => ({
+      nameA: anzeige(s.spieler_a),
+      nameB: anzeige(s.spieler_b),
+      standA: s.ergebnis_a,
+      standB: s.ergebnis_b,
+      vorgabeA: s.vorgabe_a,
+      vorgabeB: s.vorgabe_b,
+      ratingA: mitRating ? ratingVonPerson(s.spieler_a) : null,
+      ratingB: mitRating ? ratingVonPerson(s.spieler_b) : null
     });
-    herunterladen(bytes, berichtDateiname(turnier.name, turnier.datum));
-  }
+    const berichtZeile = (zeile: Zeile, platz: number) => ({
+      platz,
+      name: tabellenname(zeile.pos),
+      punkte: zeile.punkte,
+      gewonnen: zeile.gewonnen,
+      verloren: zeile.verloren,
+      diff: zeile.diff,
+      rating: mitRating ? aufstellung[zeile.pos]?.rating_eingefroren ?? null : null
+    });
+    const stichkampfVermerke = (gleichstaende: Gleichstand[]) =>
+      gleichstaende.map(
+        (g) =>
+          `Platz ${g.start + 1}-${g.start + g.mitglieder.length}: ${
+            g.entschieden ? 'Reihenfolge durch die Turnierleitung festgelegt' : 'Stichkampf offen, vorläufige Reihenfolge'
+          }.`
+      );
 
-  // Zeilen des Berichts: Einzelgruppe nach der Tabelle; zwei Gruppen nach der
-  // Endtabelle, vor Phase 2 Gruppe A, dann Gruppe B. Die Werte stammen aus der
-  // Gruppenphase. (Der eigene Bericht fuer Gruppenturniere folgt in Teil C.)
-  function berichtZeilen(): { zeile: Zeile; platz: number }[] {
-    if (!mehrgruppig) return tabelle.zeilen.map((zeile, i) => ({ zeile, platz: i + 1 }));
-    const alle = gruppenNamen.flatMap((g) => gruppenTabellen[g].zeilen);
-    const ende: { wer: string | null; platz: number }[] = zwei ? endtabelle : endtabelleMitKo;
-    if (ende.length === 0) return alle.map((zeile, i) => ({ zeile, platz: i + 1 }));
-    return ende.flatMap((z) => {
-      const zeile = alle.find((x) => aufstellung[x.pos]?.person_id === z.wer);
-      return zeile ? [{ zeile, platz: z.platz }] : [];
+    if (!mehrgruppig) {
+      const bytes = berichtPdf({
+        titel: turnier.name,
+        kopf: `${DISZIPLIN_TEXT[turnier.disziplin]} · Race to ${raceTo} · ${aufstellung.length} Spieler · ${datumText}${zeit}${handicap}`,
+        vorlaeufig: turnier.status !== 'beendet',
+        zeilen: tabelle.zeilen.map((zeile, i) => berichtZeile(zeile, i + 1)),
+        stichkampf: alleFertig ? stichkampfVermerke(tabelle.gleichstaende) : [],
+        runden: abschnitte.map((x) => ({ name: x.titel, spiele: x.partien.map(spiel) }))
+      });
+      herunterladen(bytes, berichtDateiname(turnier.name, turnier.datum));
+      return;
+    }
+
+    // Gruppenturniere: Aufbau wie der Druckbericht in v64 und v74
+    const gruppeVon = (id: string) => teilnehmer.find((t) => t.person_id === id)?.gruppe ?? '';
+    const gruppenplatzVon = (id: string) => leistung.get(id)?.platz ?? '';
+    const bloecke: BerichtBlock[] = [];
+    let kopf: string;
+    if (zwei) {
+      kopf = `Zwei-Gruppen-Modus · ${DISZIPLIN_TEXT[turnier.disziplin]} · Race to ${raceTo} (Gruppenphase) / ${race2} (Phase 2) · ${aufstellung.length} Teilnehmer · ${datumText}${zeit}${handicap}`;
+      if (einstellungen.phase2) {
+        bloecke.push({
+          art: 'tabelle',
+          titel: 'Endtabelle',
+          spalten: [
+            { text: 'Platz', align: 'mitte' },
+            { text: 'Name', align: 'links' },
+            { text: 'Gruppe', align: 'mitte' },
+            { text: 'Gruppenplatz', align: 'mitte' },
+            { text: 'Duell-Ergebnis', align: 'mitte' }
+          ],
+          zeilen: endtabelle.map((x) => [
+            String(x.platz),
+            anzeige(x.wer),
+            gruppeVon(x.wer),
+            String(x.gruppenplatz),
+            x.ergebnis ? `${x.ergebnis}${x.offen ? ' (offen)' : ''}` : ''
+          ])
+        });
+        bloecke.push({
+          art: 'tabelle',
+          titel: `Phase 2 - Platzierungsduelle (Race to ${race2})`,
+          neueSeite: true,
+          spalten: [
+            { text: 'Spieler 1', align: 'rechts' },
+            { text: 'Ergebnis', align: 'mitte' },
+            { text: 'Spieler 2', align: 'links' },
+            { text: 'Plätze', align: 'mitte' }
+          ],
+          zeilen: duelle.map((d, i) => [
+            `${anzeige(d.spieler_a)} (A${i + 1})`,
+            d.ergebnis_a !== null && d.ergebnis_b !== null ? `${d.ergebnis_a} : ${d.ergebnis_b}` : '- : -',
+            `(B${i + 1}) ${anzeige(d.spieler_b)}`,
+            `Platz ${2 * i + 1} / ${2 * i + 2}`
+          ])
+        });
+      }
+    } else {
+      const feldJetzt = koFest ? koFest.gruppenzahl * koFest.weiter : (weiter ?? 0) * gruppenzahl;
+      kopf =
+        `${gruppenNamen.length} Gruppen mit KO-Runde · je ${koFest?.weiter ?? weiter} weiter, KO-Feld ${feldJetzt} · ` +
+        `${DISZIPLIN_TEXT[turnier.disziplin]} · Race to ${raceTo} (Gruppe)${feldJetzt === 16 ? ` / ${raceFuer('R16')} (AF)` : ''}` +
+        `${feldJetzt >= 8 ? ` / ${raceFuer('QF')} (VF)` : ''} / ${raceFuer('SF')} (HF, Platz 3) / ${raceFuer('FIN')} (Finale)` +
+        ` · ${aufstellung.length} Teilnehmer · ${datumText}${zeit}${handicap}`;
+      if (koFest && baum) {
+        bloecke.push({
+          art: 'tabelle',
+          titel: 'Endtabelle',
+          spalten: [
+            { text: 'Platz', align: 'mitte' },
+            { text: 'Name', align: 'links' },
+            { text: 'Gruppe', align: 'mitte' },
+            { text: 'Gruppenplatz', align: 'mitte' },
+            { text: 'Ermittelt durch', align: 'links' }
+          ],
+          zeilen: endtabelleMitKo.map((x) => [
+            x.zeigePlatz ? String(x.platz) : '',
+            x.wer ? anzeige(x.wer) : '-',
+            x.wer ? gruppeVon(x.wer) : '',
+            x.wer ? String(gruppenplatzVon(x.wer)) : '',
+            x.wie
+          ])
+        });
+        bloecke.push({
+          art: 'tabelle',
+          titel: 'KO-Runde',
+          neueSeite: true,
+          spalten: [
+            { text: 'Spiel', align: 'links' },
+            { text: 'Spieler 1', align: 'rechts' },
+            { text: 'Ergebnis', align: 'mitte' },
+            { text: 'Spieler 2', align: 'links' },
+            { text: 'Sieger', align: 'links' }
+          ],
+          zeilen: koSpiele(feldJetzt).map((k) => {
+            const m = baum[k.id];
+            return [
+              k.name,
+              m.p1 ? `${anzeige(m.p1)} (${m.l1})` : m.l1,
+              m.bereit && m.s1 !== null && m.s2 !== null ? `${m.s1} : ${m.s2}` : '- : -',
+              m.p2 ? `(${m.l2}) ${anzeige(m.p2)}` : m.l2,
+              m.sieger ? anzeige(m.sieger) : 'offen'
+            ];
+          })
+        });
+        const p3 = einstellungen.phase3;
+        if (p3) {
+          bloecke.push({
+            art: 'tabelle',
+            titel: 'Phase 3 - Platzierungsspiele',
+            spalten: [
+              { text: 'Spiel', align: 'mitte' },
+              { text: 'Spieler 1', align: 'rechts' },
+              { text: 'Ergebnis', align: 'mitte' },
+              { text: 'Spieler 2', align: 'links' },
+              { text: 'Plätze', align: 'mitte' },
+              { text: 'Sieger', align: 'links' }
+            ],
+            zeilen: p3Partien.map((d, i) => {
+              const fertig = beendetBei(d);
+              const sieger = fertig ? ((d.ergebnis_a ?? 0) > (d.ergebnis_b ?? 0) ? d.spieler_a : d.spieler_b) : null;
+              return [
+                String(i + 1),
+                anzeige(d.spieler_a),
+                d.ergebnis_a !== null && d.ergebnis_b !== null ? `${d.ergebnis_a} : ${d.ergebnis_b}` : '- : -',
+                anzeige(d.spieler_b),
+                `${p3.abPlatz + 2 * i} / ${p3.abPlatz + 2 * i + 1}`,
+                sieger ? anzeige(sieger) : 'offen'
+              ];
+            })
+          });
+        }
+        const namen = startplatzNamen(koFest.gruppenzahl, koFest.weiter);
+        bloecke.push({
+          art: 'tabelle',
+          titel: 'Setzliste der KO-Runde',
+          spalten: [
+            { text: 'Startplatz', align: 'mitte' },
+            { text: 'Bedeutung', align: 'links' },
+            { text: 'Name', align: 'links' }
+          ],
+          zeilen: koFest.seeds.map((id, i) => {
+            const g = koFest.gruppenzahl === 2 ? (i < koFest.weiter ? 'A' : 'B') : KO_GRUPPEN[i % 4];
+            const platz = koFest.gruppenzahl === 2 ? (i % koFest.weiter) + 1 : Math.floor(i / 4) + 1;
+            return [namen[i], `Gruppe ${g}, Platz ${platz}`, anzeige(id)];
+          })
+        });
+      }
+    }
+    gruppenNamen.forEach((g) => {
+      bloecke.push({
+        art: 'gruppe',
+        titel: `Gruppe ${g} - Abschlusstabelle`,
+        zeilen: gruppenTabellen[g].zeilen.map((zeile, i) => berichtZeile(zeile, i + 1)),
+        vermerke: offenInGruppe(g) === 0 ? stichkampfVermerke(gruppenTabellen[g].gleichstaende) : []
+      });
     });
+    gruppenNamen.forEach((g) => {
+      bloecke.push({
+        art: 'runden',
+        titel: `Gruppe ${g} - Ergebnisse`,
+        runden: abschnitte.filter((x) => x.zeile === g).map((x) => ({ name: x.titel, spiele: x.partien.map(spiel) }))
+      });
+    });
+
+    // Hinweise zur Auslosung (v64 buildDrawNote), dazu die Nachtraege
+    const hinweise: string[] = [];
+    const gesetzte = teilnehmer.filter((t) => t.gesetzt && t.gruppe);
+    if (gesetzte.length > 0) {
+      hinweise.push(
+        gesetzte.length === 1
+          ? 'Ein Spieler wurde vor der Auslosung fest in eine Gruppe gesetzt:'
+          : `${gesetzte.length} Spieler wurden vor der Auslosung fest in eine Gruppe gesetzt:`
+      );
+      gruppenNamen.forEach((g) => {
+        const liste = gesetzte.filter((t) => t.gruppe === g).map((t) => anzeige(t.person_id));
+        if (liste.length) hinweise.push(`Gruppe ${g}: ${liste.join(', ')}`);
+      });
+    }
+    const tausch = einstellungen.tausch ?? [];
+    if (tausch.length > 0) {
+      hinweise.push(tausch.length === 1 ? 'Ein Gruppenwechsel von Hand nach der Auslosung:' : `${tausch.length} Gruppenwechsel von Hand nach der Auslosung:`);
+      tausch.forEach((x) =>
+        hinweise.push(
+          `${uhr(Date.parse(x.zeit))} Uhr: ${anzeige(x.raus)} von Gruppe ${x.von} nach Gruppe ${x.nach}, ${anzeige(x.rein)} von Gruppe ${x.nach} nach Gruppe ${x.von}.`
+        )
+      );
+    }
+    (einstellungen.nachgetragen ?? []).forEach((x) =>
+      hinweise.push(`${uhr(Date.parse(x.zeit))} Uhr: ${anzeige(x.person)} nachgetragen${x.gruppe ? ` in Gruppe ${x.gruppe}` : ''}.`)
+    );
+
+    const bytes = gruppenBerichtPdf({ titel: turnier.name, kopf, vorlaeufig: turnier.status !== 'beendet', bloecke, hinweise });
+    herunterladen(bytes, berichtDateiname(turnier.name, turnier.datum));
   }
 
   // Beginn: erstes Ergebnis oder erster Spielstart; Ende: letztes beendetes Spiel
@@ -759,6 +950,111 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
     const { error } = await supabase.from('turniere').update({ einstellungen: neu }).eq('id', turnier.id);
     if (error) return setFehler(error.message);
     setTurnier({ ...turnier, einstellungen: neu });
+  }
+
+  // ---------- Spieler nachtragen ----------
+
+  // Nachzuegler aufnehmen (v60, v64, v74 addLatePlayer): Er bekommt die
+  // naechste Startnummer und kommt zuletzt in seine Gruppe. Der Spielplan der
+  // Gruppe (Einzelgruppe: des Turniers) wird neu aufgebaut, alle bisherigen
+  // Partien behalten ihr Ergebnis. Stichkampf-Entscheidungen dieser Gruppe
+  // entfallen.
+  // gast: Name eines eben angelegten Gastes (steht noch nicht in der Personenliste)
+  async function nachtragen(personId: string, ziel: string, gast?: string) {
+    if (!turnier) return;
+    const name = gast ?? anzeige(personId);
+    const nummer = aufstellung.length + 1;
+    const kreis = ziel ? gruppen[ziel] ?? [] : aufstellung.map((_, i) => i);
+    let hinweis: string;
+    if (!mehrgruppig) {
+      hinweis =
+        kreis.length % 2 !== 0
+          ? `Die bisherigen Freilose werden zu Partien gegen ${name}. Spielplan und eingetragene Ergebnisse bleiben unverändert.`
+          : `Der Spielplan wird für ${nummer} Spieler neu aufgebaut. Alle eingetragenen Ergebnisse bleiben erhalten, die Partien verteilen sich aber auf andere Runden.`;
+      hinweis += '\n\nBereits getroffene Stichkampf-Entscheidungen werden dabei zurückgesetzt.';
+    } else {
+      hinweis =
+        `Der Spielplan der Gruppe ${ziel} wird neu aufgebaut. Bereits eingetragene Ergebnisse bleiben erhalten, die Partien können sich aber auf andere Runden verteilen.`;
+      if (zwei) {
+        hinweis +=
+          gruppen.A.length === gruppen.B.length
+            ? `\n\nWarnung: Die Gruppen waren gleich groß. ${name} vergrößert Gruppe A, dadurch hat der Letzte der Gruppe A in Phase 2 keinen Gegner (spielfrei, letzter Platz). Ein weiterer Nachzügler in Gruppe B würde das wieder ausgleichen.`
+            : '\n\nDamit wird das Phase-2-Freilos gefüllt: Der bisher gegnerlose Spieler der Gruppe A bekommt in Phase 2 ein Duell.';
+      } else {
+        const nachher = gruppenNamen.map((g) => (gruppen[g]?.length ?? 0) + (g === ziel ? 1 : 0));
+        if (Math.max(...nachher) - Math.min(...nachher) > 1) {
+          hinweis += `\n\nWarnung: Die Gruppen sind danach unterschiedlich groß (${gruppenNamen.map((g, i) => `${g}: ${nachher[i]}`).join(', ')}).`;
+        }
+      }
+      hinweis += `\n\nStichkampf-Entscheidungen der Gruppe ${ziel} werden zurückgesetzt.`;
+    }
+    const frage = `${name} als Spieler ${nummer}${ziel ? ` in Gruppe ${ziel}` : ''} nachtragen?\n\n${hinweis}`;
+    if (!(await fragen(frage, 'Nachtragen'))) return;
+    setArbeitet(true);
+    setFehler(null);
+
+    const r = gast ? { wert: 500, quelle: 'gast' as RatingQuelle } : ratingVon(personId);
+    const { error } = await supabase.from('turnier_teilnehmer').insert({
+      turnier_id: turnier.id,
+      person_id: personId,
+      verein_id: turnier.verein_id,
+      startnummer: Math.max(0, ...teilnehmer.map((t) => t.startnummer ?? 0)) + 1,
+      gruppe: ziel || null,
+      rating_eingefroren: r.wert,
+      rating_quelle: r.quelle
+    });
+    if (error) {
+      setArbeitet(false);
+      return setFehler(error.message);
+    }
+
+    const mitglieder = [...kreis.map(personVon), personId];
+    const { aendern, neu } = nachtragenPlan(
+      mitglieder,
+      gruppenPartien.filter((x) => (ziel ? x.gruppe === ziel : true))
+    );
+    for (const x of aendern) {
+      await supabase.from('partien').update({ runde: x.runde, paarung: x.paarung }).eq('id', x.id);
+    }
+    const werte = ratingWerte();
+    werte.set(personId, r.wert);
+    const { error: fehlerNeu } = await supabase.from('partien').insert(
+      neu.map((x) => {
+        const [vA, vB] = vorgabePaar(werte.get(x.a) ?? 500, werte.get(x.b) ?? 500, raceTo);
+        return {
+          verein_id: turnier.verein_id,
+          turnier_id: turnier.id,
+          disziplin: turnier.disziplin,
+          datum: turnier.datum,
+          phase: 'gruppe',
+          gruppe: ziel || null,
+          runde: x.runde,
+          paarung: x.paarung,
+          spieler_a: x.a,
+          spieler_b: x.b,
+          race_to: raceTo,
+          vorgabe_a: vA,
+          vorgabe_b: vB,
+          status: 'geplant' as const
+        };
+      })
+    );
+    if (fehlerNeu) setFehler(fehlerNeu.message);
+
+    // Stichkampf-Entscheidungen der Gruppe entfallen (v64 clearManualOrderForGroup)
+    const imKreis = new Set(kreis);
+    const hand = Object.fromEntries(
+      Object.entries(einstellungen.handReihenfolge ?? {}).filter(
+        ([schluessel]) => !schluessel.split('-').every((x) => imKreis.has(Number(x)))
+      )
+    );
+    await einstellungenSetzen({
+      handReihenfolge: hand,
+      nachgetragen: [...(einstellungen.nachgetragen ?? []), { person: personId, gruppe: ziel || null, zeit: new Date().toISOString() }]
+    });
+    setArbeitet(false);
+    setMeldung(`${name} wurde als Spieler ${nummer}${ziel ? ` in Gruppe ${ziel}` : ''} nachgetragen.`);
+    await laden();
   }
 
   // ---------- Zwei Gruppen: Tausch und Phase 2 ----------
@@ -1144,6 +1440,32 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
 
   const tabellenname = (pos: number) => anzeige(aufstellung[pos]?.person_id ?? '');
 
+  // Nachtragen: Zwei Gruppen in die kleinere Gruppe (sonst A), Gruppen mit KO
+  // in eine Gruppe mit Freilos, Einzelgruppe bis 12 Spieler (v60, v64, v74)
+  const nachtragZiele = zwei
+    ? [gruppen.A.length > gruppen.B.length ? 'B' : 'A']
+    : mitKo
+      ? gruppenNamen.filter((g) => (gruppen[g]?.length ?? 0) % 2 === 1)
+      : [''];
+  const nachtragMoeglich =
+    bearbeitbar &&
+    turnier.status === 'laeuft' &&
+    aufstellung.length < (zwei ? ZWEI_GRUPPEN_MAX : mitKo ? KO_MAX : 12) &&
+    !(zwei && einstellungen.phase2) &&
+    !(mitKo && koFest) &&
+    nachtragZiele.length > 0;
+  const nachtragVorschlaege = nachtrag
+    ? personen
+        .filter((x) => x.status !== 'ausgetreten' && !teilnehmer.some((t) => t.person_id === x.id))
+        .filter((x) =>
+          nachtrag.suche.trim()
+            ? `${x.vorname} ${x.nachname} ${x.anzeigename ?? ''}`.toLowerCase().includes(nachtrag.suche.toLowerCase())
+            : false
+        )
+        .sort((a, b) => personName(a).localeCompare(personName(b), 'de'))
+        .slice(0, 8)
+    : [];
+
   return (
     <div className="einspaltig">
       <section className="block">
@@ -1374,7 +1696,18 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
         <>
           <div className="turnierzweier">
             <section className="block">
-              <h2>Teilnehmer</h2>
+              <div className="bearbeitenkopf">
+                <h2>Teilnehmer</h2>
+                {nachtragMoeglich && (
+                  <button
+                    type="button"
+                    title="Nachzügler aufnehmen: bereits eingetragene Ergebnisse bleiben erhalten"
+                    onClick={() => setNachtrag({ ziel: nachtragZiele[0], suche: '', gast: '' })}
+                  >
+                    Spieler nachtragen
+                  </button>
+                )}
+              </div>
               <table className="tabelle">
                 <thead>
                   <tr>
@@ -1733,6 +2066,81 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
       )}
 
       {rueckfrage}
+      {nachtrag && (
+        <div className="dialoghintergrund" onClick={() => setNachtrag(null)}>
+          <div className="dialog" onClick={(e) => e.stopPropagation()}>
+            <h2>Spieler nachtragen</h2>
+            {mitKo && nachtragZiele.length > 1 && (
+              <div className="zeile">
+                <label>
+                  Gruppe mit Freilos{' '}
+                  <select value={nachtrag.ziel} onChange={(e) => setNachtrag({ ...nachtrag, ziel: e.target.value })}>
+                    {nachtragZiele.map((g) => (
+                      <option key={g} value={g}>
+                        {g}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+            )}
+            {nachtrag.ziel && (zwei || nachtragZiele.length === 1) && (
+              <p className="hinweis">Der Nachzügler kommt in Gruppe {nachtrag.ziel}.</p>
+            )}
+            <div className="zeile">
+              <input
+                placeholder="Mitglied suchen"
+                value={nachtrag.suche}
+                onChange={(e) => setNachtrag({ ...nachtrag, suche: e.target.value })}
+              />
+            </div>
+            {nachtragVorschlaege.length > 0 && (
+              <div className="filterzeile">
+                {nachtragVorschlaege.map((x) => (
+                  <button
+                    key={x.id}
+                    type="button"
+                    className="chip"
+                    disabled={arbeitet}
+                    onClick={() => {
+                      const ziel = nachtrag.ziel;
+                      setNachtrag(null);
+                      void nachtragen(x.id, ziel);
+                    }}
+                  >
+                    + {personName(x)}
+                    {x.status === 'gast' ? ' (Gast)' : ''}
+                  </button>
+                ))}
+              </div>
+            )}
+            <div className="zeile">
+              <input
+                placeholder="Neuer Gast: Vor- und Nachname"
+                value={nachtrag.gast}
+                onChange={(e) => setNachtrag({ ...nachtrag, gast: e.target.value })}
+              />
+              <button
+                type="button"
+                disabled={arbeitet}
+                onClick={async () => {
+                  const { gast, ziel } = nachtrag;
+                  const id = await gastErzeugen(gast);
+                  if (!id) return;
+                  setNachtrag(null);
+                  await nachtragen(id, ziel, gast.trim().replace(/\s+/g, ' '));
+                }}
+              >
+                Gast nachtragen
+              </button>
+            </div>
+            <p className="hinweis">Bereits eingetragene Ergebnisse bleiben erhalten. Gäste starten mit 500.</p>
+            <button type="button" onClick={() => setNachtrag(null)}>
+              Abbrechen
+            </button>
+          </div>
+        </div>
+      )}
       {tausch && (
         <div className="dialoghintergrund" onClick={() => setTausch(null)}>
           <div className="dialog" onClick={(e) => e.stopPropagation()}>

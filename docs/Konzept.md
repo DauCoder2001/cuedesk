@@ -306,7 +306,7 @@ Rechtlich gegenlesen lassen, bevor die Seite öffentlich geht.
 | 8 Vereinsübergreifend | Turniere mit Gastspielern anderer Vereine, Rating-Hinweis | Vereinsturniere Bassum gegen Verden |
 | 9 Erweiterungen | Turnieranmeldung, automatische Tischzuteilung, Doppel-KO | — |
 
-Bis Stufe 6 bleiben die Turnier-light-Dateien im Einsatz.
+Bis Stufe 6 bleiben die Turnier-light-Dateien im Einsatz. Stufe 6 ist seit dem 22.09.2026 umgesetzt (Regeln aus Einzelgruppe v60, Gruppen v64, KO v74, durch Vergleichstests abgesichert); die Ablösung erfolgt nach den Praxistests. Einschränkung: Folgespiele der KO-Runde legt die geöffnete Turnierseite der Turnierleitung an.
 
 ## 12. Offene Fragen
 

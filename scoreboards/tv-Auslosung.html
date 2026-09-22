@@ -97,14 +97,9 @@
     const gridEl  = document.getElementById('grid');
     const emptyEl = document.getElementById('empty');
 
-    // CueDesk: Einzelgruppe, die Tische waehlen die Spieler am Tablet selbst
-    function tableBadge(mode, g) {
-      if (mode === 'single') return 'alle Tische';
-      if (mode === 'four') return 'Tisch ' + g;
-      if (mode === 'two')  return g === 1 ? 'Tisch 1 & 2' : 'Tisch 3 & 4';
-      return 'Tisch 1 & 2';
-    }
-    function groupLabel(mode, g) { return mode === 'single' ? 'Hauptgruppe' : ('Gruppe ' + g); }
+    // CueDesk: Die Tische waehlen die Spieler am Tablet selbst, Gruppen heissen A bis D
+    function tableBadge(mode, g) { return 'alle Tische'; }
+    function groupLabel(mode, g) { return mode === 'single' ? 'Hauptgruppe' : ('Gruppe ' + 'ABCD'.charAt(g - 1)); }
     function layoutClass(n) { return n === 4 ? 'layout-four-groups' : (n === 2 ? 'layout-two-groups' : 'layout-single-group'); }
 
     onValue(ref(db, 'tournament/active'), (snap) => {

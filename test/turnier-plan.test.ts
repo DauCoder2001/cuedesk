@@ -74,7 +74,7 @@ describe('Ergebnis fuer den Fernseher', () => {
     });
     const e = tvErgebnis(
       { name: 'Test', disziplin: '9-Ball', raceTo: 3, datum: '2026-10-10' },
-      ['s', 'k', 'o'],
+      ['s', 'k', 'o'].map((id) => ({ id, gruppe: null, endplatz: null })),
       [partie('s', 'k', 3, 1), partie('k', 'o', 3, 2), partie('s', 'o', 1, 3)],
       {},
       (id) => namen[id]
@@ -82,5 +82,27 @@ describe('Ergebnis fuer den Fernseher', () => {
     // alle je 1 Sieg; Satzdifferenz: Sven +2-2=0, Kai -2+1=-1, Olli -1+2=+1
     expect(e.groups[1].map((z) => z.name)).toEqual(['Olli', 'Sven', 'Kai']);
     expect(e.groups[1][0]).toMatchObject({ games: 2, wins: 1, losses: 1, plus: 5, minus: 4 });
+    expect(e.finalPlacement).toBeUndefined();
+  });
+
+  test('Gruppen: je Gruppe eine Tabelle nur aus Gruppenspielen, nach dem Abschluss die Endplaetze', () => {
+    const partie = (a: string, b: string, ea: number, eb: number, phase = 'gruppe') => ({
+      spieler_a: a, spieler_b: b, vorgabe_a: 0, vorgabe_b: 0, ergebnis_a: ea, ergebnis_b: eb, phase
+    });
+    const teilnehmer = [
+      { id: 's', gruppe: 'A', endplatz: 2 },
+      { id: 'k', gruppe: 'A', endplatz: 3 },
+      { id: 'o', gruppe: 'B', endplatz: 1 },
+      { id: 'g', gruppe: 'B', endplatz: 4 }
+    ];
+    const partien = [partie('s', 'k', 3, 1), partie('o', 'g', 0, 3), partie('s', 'o', 1, 3, 'phase2')];
+    const laufend = tvErgebnis({ name: 'T', disziplin: '9-Ball', raceTo: 3, datum: '2026-10-10' }, teilnehmer, partien, {}, (id) => namen[id]);
+    expect(Object.keys(laufend.groups)).toEqual(['A', 'B']);
+    expect(laufend.groups.A.map((z) => z.name)).toEqual(['Sven', 'Kai']);
+    expect(laufend.groups.B.map((z) => z.name)).toEqual(['Gerd', 'Olli']);
+    expect(laufend.groups.A[0].games).toBe(1); // Phase 2 zaehlt nicht mit
+    expect(laufend.finalPlacement).toBeUndefined();
+    const fertig = tvErgebnis({ name: 'T', disziplin: '9-Ball', raceTo: 3, datum: '2026-10-10', beendet: true }, teilnehmer, partien, {}, (id) => namen[id]);
+    expect(fertig.finalPlacement?.map((x) => x.name)).toEqual(['Olli', 'Sven', 'Kai', 'Gerd']);
   });
 });

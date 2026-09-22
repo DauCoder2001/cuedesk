@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, test } from 'vitest';
-import { endtabelleZweiGruppen, gruppenRangliste, phase2Paare, verteilen, zielGroessen, zuVieleGesetzt } from '../src/gruppen';
+import { endtabelleZweiGruppen, gruppenRangliste, nachtragenPlan, phase2Paare, verteilen, zielGroessen, zuVieleGesetzt } from '../src/gruppen';
 import { bergerRunden } from '../src/turnier';
 import type { RanglistenPartie } from '../src/turnier';
 
@@ -46,6 +46,27 @@ describe('Verteilung auf zwei Gruppen', () => {
 
   test('Phase-2-Paare mit Spielfrei', () => {
     expect(phase2Paare([1, 2, 3], [4, 5])).toEqual({ duelle: [[1, 4], [2, 5]], spielfrei: [3] });
+  });
+});
+
+describe('Spieler nachtragen', () => {
+  test('bisherige Partien bleiben, der Nachzuegler bekommt alle seine Spiele', () => {
+    for (let n = 3; n <= 11; n += 1) {
+      const alt = Array.from({ length: n }, (_, i) => 's' + i);
+      const bestehend = bergerRunden(n)
+        .flat()
+        .filter(([, b]) => b !== -1)
+        // manche Partien stehen andersherum in der Datenbank
+        .map(([a, b], k) => ({ id: 'p' + k, spieler_a: k % 3 ? alt[a] : alt[b], spieler_b: k % 3 ? alt[b] : alt[a] }));
+      const { aendern, neu } = nachtragenPlan([...alt, 'neu'], bestehend);
+      expect(aendern.map((x) => x.id).sort()).toEqual(bestehend.map((x) => x.id).sort());
+      expect(neu).toHaveLength(n);
+      expect(neu.every((x) => x.a === 'neu' || x.b === 'neu')).toBe(true);
+      // zusammen genau der Berger-Plan fuer n + 1
+      const plan = [...aendern.map((x) => x.runde + ':' + x.paarung), ...neu.map((x) => x.runde + ':' + x.paarung)].sort();
+      const soll = bergerRunden(n + 1).flatMap((paare, r) => paare.flatMap(([, b], g) => (b === -1 ? [] : [r + 1 + ':' + (g + 1)]))).sort();
+      expect(plan).toEqual(soll);
+    }
   });
 });
 

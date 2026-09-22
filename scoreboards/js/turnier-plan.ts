@@ -3,6 +3,7 @@
 // (tournament/active/schedule). Reine Rechnung, getestet in
 // test/turnier-plan.test.ts. Die Datenbank spricht nur anbindung.ts an.
 
+import { gruppenRangliste } from '../../src/gruppen';
 import { rangliste } from '../../src/turnier';
 import type { HandReihenfolge } from '../../src/turnier';
 
@@ -42,7 +43,7 @@ export type TabletTurnier = {
   raceTo: number;
   schedule: Record<string, PlanEintrag>;
   // fuer die TV-Auslosung (Pool-TS: tournament/active)
-  mode?: 'single';
+  mode?: 'single' | 'two' | 'four';
   type?: string;
   discipline?: string;
   eventDate?: string;
@@ -57,7 +58,11 @@ export type TvErgebnis = {
   date: string;
   endedAt: number;
   groups: Record<string, { name: string; games: number; wins: number; losses: number; plus: number; minus: number }[]>;
+  // Gruppenturniere nach dem Abschluss: die Endplaetze (dann ohne Gruppen)
+  finalPlacement?: { place: number; name: string; score: string }[];
 };
+
+export type TvTeilnehmer = { id: string; gruppe: string | null; endplatz: number | null };
 
 // Beendet ist beendet; wer einen Tisch hat, laeuft; alles andere ist offen
 // (auch ein am Notebook angefangenes Spiel ohne Tisch).
@@ -109,50 +114,66 @@ export function tabletSpielplan(
   return plan;
 }
 
-export type ErgebnisPartie = Pick<PlanPartie, 'spieler_a' | 'spieler_b' | 'vorgabe_a' | 'vorgabe_b'> & {
+export type ErgebnisPartie = Pick<PlanPartie, 'spieler_a' | 'spieler_b' | 'vorgabe_a' | 'vorgabe_b' | 'phase'> & {
   ergebnis_a: number | null;
   ergebnis_b: number | null;
 };
 
-// Rangliste fuer den Fernseher, gerechnet wie am Notebook (v57-Regeln)
+// Rangliste fuer den Fernseher, gerechnet wie am Notebook (v57- und
+// v64-Regeln). Einzelgruppe: eine Tabelle. Gruppenturniere: eine Tabelle je
+// Gruppe aus den Gruppenspielen, nach dem Abschluss die Endplaetze.
 export function tvErgebnis(
-  turnier: { name: string; disziplin: string; raceTo: number; datum: string },
-  startliste: string[], // Personen in Startnummern-Reihenfolge
+  turnier: { name: string; disziplin: string; raceTo: number; datum: string; beendet?: boolean },
+  teilnehmer: TvTeilnehmer[], // in Startnummern-Reihenfolge
   partien: ErgebnisPartie[],
   hand: HandReihenfolge,
   name: (personId: string) => string
 ): TvErgebnis {
-  const pos = new Map(startliste.map((id, i) => [id, i]));
-  const { zeilen } = rangliste(
-    startliste.length,
-    partien
-      .filter((p) => pos.has(p.spieler_a) && pos.has(p.spieler_b))
-      .map((p) => ({
-        a: pos.get(p.spieler_a) as number,
-        b: pos.get(p.spieler_b) as number,
-        standA: p.ergebnis_a,
-        standB: p.ergebnis_b,
-        vorgabeA: p.vorgabe_a,
-        vorgabeB: p.vorgabe_b
-      })),
-    hand
-  );
+  const pos = new Map(teilnehmer.map((t, i) => [t.id, i]));
+  const eingabe = partien
+    .filter((p) => !p.phase || p.phase === 'gruppe')
+    .filter((p) => pos.has(p.spieler_a) && pos.has(p.spieler_b))
+    .map((p) => ({
+      a: pos.get(p.spieler_a) as number,
+      b: pos.get(p.spieler_b) as number,
+      standA: p.ergebnis_a,
+      standB: p.ergebnis_b,
+      vorgabeA: p.vorgabe_a,
+      vorgabeB: p.vorgabe_b
+    }));
+  const zeile = (z: { pos: number; spiele: number; punkte: number; gewonnen: number; verloren: number }) => ({
+    name: name(teilnehmer[z.pos].id),
+    games: z.spiele,
+    wins: z.punkte,
+    losses: z.spiele - z.punkte,
+    plus: z.gewonnen,
+    minus: z.verloren
+  });
+  const gruppenNamen = [...new Set(teilnehmer.map((t) => t.gruppe).filter((g): g is string => Boolean(g)))].sort();
+  const groups: TvErgebnis['groups'] =
+    gruppenNamen.length === 0
+      ? { 1: rangliste(teilnehmer.length, eingabe, hand).zeilen.map(zeile) }
+      : Object.fromEntries(
+          gruppenNamen.map((g) => {
+            const mitglieder = teilnehmer.flatMap((t, i) => (t.gruppe === g ? [i] : []));
+            return [g, gruppenRangliste(mitglieder, eingabe, hand).zeilen.map(zeile)];
+          })
+        );
+  const endplaetze = teilnehmer.filter((t) => t.endplatz !== null);
   return {
     type: turnier.name,
     discipline: turnier.disziplin,
     raceTo: turnier.raceTo,
     date: new Date(`${turnier.datum}T12:00:00`).toLocaleDateString('de-DE'),
     endedAt: Date.now(),
-    groups: {
-      1: zeilen.map((z) => ({
-        name: name(startliste[z.pos]),
-        games: z.spiele,
-        wins: z.punkte,
-        losses: z.spiele - z.punkte,
-        plus: z.gewonnen,
-        minus: z.verloren
-      }))
-    }
+    groups,
+    ...(gruppenNamen.length > 0 && turnier.beendet && endplaetze.length > 0
+      ? {
+          finalPlacement: [...endplaetze]
+            .sort((a, b) => (a.endplatz ?? 0) - (b.endplatz ?? 0))
+            .map((t) => ({ place: t.endplatz as number, name: name(t.id), score: '' }))
+        }
+      : {})
   };
 }
 
