@@ -302,7 +302,7 @@ Rechtlich gegenlesen lassen, bevor die Seite öffentlich geht.
 | 4 Pool-Einzelspiel und Live | Pool-Scoreboard, Live-Tische, TV | Tablets und TV im Einsatz |
 | 5 Turnier Einzelgruppe | Berger-Kreis, Gäste, Vorgabe, Ergebnisse vom Tablet, Live-Tabelle, PDF-Bericht | erstes Turnier komplett im neuen Programm |
 | 6 Weitere Modi | Zwei Gruppen, Gruppen mit KO, Phase 3, Spieler nachtragen | Turnier light wird abgelöst |
-| 7 Serien und Statistik Pool | Serienwertung, Streichergebnisse, Statistik Pool, Ranglisten | Serienwertung wird abgelöst |
+| 7 Serien und Statistik Pool | Serienwertung, Streichergebnisse, Statistik Pool, Ranglisten | Serienwertung wird abgelöst (umgesetzt am 22.09.2026) |
 | 8 Vereinsübergreifend | Turniere mit Gastspielern anderer Vereine, Rating-Hinweis | Vereinsturniere Bassum gegen Verden |
 | 9 Erweiterungen | Turnieranmeldung, automatische Tischzuteilung, Doppel-KO | — |
 

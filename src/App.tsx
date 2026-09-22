@@ -8,6 +8,7 @@ import Geraet from './seiten/Geraet';
 import Altdaten from './seiten/Altdaten';
 import Rating from './seiten/Rating';
 import Serien from './seiten/Serien';
+import Ranglisten from './seiten/Ranglisten';
 import StatistikPool from './seiten/StatistikPool';
 import Statistik141 from './seiten/Statistik141';
 import Live from './seiten/Live';
@@ -19,6 +20,7 @@ type Bereich =
   | 'personen'
   | 'rating'
   | 'serien'
+  | 'ranglisten'
   | 'statistikPool'
   | 'statistik141'
   | 'benutzer'
@@ -47,6 +49,7 @@ export default function App() {
     { wert: 'personen', name: 'Personen', sichtbar: true },
     { wert: 'rating', name: 'Rating', sichtbar: true },
     { wert: 'serien', name: 'Serien', sichtbar: true },
+    { wert: 'ranglisten', name: 'Ranglisten', sichtbar: true },
     { wert: 'statistikPool', name: 'Pool-Statistik', sichtbar: true },
     { wert: 'statistik141', name: '14.1-Statistik', sichtbar: true },
     { wert: 'benutzer', name: 'Benutzer und Rollen', sichtbar: darf('vereinsadmin', 'sportwart') },
@@ -89,6 +92,7 @@ export default function App() {
         {bereich === 'personen' && <Personen />}
         {bereich === 'rating' && <Rating />}
         {bereich === 'serien' && <Serien />}
+        {bereich === 'ranglisten' && <Ranglisten />}
         {bereich === 'statistikPool' && <StatistikPool />}
         {bereich === 'statistik141' && <Statistik141 />}
         {bereich === 'benutzer' && <BenutzerRollen />}
