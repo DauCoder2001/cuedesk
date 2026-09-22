@@ -55,7 +55,7 @@ button:disabled { cursor: default; color: var(--text-leise); }
 .rahmen { max-width: 1100px; margin: 0 auto; padding: 16px; }
 
 .kopfzeile {
-  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px;
   background: var(--flaeche); border: 1px solid var(--rand);
   border-radius: 12px 12px 0 0; border-bottom: none; padding: 10px 14px;
 }
@@ -123,8 +123,8 @@ button:disabled { cursor: default; color: var(--text-leise); }
   .liste { border-right: none; border-bottom: 1px solid var(--rand); }
 }
 
-.reiter { display: flex; gap: 4px; flex: 1; }
-.reiter-knopf { border: none; background: transparent; font-size: 13px; color: var(--text-leise); padding: 5px 10px; }
+.reiter { display: flex; flex-wrap: wrap; gap: 4px; flex: 1 1 auto; min-width: 0; }
+.reiter-knopf { border: none; background: transparent; font-size: 13px; color: var(--text-leise); padding: 5px 10px; white-space: nowrap; }
 .reiter-knopf.aktiv { background: var(--akzent-hell); color: var(--akzent); }
 
 .feldkopf { font-size: 12px; color: var(--text-leise); margin-bottom: 6px; }
@@ -142,7 +142,7 @@ button:disabled { cursor: default; color: var(--text-leise); }
 .eintrag .name small { display: block; font-size: 11px; color: var(--text-leise); font-weight: 400; }
 
 .gefahr {
-  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px;
   border: 1px solid #e7bcbc; border-radius: var(--radius); padding: 10px 12px; font-size: 13px;
 }
 .gefahr small { display: block; font-size: 11px; color: var(--text-leise); }
@@ -246,3 +246,19 @@ button:disabled { cursor: default; color: var(--text-leise); }
 .livestand .blau { color: #1133cc; }
 .livefuss { font-size: 12px; color: var(--text-leise); }
 .livefrei { text-align: center; color: var(--text-leise); font-size: 13px; padding: 14px 0; flex: 1; display: grid; place-items: center; }
+
+/* Turniere */
+tr.klickbar { cursor: pointer; }
+tr.klickbar:hover td { background: var(--flaeche-2); }
+.tabelle .marke, .bearbeitenkopf .marke { margin-left: 6px; }
+.zurueck { border: none; background: transparent; color: var(--akzent); padding: 0 0 6px; font-size: 13px; }
+.turnierzweier { display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); gap: 20px; }
+@media (max-width: 900px) { .turnierzweier { grid-template-columns: 1fr; } }
+.zahlfeld, .tabelle td input.zahlfeld { width: 48px; text-align: center; padding: 4px; }
+button.klein { font-size: 12px; padding: 2px 7px; margin-left: 4px; }
+tr.gespielt td { color: var(--text-leise); }
+tr.gespielt .zahlfeld { color: var(--text); }
+.marke.stichkampf { color: #854f0b; border-color: #e8cfa3; }
+.gefahrknopf { color: var(--fehler); border-color: #e7bcbc; }
+.dialoghintergrund { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.35); display: grid; place-items: center; padding: 16px; z-index: 50; }
+.dialog { background: var(--flaeche); border-radius: 12px; padding: 18px; width: 100%; max-width: 520px; max-height: 80vh; overflow: auto; display: flex; flex-direction: column; gap: 12px; }

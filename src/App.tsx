@@ -10,8 +10,9 @@ import Rating from './seiten/Rating';
 import Serien from './seiten/Serien';
 import Statistik141 from './seiten/Statistik141';
 import Live from './seiten/Live';
+import Turniere from './seiten/Turniere';
 
-type Bereich = 'live' | 'personen' | 'rating' | 'serien' | 'statistik141' | 'benutzer' | 'tische' | 'altdaten';
+type Bereich = 'live' | 'turniere' | 'personen' | 'rating' | 'serien' | 'statistik141' | 'benutzer' | 'tische' | 'altdaten';
 
 // Tablets und TV rufen die Adresse mit ?geraet auf und bekommen die
 // Geraeteansicht statt der Anmeldung.
@@ -31,6 +32,7 @@ export default function App() {
 
   const bereiche: { wert: Bereich; name: string; sichtbar: boolean }[] = [
     { wert: 'live', name: 'Live', sichtbar: true },
+    { wert: 'turniere', name: 'Turniere', sichtbar: true },
     { wert: 'personen', name: 'Personen', sichtbar: true },
     { wert: 'rating', name: 'Rating', sichtbar: true },
     { wert: 'serien', name: 'Serien', sichtbar: true },
@@ -71,6 +73,7 @@ export default function App() {
       </header>
       <main>
         {bereich === 'live' && <Live />}
+        {bereich === 'turniere' && <Turniere />}
         {bereich === 'personen' && <Personen />}
         {bereich === 'rating' && <Rating />}
         {bereich === 'serien' && <Serien />}

@@ -46,6 +46,7 @@ export default function Serien() {
       .select('*')
       .eq('verein_id', verein.id)
       .eq('serie_id', gewaehlt)
+      .eq('status', 'beendet') // laufende Turniere haben noch keine Endplaetze
       .order('datum');
 
     const ids = (turnierdaten ?? []).map((t) => t.id);
