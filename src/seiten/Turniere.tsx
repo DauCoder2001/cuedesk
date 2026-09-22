@@ -35,6 +35,9 @@ export type TurnierEinstellungen = {
   raceTo?: number;
   vorgabe?: { aktiv: boolean; staerke: number; obergrenze: number };
   handReihenfolge?: Record<string, number[]>;
+  pausiert?: boolean; // Tablets starten keine neuen Spiele
+  tvAnsicht?: 'auslosung' | 'live' | 'results'; // was die Fernseher zeigen
+  beginn?: string; // erstes Ergebnis (Zeitprognose)
 };
 
 const heute = () => new Date().toISOString().slice(0, 10);

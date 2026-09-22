@@ -4,6 +4,9 @@ import { useSitzung } from '../sitzung';
 import { personName } from '../namen';
 import { vorgabe } from '../vorgabe';
 import { useRueckfrage } from '../rueckfrage';
+import { prognose, prognoseText } from '../zeitprognose';
+import { berichtDateiname, berichtPdf } from '../turnierbericht';
+import { herunterladen } from '../pdf';
 import { angefangen, auslosen, bergerRunden, hoechstwert, rangliste, spielBeendet } from '../turnier';
 import type { RanglistenPartie } from '../turnier';
 import { DISZIPLIN_TEXT, MODUS_TEXT, STATUS_TEXT } from './Turniere';
@@ -48,6 +51,13 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
   const [verlauf, setVerlauf] = useState<{ partie: Partie; zeilen: Aenderungszeile[] } | null>(null);
   const [stapel, setStapel] = useState<Rueckgaengig[]>([]);
   const [rueckfrage, fragen] = useRueckfrage();
+  const [, setTakt] = useState(0);
+
+  // Zeitprognose haengt an der Uhr, nicht nur an Eingaben
+  useEffect(() => {
+    const uhr = window.setInterval(() => setTakt((x) => x + 1), 60000);
+    return () => window.clearInterval(uhr);
+  }, []);
 
   const laden = useCallback(async () => {
     if (!verein) return;
@@ -91,6 +101,26 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
   useEffect(() => {
     void laden();
   }, [laden]);
+
+  // Ergebnisse und Tischwahl von den Tablets sofort uebernehmen
+  useEffect(() => {
+    let zeitgeber: number | null = null;
+    const partienNeu = async () => {
+      const { data } = await supabase.from('partien').select('*').eq('turnier_id', turnierId).order('runde').order('paarung');
+      if (data) setPartien(data);
+    };
+    const kanal = supabase
+      .channel(`turnier-leitung-${turnierId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'partien', filter: `turnier_id=eq.${turnierId}` }, () => {
+        if (zeitgeber !== null) window.clearTimeout(zeitgeber);
+        zeitgeber = window.setTimeout(() => void partienNeu(), 300);
+      })
+      .subscribe();
+    return () => {
+      if (zeitgeber !== null) window.clearTimeout(zeitgeber);
+      void supabase.removeChannel(kanal);
+    };
+  }, [turnierId]);
 
   const person = useCallback((id: string) => personen.find((p) => p.id === id), [personen]);
   const anzeige = useCallback(
@@ -254,7 +284,12 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
 
     const { error } = await supabase
       .from('turniere')
-      .update({ status: 'laeuft', eingefroren_am: new Date().toISOString(), teilnehmerzahl: gerechnet.length })
+      .update({
+        status: 'laeuft',
+        eingefroren_am: new Date().toISOString(),
+        teilnehmerzahl: gerechnet.length,
+        einstellungen: { ...einstellungen, tvAnsicht: 'auslosung' }
+      })
       .eq('id', turnier.id);
     if (error) setFehler(error.message);
     setArbeitet(false);
@@ -318,6 +353,97 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
       ]);
     }
     setPartien((liste) => liste.map((x) => (x.id === p.id ? { ...x, ...neu } : x)));
+    if (!leer) await turnierBegonnen();
+  }
+
+  // Erstes Ergebnis: Beginn fuer die Zeitprognose merken, TV von der
+  // Auslosung auf die Live-Tische umschalten.
+  async function turnierBegonnen() {
+    if (!turnier) return;
+    const aenderung: TurnierEinstellungen = {};
+    if (!einstellungen.beginn) aenderung.beginn = new Date().toISOString();
+    if (einstellungen.tvAnsicht === 'auslosung') aenderung.tvAnsicht = 'live';
+    if (Object.keys(aenderung).length > 0) await einstellungenSetzen(aenderung);
+  }
+
+  async function einstellungenSetzen(aenderung: TurnierEinstellungen) {
+    if (!turnier) return;
+    const neu = { ...einstellungen, ...aenderung };
+    const { error } = await supabase.from('turniere').update({ einstellungen: neu }).eq('id', turnier.id);
+    if (error) return setFehler(error.message);
+    setTurnier({ ...turnier, einstellungen: neu });
+  }
+
+  const uhr = (ms: number) => new Date(ms).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+
+  function berichtErzeugen() {
+    if (!turnier) return;
+    const mitRating = va.aktiv;
+    const ratingVonPerson = (id: string) => teilnehmer.find((t) => t.person_id === id)?.rating_eingefroren ?? null;
+    const z = zeitDaten();
+    const zeit = z.art === 'beendet' ? ` · Von ${uhr(z.beginn)} bis ${uhr(z.ende)}` : '';
+    const datumText = new Date(`${turnier.datum}T12:00:00`).toLocaleDateString('de-DE', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+    const bytes = berichtPdf({
+      titel: turnier.name,
+      kopf:
+        `${DISZIPLIN_TEXT[turnier.disziplin]} · Race to ${raceTo} · ${aufstellung.length} Spieler · ${datumText}${zeit}` +
+        (va.aktiv ? ` · Handicap ${va.staerke} %${va.obergrenze > 0 ? `, Obergrenze ${va.obergrenze}` : ''}` : ''),
+      vorlaeufig: turnier.status !== 'beendet',
+      zeilen: tabelle.zeilen.map((zeile, i) => ({
+        platz: i + 1,
+        name: anzeige(aufstellung[zeile.pos]?.person_id ?? ''),
+        punkte: zeile.punkte,
+        gewonnen: zeile.gewonnen,
+        verloren: zeile.verloren,
+        diff: zeile.diff,
+        rating: mitRating ? aufstellung[zeile.pos]?.rating_eingefroren ?? null : null
+      })),
+      stichkampf: alleFertig
+        ? tabelle.gleichstaende.map(
+            (g) =>
+              `Platz ${g.start + 1}-${g.start + g.mitglieder.length}: ${
+                g.entschieden ? 'Reihenfolge durch die Turnierleitung festgelegt' : 'Stichkampf offen, vorläufige Reihenfolge'
+              }.`
+          )
+        : [],
+      runden: runden.map(([nr, liste]) => ({
+        name: `Runde ${nr}`,
+        spiele: liste.map((s) => ({
+          nameA: anzeige(s.spieler_a),
+          nameB: anzeige(s.spieler_b),
+          standA: s.ergebnis_a,
+          standB: s.ergebnis_b,
+          vorgabeA: s.vorgabe_a,
+          vorgabeB: s.vorgabe_b,
+          ratingA: mitRating ? ratingVonPerson(s.spieler_a) : null,
+          ratingB: mitRating ? ratingVonPerson(s.spieler_b) : null
+        }))
+      }))
+    });
+    herunterladen(bytes, berichtDateiname(turnier.name, turnier.datum));
+  }
+
+  // Beginn: erstes Ergebnis oder erster Spielstart; Ende: letztes beendetes Spiel
+  function zeitDaten() {
+    const zeiten = (liste: (string | null | undefined)[]) =>
+      liste.filter((x): x is string => Boolean(x)).map((x) => Date.parse(x));
+    const anfang = zeiten([einstellungen.beginn, ...partien.map((x) => x.begonnen), ...partien.map((x) => x.beendet)]);
+    const schluss = zeiten(partien.map((x) => x.beendet));
+    return prognose(
+      partien.map((x) => ({
+        standA: x.ergebnis_a,
+        standB: x.ergebnis_b,
+        vorgabeA: x.vorgabe_a,
+        vorgabeB: x.vorgabe_b,
+        raceTo: x.race_to ?? raceTo
+      })),
+      anfang.length ? Math.min(...anfang) : null,
+      schluss.length ? Math.max(...schluss) : null
+    );
   }
 
   async function rueckgaengig() {
@@ -379,7 +505,11 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
     }
     const { error } = await supabase
       .from('turniere')
-      .update({ status: 'beendet', teilnehmerzahl: aufstellung.length })
+      .update({
+        status: 'beendet',
+        teilnehmerzahl: aufstellung.length,
+        einstellungen: { ...einstellungen, tvAnsicht: 'results', pausiert: false }
+      })
       .eq('id', turnier.id);
     if (error) {
       setArbeitet(false);
@@ -443,9 +573,22 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
               {va.aktiv && ` · Vorgabe ${va.staerke} %${va.obergrenze > 0 ? `, höchstens ${va.obergrenze}` : ''}`}
               {!turnier.rating_werten && ' · zählt nicht fürs Rating'}
             </p>
+            {turnier.quelle !== 'import' && prognoseText(zeitDaten()) && (
+              <p className="hinweis">{prognoseText(zeitDaten())}</p>
+            )}
           </div>
           <div className="knopfpaar">
             <span className={`marke ${turnier.status === 'laeuft' ? 'livelaeuft' : ''}`}>{STATUS_TEXT[turnier.status]}</span>
+            {bearbeitbar && turnier.status === 'laeuft' && (
+              <button type="button" onClick={() => void einstellungenSetzen({ pausiert: !einstellungen.pausiert })}>
+                {einstellungen.pausiert ? 'Fortsetzen' : 'Pausieren'}
+              </button>
+            )}
+            {turnier.quelle !== 'import' && turnier.status !== 'geplant' && (
+              <button type="button" onClick={berichtErzeugen}>
+                Bericht (PDF)
+              </button>
+            )}
             {bearbeitbar && turnier.status === 'laeuft' && (
               <button type="button" onClick={() => void abschliessen()} disabled={arbeitet}>
                 Abschließen
@@ -458,6 +601,40 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
             )}
           </div>
         </div>
+        {darfLeiten && turnier.quelle !== 'import' && turnier.status !== 'geplant' && (
+          <div className="zeile">
+            <span className="hinweis">TV zeigt:</span>
+            <span className="umschalter">
+              {(
+                [
+                  ['auslosung', 'Auslosung'],
+                  ['live', 'Live-Tische'],
+                  ['results', 'Ergebnis']
+                ] as const
+              ).map(([wert, name]) => (
+                <button
+                  key={wert}
+                  type="button"
+                  className={(einstellungen.tvAnsicht ?? 'live') === wert ? 'aktiv' : ''}
+                  onClick={() => void einstellungenSetzen({ tvAnsicht: wert })}
+                >
+                  {name}
+                </button>
+              ))}
+            </span>
+          </div>
+        )}
+        {einstellungen.pausiert && turnier.status === 'laeuft' && (
+          <div className="pausehinweis">
+            <strong>Turnier pausiert.</strong> An den Tablets kann kein neues Spiel gestartet werden; laufende Spiele gehen
+            weiter.
+            {bearbeitbar && (
+              <button type="button" className="klein" onClick={() => void einstellungenSetzen({ pausiert: false })}>
+                Fortsetzen
+              </button>
+            )}
+          </div>
+        )}
         {fehler && <p className="fehler">{fehler}</p>}
         {meldung && <p className="meldung">{meldung}</p>}
       </section>

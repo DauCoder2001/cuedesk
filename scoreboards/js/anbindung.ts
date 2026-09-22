@@ -383,13 +383,21 @@ export function onValue(verweis: Verweis, cb: Beobachter): () => void {
   liste.add(cb);
   beobachter.set(verweis.pfad, liste);
 
-  // Turnierstatus und TV-Umschaltung: bis die CueDesk-Turniere angebunden
-  // sind, laeuft keins. TV-Einstellungen gibt es nicht (Standardrand 3 %).
+  // Laufendes Turnier (Turniermodus am Tablet, "Freies Spiel" am TV),
+  // TV-Umschaltung und Turnier-Ergebnis fuer die Fernseher
   if (
     verweis.pfad === 'tournament/active' ||
-    verweis.pfad.startsWith('tournament/') ||
-    verweis.pfad === 'system/tvSettings'
+    verweis.pfad === 'tournament/active/status' ||
+    verweis.pfad === 'tournament/tvView' ||
+    verweis.pfad === 'tournament_archive'
   ) {
+    if (verbindung) void turnierBeobachten(verweis.pfad);
+    else queueMicrotask(() => cb({ val: () => null }));
+    return () => liste.delete(cb);
+  }
+
+  // TV-Einstellungen gibt es nicht (Rand 3 %).
+  if (verweis.pfad.startsWith('tournament/') || verweis.pfad === 'system/tvSettings') {
     queueMicrotask(() => cb({ val: () => null }));
     return () => liste.delete(cb);
   }
@@ -570,21 +578,220 @@ async function archivZustand(a: NonNullable<typeof archiv>): Promise<unknown> {
   };
 }
 
-// Ergebnisse gehen nicht mehr ueber "push", sondern ueber ergebnisSpeichern141
-// und ergebnisSpeichernPool. Firebase lieferte bei push sofort einen Schluessel
-// (.key); der Turniermodus nutzt das. Bis die CueDesk-Turniere angebunden sind,
-// wird dieser Weg nicht erreicht.
-export function push(verweis: Verweis): { key: string; then: (weiter: () => void) => Promise<void> } {
-  console.warn('push() auf', verweis.pfad, 'wird in CueDesk nicht mehr verwendet.');
+// ---------- Turniermodus ----------
+//
+// Das Pool-Scoreboard kennt aus Pool-TS einen Turniermodus: Es liest
+// tournament/active mit dem Spielplan, beansprucht ein Spiel per Transaktion,
+// schreibt das Ergebnis nach results/<key> und gibt den Tisch frei. Hier wird
+// das auf die CueDesk-Tabellen umgelegt: Spielplan = partien des laufenden
+// Turniers, "running" = Partie hat einen Tisch.
+
+let aktuellesTurnier: TabletTurnier | null = null;
+let tvAnsicht: string | null = null; // tournament/tvView
+let tvArchiv: Record<string, TvErgebnis> | null = null; // tournament_archive
+let turnierLaeuftSchon = false;
+let turnierZeitgeber: number | null = null;
+
+// Laufendes Turnier fuer die Tablets. Fuer die Fernseher zaehlt ausserdem ein
+// heute beendetes Turnier (Ergebnis-Anzeige nach dem Abschluss).
+async function turnierLaden(): Promise<void> {
+  const v = verbindung;
+  if (!v) return;
+  const gestern = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+  const { data: kandidaten } = await v.supabase
+    .from('turniere')
+    .select('id, name, datum, disziplin, status, einstellungen')
+    .eq('verein_id', v.vereinId)
+    .in('status', ['laeuft', 'beendet'])
+    .gte('datum', gestern)
+    .order('datum', { ascending: false });
+  const liste = kandidaten ?? [];
+  const t = liste.find((x) => x.status === 'laeuft') ?? liste.find((x) => x.status === 'beendet') ?? null;
+  if (!t) {
+    aktuellesTurnier = null;
+    tvAnsicht = null;
+    tvArchiv = null;
+    return;
+  }
+
+  const [partienAntwort, personenAntwort, tischAntwort, teilnehmerAntwort] = await Promise.all([
+    v.supabase
+      .from('partien')
+      .select('id, spieler_a, spieler_b, race_to, vorgabe_a, vorgabe_b, ergebnis_a, ergebnis_b, status, tisch_id, runde, begonnen')
+      .eq('turnier_id', t.id)
+      .order('runde')
+      .order('paarung'),
+    v.supabase.from('personen').select('id, vorname, nachname, anzeigename').eq('verein_id', v.vereinId),
+    v.supabase.from('tische').select('id, nummer').eq('verein_id', v.vereinId),
+    v.supabase.from('turnier_teilnehmer').select('person_id, startnummer').eq('turnier_id', t.id)
+  ]);
+  const namen = new Map(
+    (personenAntwort.data ?? []).map((x) => [x.id, x.anzeigename || `${x.vorname} ${x.nachname}`.trim()])
+  );
+  const name = (id: string) => namen.get(id) ?? '?';
+  const nummern = new Map((tischAntwort.data ?? []).map((x) => [x.id, String(x.nummer)]));
+  const einstellungen = (t.einstellungen ?? {}) as {
+    raceTo?: number;
+    pausiert?: boolean;
+    tvAnsicht?: string;
+    handReihenfolge?: Record<string, number[]>;
+  };
+  const partien = (partienAntwort.data ?? []) as (PlanPartie & { ergebnis_a: number | null; ergebnis_b: number | null })[];
+  const startliste = (teilnehmerAntwort.data ?? [])
+    .filter((x) => x.startnummer !== null)
+    .sort((a, b) => (a.startnummer ?? 0) - (b.startnummer ?? 0))
+    .map((x) => x.person_id as string);
+  const disziplin = ({ '8-ball': '8-Ball', '9-ball': '9-Ball', '10-ball': '10-Ball' } as Record<string, string>)[t.disziplin] ?? t.disziplin;
+
+  aktuellesTurnier =
+    t.status === 'laeuft'
+      ? {
+          id: t.id,
+          name: t.name,
+          status: 'running',
+          paused: Boolean(einstellungen.pausiert),
+          raceTo: einstellungen.raceTo ?? 0,
+          schedule: tabletSpielplan(partien, name, (id) => nummern.get(id) ?? null),
+          // fuer die TV-Auslosung
+          mode: 'single',
+          type: t.name,
+          discipline: disziplin,
+          eventDate: new Date(`${t.datum}T12:00:00`).toLocaleDateString('de-DE'),
+          players: Object.fromEntries(startliste.map((id) => [id, { name: name(id), group: 1 }]))
+        }
+      : null;
+  tvAnsicht = einstellungen.tvAnsicht ?? 'live';
+  tvArchiv = {
+    [t.id]: tvErgebnis(
+      { name: t.name, disziplin, raceTo: einstellungen.raceTo ?? 0, datum: t.datum },
+      startliste,
+      partien,
+      einstellungen.handReihenfolge ?? {},
+      name
+    )
+  };
+}
+
+async function turnierAuffrischen() {
+  await turnierLaden();
+  melden('tournament/active', aktuellesTurnier);
+  melden('tournament/active/status', aktuellesTurnier ? 'running' : null);
+  melden('tournament/tvView', tvAnsicht);
+  melden('tournament_archive', tvArchiv);
+}
+
+// Welcher Wert gehoert zu welchem Turnier-Pfad
+function turnierWert(pfad: string): unknown {
+  if (pfad === 'tournament/active') return aktuellesTurnier;
+  if (pfad === 'tournament/active/status') return aktuellesTurnier ? 'running' : null;
+  if (pfad === 'tournament/tvView') return tvAnsicht;
+  return tvArchiv;
+}
+
+async function turnierBeobachten(pfad: string) {
+  const v = verbindung;
+  if (!v) return;
+  if (turnierLaeuftSchon) {
+    // Weiterer Beobachter: bekannten Stand sofort melden
+    queueMicrotask(() => melden(pfad, turnierWert(pfad)));
+    return;
+  }
+  turnierLaeuftSchon = true;
+  await turnierAuffrischen();
+
+  // Jede Aenderung an Partien oder Turnieren des Vereins: Plan neu laden,
+  // gebuendelt, damit ein Schwall von Aenderungen nur einen Abruf ausloest.
+  const spaeter = () => {
+    if (turnierZeitgeber !== null) window.clearTimeout(turnierZeitgeber);
+    turnierZeitgeber = window.setTimeout(() => void turnierAuffrischen(), 300);
+  };
+  v.supabase
+    .channel(`turnier-${v.vereinId}`)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'partien', filter: `verein_id=eq.${v.vereinId}` }, spaeter)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'turniere', filter: `verein_id=eq.${v.vereinId}` }, spaeter)
+    .subscribe();
+}
+
+// Firebase lieferte bei push sofort einen Schluessel (.key). Der Turniermodus
+// nutzt ihn nur als Kennung des Ergebnisses; gespeichert wird ueber update().
+export function push(_verweis: Verweis): { key: string; then: (weiter: () => void) => Promise<void> } {
   return { key: crypto.randomUUID(), then: (weiter) => Promise.resolve().then(weiter) };
 }
 
-// Turniermodus (Spielplan, Transaktionen): kommt mit den CueDesk-Turnieren.
-export function runTransaction(): Promise<{ committed: boolean; snapshot: { val: () => null } }> {
-  return Promise.resolve({ committed: false, snapshot: { val: () => null } });
+type Transaktion = { committed: boolean; snapshot: { val: () => unknown } };
+
+// Transaktion auf tournament/active/schedule/<partie>. Das Scoreboard
+// entscheidet in "aendern", was geschehen soll; die Datenbank setzt es nur um,
+// wenn der Stand noch passt (sonst hat ein anderer Tisch schneller gegriffen).
+export async function runTransaction(
+  verweis: Verweis,
+  aendern: (wert: PlanEintrag | null) => PlanEintrag | undefined
+): Promise<Transaktion> {
+  const v = verbindung;
+  const treffer = /^tournament\/active\/schedule\/(.+)$/.exec(verweis.pfad);
+  const abgelehnt = (wert: unknown): Transaktion => ({ committed: false, snapshot: { val: () => wert } });
+  if (!v || !treffer || betriebsart !== 'angebunden') return abgelehnt(null);
+  const partieId = treffer[1];
+
+  await turnierAuffrischen();
+  const alt = aktuellesTurnier?.schedule[partieId] ?? null;
+  const neu = aendern(alt ? structuredClone(alt) : null);
+  if (!neu || !alt) return abgelehnt(alt);
+
+  let geklappt = false;
+  if (neu.status === 'running' && alt.status === 'pending') {
+    // Spiel beanspruchen: nur wenn es noch keinen Tisch hat
+    const { data } = await v.supabase
+      .from('partien')
+      .update({ tisch_id: v.tischId, status: 'laeuft', begonnen: new Date().toISOString() })
+      .eq('id', partieId)
+      .is('tisch_id', null)
+      .neq('status', 'beendet')
+      .select('id');
+    geklappt = (data ?? []).length === 1;
+  } else if (neu.status === 'completed' && alt.status === 'running') {
+    // Abschluss: das Ergebnis selbst kommt gleich mit update(); hier nur pruefen,
+    // dass das Spiel noch diesem Tisch gehoert.
+    geklappt = alt.table === tischNummer;
+  } else if (neu.status === 'pending' && alt.status === 'running') {
+    // Abbrechen: zurueck in den Spielplan
+    const { data } = await v.supabase
+      .from('partien')
+      .update({ tisch_id: null, status: 'geplant', begonnen: null })
+      .eq('id', partieId)
+      .eq('tisch_id', v.tischId as string)
+      .neq('status', 'beendet')
+      .select('id');
+    geklappt = (data ?? []).length === 1;
+  }
+
+  await turnierAuffrischen();
+  return geklappt ? { committed: true, snapshot: { val: () => neu } } : abgelehnt(alt);
 }
-export function update(): Promise<void> {
-  return Promise.resolve();
+
+// Mehrere Pfade auf einmal schreiben. Der Turniermodus nutzt es fuer
+// results/<key> (Ergebnis) und tables/<n> = null (Tisch freigeben).
+export async function update(_verweis: Verweis, werte: Record<string, unknown>): Promise<void> {
+  const v = verbindung;
+  if (!v || betriebsart !== 'angebunden') return;
+  for (const [pfad, wert] of Object.entries(werte)) {
+    if (pfad.startsWith('results/') && wert && typeof wert === 'object') {
+      const r = wert as { matchId?: string; player1: string; player2: string; score1: number; score2: number };
+      const eintrag = r.matchId ? aktuellesTurnier?.schedule[r.matchId] : undefined;
+      if (!r.matchId || !eintrag) continue;
+      const { error } = await v.supabase
+        .from('partien')
+        .update({ ...ergebnisVomTablet(eintrag, r), status: 'beendet', beendet: new Date().toISOString() })
+        .eq('id', r.matchId)
+        .eq('tisch_id', v.tischId as string)
+        .neq('status', 'beendet');
+      if (error) throw new Error(error.message);
+    } else if (tischAusPfad(pfad) && wert === null) {
+      await set({ pfad }, null);
+    }
+    // Weitere Pfade (KO-Fortschreibung) gibt es in der Einzelgruppe nicht.
+  }
+  await turnierAuffrischen();
 }
 
 // Lesen auf Abruf. Genutzt wird es fuer die Ergebnisliste am Tisch ("results").
@@ -743,6 +950,8 @@ export async function ergebnisSpeichernPool(
 // ---------- Ergebnis 14.1 speichern ----------
 
 export { aufnahmenAusProtokoll } from './protokoll-141';
+import { ergebnisVomTablet, tabletSpielplan, tvErgebnis } from './turnier-plan';
+import type { PlanEintrag, PlanPartie, TabletTurnier, TvErgebnis } from './turnier-plan';
 import { aufnahmenAusProtokoll, protokollAusAufnahmen } from './protokoll-141';
 import type { AufnahmeZeile, Zustand141 } from './protokoll-141';
 

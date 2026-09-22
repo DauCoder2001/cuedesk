@@ -1039,7 +1039,8 @@ async function newGame() {
     const m = res.snapshot.val();
     await set(dbRef, {
       gameType: "pool", player1: m.player1, player2: m.player2,
-      score1: 0, score2: 0, nextBreak: 1,
+      // CueDesk: Turnierspiele mit Vorgabe starten beim Vorgabe-Stand (z.B. 1:0)
+      score1: m.vorgabe1 || 0, score2: m.vorgabe2 || 0, nextBreak: 1,
       tournamentMatchId: matchId, group: m.group, raceTo: m.raceTo || tournament.raceTo,
       owner: boardId
     });

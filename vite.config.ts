@@ -22,7 +22,9 @@ export default defineConfig(() => ({
         vierzehnEins: resolve(__dirname, 'scoreboards/14.1_Scoreboard.html'),
         vierzehnEinsProtokoll: resolve(__dirname, 'scoreboards/14.1_Log.html'),
         pool: resolve(__dirname, 'scoreboards/Pool_Scoreboard.html'),
-        tv: resolve(__dirname, 'scoreboards/tv.html')
+        tv: resolve(__dirname, 'scoreboards/tv.html'),
+        tvAuslosung: resolve(__dirname, 'scoreboards/tv-Auslosung.html'),
+        tvErgebnis: resolve(__dirname, 'scoreboards/tv-Turnier-Ergebnis.html')
       }
     }
   }

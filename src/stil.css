@@ -262,3 +262,8 @@ tr.gespielt .zahlfeld { color: var(--text); }
 .gefahrknopf { color: var(--fehler); border-color: #e7bcbc; }
 .dialoghintergrund { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.35); display: grid; place-items: center; padding: 16px; z-index: 50; }
 .dialog { background: var(--flaeche); border-radius: 12px; padding: 18px; width: 100%; max-width: 520px; max-height: 80vh; overflow: auto; display: flex; flex-direction: column; gap: 12px; }
+.umschalter { display: inline-flex; border: 1px solid var(--rand); border-radius: var(--radius); overflow: hidden; }
+.umschalter button { border: none; border-right: 1px solid var(--rand); border-radius: 0; font-size: 12px; padding: 5px 10px; }
+.umschalter button:last-child { border-right: none; }
+.umschalter button.aktiv { background: var(--akzent-hell); color: var(--akzent); }
+.pausehinweis { background: #faeeda; border: 1px solid #e8cfa3; color: #633806; border-radius: var(--radius); padding: 8px 12px; font-size: 13px; }

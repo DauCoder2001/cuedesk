@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CueDesk – Turnier-Ergebnis</title>
+  <link rel="icon" type="image/svg+xml" href="./img/favicon.svg">
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; background: #111; color: #fff; margin: 0; height: 100vh; overflow: hidden; }
+    /* Auto-Fit: der Inhalt in #tv-stage wird per JS passend auf den Bildschirm skaliert */
+    #tv-viewport { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }
+    #tv-stage { width: 100vw; padding: 3vh 2vw; transform-origin: center center; }
+    .tv-title { text-align: center; color: #888; font-size: 3.5vh; margin: 0 0 6px; font-weight: bold; text-transform: uppercase; letter-spacing: 2px; }
+    .tv-title .highlight { color: #38bdf8; }
+    .tv-sub { text-align: center; color: #aaa; font-size: 2.5vh; margin-bottom: 24px; }
+    h2.sec { color: #fff; font-size: 3vh; border-bottom: 2px solid #333; padding-bottom: 8px; margin: 26px 0 12px; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 18px; }
+    th { background: #1f3b73; color: #fff; font-size: 2vh; text-transform: uppercase; padding: 10px 12px; text-align: center; }
+    th.left, td.left { text-align: left; padding-left: 18px; }
+    td { padding: 9px 12px; font-size: 2.6vh; border-bottom: 1px solid #2a2a2a; text-align: center; }
+    tr:nth-child(even) td { background: #191919; }
+    .medal { font-size: 3vh; }
+    .res { width: 18%; font-weight: bold; color: #38bdf8; }
+    .empty { text-align: center; color: #666; font-size: 4vh; margin-top: 18vh; }
+  </style>
+</head>
+<body>
+
+  <div id="tv-viewport"><div id="tv-stage">
+    <div class="tv-title" id="title">🏆 Turnier-Ergebnis</div>
+    <div class="tv-sub" id="sub"></div>
+    <div id="content"></div>
+    <div class="empty" id="empty" style="display:none;">Noch kein Turnier-Ergebnis vorhanden.</div>
+  </div></div>
+
+  <script type="module">
+    // CueDesk: Ergebnis des laufenden oder heute beendeten Turniers ueber die Anbindung
+    import { db, ref, onValue, starten } from "./js/anbindung.ts";
+    import { keepScreenAwake } from "./js/wake-lock.js";
+    import { startTvAutofit } from "./js/tv-autofit.js";
+
+    await starten();
+
+    // Namen kommen aus CueDesk - nie als HTML einsetzen
+    const esc = (t) => String(t == null ? '' : t).replace(/[&<>"]/g, (c) =>
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+    keepScreenAwake();   // Bildschirm im Kiosk-Betrieb anhalten (Anzeige ohne Interaktion)
+
+    // Auto-Fit + Overscan: Inhalt immer komplett einpassen; Rand kommt aus system/tvSettings.
+    let overscanPct = 3;
+    const refit = startTvAutofit(document.getElementById('tv-stage'), () => overscanPct);
+    onValue(ref(db, 'system/tvSettings'), (snap) => {
+      const p = snap.val() && Number(snap.val().overscanPct);
+      overscanPct = Number.isFinite(p) ? p : 3;
+      refit();
+    });
+
+    // CueDesk: Umschaltung am Turnierbildschirm ("TV zeigt"). Die Seiten liegen
+    // bei CueDesk alle im Ordner scoreboards.
+    const PAGE_FOR = { auslosung: 'tv-Auslosung.html', live: 'tv.html', results: 'tv-Turnier-Ergebnis.html' };
+    onValue(ref(db, 'tournament/tvView'), (snap) => {
+      const target = PAGE_FOR[snap.val()] || 'tv.html';
+      if (target !== 'tv-Turnier-Ergebnis.html') window.location.href = target;
+    });
+
+    const titleEl = document.getElementById('title');
+    const subEl   = document.getElementById('sub');
+    const contentEl = document.getElementById('content');
+    const emptyEl = document.getElementById('empty');
+
+    function medal(p) { return p === 1 ? '🥇' : p === 2 ? '🥈' : p === 3 ? '🥉' : ('<strong>' + p + '.</strong>'); }
+
+    onValue(ref(db, 'tournament_archive'), (snap) => {
+      const data = snap.val();
+      if (!data) {
+        titleEl.innerHTML = '🏆 Turnier-Ergebnis';
+        subEl.textContent = '';
+        contentEl.innerHTML = '';
+        emptyEl.style.display = 'block';
+        refit();
+        return;
+      }
+      emptyEl.style.display = 'none';
+
+      // Neuestes Turnier (groesster endedAt)
+      const t = Object.values(data).sort((a, b) => (b.endedAt || 0) - (a.endedAt || 0))[0];
+
+      titleEl.innerHTML = `🏆 <span class="highlight">${esc(t.type || '')}</span> · ${esc(t.discipline || '')} (Race to ${t.raceTo || ''})`;
+      subEl.textContent = 'Turnier am ' + (t.date || '');
+
+      let html = '';
+
+      // Endplatzierung
+      if (t.finalPlacement) {
+        const rows = Object.values(t.finalPlacement).map(e =>
+          `<tr><td class="medal">${medal(e.place)}</td><td class="left">${esc(e.name)}</td><td class="res">${e.score || ''}</td></tr>`
+        ).join('');
+        html += `<h2 class="sec">🏆 Endplatzierung</h2>
+          <table><thead><tr><th>Platz</th><th class="left">Spieler</th><th class="res">Ergebnis</th></tr></thead>
+          <tbody>${rows}</tbody></table>`;
+      }
+
+      // Gruppen-Ergebnisse nur zeigen, wenn es KEINE Endplatzierung gibt
+      // (Einzelgruppe / Jeder gegen jeden). Bei Finalrunde/KO ist die
+      // Endplatzierung bereits das vollstaendige Ergebnis -> Gruppen weglassen.
+      if (!t.finalPlacement) {
+        const groups = t.groups || {};
+        const groupKeys = Object.keys(groups);
+        groupKeys.forEach(g => {
+          const arrG = groups[g] ? Object.values(groups[g]) : [];
+          const rows = arrG.map((p, i) => {
+            const diff = (p.plus || 0) - (p.minus || 0);
+            return `<tr><td class="medal">${medal(i + 1)}</td><td class="left">${esc(p.name)}</td><td>${p.games || 0}</td>`
+              + `<td>${p.wins || 0}</td><td>${p.losses || 0}</td>`
+              + `<td>${p.plus || 0} : ${p.minus || 0} (${diff > 0 ? '+' + diff : diff})</td></tr>`;
+          }).join('');
+          const label = groupKeys.length > 1 ? ('Gruppe ' + g) : 'Rangliste';
+          html += `<h2 class="sec">👥 ${label}</h2>
+            <table><thead><tr><th>Platz</th><th class="left">Spieler</th><th>Spiele</th><th>Siege</th><th>Niederlagen</th><th>Kugeln / Punkte (Diff.)</th></tr></thead>
+            <tbody>${rows}</tbody></table>`;
+        });
+      }
+
+      contentEl.innerHTML = html;
+      refit();
+    });
+  </script>
+
+</body>
+</html>

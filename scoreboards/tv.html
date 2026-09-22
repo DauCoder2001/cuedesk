@@ -139,8 +139,13 @@
       refit();
     });
 
-    // CueDesk: Die automatische Umschaltung je nach Turnierphase kommt mit den
-    // Turnieren (Stufe 5).
+    // CueDesk: Umschaltung am Turnierbildschirm ("TV zeigt"). Die Seiten liegen
+    // bei CueDesk alle im Ordner scoreboards.
+    const PAGE_FOR = { auslosung: 'tv-Auslosung.html', live: 'tv.html', results: 'tv-Turnier-Ergebnis.html' };
+    onValue(ref(db, 'tournament/tvView'), (snap) => {
+      const target = PAGE_FOR[snap.val()] || 'tv.html';
+      if (target !== 'tv.html') window.location.href = target;
+    });
 
     // Turnierstatus mitlesen -> "Freies Spiel"-Badge waehrend eines Turniers
     let tournamentRunning = false;

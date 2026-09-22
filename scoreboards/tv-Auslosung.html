@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CueDesk – Auslosung</title>
+  <link rel="icon" type="image/svg+xml" href="./img/favicon.svg">
+  <style>
+    /* ==========================================================================
+       EDLES SMART-TV DESIGN (wie die TV-Ansicht in Turnier_Vorbereitung.html)
+       ========================================================================== */
+    * { box-sizing: border-box; }
+    body {
+      font-family: Arial, sans-serif; background: #111; color: #fff;
+      margin: 0; height: 100vh; overflow: hidden;
+    }
+    /* Auto-Fit: der Inhalt in #tv-stage wird per JS passend auf den Bildschirm skaliert */
+    #tv-viewport { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }
+    #tv-stage { width: 100vw; padding: 3vh 2vw; transform-origin: center center; }
+    .tv-title {
+      text-align: center; color: #888; font-size: 3.5vh; margin: 0 0 10px;
+      font-weight: bold; text-transform: uppercase; letter-spacing: 2px;
+    }
+    .tv-title .highlight { color: #38bdf8; }
+    .tv-subtitle { text-align: center; color: #aaa; font-size: 2.5vh; margin-bottom: 30px; }
+
+    .tv-grid { display: grid; gap: 20px; box-sizing: border-box; }
+    .layout-single-group { grid-template-columns: 1fr; max-width: 700px; margin: 0 auto; }
+    .layout-two-groups  { grid-template-columns: 1fr 1fr; }
+    .layout-four-groups { grid-template-columns: 1fr 1fr; }
+
+    .table-card {
+      background: #222; border-radius: 15px; padding: 25px; display: flex;
+      flex-direction: column; box-shadow: 0 4px 10px rgba(0,0,0,0.5); border: 1px solid #333;
+    }
+    .table-title {
+      font-size: 3.5vh; color: #fff; margin-bottom: 15px; font-weight: bold;
+      display: flex; justify-content: space-between; align-items: center;
+      border-bottom: 2px solid #333; padding-bottom: 12px;
+    }
+    .game-badge { font-size: 2vh; background: #e67e22; padding: 4px 12px; border-radius: 8px; color: #fff; font-weight: bold; }
+
+    .tv-player-list { list-style: none; padding: 0; margin: 0; }
+    .tv-player-list li {
+      font-size: 3.8vh; font-weight: bold; padding: 10px 18px; margin-bottom: 8px;
+      background: #1a1a1a; border-radius: 10px; display: flex; align-items: center;
+      border-left: 8px solid #4488ff;
+    }
+    .tv-player-list li:nth-child(even) { border-left-color: #ff4444; }
+
+    .empty { text-align: center; color: #666; font-size: 4vh; margin-top: 18vh; }
+  </style>
+</head>
+<body>
+
+  <div id="tv-viewport"><div id="tv-stage">
+    <div class="tv-title" id="title">📺 Gruppen-Auslosung</div>
+    <div class="tv-subtitle" id="subtitle"></div>
+    <div class="tv-grid" id="grid"></div>
+    <div class="empty" id="empty" style="display:none;">Warte auf Auslosung…</div>
+  </div></div>
+
+  <script type="module">
+    // CueDesk: liest das laufende Turnier ueber die Anbindung und zeigt die
+    // Teilnehmer in Startnummern-Reihenfolge.
+    import { db, ref, onValue, starten } from "./js/anbindung.ts";
+    import { keepScreenAwake } from "./js/wake-lock.js";
+    import { startTvAutofit } from "./js/tv-autofit.js";
+
+    await starten();
+
+    // Namen kommen aus CueDesk - nie als HTML einsetzen
+    const esc = (t) => String(t == null ? '' : t).replace(/[&<>"]/g, (c) =>
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+    keepScreenAwake();   // Bildschirm im Kiosk-Betrieb anhalten (Anzeige ohne Interaktion)
+
+    // Auto-Fit + Overscan: Inhalt immer komplett einpassen; Rand kommt aus system/tvSettings.
+    let overscanPct = 3;
+    const refit = startTvAutofit(document.getElementById('tv-stage'), () => overscanPct);
+    onValue(ref(db, 'system/tvSettings'), (snap) => {
+      const p = snap.val() && Number(snap.val().overscanPct);
+      overscanPct = Number.isFinite(p) ? p : 3;
+      refit();
+    });
+
+    // CueDesk: Umschaltung am Turnierbildschirm ("TV zeigt"). Die Seiten liegen
+    // bei CueDesk alle im Ordner scoreboards.
+    const PAGE_FOR = { auslosung: 'tv-Auslosung.html', live: 'tv.html', results: 'tv-Turnier-Ergebnis.html' };
+    onValue(ref(db, 'tournament/tvView'), (snap) => {
+      const target = PAGE_FOR[snap.val()] || 'tv.html';
+      if (target !== 'tv-Auslosung.html') window.location.href = target;
+    });
+
+    const titleEl = document.getElementById('title');
+    const subEl   = document.getElementById('subtitle');
+    const gridEl  = document.getElementById('grid');
+    const emptyEl = document.getElementById('empty');
+
+    // CueDesk: Einzelgruppe, die Tische waehlen die Spieler am Tablet selbst
+    function tableBadge(mode, g) {
+      if (mode === 'single') return 'alle Tische';
+      if (mode === 'four') return 'Tisch ' + g;
+      if (mode === 'two')  return g === 1 ? 'Tisch 1 & 2' : 'Tisch 3 & 4';
+      return 'Tisch 1 & 2';
+    }
+    function groupLabel(mode, g) { return mode === 'single' ? 'Hauptgruppe' : ('Gruppe ' + g); }
+    function layoutClass(n) { return n === 4 ? 'layout-four-groups' : (n === 2 ? 'layout-two-groups' : 'layout-single-group'); }
+
+    onValue(ref(db, 'tournament/active'), (snap) => {
+      const t = snap.val();
+      if (!t || !t.players) {
+        titleEl.innerHTML = '📺 Gruppen-Auslosung';
+        subEl.textContent = '';
+        gridEl.innerHTML = '';
+        emptyEl.style.display = 'block';
+        refit();
+        return;
+      }
+      emptyEl.style.display = 'none';
+
+      const numGroups = t.mode === 'four' ? 4 : (t.mode === 'two' ? 2 : 1);
+
+      // Spieler nach Gruppe sammeln (Reihenfolge der Auslosung bleibt erhalten)
+      const groups = {};
+      for (let g = 1; g <= numGroups; g++) groups[g] = [];
+      Object.values(t.players).forEach(p => { if (groups[p.group]) groups[p.group].push(p.name); });
+
+      // Kopfzeile
+      titleEl.innerHTML = `📺 Auslosung — <span class="highlight">${esc(t.discipline || '')}</span> (Race to ${t.raceTo || ''})`;
+      // Symbol aus dem am Turnier eingefrorenen Schalter, nicht aus dem Namen -
+      // sonst bekaeme eine selbst angelegte Art immer die Medaille.
+      let sub = `🏆 ${esc(t.type || '')}`;
+      if (t.eventDate) sub += ` &nbsp;&nbsp;📅 ${t.eventDate}`;
+      if (t.startTime) sub += ` &nbsp;&nbsp;⏰ Start: ${t.startTime} Uhr`;
+      subEl.innerHTML = sub;
+
+      // Gruppen-Raster
+      gridEl.className = 'tv-grid ' + layoutClass(numGroups);
+      let html = '';
+      for (let g = 1; g <= numGroups; g++) {
+        const lis = groups[g].map(n => `<li>${esc(n)}</li>`).join('');
+        html += `<div class="table-card">
+            <div class="table-title">
+              <span>👥 ${groupLabel(t.mode, g)}</span>
+              <span class="game-badge">${tableBadge(t.mode, g)}</span>
+            </div>
+            <ul class="tv-player-list">${lis}</ul>
+          </div>`;
+      }
+      gridEl.innerHTML = html;
+      refit();
+    });
+  </script>
+
+</body>
+</html>
