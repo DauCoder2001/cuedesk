@@ -617,7 +617,7 @@ async function turnierLaden(): Promise<void> {
   const [partienAntwort, personenAntwort, tischAntwort, teilnehmerAntwort] = await Promise.all([
     v.supabase
       .from('partien')
-      .select('id, spieler_a, spieler_b, race_to, vorgabe_a, vorgabe_b, ergebnis_a, ergebnis_b, status, tisch_id, runde, begonnen')
+      .select('id, spieler_a, spieler_b, race_to, vorgabe_a, vorgabe_b, ergebnis_a, ergebnis_b, status, tisch_id, runde, gruppe, phase, begonnen')
       .eq('turnier_id', t.id)
       .order('runde')
       .order('paarung'),

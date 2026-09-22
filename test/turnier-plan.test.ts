@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { ergebnisVomTablet, planStatus, tabletSpielplan, tvErgebnis } from '../scoreboards/js/turnier-plan';
+import { abschnittName, ergebnisVomTablet, planStatus, tabletSpielplan, tvErgebnis } from '../scoreboards/js/turnier-plan';
 import type { PlanPartie } from '../scoreboards/js/turnier-plan';
 
 const namen: Record<string, string> = { s: 'Sven', k: 'Kai', o: 'Olli', g: 'Gerd' };
@@ -38,6 +38,12 @@ describe('Spielplan fuer das Tablet', () => {
     expect(plan.p1).toMatchObject({ player1: 'Sven', player2: 'Kai', status: 'pending', vorgabe1: 0, vorgabe2: 2, group: 'Runde 1' });
     expect(plan.p2).toMatchObject({ status: 'running', table: '2', startedAt: Date.parse('2026-09-22T18:00:00Z') });
   });
+});
+
+test('Beschriftung mit Gruppe und Phase 2', () => {
+  expect(abschnittName({ runde: 2, gruppe: 'B', phase: 'gruppe' })).toBe('Gruppe B · Runde 2');
+  expect(abschnittName({ runde: null, gruppe: null, phase: 'phase2' })).toBe('Phase 2');
+  expect(abschnittName({ runde: 3 })).toBe('Runde 3');
 });
 
 describe('Ergebnis vom Tablet', () => {

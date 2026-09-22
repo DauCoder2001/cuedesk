@@ -32,7 +32,10 @@ export const STATUS_TEXT: Record<TurnierStatus, string> = {
 
 // Was ein Turnier in turniere.einstellungen mitbringt
 export type TurnierEinstellungen = {
-  raceTo?: number;
+  raceTo?: number; // Einzelgruppe und Gruppenphase
+  racePhase2?: number; // Zwei Gruppen: Platzierungsduelle
+  phase2?: { A: string[]; B: string[] }; // Zwei Gruppen: beim Start von Phase 2 fixierte Gruppenreihenfolge
+  tausch?: { raus: string; rein: string; von: string; nach: string; zeit: string }[]; // Gruppentausch von Hand
   vorgabe?: { aktiv: boolean; staerke: number; obergrenze: number };
   handReihenfolge?: Record<string, number[]>;
   pausiert?: boolean; // Tablets starten keine neuen Spiele
@@ -56,7 +59,9 @@ export default function Turniere() {
   const [name, setName] = useState('');
   const [datum, setDatum] = useState(heute());
   const [disziplin, setDisziplin] = useState<Disziplin>('9-ball');
+  const [modus, setModus] = useState<TurnierModus>('einzelgruppe');
   const [raceTo, setRaceTo] = useState('5');
+  const [racePhase2, setRacePhase2] = useState('5');
   const [serieId, setSerieId] = useState('');
   const [vorgabeAn, setVorgabeAn] = useState(true);
   const [staerke, setStaerke] = useState('75');
@@ -85,9 +90,14 @@ export default function Turniere() {
     setFehler(null);
     const race = Number(raceTo);
     if (!name.trim()) return setFehler('Bitte einen Namen eingeben.');
+    const race2 = Number(racePhase2);
     if (!Number.isInteger(race) || race < 1 || race > 25) return setFehler('Race to zwischen 1 und 25.');
+    if (modus === 'zwei-gruppen' && (!Number.isInteger(race2) || race2 < 1 || race2 > 25)) {
+      return setFehler('Race to für Phase 2 zwischen 1 und 25.');
+    }
     const einstellungen: TurnierEinstellungen = {
       raceTo: race,
+      ...(modus === 'zwei-gruppen' ? { racePhase2: race2 } : {}),
       vorgabe: {
         aktiv: vorgabeAn,
         staerke: Math.min(100, Math.max(0, Number(staerke) || 0)),
@@ -101,7 +111,7 @@ export default function Turniere() {
         name: name.trim(),
         datum,
         disziplin,
-        modus: 'einzelgruppe',
+        modus,
         serie_id: serieId || null,
         status: 'geplant',
         rating_werten: ratingWerten,
@@ -144,7 +154,7 @@ export default function Turniere() {
 
         {formular && (
           <div className="kasten">
-            <div className="feldkopf">Neues Turnier (Einzelgruppe, jeder gegen jeden)</div>
+            <div className="feldkopf">Neues Turnier</div>
             <div className="felder">
               <label className="feld">
                 <span>Name</span>
@@ -163,9 +173,22 @@ export default function Turniere() {
                 </select>
               </label>
               <label className="feld">
-                <span>Race to</span>
+                <span>Modus</span>
+                <select value={modus} onChange={(e) => setModus(e.target.value as TurnierModus)}>
+                  <option value="einzelgruppe">Einzelgruppe (jeder gegen jeden)</option>
+                  <option value="zwei-gruppen">Zwei Gruppen mit Platzierungsduellen</option>
+                </select>
+              </label>
+              <label className="feld">
+                <span>{modus === 'zwei-gruppen' ? 'Race to Gruppenphase' : 'Race to'}</span>
                 <input inputMode="numeric" value={raceTo} onChange={(e) => setRaceTo(e.target.value)} />
               </label>
+              {modus === 'zwei-gruppen' && (
+                <label className="feld">
+                  <span>Race to Phase 2</span>
+                  <input inputMode="numeric" value={racePhase2} onChange={(e) => setRacePhase2(e.target.value)} />
+                </label>
+              )}
               <label className="feld">
                 <span>Serie</span>
                 <select value={serieId} onChange={(e) => setSerieId(e.target.value)}>

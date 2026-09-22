@@ -17,6 +17,8 @@ export type PlanPartie = {
   tisch_id: string | null;
   runde: number | null;
   begonnen: string | null;
+  gruppe?: string | null; // Zwei Gruppen: A oder B
+  phase?: string | null; // 'gruppe' oder 'phase2'
 };
 
 // Ein Eintrag, wie ihn das Scoreboard kennt
@@ -65,6 +67,13 @@ export function planStatus(p: Pick<PlanPartie, 'status' | 'tisch_id'>): PlanEint
   return 'pending';
 }
 
+// Beschriftung am Tablet: Runde, bei Gruppen mit Gruppe, Platzierungsduelle als Phase 2
+export function abschnittName(p: Pick<PlanPartie, 'runde' | 'gruppe' | 'phase'>): string {
+  if (p.phase === 'phase2') return 'Phase 2';
+  const runde = p.runde ? `Runde ${p.runde}` : '';
+  return p.gruppe ? `Gruppe ${p.gruppe}${runde ? ` · ${runde}` : ''}` : runde;
+}
+
 export function tabletSpielplan(
   partien: PlanPartie[],
   name: (personId: string) => string,
@@ -81,7 +90,7 @@ export function tabletSpielplan(
       table: p.tisch_id ? tischNummer(p.tisch_id) : null,
       startedAt: p.begonnen ? Date.parse(p.begonnen) : null,
       raceTo: p.race_to,
-      group: p.runde ? `Runde ${p.runde}` : '',
+      group: abschnittName(p),
       vorgabe1: p.vorgabe_a,
       vorgabe2: p.vorgabe_b
     };
