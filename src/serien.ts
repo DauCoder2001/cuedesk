@@ -39,6 +39,8 @@ export type SerienSpieler = {
   gewertet: number;
   ergebnisse: Record<string, SerienErgebnisEintrag>;
   plaetze: Record<number, number>;
+  platz: number; // Punktgleiche teilen sich einen Platz
+  zeigePlatz: boolean; // nur beim ersten der Punktgleichen anzeigen
 };
 
 export function punkteFuer(platz: number, teilnehmer: number, bonus: number): number {
@@ -68,7 +70,9 @@ export function serienwertung(
             gespielt: 0,
             gewertet: 0,
             ergebnisse: {},
-            plaetze: {}
+            plaetze: {},
+            platz: 0,
+            zeigePlatz: true
           } as SerienSpieler);
         spieler.set(platzierung.spieler, eintrag);
 
@@ -114,6 +118,15 @@ export function serienwertung(
       if (x !== y) return y - x;
     }
     return name(a.spieler).localeCompare(name(b.spieler), 'de');
+  });
+
+  // Platzziffern wie in v15: punktgleiche Spieler teilen sich einen Platz
+  let platz = 0;
+  liste.forEach((sp, i) => {
+    const neu = i === 0 || sp.summe !== liste[i - 1].summe;
+    if (neu) platz = i + 1;
+    sp.platz = platz;
+    sp.zeigePlatz = neu;
   });
 
   return liste;

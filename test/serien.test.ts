@@ -64,6 +64,10 @@ describe('Wertung einer Serie', () => {
     const c = liste.find((s) => s.spieler === 'C')!;
     expect(b.summe).toBe(c.summe);
     expect(liste.indexOf(b)).toBeLessThan(liste.indexOf(c));
+    // wie v15: gleiche Summe heisst gleicher Platz, die Ziffer steht nur einmal
+    expect(b.platz).toBe(c.platz);
+    expect(b.zeigePlatz).toBe(true);
+    expect(c.zeigePlatz).toBe(false);
   });
 
   test('doppelte Platzierung: die bessere zaehlt', () => {
