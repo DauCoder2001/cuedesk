@@ -88,7 +88,8 @@ button:disabled { cursor: default; color: var(--text-leise); }
 .chip { font-size: 12px; padding: 3px 9px; color: var(--text-leise); }
 .chip.aktiv { background: var(--akzent-hell); color: var(--akzent); border-color: var(--akzent-hell); }
 
-.liste ul { list-style: none; margin: 0; padding: 0; flex: 1; }
+/* Die Namensliste scrollt in sich, damit das Formular rechts im Bild bleibt */
+.liste ul { list-style: none; margin: 0; padding: 0; flex: 1; min-height: 0; max-height: 65vh; overflow-y: auto; }
 .liste li { border-bottom: 1px solid var(--rand); }
 .liste li.hinweis { padding: 12px; border-bottom: none; }
 
@@ -125,6 +126,7 @@ button:disabled { cursor: default; color: var(--text-leise); }
 @media (max-width: 760px) {
   .zweispaltig { grid-template-columns: minmax(0, 1fr); }
   .liste { border-right: none; border-bottom: 1px solid var(--rand); }
+  .liste ul { max-height: 45vh; }
 }
 
 /* Schmale Bildschirme: Verein, Konto und Reiter untereinander */
