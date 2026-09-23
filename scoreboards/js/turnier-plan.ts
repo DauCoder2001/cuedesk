@@ -81,10 +81,11 @@ const KO_NAME: Record<string, (id: string) => string> = {
   bro: () => 'Spiel um Platz 3'
 };
 
-// Beschriftung am Tablet: Runde, bei Gruppen mit Gruppe, Platzierungsduelle als Phase 2
+// Beschriftung am Tablet: Runde, bei Gruppen mit Gruppe, dazu die
+// Platzierungsrunden der Modi "Zwei Gruppen" und "Gruppen mit KO"
 export function abschnittName(p: Pick<PlanPartie, 'runde' | 'gruppe' | 'phase'>): string {
-  if (p.phase === 'phase2') return 'Phase 2';
-  if (p.phase === 'phase3') return 'Phase 3';
+  if (p.phase === 'phase2') return 'Platzierungsduelle';
+  if (p.phase === 'phase3') return 'Platzierungsspiele';
   if (p.phase === 'ko') return KO_NAME[(p.gruppe ?? '').replace(/\d+$/, '')]?.(p.gruppe ?? '') ?? 'KO-Runde';
   const runde = p.runde ? `Runde ${p.runde}` : '';
   return p.gruppe ? `Gruppe ${p.gruppe}${runde ? ` · ${runde}` : ''}` : runde;

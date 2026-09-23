@@ -147,7 +147,7 @@ export default function Turniere() {
     const race2 = Number(racePhase2);
     if (!Number.isInteger(race) || race < 1 || race > 25) return setFehler('Race to zwischen 1 und 25.');
     if (modus === 'zwei-gruppen' && (!Number.isInteger(race2) || race2 < 1 || race2 > 25)) {
-      return setFehler('Race to für Phase 2 zwischen 1 und 25.');
+      return setFehler('Race to für die Platzierungsduelle zwischen 1 und 25.');
     }
     const ko = Object.fromEntries(Object.entries(raceKo).map(([k, v]) => [k, Number(v)]));
     if (modus === 'gruppen-ko' && Object.values(ko).some((x) => !Number.isInteger(x) || x < 1 || x > 25)) {
@@ -372,7 +372,7 @@ export default function Turniere() {
               )}
               {modus === 'zwei-gruppen' && (
                 <label className="feld">
-                  <span>Race to Phase 2</span>
+                  <span>Race to Platzierungsduelle</span>
                   <input inputMode="numeric" value={racePhase2} onChange={(e) => setRacePhase2(e.target.value)} />
                 </label>
               )}
@@ -383,7 +383,7 @@ export default function Turniere() {
                     ['QF', 'Race to Viertelfinale'],
                     ['SF', 'Race to Halbfinale und Platz 3'],
                     ['FIN', 'Race to Finale'],
-                    ['P3', 'Race to Phase 3']
+                    ['P3', 'Race to Platzierungsspiele']
                   ] as const
                 ).map(([k, text]) => (
                   <label key={k} className="feld">

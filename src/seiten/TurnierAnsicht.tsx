@@ -359,9 +359,9 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
       const r = p.runde ?? 0;
       const [schluessel, zeile, titel, ordnung] =
         p.phase === 'phase2'
-          ? ['P2', 'P2', 'Phase 2', 'Z']
+          ? ['P2', 'P2', 'Platzierungsduelle', 'Z']
           : p.phase === 'phase3'
-            ? ['P3', 'P3', 'Phase 3', 'Z3']
+            ? ['P3', 'P3', 'Platzierungsspiele', 'Z3']
             : p.phase === 'ko'
               ? [`K${r}`, 'KO', KO_ABSCHNITT[(p.gruppe ?? '').replace(/\d+$/, '')] ?? 'KO', `Y${r}`]
               : p.gruppe
@@ -702,7 +702,7 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
     const bloecke: BerichtBlock[] = [];
     let kopf: string;
     if (zwei) {
-      kopf = `Zwei-Gruppen-Modus · ${DISZIPLIN_TEXT[turnier.disziplin]} · Race to ${raceTo} (Gruppenphase) / ${race2} (Phase 2) · ${aufstellung.length} Teilnehmer · ${datumText}${zeit}${handicap}`;
+      kopf = `Zwei-Gruppen-Modus · ${DISZIPLIN_TEXT[turnier.disziplin]} · Race to ${raceTo} (Gruppenphase) / ${race2} (Platzierungsduelle) · ${aufstellung.length} Teilnehmer · ${datumText}${zeit}${handicap}`;
       if (einstellungen.phase2) {
         bloecke.push({
           art: 'tabelle',
@@ -724,7 +724,7 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
         });
         bloecke.push({
           art: 'tabelle',
-          titel: `Phase 2 - Platzierungsduelle (Race to ${race2})`,
+          titel: `Platzierungsduelle (Race to ${race2})`,
           neueSeite: true,
           spalten: [
             { text: 'Spieler 1', align: 'rechts' },
@@ -792,7 +792,7 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
         if (p3) {
           bloecke.push({
             art: 'tabelle',
-            titel: 'Phase 3 - Platzierungsspiele',
+            titel: 'Platzierungsspiele',
             spalten: [
               { text: 'Spiel', align: 'mitte' },
               { text: 'Spieler 1', align: 'rechts' },
@@ -978,8 +978,8 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
       if (zwei) {
         hinweis +=
           gruppen.A.length === gruppen.B.length
-            ? `\n\nWarnung: Die Gruppen waren gleich groß. ${name} vergrößert Gruppe A, dadurch hat der Letzte der Gruppe A in Phase 2 keinen Gegner (spielfrei, letzter Platz). Ein weiterer Nachzügler in Gruppe B würde das wieder ausgleichen.`
-            : '\n\nDamit wird das Phase-2-Freilos gefüllt: Der bisher gegnerlose Spieler der Gruppe A bekommt in Phase 2 ein Duell.';
+            ? `\n\nWarnung: Die Gruppen waren gleich groß. ${name} vergrößert Gruppe A, dadurch hat der Letzte der Gruppe A bei den Platzierungsduellen keinen Gegner (spielfrei, letzter Platz). Ein weiterer Nachzügler in Gruppe B würde das wieder ausgleichen.`
+            : '\n\nDamit wird das Freilos gefüllt: Der bisher gegnerlose Spieler der Gruppe A bekommt ein Platzierungsduell.';
       } else {
         const nachher = gruppenNamen.map((g) => (gruppen[g]?.length ?? 0) + (g === ziel ? 1 : 0));
         if (Math.max(...nachher) - Math.min(...nachher) > 1) {
@@ -1102,7 +1102,7 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
   async function phase2Starten() {
     if (!turnier) return;
     if (offeneGruppenspiele > 0) {
-      return setFehler(`Phase 2 kann noch nicht starten: ${offeneGruppenspiele} Gruppenspiele sind nicht beendet.`);
+      return setFehler(`Die Platzierungsduelle können noch nicht starten: ${offeneGruppenspiele} Gruppenspiele sind nicht beendet.`);
     }
     const offen = offeneStichkaempfe();
     if (
@@ -1113,7 +1113,7 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
       ))
     )
       return;
-    if (offen === 0 && !(await fragen('Phase 2 starten? Die Gruppenplätze werden fixiert.', 'Phase 2 starten'))) return;
+    if (offen === 0 && !(await fragen('Platzierungsduelle starten? Die Gruppenplätze werden fixiert.', 'Duelle starten'))) return;
     setArbeitet(true);
     const reihe = (g: string) => gruppenTabellen[g].zeilen.map((z) => aufstellung[z.pos].person_id);
     const p2 = { A: reihe('A'), B: reihe('B') };
@@ -1148,7 +1148,7 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
 
   async function phase2Zuruecksetzen() {
     if (!turnier) return;
-    const frage = 'Phase 2 zurücksetzen? Die Duell-Ergebnisse gehen verloren, die Gruppenphase bleibt erhalten.';
+    const frage = 'Platzierungsduelle zurücksetzen? Die Ergebnisse gehen verloren, die Gruppenphase bleibt erhalten.';
     if (!(await fragen(frage, 'Zurücksetzen'))) return;
     const { error } = await supabase.from('partien').delete().eq('turnier_id', turnier.id).eq('phase', 'phase2');
     if (error) return setFehler(error.message);
@@ -1156,7 +1156,7 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
     delete neu.phase2;
     await supabase.from('turniere').update({ einstellungen: neu }).eq('id', turnier.id);
     setAbschnitt(null);
-    setMeldung('Phase 2 zurückgesetzt.');
+    setMeldung('Platzierungsduelle zurückgesetzt.');
     await laden();
   }
 
@@ -1258,7 +1258,7 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
 
   async function koZuruecksetzen() {
     if (!turnier) return;
-    const frage = 'KO-Runde zurücksetzen? Setzliste und alle KO-Ergebnisse gehen verloren, Phase 3 ebenso. Die Gruppenphase bleibt erhalten.';
+    const frage = 'KO-Runde zurücksetzen? Setzliste und alle KO-Ergebnisse gehen verloren, die Platzierungsspiele ebenso. Die Gruppenphase bleibt erhalten.';
     if (!(await fragen(frage, 'Zurücksetzen'))) return;
     const { error } = await supabase.from('partien').delete().eq('turnier_id', turnier.id).in('phase', ['ko', 'phase3']);
     if (error) return setFehler(error.message);
@@ -1275,10 +1275,10 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
   async function phase3Starten() {
     if (!turnier || !koFest) return;
     const rest = nichtQualifiziert(gruppenListen, koFest.seeds);
-    if (rest.length < 2) return setFehler('Für Phase 3 werden mindestens zwei Spieler benötigt, die die KO-Runde nicht erreicht haben.');
+    if (rest.length < 2) return setFehler('Für die Platzierungsspiele werden mindestens zwei Spieler benötigt, die die KO-Runde nicht erreicht haben.');
     const abPlatz = koFest.gruppenzahl * koFest.weiter + 1;
-    const frage = `Phase 3 starten? Sie spielt die Plätze ${abPlatz} bis ${abPlatz + rest.length - 1} aus (Race to ${race3}).`;
-    if (!(await fragen(frage, 'Phase 3 starten'))) return;
+    const frage = `Platzierungsspiele starten? Sie spielen die Plätze ${abPlatz} bis ${abPlatz + rest.length - 1} aus (Race to ${race3}).`;
+    if (!(await fragen(frage, 'Spiele starten'))) return;
     setArbeitet(true);
     const reihung = nachGruppenleistung(rest, leistung, ordnung);
     const werte = ratingWerte();
@@ -1312,7 +1312,7 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
 
   async function phase3Zuruecksetzen() {
     if (!turnier) return;
-    const frage = 'Phase 3 zurücksetzen? Die Ergebnisse der Platzierungsspiele gehen verloren. Die unteren Plätze werden danach wieder aus der Gruppenwertung berechnet.';
+    const frage = 'Platzierungsspiele zurücksetzen? Die Ergebnisse gehen verloren. Die unteren Plätze werden danach wieder aus der Gruppenwertung berechnet.';
     if (!(await fragen(frage, 'Zurücksetzen'))) return;
     const { error } = await supabase.from('partien').delete().eq('turnier_id', turnier.id).eq('phase', 'phase3');
     if (error) return setFehler(error.message);
@@ -1320,13 +1320,13 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
     delete neu.phase3;
     await supabase.from('turniere').update({ einstellungen: neu }).eq('id', turnier.id);
     setAbschnitt(null);
-    setMeldung('Phase 3 zurückgesetzt.');
+    setMeldung('Platzierungsspiele zurückgesetzt.');
     await laden();
   }
 
   async function abschliessen() {
     if (!turnier) return;
-    if (zwei && !einstellungen.phase2) return setFehler('Zuerst Phase 2 starten und ausspielen.');
+    if (zwei && !einstellungen.phase2) return setFehler('Zuerst die Platzierungsduelle starten und ausspielen.');
     if (mitKo && !(baum?.fin.fertig && baum.bro.fertig)) return setFehler('Zuerst die KO-Runde bis zum Finale ausspielen.');
     if (offeneSpiele > 0) return setFehler(`Es sind noch ${offeneSpiele} Spiele offen.`);
     const offen = mehrgruppig ? [] : tabelle.gleichstaende.filter((g) => !g.entschieden);
@@ -1490,7 +1490,7 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
               · {DISZIPLIN_TEXT[turnier.disziplin]} · {MODUS_TEXT[turnier.modus]}
               {turnier.quelle !== 'import' &&
                 (zwei
-                  ? ` · Race to ${raceTo}, Phase 2 Race to ${race2}`
+                  ? ` · Race to ${raceTo}, Duelle Race to ${race2}`
                   : mitKo
                     ? ` · Race to ${raceTo}, KO ${raceFuer('QF')}/${raceFuer('SF')}/${raceFuer('FIN')}`
                     : ` · Race to ${raceTo}`)}
@@ -1855,7 +1855,9 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
           {mehrgruppig ? (
             <>
               {gruppenGesperrt && (
-                <p className="hinweis">Die Gruppenspiele sind gesperrt, weil in der Folgephase schon gespielt wird.</p>
+                <p className="hinweis">
+                  Die Gruppenspiele sind gesperrt, weil {zwei ? 'die Platzierungsduelle schon laufen' : 'die KO-Runde schon läuft'}.
+                </p>
               )}
               <div className="turnierzweier">
                 {gruppenNamen.map((g) => (
@@ -1876,7 +1878,7 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
                       {offenInGruppe(g) > 0
                         ? `Noch ${offenInGruppe(g)} Spiele offen. Ein Stichkampf wird erst angeboten, wenn alle Spiele der Gruppe beendet sind.`
                         : fixiert
-                          ? `Gruppenplätze für ${zwei ? 'Phase 2' : 'die KO-Runde'} fixiert.`
+                          ? `Gruppenplätze für ${zwei ? 'die Platzierungsduelle' : 'die KO-Runde'} fixiert.`
                           : 'Reihenfolge: Punkte, Satzdifferenz, direkter Vergleich, danach Stichkampf.'}
                     </p>
                   </section>
@@ -1886,23 +1888,23 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
               {zwei && (
               <section className="block">
                 <div className="bearbeitenkopf">
-                  <h2>Phase 2: Platzierungsduelle (Race to {race2})</h2>
+                  <h2>Platzierungsduelle (Race to {race2})</h2>
                   {bearbeitbar && !einstellungen.phase2 && (
                     <button type="button" onClick={() => void phase2Starten()} disabled={arbeitet || offeneGruppenspiele > 0}>
-                      Phase 2 starten
+                      Duelle starten
                     </button>
                   )}
                   {bearbeitbar && einstellungen.phase2 && (
                     <button type="button" className="gefahrknopf" onClick={() => void phase2Zuruecksetzen()}>
-                      Phase 2 zurücksetzen
+                      Duelle zurücksetzen
                     </button>
                   )}
                 </div>
                 {!einstellungen.phase2 ? (
                   <p className="hinweis">
                     {offeneGruppenspiele > 0
-                      ? `Noch ${offeneGruppenspiele} Gruppenspiele nicht beendet. Phase 2 kann erst danach starten.`
-                      : 'Alle Gruppenspiele beendet. Phase 2 fixiert die Gruppenplätze: A1 gegen B1, A2 gegen B2 und so fort.'}
+                      ? `Noch ${offeneGruppenspiele} Gruppenspiele nicht beendet. Die Duelle können erst danach starten.`
+                      : 'Alle Gruppenspiele beendet. Der Start fixiert die Gruppenplätze: A1 gegen B1, A2 gegen B2 und so fort.'}
                   </p>
                 ) : (
                   <>
@@ -1934,7 +1936,7 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
                     </table>
                     <p className="hinweis">
                       Sieger von Duell 1 ist Platz 1, Verlierer Platz 2, Sieger von Duell 2 Platz 3 und so fort. Die
-                      Duelle stehen im Spielplan unter „Phase 2“.
+                      Duelle stehen im Spielplan unter „Platzierungsduelle“.
                     </p>
                   </>
                 )}
@@ -1999,28 +2001,28 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
                   {koFest && (
                     <section className="block">
                       <div className="bearbeitenkopf">
-                        <h2>Phase 3: Platzierungsspiele (Race to {race3})</h2>
+                        <h2>Platzierungsspiele (Race to {race3})</h2>
                         {bearbeitbar && !einstellungen.phase3 && nichtImKo.length >= 2 && (
                           <button type="button" onClick={() => void phase3Starten()} disabled={arbeitet}>
-                            Phase 3 starten
+                            Spiele starten
                           </button>
                         )}
                         {bearbeitbar && einstellungen.phase3 && (
                           <button type="button" className="gefahrknopf" onClick={() => void phase3Zuruecksetzen()}>
-                            Phase 3 zurücksetzen
+                            Spiele zurücksetzen
                           </button>
                         )}
                       </div>
                       <p className="hinweis">
                         {einstellungen.phase3
                           ? offenP3 > 0
-                            ? `Phase 3 läuft, noch ${offenP3} Spiele offen. Die Spiele stehen im Spielplan unter „Phase 3“.`
-                            : 'Phase 3 ist abgeschlossen. Die unteren Plätze der Endtabelle stammen aus diesen Spielen.'
+                            ? `Die Platzierungsspiele laufen, noch ${offenP3} offen. Sie stehen im Spielplan unter „Platzierungsspiele“.`
+                            : 'Die Platzierungsspiele sind abgeschlossen. Die unteren Plätze der Endtabelle stammen aus diesen Spielen.'
                           : nichtImKo.length === 0
-                            ? 'Alle Teilnehmer stehen im KO-Feld. Phase 3 entfällt.'
+                            ? 'Alle Teilnehmer stehen im KO-Feld. Die Platzierungsspiele entfallen.'
                             : nichtImKo.length === 1
-                              ? 'Nur ein Spieler hat die KO-Runde nicht erreicht. Für Phase 3 werden mindestens zwei benötigt.'
-                              : `Optional. ${nichtImKo.length} Spieler haben die KO-Runde nicht erreicht. Phase 3 spielt die Plätze ${feld + 1} bis ${feld + nichtImKo.length} aus, je ein Spiel pro Teilnehmer. Ohne Start gilt die Gruppenwertung.`}
+                              ? 'Nur ein Spieler hat die KO-Runde nicht erreicht. Für Platzierungsspiele werden mindestens zwei benötigt.'
+                              : `Optional. ${nichtImKo.length} Spieler haben die KO-Runde nicht erreicht. Die Platzierungsspiele spielen die Plätze ${feld + 1} bis ${feld + nichtImKo.length} aus, je ein Spiel pro Teilnehmer. Ohne Start gilt die Gruppenwertung.`}
                       </p>
                     </section>
                   )}

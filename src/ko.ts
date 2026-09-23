@@ -345,18 +345,18 @@ export function endtabelleKo<T>(
       const platz = phase3.abPlatz + 2 * i;
       if (spielBeendet(s1, s2, phase3.race)) {
         const aGewinnt = (s1 as number) > (s2 as number);
-        zeilen.push({ platz, wer: aGewinnt ? a : b, wie: 'Sieger Phase 3', offen: false, zeigePlatz: true });
-        zeilen.push({ platz: platz + 1, wer: aGewinnt ? b : a, wie: 'Phase 3', offen: false, zeigePlatz: true });
+        zeilen.push({ platz, wer: aGewinnt ? a : b, wie: 'Sieger Platzierungsspiel', offen: false, zeigePlatz: true });
+        zeilen.push({ platz: platz + 1, wer: aGewinnt ? b : a, wie: 'Platzierungsspiel', offen: false, zeigePlatz: true });
       } else {
-        zeilen.push({ platz, wer: a, wie: 'Phase 3 läuft', offen: true, zeigePlatz: true });
-        zeilen.push({ platz: platz + 1, wer: b, wie: 'Phase 3 läuft', offen: true, zeigePlatz: true });
+        zeilen.push({ platz, wer: a, wie: 'Platzierungsspiel läuft', offen: true, zeigePlatz: true });
+        zeilen.push({ platz: platz + 1, wer: b, wie: 'Platzierungsspiel läuft', offen: true, zeigePlatz: true });
       }
     });
     if (solo !== null) {
       zeilen.push({
         platz: phase3.abPlatz + phase3.reihung.length - 1,
         wer: solo,
-        wie: 'Phase 3, kein Gegner',
+        wie: 'Platzierungsspiel, kein Gegner',
         offen: false,
         zeigePlatz: true
       });

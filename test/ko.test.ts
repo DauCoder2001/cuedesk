@@ -242,7 +242,8 @@ describe.skipIf(!existsSync(V74))('Vergleich mit Turnierplan KO v74', () => {
           : null
       );
       expect(tabelle.map((z) => [z.platz, z.wer, z.wie, z.offen, z.zeigePlatz])).toEqual(
-        e.tabelle.map((z) => [z.place, z.idx, z.how, z.open, z.showRank ?? true])
+        // v74 nennt die Platzierungsspiele noch "Phase 3"
+        e.tabelle.map((z) => [z.place, z.idx, z.how.replace('Phase 3', 'Platzierungsspiel'), z.open, z.showRank ?? true])
       );
     }
     expect(mitPhase3).toBeGreaterThan(100);

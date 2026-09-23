@@ -40,13 +40,13 @@ describe('Spielplan fuer das Tablet', () => {
   });
 });
 
-test('Beschriftung mit Gruppe und Phase 2', () => {
+test('Beschriftung mit Gruppe und Platzierungsrunde', () => {
   expect(abschnittName({ runde: 2, gruppe: 'B', phase: 'gruppe' })).toBe('Gruppe B · Runde 2');
-  expect(abschnittName({ runde: null, gruppe: null, phase: 'phase2' })).toBe('Phase 2');
+  expect(abschnittName({ runde: null, gruppe: null, phase: 'phase2' })).toBe('Platzierungsduelle');
   expect(abschnittName({ runde: 3 })).toBe('Runde 3');
   expect(abschnittName({ runde: 2, gruppe: 'qf3', phase: 'ko' })).toBe('Viertelfinale 3');
   expect(abschnittName({ runde: 4, gruppe: 'bro', phase: 'ko' })).toBe('Spiel um Platz 3');
-  expect(abschnittName({ runde: null, gruppe: null, phase: 'phase3' })).toBe('Phase 3');
+  expect(abschnittName({ runde: null, gruppe: null, phase: 'phase3' })).toBe('Platzierungsspiele');
 });
 
 describe('Ergebnis vom Tablet', () => {
@@ -100,7 +100,7 @@ describe('Ergebnis fuer den Fernseher', () => {
     expect(Object.keys(laufend.groups)).toEqual(['A', 'B']);
     expect(laufend.groups.A.map((z) => z.name)).toEqual(['Sven', 'Kai']);
     expect(laufend.groups.B.map((z) => z.name)).toEqual(['Gerd', 'Olli']);
-    expect(laufend.groups.A[0].games).toBe(1); // Phase 2 zaehlt nicht mit
+    expect(laufend.groups.A[0].games).toBe(1); // die Duelle zaehlen nicht mit
     expect(laufend.finalPlacement).toBeUndefined();
     const fertig = tvErgebnis({ name: 'T', disziplin: '9-Ball', raceTo: 3, datum: '2026-10-10', beendet: true }, teilnehmer, partien, {}, (id) => namen[id]);
     expect(fertig.finalPlacement?.map((x) => x.name)).toEqual(['Olli', 'Sven', 'Kai', 'Gerd']);
