@@ -37,6 +37,8 @@ export type PlanEintrag = {
   // Liga-Spieltag: jede Partie hat ihre eigene Disziplin. Ohne Angabe gilt die
   // Disziplin des Turniers.
   discipline?: string | null;
+  // 14.1: Aufnahmen-Begrenzung aus den Ausspielzielen (raceTo ist das Punkteziel)
+  innings?: number | null;
 };
 
 export type TabletTurnier = {
@@ -95,6 +97,14 @@ export function abschnittName(p: Pick<PlanPartie, 'runde' | 'gruppe' | 'phase'>)
   return p.gruppe ? `Gruppe ${p.gruppe}${runde ? ` · ${runde}` : ''}` : runde;
 }
 
+// Am Tisch zaehlt der Name, nicht der Verein: "Matthias H. (Bassum)" wird zu
+// "Matthias H.". Der Zusatz bleibt aber stehen, wenn beide Namen einer Partie
+// sonst gleich waeren.
+export function ohneZusatz(text: string): string {
+  const kurz = text.replace(/\s*\([^()]*\)\s*$/, '').trim();
+  return kurz || text;
+}
+
 // Wie die Disziplin am Tisch heissen soll
 const DISZIPLIN_NAME: Record<string, string> = {
   '8-ball': '8-Ball',
@@ -105,16 +115,13 @@ const DISZIPLIN_NAME: Record<string, string> = {
 
 export type Verdeckt = { hin?: { heim?: boolean; gast?: boolean }; rueck?: { heim?: boolean; gast?: boolean } };
 
-// Was am Tablet zur Auswahl steht: 14.1 laeuft nicht ueber das Pool-Board
-// (dort gibt es keinen Picker), und eine verdeckte Aufstellung bleibt auch am
-// Tisch verdeckt - sonst waere das Verbergen umsonst.
-export function fuersTablet<T extends { disziplin?: string | null; runde: number | null }>(
-  partien: T[],
-  verdeckt?: Verdeckt
-): T[] {
+// Was am Tablet zur Auswahl steht: eine verdeckte Aufstellung bleibt auch am
+// Tisch verdeckt, sonst waere das Verbergen umsonst. Welches Board welche
+// Disziplin zeigt, entscheidet das Board (8/9/10-Ball am Pool-Board, 14.1 am
+// 14.1-Board).
+export function fuersTablet<T extends { runde: number | null }>(partien: T[], verdeckt?: Verdeckt): T[] {
+  if (!verdeckt) return partien;
   return partien.filter((p) => {
-    if (p.disziplin === '14-1') return false;
-    if (!verdeckt) return true;
     const seiten = p.runde === 2 ? verdeckt.rueck : verdeckt.hin;
     return !(seiten?.heim || seiten?.gast);
   });
@@ -123,15 +130,19 @@ export function fuersTablet<T extends { disziplin?: string | null; runde: number
 export function tabletSpielplan(
   partien: PlanPartie[],
   name: (personId: string) => string,
-  tischNummer: (tischId: string) => string | null
+  tischNummer: (tischId: string) => string | null,
+  aufnahmen141?: number | null
 ): Record<string, PlanEintrag> {
   const plan: Record<string, PlanEintrag> = {};
   // Reihenfolge wie im Spielplan (Runde, dann Paarung) - die Auswahl am
   // Tablet zeigt die Spiele in dieser Reihenfolge.
   for (const p of partien) {
+    const a = name(p.spieler_a);
+    const b = name(p.spieler_b);
+    const eindeutig = ohneZusatz(a) !== ohneZusatz(b);
     plan[p.id] = {
-      player1: name(p.spieler_a),
-      player2: name(p.spieler_b),
+      player1: eindeutig ? ohneZusatz(a) : a,
+      player2: eindeutig ? ohneZusatz(b) : b,
       status: planStatus(p),
       table: p.tisch_id ? tischNummer(p.tisch_id) : null,
       startedAt: p.begonnen ? Date.parse(p.begonnen) : null,
@@ -139,7 +150,8 @@ export function tabletSpielplan(
       group: abschnittName(p),
       vorgabe1: p.vorgabe_a,
       vorgabe2: p.vorgabe_b,
-      discipline: DISZIPLIN_NAME[p.disziplin ?? ''] ?? null
+      discipline: DISZIPLIN_NAME[p.disziplin ?? ''] ?? null,
+      innings: p.disziplin === '14-1' ? aufnahmen141 ?? null : null
     };
   }
   return plan;
@@ -210,14 +222,25 @@ export function tvErgebnis(
 
 // Ergebnis vom Tablet: Nach einem Seitenwechsel stehen die Spieler dort
 // vertauscht. Massgeblich ist deshalb der Name, nicht die Seite.
+// Hat das Board die Seiten getauscht? Dann gehoert Seite 1 zu Spieler B.
+export function seitenGetauscht(
+  eintrag: Pick<PlanEintrag, 'player1' | 'player2'>,
+  ergebnis: { player1: string; player2: string }
+): boolean {
+  // Verglichen wird ohne Vereinszusatz: Ein Board kann den Namen noch in der
+  // langen Form fuehren, waehrend der Spielplan schon die kurze zeigt.
+  return (
+    ohneZusatz(eintrag.player1) !== ohneZusatz(eintrag.player2) &&
+    ohneZusatz(ergebnis.player1) === ohneZusatz(eintrag.player2) &&
+    ohneZusatz(ergebnis.player2) === ohneZusatz(eintrag.player1)
+  );
+}
+
 export function ergebnisVomTablet(
   eintrag: Pick<PlanEintrag, 'player1' | 'player2'>,
   ergebnis: { player1: string; player2: string; score1: number; score2: number }
 ): { ergebnis_a: number; ergebnis_b: number } {
-  const getauscht =
-    eintrag.player1 !== eintrag.player2 &&
-    ergebnis.player1 === eintrag.player2 &&
-    ergebnis.player2 === eintrag.player1;
+  const getauscht = seitenGetauscht(eintrag, ergebnis);
   return getauscht
     ? { ergebnis_a: ergebnis.score2, ergebnis_b: ergebnis.score1 }
     : { ergebnis_a: ergebnis.score1, ergebnis_b: ergebnis.score2 };

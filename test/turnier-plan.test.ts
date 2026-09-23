@@ -1,5 +1,13 @@
 import { describe, expect, test } from 'vitest';
-import { abschnittName, ergebnisVomTablet, fuersTablet, planStatus, tabletSpielplan, tvErgebnis } from '../scoreboards/js/turnier-plan';
+import {
+  abschnittName,
+  ergebnisVomTablet,
+  fuersTablet,
+  ohneZusatz,
+  planStatus,
+  tabletSpielplan,
+  tvErgebnis
+} from '../scoreboards/js/turnier-plan';
 import type { PlanPartie } from '../scoreboards/js/turnier-plan';
 
 const namen: Record<string, string> = { s: 'Sven', k: 'Kai', o: 'Olli', g: 'Gerd' };
@@ -50,9 +58,21 @@ describe('Spielplan fuer das Tablet', () => {
       () => null
     );
     expect(plan.p1.discipline).toBe('9-Ball');
+    expect(plan.p1.innings).toBeNull();
     expect(plan.p2).toMatchObject({ discipline: '10-Ball', raceTo: 4 });
     // Ohne Angabe gilt die Disziplin des Turniers
     expect(plan.p3.discipline).toBeNull();
+  });
+
+  test('14.1 bekommt Punkteziel und Aufnahmen-Limit', () => {
+    const plan = tabletSpielplan(
+      [partie('p1', 's', 'k', { disziplin: '14-1', race_to: 50 }), partie('p2', 'o', 'g', { disziplin: '8-ball' })],
+      (id) => namen[id],
+      () => null,
+      20
+    );
+    expect(plan.p1).toMatchObject({ discipline: '14.1', raceTo: 50, innings: 20 });
+    expect(plan.p2.innings).toBeNull();
   });
 });
 
@@ -65,6 +85,24 @@ test('Beschriftung mit Gruppe und Platzierungsrunde', () => {
   expect(abschnittName({ runde: null, gruppe: null, phase: 'phase3' })).toBe('Platzierungsspiele');
 });
 
+describe('Namen am Tisch', () => {
+  test('Vereinszusatz in Klammern faellt weg', () => {
+    expect(ohneZusatz('Matthias H. (Bassum)')).toBe('Matthias H.');
+    expect(ohneZusatz('Kai')).toBe('Kai');
+    expect(ohneZusatz('(Bassum)')).toBe('(Bassum)'); // ein leerer Name waere schlechter
+  });
+
+  test('der Zusatz bleibt, wenn beide sonst gleich heissen', () => {
+    const plan = tabletSpielplan(
+      [partie('p1', 'x', 'y'), partie('p2', 'x', 'z')],
+      (id) => ({ x: 'Matthias H.', y: 'Matthias H. (Bassum)', z: 'Kai (Bassum)' })[id],
+      () => null
+    );
+    expect(plan.p1).toMatchObject({ player1: 'Matthias H.', player2: 'Matthias H. (Bassum)' });
+    expect(plan.p2).toMatchObject({ player1: 'Matthias H.', player2: 'Kai' });
+  });
+});
+
 describe('Welche Partien am Tablet erscheinen', () => {
   const liste = [
     { id: 'a', disziplin: '14-1', runde: 1 },
@@ -72,23 +110,28 @@ describe('Welche Partien am Tablet erscheinen', () => {
     { id: 'c', disziplin: '9-ball', runde: 2 }
   ];
 
-  test('14.1 laeuft nicht ueber das Pool-Board', () => {
-    expect(fuersTablet(liste).map((p) => p.id)).toEqual(['b', 'c']);
+  test('ohne verdeckte Aufstellung bleibt alles stehen', () => {
+    expect(fuersTablet(liste).map((p) => p.id)).toEqual(['a', 'b', 'c']);
   });
 
   test('verdeckte Aufstellung bleibt auch am Tisch verdeckt', () => {
     expect(fuersTablet(liste, { hin: { heim: true } }).map((p) => p.id)).toEqual(['c']);
-    expect(fuersTablet(liste, { rueck: { gast: true } }).map((p) => p.id)).toEqual(['b']);
-    expect(fuersTablet(liste, { hin: { heim: false, gast: false } }).map((p) => p.id)).toEqual(['b', 'c']);
-  });
-
-  test('ohne Liga bleibt alles ausser 14.1', () => {
-    expect(fuersTablet([{ disziplin: '9-ball', runde: 1 }])).toHaveLength(1);
+    expect(fuersTablet(liste, { rueck: { gast: true } }).map((p) => p.id)).toEqual(['a', 'b']);
+    expect(fuersTablet(liste, { hin: { heim: false, gast: false } }).map((p) => p.id)).toEqual(['a', 'b', 'c']);
   });
 });
 
 describe('Ergebnis vom Tablet', () => {
   const eintrag = { player1: 'Sven', player2: 'Kai' };
+
+  test('Seitenwechsel auch bei altem Namen mit Vereinszusatz erkannt', () => {
+    expect(
+      ergebnisVomTablet(
+        { player1: 'Bruno', player2: 'Matthias H.' },
+        { player1: 'Matthias H. (Bassum)', player2: 'Bruno', score1: 60, score2: 41 }
+      )
+    ).toEqual({ ergebnis_a: 41, ergebnis_b: 60 });
+  });
 
   test('gleiche Seiten', () => {
     expect(ergebnisVomTablet(eintrag, { player1: 'Sven', player2: 'Kai', score1: 5, score2: 3 })).toEqual({

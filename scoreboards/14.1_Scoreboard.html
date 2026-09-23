@@ -409,6 +409,30 @@
 
   #btn-back-141 { display: none; background: #6c757d; color: #fff; }
 
+  /* Turnier-Picker: Auswahl der 14.1-Partien eines laufenden Spieltags */
+  #picker141 {
+    display: none;
+    position: fixed; inset: 0;
+    background: #1f3b73;
+    z-index: 100;
+    justify-content: center;
+    align-items: flex-start;
+    overflow-y: auto;
+    padding: 4vmin;
+    box-sizing: border-box;
+  }
+  #picker141-box { background: #fff; border-radius: 2vmin; padding: 3vmin; width: 100%; max-width: 90vmin; }
+  #picker141-box h2 { color: #1f3b73; margin: 0 0 2vmin; text-align: center; font-size: 4.5vmin; }
+  #picker141-list { display: flex; flex-direction: column; gap: 1.5vmin; }
+  .pick141 {
+    font-size: 3.5vmin; padding: 2.2vmin; border: none; border-radius: 1.2vmin;
+    background: #e8f0fe; color: #1f3b73; cursor: pointer; width: 100%;
+  }
+  .pick141.busy { background: #eee; color: #999; cursor: not-allowed; }
+  .pick141 .vs { color: #888; margin: 0 1.2vmin; font-size: 2.8vmin; }
+  .pick141 .note { font-size: 2.2vmin; color: #666; }
+  #btn-frei-141 { margin-top: 3vmin; width: 100%; background: #6c757d; color: #fff; }
+
   /* Nachgeben-Overlay: ein anderes Geraet steuert diesen Tisch (verhindert Schreib-Krieg) */
   #yield-overlay {
     display: none;
@@ -807,12 +831,21 @@
   </div>
 </div>
 
+<!-- Turnier-Picker: 14.1-Partien des laufenden Spieltags -->
+<div id="picker141">
+  <div id="picker141-box">
+    <h2>🎯 14.1-Spiel auswählen — Tisch <span id="picker141-table"></span></h2>
+    <div id="picker141-list"></div>
+    <button id="btn-frei-141" type="button">🎮 Frei spielen (ohne Turnier)</button>
+  </div>
+</div>
+
 <script type="module">
   // CueDesk: Anbindung mit denselben Funktionen wie frueher Firebase. Je nach
   // Umgebung spricht sie mit CueDesk (gekoppeltes Tablet) oder arbeitet offline.
   import {
-    db, auth, ref, set, onValue, push, serverTimestamp, signInAnonymously,
-    starten, istAngebunden, startseite, spielerWaehlen, ergebnisSpeichern141
+    db, auth, ref, set, onValue, push, serverTimestamp, runTransaction, signInAnonymously,
+    starten, istAngebunden, startseite, spielerWaehlen, ergebnisSpeichern141, ergebnis141InPartie
   } from "./js/anbindung.ts";
   import { startIdleRedirect } from "./js/idle-timeout.js";
   import { keepScreenAwake } from "./js/wake-lock.js";
@@ -878,6 +911,85 @@
   let yielded = false;         // Tisch an anderes Geraet abgegeben -> nichts mehr schreiben
   let yieldCount = 0;          // wie oft dieses Board verdraengt wurde (>=2 -> Uebernehmen sperren)
   function tournamentActive() { return !!(tournament && tournament.status === 'running'); }
+  let frei141 = false;   // Spieler hat "Frei spielen" gewaehlt
+
+  // Die 14.1-Partien des laufenden Turniers (Liga-Spieltag). 8-, 9- und
+  // 10-Ball laufen am Pool-Board.
+  function spiele141() {
+    if (!tournament || !tournament.schedule) return [];
+    return Object.entries(tournament.schedule)
+      .filter(([, m]) => m.discipline === '14.1')
+      .map(([id, m]) => ({ id, ...m }));
+  }
+  function offene141() { return spiele141().filter(m => m.status === 'pending' && m.player1 && m.player2); }
+  // Gehoert dieses Spiel noch zu unserem Tisch?
+  function unserSpiel(m) { return !!(m && m.status === 'running' && String(m.table) === String(tableId)); }
+
+  function renderPicker141() {
+    const liste = document.getElementById('picker141-list');
+    document.getElementById('picker141-table').textContent = tableId;
+    if (tournament && tournament.paused) {
+      liste.innerHTML = '<p style="text-align:center; font-size:4vh; color:#b8860b; font-weight:bold;">⏸️ Spieltag pausiert</p>';
+      return;
+    }
+    const offen = offene141();
+    if (offen.length === 0) {
+      liste.innerHTML = '<p style="text-align:center; color:#888;">Keine offenen 14.1-Spiele.</p>';
+      return;
+    }
+    liste.innerHTML = offen.map(m => {
+      const ziel = m.raceTo ? m.raceTo + ' Pkt.' : '';
+      const aufn = m.innings ? ' / ' + m.innings + ' Aufn.' : '';
+      return '<button class="pick141" data-id="' + m.id + '">'
+        + '<span>' + m.player1 + '</span><span class="vs">vs</span><span>' + m.player2 + '</span>'
+        + ' <span class="note">(' + ziel + aufn + ')</span></button>';
+    }).join('');
+    liste.querySelectorAll('.pick141').forEach(btn => {
+      btn.addEventListener('click', () => startMatch141(btn.getAttribute('data-id')));
+    });
+  }
+
+  // Spiel am Tisch beanspruchen - die Transaktion verhindert den Doppelstart
+  async function startMatch141(matchId) {
+    if (tournament && tournament.paused) { alert("Der Spieltag ist pausiert."); return; }
+    let res;
+    try {
+      res = await runTransaction(ref(db, 'tournament/active/schedule/' + matchId), (m) => {
+        if (!m || m.status !== 'pending') return;
+        if (m.player1 == null || m.player2 == null) return;
+        m.status = 'running'; m.table = tableId; m.startedAt = Date.now();
+        return m;
+      });
+    } catch (e) { alert("Fehler beim Starten: " + e.message); return; }
+    if (!res.committed) { alert("Dieses Spiel läuft bereits an einem anderen Tisch."); return; }
+    const m = res.snapshot.val();
+    state = freshState141();
+    state.player1 = m.player1;
+    state.player2 = m.player2;
+    state.target = m.raceTo || state.target;
+    state.targetInn = m.innings || 0;
+    state.startedAt = Date.now();
+    state.tournamentMatchId = matchId;
+    claimed = true;
+    save();
+    render();
+    applyMode();
+  }
+
+  // Spiel zurueck in den Spielplan legen (nichts wird gespeichert)
+  async function abbruch141() {
+    const matchId = state.tournamentMatchId;
+    if (!matchId) return;
+    try {
+      const res = await runTransaction(ref(db, 'tournament/active/schedule/' + matchId), (m) => {
+        if (!unserSpiel(m)) return;
+        m.status = 'pending'; m.table = null; m.startedAt = null;
+        return m;
+      });
+      if (!res.committed) alert("Dieses Spiel gehört nicht mehr zu diesem Tisch. Der Tisch wird trotzdem freigegeben.");
+    } catch (e) { alert("Fehler: " + e.message); return; }
+    try { await set(dbRef, null); } catch (e) { alert("Fehler: " + e.message); }
+  }
 
   // Stabile Geraete-Kennung: erkennt ZWEI Geraete am selben Tisch (auch bei gleicher
   // Spielart). Bewusst localStorage statt sessionStorage – ein Kiosk-/Browser-Neustart
@@ -1158,6 +1270,25 @@
   }
 
   async function newGame() {
+    // Turnierspiel: Ist das Ziel erreicht, wird gespeichert; sonst geht die
+    // Partie zurueck in den Spielplan. Einen eigenen Abbrechen-Knopf braucht
+    // es dafuer nicht.
+    if (state.tournamentMatchId && istAngebunden()) {
+      if (!state.locked) {
+        const frage = "Das Spiel ist noch nicht zu Ende.\n\n" +
+          "Abbrechen und zurück in den Spielplan legen? Es wird nichts gespeichert.";
+        if (!await confirmModal(frage)) return;
+        await abbruch141();
+        return;
+      }
+      if (!await confirmModal("Ergebnis speichern und Tisch freigeben?")) return;
+      const erg = await ergebnis141InPartie(state.tournamentMatchId, state, { abgebrochen: false });
+      if (!erg.ok) { alert("Speichern fehlgeschlagen: " + erg.fehler); return; }
+      frei141 = false;
+      try { await set(dbRef, null); } catch (e) { alert("Fehler: " + e.message); }
+      return;
+    }
+
     // Pruefen, ob ueberhaupt gespielt wurde (mind. eine Aufnahme; Punkte koennen negativ sein)
     if (istAngebunden() && (state.inn1 > 0 || state.inn2 > 0)) {
       const abgebrochen = !state.locked;
@@ -1592,14 +1723,22 @@
     return { player1:"Spieler 1", player2:"Spieler 2", player1Id:null, player2Id:null, s1:0, s2:0, run1:0, run2:0, rackPts:[],
              high1:0, high2:0, inn1:0, inn2:0, consec1:0, consec2:0, target:60, targetInn:20, turn:1,
              ballsLeft:15, rackNo:1, pendingRebuilds:0, phase:"break", breaker:1,
-             locked:false, winnerText:"", log:[], gameType:"14.1" };
+             locked:false, winnerText:"", log:[], gameType:"14.1",
+             tournamentMatchId:null, startedAt:null };
   }
 
   function applyMode() {
-    // Kein Reservierungs-Overlay mehr – 14.1 wird direkt gespielt.
-    // "Zurueck zum Turnier" anbieten, solange ein Turnier laeuft (fuehrt zum Pool-Picker).
+    // Laeuft ein Spieltag mit offenen 14.1-Partien, wird zuerst gewaehlt.
+    const imTurnier = !!(state && state.tournamentMatchId);
+    const zeigePicker = tournamentActive() && !imTurnier && !frei141 && offene141().length > 0;
+    const overlay = document.getElementById('picker141');
+    if (overlay) {
+      overlay.style.display = zeigePicker ? 'flex' : 'none';
+      if (zeigePicker) renderPicker141();
+    }
+    // "Zurueck zum Turnier" fuehrt zum Pool-Picker, solange ein Turnier laeuft.
     const backBtn = document.getElementById('btn-back-141');
-    if (backBtn) backBtn.style.display = tournamentActive() ? 'inline-block' : 'none';
+    if (backBtn) backBtn.style.display = tournamentActive() && !imTurnier ? 'inline-block' : 'none';
   }
 
   // Verarbeitet den aktuellen Tisch-Stand. 14.1 wird direkt gespielt; ein laufendes
@@ -1681,6 +1820,10 @@
 
   // "Zurueck zum Turnier": Turnierspiele laufen ueber das Pool-Board (Picker). Das
   // 14.1-Board hat keinen Picker -> Tisch freigeben und direkt zum Pool-Board.
+  document.getElementById('btn-frei-141').addEventListener('click', () => {
+    frei141 = true;
+    applyMode();
+  });
   document.getElementById('btn-back-141').addEventListener('click', async () => {
     yielded = true;   // verhindert, dass unser onValue den freigegebenen Tisch neu beansprucht
     try { await set(dbRef, null); } catch (e) {}

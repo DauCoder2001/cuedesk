@@ -637,7 +637,7 @@ async function turnierLaden(): Promise<void> {
     pausiert?: boolean;
     tvAnsicht?: string;
     handReihenfolge?: Record<string, number[]>;
-    liga?: { verdeckt?: Verdeckt };
+    liga?: { verdeckt?: Verdeckt; ziele?: { aufnahmen141?: number } };
   };
   const partien = (partienAntwort.data ?? []) as (PlanPartie & { ergebnis_a: number | null; ergebnis_b: number | null })[];
   const aufstellung = (teilnehmerAntwort.data ?? [])
@@ -657,7 +657,12 @@ async function turnierLaden(): Promise<void> {
           status: 'running',
           paused: Boolean(einstellungen.pausiert),
           raceTo: einstellungen.raceTo ?? 0,
-          schedule: tabletSpielplan(fuersTablet(partien, einstellungen.liga?.verdeckt), name, (id) => nummern.get(id) ?? null),
+          schedule: tabletSpielplan(
+            fuersTablet(partien, einstellungen.liga?.verdeckt),
+            name,
+            (id) => nummern.get(id) ?? null,
+            einstellungen.liga?.ziele?.aufnahmen141
+          ),
           // fuer die TV-Auslosung
           mode: modus,
           type: t.name,
@@ -958,7 +963,7 @@ export async function ergebnisSpeichernPool(
 // ---------- Ergebnis 14.1 speichern ----------
 
 export { aufnahmenAusProtokoll } from './protokoll-141';
-import { ergebnisVomTablet, fuersTablet, tabletSpielplan, tvErgebnis } from './turnier-plan';
+import { ergebnisVomTablet, fuersTablet, seitenGetauscht, tabletSpielplan, tvErgebnis } from './turnier-plan';
 import type { PlanEintrag, PlanPartie, TabletTurnier, TvErgebnis, Verdeckt } from './turnier-plan';
 import { aufnahmenAusProtokoll, protokollAusAufnahmen } from './protokoll-141';
 import type { AufnahmeZeile, Zustand141 } from './protokoll-141';
@@ -1024,5 +1029,86 @@ export async function ergebnisSpeichern141(
     const { error } = await v.supabase.from('aufnahmen_141').insert(zeilen);
     if (error) return { ok: false, fehler: error.message };
   }
+  return { ok: true };
+}
+
+// ---------- 14.1 im Turnier (Liga-Spieltag) ----------
+
+// Anders als beim Einzelspiel gibt es die Partie schon: Sie wurde beim
+// Aufstellen des Spieltags angelegt. Hier werden nur Ergebnis, Kennzahlen und
+// Protokoll nachgetragen. Die Seiten koennen am Board vertauscht sein, deshalb
+// wird ueber die Namen des Spielplans zugeordnet.
+export async function ergebnis141InPartie(
+  matchId: string,
+  zustand: Zustand141 & { player1: string; player2: string },
+  optionen: { abgebrochen: boolean }
+): Promise<{ ok: true } | { ok: false; fehler: string }> {
+  const v = verbindung;
+  if (!v) return { ok: false, fehler: 'Nicht mit CueDesk verbunden.' };
+  const eintrag = aktuellesTurnier?.schedule[matchId];
+  if (!eintrag) return { ok: false, fehler: 'Das Spiel steht nicht mehr im Spielplan.' };
+  const getrennt = await nichtGekoppelt(`${zustand.s1} : ${zustand.s2}`);
+  if (getrennt) return { ok: false, fehler: getrennt };
+
+  const { data: partie, error: fehlerPartie } = await v.supabase
+    .from('partien')
+    .select('id, spieler_a, spieler_b, race_to')
+    .eq('id', matchId)
+    .maybeSingle();
+  if (fehlerPartie || !partie) return { ok: false, fehler: fehlerPartie?.message ?? 'Partie nicht gefunden.' };
+
+  const getauscht = seitenGetauscht(eintrag, zustand);
+  const { ergebnis_a, ergebnis_b } = ergebnisVomTablet(eintrag, {
+    player1: zustand.player1,
+    player2: zustand.player2,
+    score1: zustand.s1,
+    score2: zustand.s2
+  });
+  // Seite 1 des Boards gehoert zu diesem Spieler
+  const idSeite1 = getauscht ? partie.spieler_b : partie.spieler_a;
+  const idSeite2 = getauscht ? partie.spieler_a : partie.spieler_b;
+  const dauer = zustand.startedAt
+    ? Math.max(0, Math.round(((zustand.endedAt ?? Date.now()) - zustand.startedAt) / 1000))
+    : null;
+
+  const { error: fehlerUpdate } = await v.supabase
+    .from('partien')
+    .update({
+      ergebnis_a,
+      ergebnis_b,
+      status: optionen.abgebrochen ? 'abgebrochen' : 'beendet',
+      begonnen: zustand.startedAt ? new Date(zustand.startedAt).toISOString() : null,
+      beendet: new Date(zustand.endedAt ?? Date.now()).toISOString()
+    })
+    .eq('id', matchId)
+    .eq('tisch_id', v.tischId as string)
+    .neq('status', 'beendet');
+  if (fehlerUpdate) return { ok: false, fehler: fehlerUpdate.message };
+
+  const { error: fehler141 } = await v.supabase.from('partien_141').upsert({
+    partie_id: matchId,
+    verein_id: v.vereinId,
+    ziel_punkte: zustand.target,
+    ziel_aufnahmen: zustand.targetInn,
+    aufnahmen_a: getauscht ? zustand.inn2 : zustand.inn1,
+    aufnahmen_b: getauscht ? zustand.inn1 : zustand.inn2,
+    hoechstserie_a: getauscht ? zustand.high2 : zustand.high1,
+    hoechstserie_b: getauscht ? zustand.high1 : zustand.high2,
+    dauer_sek: dauer
+  });
+  if (fehler141) return { ok: false, fehler: fehler141.message };
+
+  // Ein zweiter Anlauf soll das Protokoll nicht verdoppeln
+  await v.supabase.from('aufnahmen_141').delete().eq('partie_id', matchId);
+  const zeilen = aufnahmenAusProtokoll(zustand.log, idSeite1, idSeite2).map((z) => ({
+    ...z,
+    partie_id: matchId,
+    verein_id: v.vereinId
+  }));
+  if (zeilen.length > 0) {
+    const { error } = await v.supabase.from('aufnahmen_141').insert(zeilen);
+    if (error) return { ok: false, fehler: error.message };
+  }
+  await turnierAuffrischen();
   return { ok: true };
 }

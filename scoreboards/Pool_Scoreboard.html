@@ -971,7 +971,8 @@ async function newGame() {
     const busy = busyPlayers();
     const filter = pickerFilterEl.value;
     let pend = Object.entries(tournament.schedule)
-      .filter(([id, m]) => m.status === 'pending')
+      // 14.1 wird am 14.1-Board gespielt, nicht hier
+      .filter(([id, m]) => m.status === 'pending' && m.discipline !== '14.1')
       .map(([id, m]) => ({ id, ...m }));
     if (filter) pend = pend.filter(m => m.player1 === filter || m.player2 === filter);
     const isFL = (n) => String(n).includes('FREILOS');
@@ -987,7 +988,17 @@ async function newGame() {
     });
 
     if (pend.length === 0) {
-      pickerListEl.innerHTML = '<p style="text-align:center; color:#888;">Keine offenen Spiele.</p>';
+      const offene141 = Object.values(tournament.schedule)
+        .filter(m => m.status === 'pending' && m.discipline === '14.1').length;
+      pickerListEl.innerHTML = offene141 > 0
+        ? '<p style="text-align:center; color:#888;">Keine offenen 8-, 9- oder 10-Ball-Spiele.</p>'
+          + '<button id="zum-141" class="pick-item" type="button" style="justify-content:center;">'
+          + '➡ ' + offene141 + ' offene 14.1-Spiele am 14.1-Board</button>'
+        : '<p style="text-align:center; color:#888;">Keine offenen Spiele.</p>';
+      const knopf = document.getElementById('zum-141');
+      if (knopf) knopf.addEventListener('click', () => {
+        window.location.href = '14.1_Scoreboard.html?table=' + tableId;
+      });
       return;
     }
     const raceTo = (tournament && tournament.raceTo) || 0;
