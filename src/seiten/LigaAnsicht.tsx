@@ -43,7 +43,7 @@ export default function LigaAnsicht({
   const [gastName, setGastName] = useState('');
   // Halbe Aufstellung: solange nur eine Seite gewaehlt ist, gibt es noch keine
   // Partie in der Datenbank. Die Wahl haelt deshalb die Ansicht fest.
-  const [wahl, setWahl] = useState<Record<number, { eigen?: string | null; gegen?: string | null }>>({});
+  const [wahl, setWahl] = useState<Record<number, { heim?: string | null; gast?: string | null }>>({});
   const [arbeitet, setArbeitet] = useState(false);
   const [fehler, setFehler] = useState<string | null>(null);
   const [meldung, setMeldung] = useState<string | null>(null);
@@ -88,31 +88,27 @@ export default function LigaAnsicht({
     [partien]
   );
 
-  // Eigene Spieler stehen je nach Heimrecht auf Seite A oder B
-  const eigeneSeiteIstA = liga?.heim ?? true;
-  const ausPartie = (p: Partie | null, seite: 'eigen' | 'gegner') =>
-    p ? ((seite === 'eigen') === eigeneSeiteIstA ? p.spieler_a : p.spieler_b) : null;
-  const eigenerSpieler = (s: LigaSpiel) => {
-    const gemerkt = wahl[s.nr]?.eigen;
-    return gemerkt !== undefined ? gemerkt : ausPartie(partieVon(s), 'eigen');
+  // Heim steht immer auf Seite A, so wie im Spielbericht des Verbands.
+  // Unsere Mannschaft ist je nach Heimrecht die Heim- oder die Gastseite.
+  const wirSindHeim = liga?.heim ?? true;
+  const heimSpieler = (s: LigaSpiel) => {
+    const gemerkt = wahl[s.nr]?.heim;
+    return gemerkt !== undefined ? gemerkt : partieVon(s)?.spieler_a ?? null;
   };
-  const gegnerSpieler = (s: LigaSpiel) => {
-    const gemerkt = wahl[s.nr]?.gegen;
-    return gemerkt !== undefined ? gemerkt : ausPartie(partieVon(s), 'gegner');
+  const gastSpieler = (s: LigaSpiel) => {
+    const gemerkt = wahl[s.nr]?.gast;
+    return gemerkt !== undefined ? gemerkt : partieVon(s)?.spieler_b ?? null;
   };
+  const unsererSpieler = (s: LigaSpiel) => (wirSindHeim ? heimSpieler(s) : gastSpieler(s));
 
   const ergebnisse = useMemo(
     () =>
       spiele.map((s) => {
         const p = partieVon(s);
         // Der Rating-Haken einer Partie ändert die Partiepunkte nicht
-        return {
-          nr: s.nr,
-          heim: p ? (eigeneSeiteIstA ? p.ergebnis_a : p.ergebnis_b) : null,
-          gast: p ? (eigeneSeiteIstA ? p.ergebnis_b : p.ergebnis_a) : null
-        };
+        return { nr: s.nr, heim: p?.ergebnis_a ?? null, gast: p?.ergebnis_b ?? null };
       }),
-    [spiele, partieVon, eigeneSeiteIstA]
+    [spiele, partieVon]
   );
   const punkte = useMemo(() => wertung(ergebnisse), [ergebnisse]);
 
@@ -131,10 +127,10 @@ export default function LigaAnsicht({
   const fehlerAufstellung = useMemo(() => {
     if (spiele.length === 0) return [];
     const plan: Record<number, string | null> = {};
-    spiele.forEach((s) => (plan[s.nr] = eigenerSpieler(s)));
+    spiele.forEach((s) => (plan[s.nr] = unsererSpieler(s)));
     return aufstellungPruefen(spiele, plan, (id) => anzeige(id));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [spiele, partien, wahl, anzeige, eigeneSeiteIstA]);
+  }, [spiele, partien, wahl, anzeige, wirSindHeim]);
 
   if (!verein) return null;
   if (!turnier || !liga) {
@@ -150,15 +146,15 @@ export default function LigaAnsicht({
   // ---------- Aufstellung und Ergebnisse ----------
 
   // Legt die Partie an, sobald beide Spieler feststehen, und aendert sie sonst
-  async function spielerSetzen(s: LigaSpiel, wer: 'eigen' | 'gegner', personId: string | null) {
+  async function spielerSetzen(s: LigaSpiel, seite: 'heim' | 'gast', personId: string | null) {
     if (!turnier || !liga) return;
     const vorhanden = partieVon(s);
-    const eigen = wer === 'eigen' ? personId : eigenerSpieler(s);
-    const gegen = wer === 'gegner' ? personId : gegnerSpieler(s);
+    const heim = seite === 'heim' ? personId : heimSpieler(s);
+    const gast = seite === 'gast' ? personId : gastSpieler(s);
     setFehler(null);
-    setWahl((bisher) => ({ ...bisher, [s.nr]: { eigen, gegen } }));
+    setWahl((bisher) => ({ ...bisher, [s.nr]: { heim, gast } }));
 
-    if (!eigen || !gegen) {
+    if (!heim || !gast) {
       // Ohne beide Spieler gibt es noch keine Partie; eine bestehende entfaellt
       if (vorhanden) {
         await supabase.from('partien').delete().eq('id', vorhanden.id);
@@ -166,8 +162,8 @@ export default function LigaAnsicht({
       }
       return;
     }
-    const spieler_a = eigeneSeiteIstA ? eigen : gegen;
-    const spieler_b = eigeneSeiteIstA ? gegen : eigen;
+    const spieler_a = heim;
+    const spieler_b = gast;
     if (spieler_a === spieler_b) return setFehler('Ein Spieler kann nicht gegen sich selbst antreten.');
 
     if (vorhanden) {
@@ -191,7 +187,7 @@ export default function LigaAnsicht({
       });
       if (error) return setFehler(error.message);
     }
-    await teilnehmerPflegen([eigen, gegen]);
+    await teilnehmerPflegen([heim, gast]);
     await laden();
   }
 
@@ -205,11 +201,11 @@ export default function LigaAnsicht({
       .insert(neue.map((id) => ({ turnier_id: turnier.id, person_id: id, verein_id: turnier.verein_id })));
   }
 
-  async function ergebnisSetzen(s: LigaSpiel, eigenWert: number | null, gegenWert: number | null) {
+  async function ergebnisSetzen(s: LigaSpiel, heimWert: number | null, gastWert: number | null) {
     const p = partieVon(s);
     if (!p) return setFehler('Erst beide Spieler eintragen.');
-    const ergebnis_a = eigeneSeiteIstA ? eigenWert : gegenWert;
-    const ergebnis_b = eigeneSeiteIstA ? gegenWert : eigenWert;
+    const ergebnis_a = heimWert;
+    const ergebnis_b = gastWert;
     const leer = ergebnis_a === null || ergebnis_b === null;
     const neu = {
       ergebnis_a,
@@ -334,6 +330,9 @@ export default function LigaAnsicht({
   // ---------- Anzeige ----------
 
   const eigenerName = liga.eigene || verein.name;
+  // Spaltenfolge wie im Spielbericht: erst Heim, dann Gast
+  const heimMannschaft = wirSindHeim ? eigenerName : liga.gegner;
+  const gastMannschaft = wirSindHeim ? liga.gegner : eigenerName;
   const reihen: { runde: 'hin' | 'rueck'; titel: string }[] = [
     { runde: 'hin', titel: 'Hinrunde' },
     { runde: 'rueck', titel: 'Rückrunde' }
@@ -404,7 +403,7 @@ export default function LigaAnsicht({
               {punkte.partiepunkte[0]} : {punkte.partiepunkte[1]}
             </strong>
             <small>
-              {eigenerName} gegen {liga.gegner}
+              {heimMannschaft} gegen {gastMannschaft}
             </small>
           </div>
           <div>
@@ -434,8 +433,14 @@ export default function LigaAnsicht({
               <tr>
                 <th style={{ width: '40px' }}>Nr.</th>
                 <th>Disziplin</th>
-                <th>{eigenerName}</th>
-                <th>{liga.gegner}</th>
+                <th>
+                  {heimMannschaft}
+                  <small> {wirSindHeim ? 'wir, Heim' : 'Heim'}</small>
+                </th>
+                <th>
+                  {gastMannschaft}
+                  <small> {wirSindHeim ? 'Gast' : 'wir, Gast'}</small>
+                </th>
                 <th className="rechts">Ergebnis</th>
                 <th></th>
               </tr>
@@ -450,14 +455,13 @@ export default function LigaAnsicht({
                       key={s.nr}
                       spiel={s}
                       partie={p}
-                      eigen={eigenerSpieler(s)}
-                      gegen={gegnerSpieler(s)}
-                      eigeneWahl={eigeneMitglieder}
-                      gegnerWahl={gaeste}
+                      heim={heimSpieler(s)}
+                      gast={gastSpieler(s)}
+                      heimWahl={wirSindHeim ? eigeneMitglieder : gaeste}
+                      gastWahl={wirSindHeim ? gaeste : eigeneMitglieder}
                       anzeige={anzeige}
                       bearbeitbar={bearbeitbar}
-                      eigeneSeiteIstA={eigeneSeiteIstA}
-                      spielerSetzen={(wer, id) => void spielerSetzen(s, wer, id)}
+                      spielerSetzen={(seite, id) => void spielerSetzen(s, seite, id)}
                       ergebnisSetzen={(a, b) => void ergebnisSetzen(s, a, b)}
                       wertungSetzen={(werten) => void partieWertung(s, werten)}
                     />
@@ -503,21 +507,20 @@ export default function LigaAnsicht({
 function Spielzeile(props: {
   spiel: LigaSpiel;
   partie: Partie | null;
-  eigen: string | null;
-  gegen: string | null;
-  eigeneWahl: Person[];
-  gegnerWahl: Person[];
+  heim: string | null;
+  gast: string | null;
+  heimWahl: Person[];
+  gastWahl: Person[];
   anzeige: (id: string | null) => string;
   bearbeitbar: boolean;
-  eigeneSeiteIstA: boolean;
-  spielerSetzen: (wer: 'eigen' | 'gegner', id: string | null) => void;
-  ergebnisSetzen: (eigen: number | null, gegen: number | null) => void;
+  spielerSetzen: (seite: 'heim' | 'gast', id: string | null) => void;
+  ergebnisSetzen: (heim: number | null, gast: number | null) => void;
   wertungSetzen: (werten: boolean) => void;
 }) {
   const { spiel, partie } = props;
   const wert = (w: number | null | undefined) => (w === null || w === undefined ? '' : String(w));
-  const eigenErgebnis = partie ? (props.eigeneSeiteIstA ? partie.ergebnis_a : partie.ergebnis_b) : null;
-  const gegenErgebnis = partie ? (props.eigeneSeiteIstA ? partie.ergebnis_b : partie.ergebnis_a) : null;
+  const eigenErgebnis = partie?.ergebnis_a ?? null;
+  const gegenErgebnis = partie?.ergebnis_b ?? null;
   const [a, setA] = useState(wert(eigenErgebnis));
   const [b, setB] = useState(wert(gegenErgebnis));
   const zeile = useRef<HTMLTableRowElement>(null);
@@ -538,9 +541,9 @@ function Spielzeile(props: {
     props.ergebnisSetzen(zahl(a), zahl(b));
   };
 
-  const auswahl = (wer: 'eigen' | 'gegner', gewaehlt: string | null, liste: Person[]) =>
+  const auswahl = (seite: 'heim' | 'gast', gewaehlt: string | null, liste: Person[]) =>
     props.bearbeitbar ? (
-      <select value={gewaehlt ?? ''} onChange={(e) => props.spielerSetzen(wer, e.target.value || null)}>
+      <select value={gewaehlt ?? ''} onChange={(e) => props.spielerSetzen(seite, e.target.value || null)}>
         <option value="">– offen –</option>
         {liste.map((p) => (
           <option key={p.id} value={p.id}>
@@ -570,8 +573,8 @@ function Spielzeile(props: {
           {spiel.disziplin === '14-1' ? `${spiel.ziel} Pkt. / ${spiel.aufnahmen} Aufn.` : `${spiel.ziel} Gewinnsätze`}
         </small>
       </td>
-      <td>{auswahl('eigen', props.eigen, props.eigeneWahl)}</td>
-      <td>{auswahl('gegner', props.gegen, props.gegnerWahl)}</td>
+      <td>{auswahl('heim', props.heim, props.heimWahl)}</td>
+      <td>{auswahl('gast', props.gast, props.gastWahl)}</td>
       <td className="rechts">
         {props.bearbeitbar && partie ? (
           <>
