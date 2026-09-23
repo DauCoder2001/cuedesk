@@ -1007,11 +1007,13 @@ async function newGame() {
       const note = m._playable ? '' : ' <span class="busy-note">(Spieler aktiv)</span>';
       // Abweichendes Race to (Final-/KO-Phase) am Spiel anzeigen
       const rtNote = m.raceTo && m.raceTo !== raceTo ? ` <span class="busy-note" style="color:#888;">(Race to ${m.raceTo})</span>` : '';
+      // Liga-Spieltag: jede Partie hat ihre eigene Disziplin
+      const disNote = m.discipline && m.discipline !== (tournament && tournament.discipline) ? ` <span class="busy-note" style="color:#1f3b73; font-weight:bold;">${m.discipline}</span>` : '';
       // Bei aktivem Namensfilter den gefilterten Spieler immer links anzeigen (nur Anzeige)
       let left = m.player1, right = m.player2;
       if (filter && m.player2 === filter) { left = m.player2; right = m.player1; }
       return `<button class="pick-item${m._playable ? '' : ' busy'}" data-id="${m.id}" ${m._playable ? '' : 'disabled'}>`
-        + `<span class="pick-p1">${left}</span><span class="pick-vs">vs</span><span class="pick-p2">${right}</span>${rtNote}${note}</button>`;
+        + `<span class="pick-p1">${left}</span><span class="pick-vs">vs</span><span class="pick-p2">${right}</span>${disNote}${rtNote}${note}</button>`;
     }).join('');
     pickerListEl.querySelectorAll('.pick-item:not(.busy)').forEach(btn => {
       if (btn.dataset.freilos) {
@@ -1042,6 +1044,8 @@ async function newGame() {
       // CueDesk: Turnierspiele mit Vorgabe starten beim Vorgabe-Stand (z.B. 1:0)
       score1: m.vorgabe1 || 0, score2: m.vorgabe2 || 0, nextBreak: 1,
       tournamentMatchId: matchId, group: m.group, raceTo: m.raceTo || tournament.raceTo,
+      // Liga-Spieltag: Disziplin der Partie, sonst die des Turniers
+      discipline: m.discipline || null,
       owner: boardId
     });
     // Anzeige/Screen-Wechsel übernimmt onValue(dbRef)
@@ -1316,7 +1320,10 @@ async function newGame() {
     showBtn('btn-back',    mode === 'free' && tActive);
 
     const hdrText = document.getElementById('hdr-title');
-    if (mode === 'match')              hdrText.textContent = `TURNIER · Tisch ${tableId} · Race to ${currentRaceTo()}`;
+    if (mode === 'match') {
+      const dis = tableData && tableData.discipline ? ` · ${tableData.discipline}` : '';
+      hdrText.textContent = `TURNIER · Tisch ${tableId}${dis} · Race to ${currentRaceTo()}`;
+    }
     else if (mode === 'free' && tActive) hdrText.textContent = `FREI-MODUS · Tisch ${tableId}`;
     else                                 hdrText.textContent = '8/9/10-Ball SCOREBOARD';
   }

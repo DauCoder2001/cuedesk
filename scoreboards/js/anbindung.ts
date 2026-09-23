@@ -617,7 +617,9 @@ async function turnierLaden(): Promise<void> {
   const [partienAntwort, personenAntwort, tischAntwort, teilnehmerAntwort] = await Promise.all([
     v.supabase
       .from('partien')
-      .select('id, spieler_a, spieler_b, race_to, vorgabe_a, vorgabe_b, ergebnis_a, ergebnis_b, status, tisch_id, runde, gruppe, phase, begonnen')
+      .select(
+        'id, spieler_a, spieler_b, race_to, vorgabe_a, vorgabe_b, ergebnis_a, ergebnis_b, status, tisch_id, runde, gruppe, phase, disziplin, begonnen'
+      )
       .eq('turnier_id', t.id)
       .order('runde')
       .order('paarung'),
@@ -635,6 +637,7 @@ async function turnierLaden(): Promise<void> {
     pausiert?: boolean;
     tvAnsicht?: string;
     handReihenfolge?: Record<string, number[]>;
+    liga?: { verdeckt?: Verdeckt };
   };
   const partien = (partienAntwort.data ?? []) as (PlanPartie & { ergebnis_a: number | null; ergebnis_b: number | null })[];
   const aufstellung = (teilnehmerAntwort.data ?? [])
@@ -654,7 +657,7 @@ async function turnierLaden(): Promise<void> {
           status: 'running',
           paused: Boolean(einstellungen.pausiert),
           raceTo: einstellungen.raceTo ?? 0,
-          schedule: tabletSpielplan(partien, name, (id) => nummern.get(id) ?? null),
+          schedule: tabletSpielplan(fuersTablet(partien, einstellungen.liga?.verdeckt), name, (id) => nummern.get(id) ?? null),
           // fuer die TV-Auslosung
           mode: modus,
           type: t.name,
@@ -955,8 +958,8 @@ export async function ergebnisSpeichernPool(
 // ---------- Ergebnis 14.1 speichern ----------
 
 export { aufnahmenAusProtokoll } from './protokoll-141';
-import { ergebnisVomTablet, tabletSpielplan, tvErgebnis } from './turnier-plan';
-import type { PlanEintrag, PlanPartie, TabletTurnier, TvErgebnis } from './turnier-plan';
+import { ergebnisVomTablet, fuersTablet, tabletSpielplan, tvErgebnis } from './turnier-plan';
+import type { PlanEintrag, PlanPartie, TabletTurnier, TvErgebnis, Verdeckt } from './turnier-plan';
 import { aufnahmenAusProtokoll, protokollAusAufnahmen } from './protokoll-141';
 import type { AufnahmeZeile, Zustand141 } from './protokoll-141';
 

@@ -322,7 +322,7 @@ Rechtlich gegenlesen lassen, bevor die Seite öffentlich geht.
 | 5 Turnier Einzelgruppe | Berger-Kreis, Gäste, Vorgabe, Ergebnisse vom Tablet, Live-Tabelle, PDF-Bericht | erstes Turnier komplett im neuen Programm |
 | 6 Weitere Modi | Zwei Gruppen, Gruppen mit KO, Phase 3, Spieler nachtragen | Turnier light wird abgelöst |
 | 7 Serien und Statistik Pool | Serienwertung, Streichergebnisse, Statistik Pool, Ranglisten | Serienwertung wird abgelöst (umgesetzt am 22.09.2026) |
-| 8 Liga-Spieltage | Begegnung mit acht Partien, Doppelspieltag mit getauschtem Heimrecht, verdeckte Aufstellung, Spaß-Liga; Gegner als Gäste, 14.1 ohne Rating | Ligabetrieb im Programm (umgesetzt am 23.09.2026) |
+| 8 Liga-Spieltage | Begegnung mit acht Partien, Doppelspieltag mit getauschtem Heimrecht, verdeckte Aufstellung, Spaß-Liga; Gegner als Gäste, 14.1 ohne Rating; Ergebnisse am Tablet, sobald der Spieltag gestartet ist (8-, 9-, 10-Ball; 14.1 folgt) | Ligabetrieb im Programm (umgesetzt am 23.09.2026) |
 | 9 Mannschaften | Mannschaften je Saison mit Kader, Stammspielern und Kapitän, Saisonübersicht, Einsatzzählung | Meldeliste und Aufstellung an einer Stelle (umgesetzt am 23.09.2026) |
 | 10 Vereinsübergreifend | Turniere mit Gastspielern anderer Vereine, Rating-Hinweis | Vereinsturniere Bassum gegen Verden |
 | 11 Erweiterungen | Turnieranmeldung, automatische Tischzuteilung, Doppel-KO | — |

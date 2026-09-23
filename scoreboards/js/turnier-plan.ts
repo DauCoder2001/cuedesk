@@ -20,6 +20,7 @@ export type PlanPartie = {
   begonnen: string | null;
   gruppe?: string | null; // Zwei Gruppen: A oder B
   phase?: string | null; // 'gruppe' oder 'phase2'
+  disziplin?: string | null; // 8-ball, 9-ball, 10-ball, 14-1
 };
 
 // Ein Eintrag, wie ihn das Scoreboard kennt
@@ -33,6 +34,9 @@ export type PlanEintrag = {
   group: string;
   vorgabe1: number;
   vorgabe2: number;
+  // Liga-Spieltag: jede Partie hat ihre eigene Disziplin. Ohne Angabe gilt die
+  // Disziplin des Turniers.
+  discipline?: string | null;
 };
 
 export type TabletTurnier = {
@@ -91,6 +95,31 @@ export function abschnittName(p: Pick<PlanPartie, 'runde' | 'gruppe' | 'phase'>)
   return p.gruppe ? `Gruppe ${p.gruppe}${runde ? ` · ${runde}` : ''}` : runde;
 }
 
+// Wie die Disziplin am Tisch heissen soll
+const DISZIPLIN_NAME: Record<string, string> = {
+  '8-ball': '8-Ball',
+  '9-ball': '9-Ball',
+  '10-ball': '10-Ball',
+  '14-1': '14.1'
+};
+
+export type Verdeckt = { hin?: { heim?: boolean; gast?: boolean }; rueck?: { heim?: boolean; gast?: boolean } };
+
+// Was am Tablet zur Auswahl steht: 14.1 laeuft nicht ueber das Pool-Board
+// (dort gibt es keinen Picker), und eine verdeckte Aufstellung bleibt auch am
+// Tisch verdeckt - sonst waere das Verbergen umsonst.
+export function fuersTablet<T extends { disziplin?: string | null; runde: number | null }>(
+  partien: T[],
+  verdeckt?: Verdeckt
+): T[] {
+  return partien.filter((p) => {
+    if (p.disziplin === '14-1') return false;
+    if (!verdeckt) return true;
+    const seiten = p.runde === 2 ? verdeckt.rueck : verdeckt.hin;
+    return !(seiten?.heim || seiten?.gast);
+  });
+}
+
 export function tabletSpielplan(
   partien: PlanPartie[],
   name: (personId: string) => string,
@@ -109,7 +138,8 @@ export function tabletSpielplan(
       raceTo: p.race_to,
       group: abschnittName(p),
       vorgabe1: p.vorgabe_a,
-      vorgabe2: p.vorgabe_b
+      vorgabe2: p.vorgabe_b,
+      discipline: DISZIPLIN_NAME[p.disziplin ?? ''] ?? null
     };
   }
   return plan;

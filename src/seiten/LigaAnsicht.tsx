@@ -369,6 +369,16 @@ export default function LigaAnsicht({
     await laden();
   }
 
+  // Erst ein laufender Spieltag erscheint an den Tablets. Gestartet wird er
+  // von Hand, damit die Aufstellung vorher in Ruhe eingetragen werden kann.
+  async function starten() {
+    if (!turnier) return;
+    const { error } = await supabase.from('turniere').update({ status: 'laeuft' }).eq('id', turnier.id);
+    if (error) return setFehler(error.message);
+    setMeldung('Spieltag gestartet. Die Partien stehen jetzt an den Tablets zur Auswahl.');
+    await laden();
+  }
+
   async function wiederOeffnen() {
     if (!turnier || !(await fragen('Spieltag wieder öffnen?', 'Wieder öffnen'))) return;
     const { error } = await supabase.from('turniere').update({ status: 'laeuft' }).eq('id', turnier.id);
@@ -442,6 +452,11 @@ export default function LigaAnsicht({
           </div>
           <div className="knopfpaar">
             <span className={`marke ${turnier.status === 'laeuft' ? 'livelaeuft' : ''}`}>{STATUS_TEXT[turnier.status]}</span>
+            {bearbeitbar && turnier.status === 'geplant' && (
+              <button type="button" onClick={() => void starten()}>
+                Spieltag starten
+              </button>
+            )}
             {bearbeitbar && (
               <button type="button" onClick={() => void ratingUmschalten()}>
                 {turnier.rating_werten ? 'Nicht fürs Rating werten' : 'Fürs Rating werten'}

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { abschnittName, ergebnisVomTablet, planStatus, tabletSpielplan, tvErgebnis } from '../scoreboards/js/turnier-plan';
+import { abschnittName, ergebnisVomTablet, fuersTablet, planStatus, tabletSpielplan, tvErgebnis } from '../scoreboards/js/turnier-plan';
 import type { PlanPartie } from '../scoreboards/js/turnier-plan';
 
 const namen: Record<string, string> = { s: 'Sven', k: 'Kai', o: 'Olli', g: 'Gerd' };
@@ -38,6 +38,22 @@ describe('Spielplan fuer das Tablet', () => {
     expect(plan.p1).toMatchObject({ player1: 'Sven', player2: 'Kai', status: 'pending', vorgabe1: 0, vorgabe2: 2, group: 'Runde 1' });
     expect(plan.p2).toMatchObject({ status: 'running', table: '2', startedAt: Date.parse('2026-09-22T18:00:00Z') });
   });
+
+  test('Disziplin der Partie steht am Spiel (Liga-Spieltag)', () => {
+    const plan = tabletSpielplan(
+      [
+        partie('p1', 's', 'k', { disziplin: '9-ball' }),
+        partie('p2', 'o', 'g', { disziplin: '10-ball', race_to: 4 }),
+        partie('p3', 's', 'g')
+      ],
+      (id) => namen[id],
+      () => null
+    );
+    expect(plan.p1.discipline).toBe('9-Ball');
+    expect(plan.p2).toMatchObject({ discipline: '10-Ball', raceTo: 4 });
+    // Ohne Angabe gilt die Disziplin des Turniers
+    expect(plan.p3.discipline).toBeNull();
+  });
 });
 
 test('Beschriftung mit Gruppe und Platzierungsrunde', () => {
@@ -47,6 +63,28 @@ test('Beschriftung mit Gruppe und Platzierungsrunde', () => {
   expect(abschnittName({ runde: 2, gruppe: 'qf3', phase: 'ko' })).toBe('Viertelfinale 3');
   expect(abschnittName({ runde: 4, gruppe: 'bro', phase: 'ko' })).toBe('Spiel um Platz 3');
   expect(abschnittName({ runde: null, gruppe: null, phase: 'phase3' })).toBe('Platzierungsspiele');
+});
+
+describe('Welche Partien am Tablet erscheinen', () => {
+  const liste = [
+    { id: 'a', disziplin: '14-1', runde: 1 },
+    { id: 'b', disziplin: '8-ball', runde: 1 },
+    { id: 'c', disziplin: '9-ball', runde: 2 }
+  ];
+
+  test('14.1 laeuft nicht ueber das Pool-Board', () => {
+    expect(fuersTablet(liste).map((p) => p.id)).toEqual(['b', 'c']);
+  });
+
+  test('verdeckte Aufstellung bleibt auch am Tisch verdeckt', () => {
+    expect(fuersTablet(liste, { hin: { heim: true } }).map((p) => p.id)).toEqual(['c']);
+    expect(fuersTablet(liste, { rueck: { gast: true } }).map((p) => p.id)).toEqual(['b']);
+    expect(fuersTablet(liste, { hin: { heim: false, gast: false } }).map((p) => p.id)).toEqual(['b', 'c']);
+  });
+
+  test('ohne Liga bleibt alles ausser 14.1', () => {
+    expect(fuersTablet([{ disziplin: '9-ball', runde: 1 }])).toHaveLength(1);
+  });
 });
 
 describe('Ergebnis vom Tablet', () => {
