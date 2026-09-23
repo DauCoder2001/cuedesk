@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../supabase';
 import { useSitzung } from '../sitzung';
+import LigaAnsicht from './LigaAnsicht';
 import TurnierAnsicht from './TurnierAnsicht';
+import { LIGEN } from '../liga';
+import type { Ausspielziele, LigaKennung } from '../liga';
 import type { Disziplin, Serie, Turnier, TurnierModus, TurnierStatus } from '../datenbank.types';
 
 // Turnierliste. Turnierleiter, Sportwart und Vereins-Admin legen Turniere an
@@ -20,6 +23,7 @@ export const MODUS_TEXT: Record<TurnierModus, string> = {
   'zwei-gruppen': 'Zwei Gruppen',
   'gruppen-ko': 'Gruppen mit KO',
   einzelspiel: 'Einzelspiel',
+  liga: 'Liga-Spieltag',
   sonstiges: 'Sonstiges'
 };
 
@@ -45,6 +49,16 @@ export type TurnierEinstellungen = {
   ko?: { seeds: string[]; option: number; gruppenzahl: number; weiter: number; reihung: Record<string, string[]> };
   phase3?: { reihung: string[]; abPlatz: number };
   nachgetragen?: { person: string; gruppe: string | null; zeit: string }[]; // Nachzuegler fuer den Bericht
+  // Liga-Spieltag (Begegnung)
+  liga?: {
+    liga: LigaKennung;
+    spieltag: number;
+    heim: boolean; // Heimrecht der eigenen Mannschaft im ersten Spiel
+    gegner: string; // Name der gegnerischen Mannschaft
+    eigene: string; // Name der eigenen Mannschaft
+    ziele: Ausspielziele;
+    quelle?: string; // URL des eingelesenen Spielberichts
+  };
   vorgabe?: { aktiv: boolean; staerke: number; obergrenze: number };
   handReihenfolge?: Record<string, number[]>;
   pausiert?: boolean; // Tablets starten keine neuen Spiele
@@ -72,6 +86,11 @@ export default function Turniere() {
   const [raceTo, setRaceTo] = useState('5');
   const [racePhase2, setRacePhase2] = useState('5');
   const [raceKo, setRaceKo] = useState({ R16: '5', QF: '5', SF: '5', FIN: '5', P3: '5' });
+  const [liga, setLiga] = useState<LigaKennung>('kreisliga');
+  const [spieltag, setSpieltag] = useState('1');
+  const [heim, setHeim] = useState(true);
+  const [gegner, setGegner] = useState('');
+  const [eigeneMannschaft, setEigeneMannschaft] = useState('');
   const [serieId, setSerieId] = useState('');
   const [vorgabeAn, setVorgabeAn] = useState(true);
   const [staerke, setStaerke] = useState('75');
@@ -109,8 +128,21 @@ export default function Turniere() {
     if (modus === 'gruppen-ko' && Object.values(ko).some((x) => !Number.isInteger(x) || x < 1 || x > 25)) {
       return setFehler('Race to je Runde zwischen 1 und 25.');
     }
+    if (modus === 'liga' && !gegner.trim()) return setFehler('Bitte die gegnerische Mannschaft eintragen.');
     const einstellungen: TurnierEinstellungen = {
       raceTo: race,
+      ...(modus === 'liga'
+        ? {
+            liga: {
+              liga,
+              spieltag: Math.max(1, Number(spieltag) || 1),
+              heim,
+              gegner: gegner.trim(),
+              eigene: eigeneMannschaft.trim() || verein.name,
+              ziele: LIGEN[liga].ziele
+            }
+          }
+        : {}),
       ...(modus === 'zwei-gruppen' ? { racePhase2: race2 } : {}),
       ...(modus === 'gruppen-ko'
         ? { raceKo: { R16: ko.R16, QF: ko.QF, SF: ko.SF, FIN: ko.FIN }, racePhase3: ko.P3 }
@@ -127,7 +159,7 @@ export default function Turniere() {
         verein_id: verein.id,
         name: name.trim(),
         datum,
-        disziplin,
+        disziplin: modus === 'liga' ? 'multi-ball' : disziplin,
         modus,
         serie_id: serieId || null,
         status: 'geplant',
@@ -144,6 +176,19 @@ export default function Turniere() {
   }
 
   if (!verein) return <p className="hinweis">Kein Verein zugeordnet.</p>;
+
+  const offenesTurnier = turniere.find((t) => t.id === offen);
+  if (offen && offenesTurnier?.modus === 'liga') {
+    return (
+      <LigaAnsicht
+        turnierId={offen}
+        zurueck={() => {
+          setOffen(null);
+          void laden();
+        }}
+      />
+    );
+  }
 
   if (offen) {
     return (
@@ -195,12 +240,48 @@ export default function Turniere() {
                   <option value="einzelgruppe">Einzelgruppe (jeder gegen jeden)</option>
                   <option value="zwei-gruppen">Zwei Gruppen mit Platzierungsduellen</option>
                   <option value="gruppen-ko">Gruppen mit KO-Runde</option>
+                  <option value="liga">Liga-Spieltag (Begegnung)</option>
                 </select>
               </label>
+              {modus === 'liga' && (
+                <>
+                  <label className="feld">
+                    <span>Liga</span>
+                    <select value={liga} onChange={(e) => setLiga(e.target.value as LigaKennung)}>
+                      {(Object.keys(LIGEN) as LigaKennung[]).map((k) => (
+                        <option key={k} value={k}>
+                          {LIGEN[k].name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="feld">
+                    <span>Spieltag</span>
+                    <input inputMode="numeric" value={spieltag} onChange={(e) => setSpieltag(e.target.value)} />
+                  </label>
+                  <label className="feld">
+                    <span>Heimrecht</span>
+                    <select value={heim ? 'heim' : 'gast'} onChange={(e) => setHeim(e.target.value === 'heim')}>
+                      <option value="heim">Heimspiel</option>
+                      <option value="gast">Auswärtsspiel</option>
+                    </select>
+                  </label>
+                  <label className="feld">
+                    <span>Eigene Mannschaft</span>
+                    <input value={eigeneMannschaft} onChange={(e) => setEigeneMannschaft(e.target.value)} placeholder={verein.name} />
+                  </label>
+                  <label className="feld">
+                    <span>Gegner</span>
+                    <input value={gegner} onChange={(e) => setGegner(e.target.value)} placeholder="BC Achim 2" />
+                  </label>
+                </>
+              )}
+              {modus !== 'liga' && (
               <label className="feld">
                 <span>{modus === 'einzelgruppe' ? 'Race to' : 'Race to Gruppenphase'}</span>
                 <input inputMode="numeric" value={raceTo} onChange={(e) => setRaceTo(e.target.value)} />
               </label>
+              )}
               {modus === 'zwei-gruppen' && (
                 <label className="feld">
                   <span>Race to Phase 2</span>

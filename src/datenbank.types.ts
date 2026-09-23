@@ -113,7 +113,7 @@ export type Aenderung = {
 
 
 export type Disziplin = '8-ball' | '9-ball' | '10-ball' | 'multi-ball' | '14-1';
-export type TurnierModus = 'einzelgruppe' | 'zwei-gruppen' | 'gruppen-ko' | 'einzelspiel' | 'sonstiges';
+export type TurnierModus = 'einzelgruppe' | 'zwei-gruppen' | 'gruppen-ko' | 'einzelspiel' | 'liga' | 'sonstiges';
 export type TurnierStatus = 'geplant' | 'laeuft' | 'beendet' | 'abgebrochen';
 export type PartieStatus = 'geplant' | 'laeuft' | 'beendet' | 'abgebrochen';
 export type RatingQuelle =
