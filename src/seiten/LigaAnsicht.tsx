@@ -435,8 +435,10 @@ export default function LigaAnsicht({
               {datumLang(turnier.datum)} · {eigenerName} gegen {liga.gegner} · {liga.heim ? 'Heimspiel' : 'Auswärtsspiel'} ·
               14.1 {liga.ziele.punkte141} Punkte / {liga.ziele.aufnahmen141} Aufnahmen · 8-Ball {liga.ziele['8-ball']} ·
               9-Ball {liga.ziele['9-ball']} · 10-Ball {liga.ziele['10-ball']} Gewinnsätze
-              {!turnier.rating_werten && ' · zählt nicht fürs Rating'}
             </p>
+            {!turnier.rating_werten && (
+              <p className="hinweis">Keine Partie dieses Spieltags zählt fürs Rating.</p>
+            )}
           </div>
           <div className="knopfpaar">
             <span className={`marke ${turnier.status === 'laeuft' ? 'livelaeuft' : ''}`}>{STATUS_TEXT[turnier.status]}</span>
@@ -478,7 +480,9 @@ export default function LigaAnsicht({
             <small>
               {punkte.entschieden
                 ? 'endgültig'
-                : `Zwischenstand ${punkte.matchpunkte[0]} : ${punkte.matchpunkte[1]}, noch ${punkte.offen} Partien offen`}
+                : punkte.partiepunkte[0] + punkte.partiepunkte[1] === 0
+                  ? `noch keine Partie entschieden, ${punkte.offen} offen`
+                  : `Zwischenstand ${punkte.matchpunkte[0]} : ${punkte.matchpunkte[1]}, noch ${punkte.offen} Partien offen`}
             </small>
           </div>
         </div>
@@ -731,7 +735,9 @@ function Spielzeile(props: {
       </td>
       <td className="rechts">
         {spiel.disziplin === '14-1' ? (
-          <span className="hinweis">zählt nicht fürs Rating</span>
+          <span className="hinweis" title="14.1 wird auf Punkte gespielt und geht nie ins Rating ein">
+            14.1: kein Rating
+          </span>
         ) : (
           partie &&
           props.bearbeitbar && (

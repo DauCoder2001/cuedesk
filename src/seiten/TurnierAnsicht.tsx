@@ -1495,8 +1495,10 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
                     ? ` · Race to ${raceTo}, KO ${raceFuer('QF')}/${raceFuer('SF')}/${raceFuer('FIN')}`
                     : ` · Race to ${raceTo}`)}
               {va.aktiv && ` · Vorgabe ${va.staerke} %${va.obergrenze > 0 ? `, höchstens ${va.obergrenze}` : ''}`}
-              {!turnier.rating_werten && ' · zählt nicht fürs Rating'}
             </p>
+            {!turnier.rating_werten && (
+              <p className="hinweis">Keine Partie dieses Turniers zählt fürs Rating.</p>
+            )}
             {turnier.quelle !== 'import' && prognoseText(zeitDaten()) && (
               <p className="hinweis">{prognoseText(zeitDaten())}</p>
             )}
