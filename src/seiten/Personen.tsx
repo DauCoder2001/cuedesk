@@ -48,6 +48,7 @@ export default function Personen() {
       .from('personen')
       .select('*')
       .eq('verein_id', vereinId)
+      .order('vorname')
       .order('nachname')
       .order('vorname');
     if (error) {

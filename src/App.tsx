@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { supabase } from './supabase';
 import { useSitzung } from './sitzung';
 import Anmeldung from './seiten/Anmeldung';
 import Personen from './seiten/Personen';
@@ -36,6 +37,34 @@ const istGeraet = new URLSearchParams(window.location.search).has('geraet');
 export default function App() {
   const { laedt, sitzung, benutzer, verein, rollen, abmelden, darf } = useSitzung();
   const [bereich, setBereich] = useState<Bereich>('live');
+  // Laeuft gerade ein Turnier, faellt der Live-Reiter gruen auf.
+  const [turnierLaeuft, setTurnierLaeuft] = useState(false);
+
+  useEffect(() => {
+    if (!verein) return;
+    let vorbei = false;
+    const nachsehen = async () => {
+      const { count } = await supabase
+        .from('turniere')
+        .select('id', { count: 'exact', head: true })
+        .eq('verein_id', verein.id)
+        .eq('status', 'laeuft');
+      if (!vorbei) setTurnierLaeuft((count ?? 0) > 0);
+    };
+    void nachsehen();
+    const kanal = supabase
+      .channel(`turnierstand-${verein.id}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'turniere', filter: `verein_id=eq.${verein.id}` },
+        () => void nachsehen()
+      )
+      .subscribe();
+    return () => {
+      vorbei = true;
+      void supabase.removeChannel(kanal);
+    };
+  }, [verein]);
 
   // Anonyme Anmeldungen gehoeren immer zu einem Geraet, auch ohne ?geraet in
   // der Adresse. Sonst landet ein Tablet in der Mitgliederansicht.
@@ -74,7 +103,14 @@ export default function App() {
               <button
                 key={eintrag.wert}
                 type="button"
-                className={bereich === eintrag.wert ? 'reiter-knopf aktiv' : 'reiter-knopf'}
+                className={[
+                  'reiter-knopf',
+                  bereich === eintrag.wert ? 'aktiv' : '',
+                  eintrag.wert === 'live' && turnierLaeuft ? 'laeuft' : ''
+                ]
+                  .filter(Boolean)
+                  .join(' ')}
+                title={eintrag.wert === 'live' && turnierLaeuft ? 'Ein Turnier läuft gerade' : undefined}
                 onClick={() => setBereich(eintrag.wert)}
               >
                 {eintrag.name}

@@ -8,10 +8,11 @@ export function nameZerlegen(text: string): { vorname: string; nachname: string 
   return { vorname: teile.slice(0, -1).join(' '), nachname: teile[teile.length - 1] };
 }
 
+// Angezeigt wird immer "Vorname Nachname", so wie man einander anspricht.
 export function personName(person: { vorname: string; nachname: string }): string {
   if (!person.nachname) return person.vorname;
   if (!person.vorname) return person.nachname;
-  return `${person.nachname}, ${person.vorname}`;
+  return `${person.vorname} ${person.nachname}`;
 }
 
 export function kuerzelAus(person: { vorname: string; nachname: string }): string {
