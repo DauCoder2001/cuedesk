@@ -148,6 +148,8 @@ button:disabled { cursor: default; color: var(--text-leise); }
 .gefahr small { display: block; font-size: 11px; color: var(--text-leise); }
 .gefahr button { color: var(--fehler); border-color: #e7bcbc; }
 .knopfpaar { display: flex; gap: 6px; }
+/* Auswahlfeld neben Knoepfen, z.B. die Saison: nicht zusammenschrumpfen */
+.knopfpaar .feld { min-width: 110px; }
 
 .einspaltig {
   background: var(--flaeche); border: 1px solid var(--rand); border-radius: 0 0 12px 12px;

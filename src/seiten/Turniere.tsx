@@ -5,7 +5,8 @@ import LigaAnsicht from './LigaAnsicht';
 import TurnierAnsicht from './TurnierAnsicht';
 import { LIGEN } from '../liga';
 import type { Ausspielziele, LigaKennung } from '../liga';
-import type { Disziplin, Serie, Turnier, TurnierModus, TurnierStatus } from '../datenbank.types';
+import { saisonAus } from '../mannschaften';
+import type { Disziplin, Mannschaft, Serie, Turnier, TurnierModus, TurnierStatus } from '../datenbank.types';
 
 // Turnierliste. Turnierleiter, Sportwart und Vereins-Admin legen Turniere an
 // und fuehren sie; Mitglieder sehen alles nur zum Lesen.
@@ -56,6 +57,7 @@ export type TurnierEinstellungen = {
     heim: boolean; // Heimrecht der eigenen Mannschaft im ersten Spiel
     gegner: string; // Name der gegnerischen Mannschaft
     eigene: string; // Name der eigenen Mannschaft
+    mannschaft_id?: string | null; // gemeldete Mannschaft, fuer Kader und Saisonuebersicht
     ziele: Ausspielziele;
     // Ein Spieltag besteht aus zwei Begegnungen am selben Tag; in der zweiten
     // wechselt das Heimrecht (BLVN, 2er-Spieltage).
@@ -97,6 +99,8 @@ export default function Turniere() {
   const [heim, setHeim] = useState(true);
   const [gegner, setGegner] = useState('');
   const [eigeneMannschaft, setEigeneMannschaft] = useState('');
+  const [mannschaften, setMannschaften] = useState<Mannschaft[]>([]);
+  const [mannschaftId, setMannschaftId] = useState('');
   // Spaß-Liga: eigene Ausspielziele
   const [ziele, setZiele] = useState({ punkte141: '50', aufnahmen141: '20', '8-ball': '4', '9-ball': '5', '10-ball': '4' });
   const [serieId, setSerieId] = useState('');
@@ -107,20 +111,33 @@ export default function Turniere() {
 
   const laden = useCallback(async () => {
     if (!verein) return;
-    const [turnierAntwort, serienAntwort, einstellungAntwort] = await Promise.all([
+    const [turnierAntwort, serienAntwort, einstellungAntwort, mannschaftAntwort] = await Promise.all([
       supabase.from('turniere').select('*').eq('verein_id', verein.id).order('datum', { ascending: false }),
       supabase.from('serien').select('*').eq('verein_id', verein.id).eq('aktiv', true).order('name'),
-      supabase.from('rating_einstellungen').select('staerke_prozent').eq('verein_id', verein.id).maybeSingle()
+      supabase.from('rating_einstellungen').select('staerke_prozent').eq('verein_id', verein.id).maybeSingle(),
+      supabase.from('mannschaften').select('*').eq('verein_id', verein.id).eq('aktiv', true).order('rang')
     ]);
     if (turnierAntwort.error) setFehler(turnierAntwort.error.message);
     setTurniere(turnierAntwort.data ?? []);
     setSerien(serienAntwort.data ?? []);
+    setMannschaften(mannschaftAntwort.data ?? []);
     if (einstellungAntwort.data) setStaerke(String(einstellungAntwort.data.staerke_prozent));
   }, [verein]);
 
   useEffect(() => {
     void laden();
   }, [laden]);
+
+  // Gemeldete Mannschaften der Saison, in die das Datum faellt
+  const mannschaftenDerSaison = mannschaften.filter((m) => m.saison === saisonAus(datum));
+  const gewaehlteMannschaft = mannschaftenDerSaison.find((m) => m.id === mannschaftId) ?? null;
+
+  // Die Mannschaft bringt ihre Liga mit; frei eingetragene Namen nicht.
+  function mannschaftWaehlen(id: string) {
+    setMannschaftId(id);
+    const m = mannschaftenDerSaison.find((x) => x.id === id);
+    if (m?.liga && m.liga in LIGEN) setLiga(m.liga as LigaKennung);
+  }
 
   async function anlegen() {
     if (!verein) return;
@@ -160,7 +177,8 @@ export default function Turniere() {
               spieltag: Math.max(1, Number(spieltag) || 1),
               heim,
               gegner: gegner.trim(),
-              eigene: eigeneMannschaft.trim() || verein.name,
+              eigene: gewaehlteMannschaft?.name ?? (eigeneMannschaft.trim() || verein.name),
+              mannschaft_id: mannschaftId || null,
               ziele: liga === 'spass' ? eigeneZiele : LIGEN[liga].ziele,
               begegnung: 1 as const
             }
@@ -236,7 +254,14 @@ export default function Turniere() {
         <div className="bearbeitenkopf">
           <h2>Turniere</h2>
           {darfLeiten && !formular && (
-            <button type="button" onClick={() => setFormular(true)}>
+            <button
+              type="button"
+              onClick={() => {
+                // Standard ist die erste gemeldete Mannschaft der Saison
+                setMannschaftId(mannschaftenDerSaison[0]?.id ?? '');
+                setFormular(true);
+              }}
+            >
               Neues Turnier
             </button>
           )}
@@ -313,8 +338,26 @@ export default function Turniere() {
                   </label>
                   <label className="feld">
                     <span>Eigene Mannschaft</span>
-                    <input value={eigeneMannschaft} onChange={(e) => setEigeneMannschaft(e.target.value)} placeholder={verein.name} />
+                    {mannschaftenDerSaison.length > 0 ? (
+                      <select value={mannschaftId} onChange={(e) => mannschaftWaehlen(e.target.value)}>
+                        {mannschaftenDerSaison.map((m) => (
+                          <option key={m.id} value={m.id}>
+                            {m.name}
+                            {m.staffel ? ` (${m.staffel})` : ''}
+                          </option>
+                        ))}
+                        <option value="">andere, von Hand eintragen</option>
+                      </select>
+                    ) : (
+                      <input value={eigeneMannschaft} onChange={(e) => setEigeneMannschaft(e.target.value)} placeholder={verein.name} />
+                    )}
                   </label>
+                  {mannschaftenDerSaison.length > 0 && !mannschaftId && (
+                    <label className="feld">
+                      <span>Name der Mannschaft</span>
+                      <input value={eigeneMannschaft} onChange={(e) => setEigeneMannschaft(e.target.value)} placeholder={verein.name} />
+                    </label>
+                  )}
                   <label className="feld">
                     <span>Gegner</span>
                     <input value={gegner} onChange={(e) => setGegner(e.target.value)} placeholder="BC Achim 2" />

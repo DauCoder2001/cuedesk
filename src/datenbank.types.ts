@@ -61,6 +61,34 @@ export type PersonIntern = {
   minderjaehrig: boolean;
   rating_startwert: number | null;
   notiz: string | null;
+  passnummer: string | null;   // Pass-Nr. des Landesverbands
+  dbu_nummer: string | null;   // Nummer der Deutschen Billard-Union
+};
+
+export type Mannschaft = {
+  id: string;
+  verein_id: string;
+  name: string;
+  saison: string;
+  liga: string | null;
+  staffel: string | null;
+  rang: number;
+  aktiv: boolean;
+  notiz: string | null;
+  erstellt_am: string;
+  geaendert_am: string;
+};
+
+export type MannschaftSpieler = {
+  id: string;
+  verein_id: string;
+  mannschaft_id: string;
+  person_id: string;
+  stammspieler: boolean;
+  kapitaen: boolean;
+  berechtigt_ab: string | null;
+  position: number | null;
+  erstellt_am: string;
 };
 
 export type BenutzerPerson = {
@@ -289,6 +317,11 @@ export type Database = {
       aufnahmen_141: Tabelle<Aufnahme141, Omit<Aufnahme141, 'id'>>;
       rating_einstellungen: Tabelle<RatingEinstellungen, Partial<RatingEinstellungen> & Pick<RatingEinstellungen, 'verein_id'>>;
       rating_stand: Tabelle<RatingStand, RatingStand>;
+      mannschaften: Tabelle<Mannschaft, Partial<Mannschaft> & Pick<Mannschaft, 'verein_id' | 'name' | 'saison'>>;
+      mannschaft_spieler: Tabelle<
+        MannschaftSpieler,
+        Partial<MannschaftSpieler> & Pick<MannschaftSpieler, 'verein_id' | 'mannschaft_id' | 'person_id'>
+      >;
     };
     Views: { rating_partien: Tabelle<RatingPartie, never, never> };
     Functions: {

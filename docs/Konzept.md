@@ -19,7 +19,7 @@ Export und Import zwischen Programmteilen entfallen.
 | Betreiber | Stufe 1: Matthias. Später können Vereine eine eigene Supabase-Datenbank betreiben |
 | Mandanten | mehrere Vereine in einer Datenbank, strikt getrennt (`verein_id`) |
 | Erster Mandant | Verden; ein weiterer Verein ist vorerst nicht geplant, das Programm ist aber darauf vorbereitet |
-| Vereinsübergreifende Turniere | zu Beginn als normales Turnier mit Gästen; eigene Logik erst in Stufe 8 |
+| Vereinsübergreifende Turniere | zu Beginn als normales Turnier mit Gästen; eigene Logik erst in Stufe 10 |
 | Adresse | zunächst GitHub Pages, Umzug auf eine eigene Domain später |
 | Offline-Betrieb | entfällt; im Vereinsheim mobiler WLAN-Router |
 | Raspberry Pi | wird abgelöst, Hosting im Netz |
@@ -163,6 +163,24 @@ Tabellennamen deutsch, ohne Umlaute. Alle Tabellen außer `vereine` und
 | `partien` | id, turnier_id (leer bei Einzelspiel), disziplin, phase, gruppe, runde, paarung, tisch_id, spieler_a, spieler_b, race_to, vorgabe_a, vorgabe_b, ergebnis_a, ergebnis_b, status, begonnen, beendet, rating_ausgenommen |
 | `live_stand` | tisch_id, partie_id, zustand (JSON, wie heute `tables/<id>`) |
 
+**Mannschaften**
+
+| Tabelle | Wichtige Felder |
+|---|---|
+| `mannschaften` | id, verein_id, name, saison, liga, staffel, rang (Nummer im Mannschaftspass), aktiv, notiz |
+| `mannschaft_spieler` | mannschaft_id, person_id, stammspieler, kapitaen, berechtigt_ab, position |
+
+Pass-Nr. und DBU-Nr. stehen bei der Person (`personen_intern`), nicht bei der
+Mannschaft: sie gelten vereinsweit und sind vertraulich.
+
+Ein Liga-Spieltag verweist über `einstellungen.liga.mannschaft_id` auf seine
+Mannschaft; daraus entstehen die Saisonübersicht und die Einsatzzählung. Wer
+im Kader einer unteren Mannschaft steht, darf oben aushelfen; umgekehrt warnt
+das Programm, wenn ein Stammspieler einer höheren Mannschaft unten antreten
+soll. Die Festspielregel des Verbands (wer zu oft oben aushilft, wird dort
+Stammspieler) bildet CueDesk nicht automatisch ab, zählt aber die Einsätze je
+Spieler und Mannschaft.
+
 Gäste sind Personen mit Status `gast` im ausrichtenden Verein. Beim
 vereinsübergreifenden Turnier zeigt ein optionales Feld auf den
 Personeneintrag im Heimatverein (nur für den Rating-Hinweis).
@@ -304,8 +322,10 @@ Rechtlich gegenlesen lassen, bevor die Seite öffentlich geht.
 | 5 Turnier Einzelgruppe | Berger-Kreis, Gäste, Vorgabe, Ergebnisse vom Tablet, Live-Tabelle, PDF-Bericht | erstes Turnier komplett im neuen Programm |
 | 6 Weitere Modi | Zwei Gruppen, Gruppen mit KO, Phase 3, Spieler nachtragen | Turnier light wird abgelöst |
 | 7 Serien und Statistik Pool | Serienwertung, Streichergebnisse, Statistik Pool, Ranglisten | Serienwertung wird abgelöst (umgesetzt am 22.09.2026) |
-| 8 Vereinsübergreifend | Turniere mit Gastspielern anderer Vereine, Rating-Hinweis | Vereinsturniere Bassum gegen Verden |
-| 9 Erweiterungen | Turnieranmeldung, automatische Tischzuteilung, Doppel-KO | — |
+| 8 Liga-Spieltage | Begegnung mit acht Partien, Doppelspieltag mit getauschtem Heimrecht, verdeckte Aufstellung, Spaß-Liga; Gegner als Gäste, 14.1 ohne Rating | Ligabetrieb im Programm (umgesetzt am 23.09.2026) |
+| 9 Mannschaften | Mannschaften je Saison mit Kader, Stammspielern und Kapitän, Saisonübersicht, Einsatzzählung | Meldeliste und Aufstellung an einer Stelle (umgesetzt am 23.09.2026) |
+| 10 Vereinsübergreifend | Turniere mit Gastspielern anderer Vereine, Rating-Hinweis | Vereinsturniere Bassum gegen Verden |
+| 11 Erweiterungen | Turnieranmeldung, automatische Tischzuteilung, Doppel-KO | — |
 
 Bis Stufe 6 bleiben die Turnier-light-Dateien im Einsatz. Stufe 6 ist seit dem 22.09.2026 umgesetzt (Regeln aus Einzelgruppe v60, Gruppen v64, KO v74, durch Vergleichstests abgesichert); die Ablösung erfolgt nach den Praxistests. Einschränkung: Folgespiele der KO-Runde legt die geöffnete Turnierseite der Turnierleitung an.
 

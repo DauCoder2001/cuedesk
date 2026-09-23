@@ -4,10 +4,11 @@ import { useSitzung } from '../sitzung';
 import { personName } from '../namen';
 import { useRueckfrage } from '../rueckfrage';
 import { LIGEN, aufstellungPruefen, spielplan, wertung } from '../liga';
+import { kaderHinweise } from '../mannschaften';
 import { STATUS_TEXT } from './Turniere';
 import type { LigaSpiel } from '../liga';
 import type { TurnierEinstellungen } from './Turniere';
-import type { Partie, Person, Turnier, TurnierTeilnehmer } from '../datenbank.types';
+import type { Mannschaft, MannschaftSpieler, Partie, Person, Turnier, TurnierTeilnehmer } from '../datenbank.types';
 
 // Ein Liga-Spieltag (Begegnung): Aufstellung, acht Einzelpartien, Partie- und
 // Matchpunkte, Abschluss. Die Regeln stehen in src/liga.ts, die Ergebnisse in
@@ -44,6 +45,8 @@ export default function LigaAnsicht({
   const [teilnehmer, setTeilnehmer] = useState<TurnierTeilnehmer[]>([]);
   const [partien, setPartien] = useState<Partie[]>([]);
   const [personen, setPersonen] = useState<Person[]>([]);
+  const [mannschaften, setMannschaften] = useState<Mannschaft[]>([]);
+  const [kader, setKader] = useState<MannschaftSpieler[]>([]);
   const [gastName, setGastName] = useState('');
   const [passwortFrage, setPasswortFrage] = useState<{ runde: 'hin' | 'rueck'; seite: 'heim' | 'gast' } | null>(null);
   const [passwort, setPasswort] = useState('');
@@ -57,17 +60,21 @@ export default function LigaAnsicht({
 
   const laden = useCallback(async () => {
     if (!verein) return;
-    const [t, tn, p, pe] = await Promise.all([
+    const [t, tn, p, pe, ma, ka] = await Promise.all([
       supabase.from('turniere').select('*').eq('id', turnierId).maybeSingle(),
       supabase.from('turnier_teilnehmer').select('*').eq('turnier_id', turnierId),
       supabase.from('partien').select('*').eq('turnier_id', turnierId).order('runde').order('paarung'),
-      supabase.from('personen').select('*').eq('verein_id', verein.id)
+      supabase.from('personen').select('*').eq('verein_id', verein.id),
+      supabase.from('mannschaften').select('*').eq('verein_id', verein.id),
+      supabase.from('mannschaft_spieler').select('*').eq('verein_id', verein.id)
     ]);
     if (t.error) setFehler(t.error.message);
     setTurnier(t.data ?? null);
     setTeilnehmer(tn.data ?? []);
     setPartien(p.data ?? []);
     setPersonen(pe.data ?? []);
+    setMannschaften(ma.data ?? []);
+    setKader(ka.data ?? []);
   }, [verein, turnierId]);
 
   useEffect(() => {
@@ -139,6 +146,20 @@ export default function LigaAnsicht({
     return aufstellungPruefen(spiele, plan, (id) => anzeige(id));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [spiele, partien, wahl, anzeige, wirSindHeim]);
+
+  const hinweiseKader = useMemo(() => {
+    const eigene = mannschaften.find((m) => m.id === liga?.mannschaft_id);
+    if (!eigene || spiele.length === 0) return [];
+    const derSaison = mannschaften.filter((m) => m.saison === eigene.saison);
+    return kaderHinweise({
+      mannschaft: { id: eigene.id, name: eigene.name, rang: eigene.rang },
+      aufgestellt: spiele.map((s) => unsererSpieler(s)).filter((id): id is string => Boolean(id)),
+      kader: kader.filter((k) => derSaison.some((m) => m.id === k.mannschaft_id)),
+      mannschaften: derSaison.map((m) => ({ id: m.id, name: m.name, rang: m.rang })),
+      name: (id) => anzeige(id)
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mannschaften, kader, spiele, partien, wahl, anzeige, liga?.mannschaft_id, wirSindHeim]);
 
   if (!verein) return null;
   if (!turnier || !liga) {
@@ -464,6 +485,11 @@ export default function LigaAnsicht({
         {fehlerAufstellung.length > 0 && (
           <div className="pausehinweis">
             <strong>Aufstellung prüfen:</strong> {fehlerAufstellung.join(' ')}
+          </div>
+        )}
+        {hinweiseKader.length > 0 && (
+          <div className="pausehinweis">
+            <strong>Kader:</strong> {hinweiseKader.join(' ')}
           </div>
         )}
         {fehler && <p className="fehler">{fehler}</p>}

@@ -13,7 +13,9 @@ const LEER_INTERN: EntwurfIntern = {
   austritt: null,
   minderjaehrig: false,
   rating_startwert: null,
-  notiz: null
+  notiz: null,
+  passnummer: null,
+  dbu_nummer: null
 };
 
 const STATUS_TEXT: Record<PersonenStatus, string> = {
@@ -365,6 +367,20 @@ export default function Personen() {
                           rating_startwert: e.target.value ? Number(e.target.value) : null
                         })
                       }
+                    />
+                  </Feld>
+                  <Feld beschriftung="Pass-Nr. (BLVN)">
+                    <input
+                      value={intern.passnummer ?? ''}
+                      disabled={!darfAendern}
+                      onChange={(e) => setIntern({ ...intern, passnummer: e.target.value || null })}
+                    />
+                  </Feld>
+                  <Feld beschriftung="DBU-Nr.">
+                    <input
+                      value={intern.dbu_nummer ?? ''}
+                      disabled={!darfAendern}
+                      onChange={(e) => setIntern({ ...intern, dbu_nummer: e.target.value || null })}
                     />
                   </Feld>
                 </div>

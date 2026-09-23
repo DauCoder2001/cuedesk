@@ -13,10 +13,12 @@ import StatistikPool from './seiten/StatistikPool';
 import Statistik141 from './seiten/Statistik141';
 import Live from './seiten/Live';
 import Turniere from './seiten/Turniere';
+import Mannschaften from './seiten/Mannschaften';
 
 type Bereich =
   | 'live'
   | 'turniere'
+  | 'mannschaften'
   | 'personen'
   | 'rating'
   | 'serien'
@@ -46,6 +48,7 @@ export default function App() {
   const bereiche: { wert: Bereich; name: string; sichtbar: boolean }[] = [
     { wert: 'live', name: 'Live', sichtbar: true },
     { wert: 'turniere', name: 'Turniere', sichtbar: true },
+    { wert: 'mannschaften', name: 'Mannschaften', sichtbar: true },
     { wert: 'personen', name: 'Personen', sichtbar: true },
     { wert: 'rating', name: 'Rating', sichtbar: true },
     { wert: 'serien', name: 'Serien', sichtbar: true },
@@ -89,6 +92,7 @@ export default function App() {
       <main>
         {bereich === 'live' && <Live />}
         {bereich === 'turniere' && <Turniere />}
+        {bereich === 'mannschaften' && <Mannschaften />}
         {bereich === 'personen' && <Personen />}
         {bereich === 'rating' && <Rating />}
         {bereich === 'serien' && <Serien />}
