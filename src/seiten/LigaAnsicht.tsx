@@ -356,7 +356,12 @@ export default function LigaAnsicht({
   }
 
   async function loeschen() {
-    if (!turnier || !(await fragen(`Spieltag „${turnier.name}“ mit allen Partien löschen?`, 'Löschen'))) return;
+    if (!turnier) return;
+    const zusatz =
+      partien.length > 0
+        ? `\n\n${partien.length} Partien gehen mit verloren.${turnier.rating_werten ? ' Danach das Rating neu berechnen.' : ''}`
+        : '';
+    if (!(await fragen(`Spieltag „${turnier.name}“ mit allen Partien löschen?${zusatz}`, 'Löschen'))) return;
     const { error } = await supabase.from('turniere').delete().eq('id', turnier.id);
     if (error) return setFehler(error.message);
     zurueck();
@@ -427,6 +432,11 @@ export default function LigaAnsicht({
             {istAdmin && turnier.status === 'beendet' && (
               <button type="button" onClick={() => void wiederOeffnen()}>
                 Wieder öffnen
+              </button>
+            )}
+            {istAdmin && (
+              <button type="button" className="gefahrknopf" onClick={() => void loeschen()}>
+                Löschen
               </button>
             )}
           </div>
@@ -505,32 +515,30 @@ export default function LigaAnsicht({
                   );
                 })}
             </tbody>
+            {bearbeitbar && (
+              <tfoot>
+                <tr>
+                  <td colSpan={2}></td>
+                  {(['heim', 'gast'] as const).map((seite) => (
+                    <td key={seite} className="mittig">
+                      <button
+                        type="button"
+                        title="Verborgene Aufstellungen sieht der Gegner nicht. Zum Zeigen wird das Passwort gebraucht."
+                        onClick={() =>
+                          istVerdeckt(r.runde, seite)
+                            ? setPasswortFrage({ runde: r.runde, seite })
+                            : void verdeckenSetzen(r.runde, seite, true)
+                        }
+                      >
+                        Aufstellung {istVerdeckt(r.runde, seite) ? 'zeigen' : 'verbergen'}
+                      </button>
+                    </td>
+                  ))}
+                  <td colSpan={2}></td>
+                </tr>
+              </tfoot>
+            )}
           </table>
-          {bearbeitbar && (
-            <div className="zeile">
-              {(
-                [
-                  ['heim', heimMannschaft],
-                  ['gast', gastMannschaft]
-                ] as const
-              ).map(([seite, mannschaft]) => (
-                <button
-                  key={seite}
-                  type="button"
-                  onClick={() =>
-                    istVerdeckt(r.runde, seite)
-                      ? setPasswortFrage({ runde: r.runde, seite })
-                      : void verdeckenSetzen(r.runde, seite, true)
-                  }
-                >
-                  {mannschaft}: Aufstellung {istVerdeckt(r.runde, seite) ? 'zeigen' : 'verbergen'}
-                </button>
-              ))}
-              <span className="hinweis">
-                Verborgene Aufstellungen sieht der Gegner nicht. Zum Zeigen wird das Passwort gebraucht.
-              </span>
-            </div>
-          )}
         </section>
       ))}
 
@@ -552,11 +560,6 @@ export default function LigaAnsicht({
             Der Name bekommt die Mannschaft angehängt, zum Beispiel „Meier ({liga.gegner})“. Gäste stehen in keiner
             Rangliste, ihre Stärke zählt aber für das Rating deiner Spieler.
           </p>
-          <div className="knopfpaar">
-            <button type="button" className="gefahrknopf" onClick={() => void loeschen()}>
-              Spieltag löschen
-            </button>
-          </div>
         </section>
       )}
       {rueckfrage}

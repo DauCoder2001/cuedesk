@@ -1374,7 +1374,12 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
   }
 
   async function loeschen() {
-    if (!turnier || !(await fragen(`„${turnier.name}“ mit allen Teilnehmern und Partien löschen?`, 'Löschen'))) return;
+    if (!turnier) return;
+    const zusatz =
+      partien.length > 0
+        ? `\n\n${partien.length} Partien gehen mit verloren.${turnier.rating_werten ? ' Danach das Rating neu berechnen.' : ''}`
+        : '';
+    if (!(await fragen(`„${turnier.name}“ mit allen Teilnehmern und Partien löschen?${zusatz}`, 'Löschen'))) return;
     const { error } = await supabase.from('turniere').delete().eq('id', turnier.id);
     if (error) return setFehler(error.message);
     zurueck();
@@ -1516,6 +1521,11 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
             {istAdmin && turnier.status === 'beendet' && turnier.quelle !== 'import' && (
               <button type="button" onClick={() => void wiederOeffnen()}>
                 Wieder öffnen
+              </button>
+            )}
+            {istAdmin && turnier.status !== 'geplant' && (
+              <button type="button" className="gefahrknopf" onClick={() => void loeschen()}>
+                Löschen
               </button>
             )}
           </div>

@@ -191,6 +191,8 @@ button:disabled { cursor: default; color: var(--text-leise); }
 .kennzahlen small { display: block; font-size: 11px; color: var(--text-leise); }
 
 .verdeckt { filter: blur(5px); user-select: none; color: var(--text-leise); }
+.tabelle td.mittig { text-align: center; }
+.tabelle tfoot td { border-top: none; padding-top: 10px; }
 
 .formzeile { display: flex; flex-wrap: wrap; gap: 4px; margin: 0 0 6px; }
 .formmarke { width: 22px; height: 22px; border-radius: 6px; font-size: 12px; line-height: 22px; text-align: center; background: var(--flaeche-2); }
