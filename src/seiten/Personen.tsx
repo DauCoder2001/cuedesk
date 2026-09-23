@@ -3,6 +3,7 @@ import { supabase } from '../supabase';
 import { useSitzung } from '../sitzung';
 import type { Person, PersonIntern, PersonenStatus } from '../datenbank.types';
 import { personName, kuerzelAus } from '../namen';
+import { useRueckfrage } from '../rueckfrage';
 
 type Entwurf = Omit<Person, 'id' | 'erstellt_am' | 'geaendert_am'> & { id: string | null };
 type EntwurfIntern = Omit<PersonIntern, 'person_id' | 'verein_id'>;
@@ -23,6 +24,7 @@ const STATUS_TEXT: Record<PersonenStatus, string> = {
 
 export default function Personen() {
   const { verein, darf } = useSitzung();
+  const [rueckfrage, fragen] = useRueckfrage();
   const darfSehen = darf('vereinsadmin', 'sportwart', 'turnierleiter');
   const darfAendern = darf('vereinsadmin', 'sportwart');
 
@@ -147,6 +149,50 @@ export default function Personen() {
     return zaehler;
   }, [personen]);
 
+  // Eine Person wird nur geloescht, wenn nichts an ihr haengt. Ergebnisse
+  // duerfen nicht verschwinden, deshalb gibt es sonst nur "Ausgetreten".
+  async function personLoeschen() {
+    if (!verein || !entwurf?.id) return;
+    const id = entwurf.id;
+    const name = personName(entwurf as unknown as Person);
+    setFehler(null);
+    setMeldung(null);
+
+    const [partienAntwort, teilnahmeAntwort, aufnahmeAntwort] = await Promise.all([
+      supabase.from('partien').select('id', { count: 'exact', head: true }).or(`spieler_a.eq.${id},spieler_b.eq.${id}`),
+      supabase.from('turnier_teilnehmer').select('person_id', { count: 'exact', head: true }).eq('person_id', id),
+      supabase.from('aufnahmen_141').select('partie_id', { count: 'exact', head: true }).eq('spieler', id)
+    ]);
+    const partien = partienAntwort.count ?? 0;
+    const teilnahmen = teilnahmeAntwort.count ?? 0;
+    const aufnahmen = aufnahmeAntwort.count ?? 0;
+
+    if (partien + teilnahmen + aufnahmen > 0) {
+      const teile = [
+        partien > 0 ? `${partien} Partien` : null,
+        teilnahmen > 0 ? `${teilnahmen} Turnierteilnahmen` : null,
+        aufnahmen > 0 ? `${aufnahmen} 14.1-Aufnahmen` : null
+      ].filter(Boolean);
+      const frage =
+        `${name} kann nicht gelöscht werden: ${teile.join(', ')} hängen daran.\n\n` +
+        'Stattdessen auf „Ausgetreten“ setzen? Die Person verschwindet dann aus Auswahllisten und Ranglisten, ' +
+        'die Ergebnisse bleiben erhalten.';
+      if (!(await fragen(frage, 'Ausgetreten'))) return;
+      const { error } = await supabase.from('personen').update({ status: 'ausgetreten' }).eq('id', id);
+      if (error) return setFehler(error.message);
+      setMeldung(`${name} ist jetzt als ausgetreten geführt.`);
+      await laden(verein.id);
+      return;
+    }
+
+    if (!(await fragen(`${name} endgültig löschen?`, 'Löschen'))) return;
+    const { error } = await supabase.from('personen').delete().eq('id', id);
+    if (error) return setFehler(error.message);
+    setEntwurf(null);
+    setMeldung(`${name} wurde gelöscht.`);
+    await laden(verein.id);
+  }
+
   if (!verein) {
     return <p className="hinweis">Kein Verein zugeordnet. Wende dich an den Vereins-Administrator.</p>;
   }
@@ -207,7 +253,11 @@ export default function Personen() {
 
       <section className="bearbeiten">
         {!entwurf ? (
-          <p className="hinweis">Links eine Person auswählen oder eine neue anlegen.</p>
+          <>
+            {meldung && <p className="meldung">{meldung}</p>}
+            {fehler && <p className="fehler">{fehler}</p>}
+            <p className="hinweis">Links eine Person auswählen oder eine neue anlegen.</p>
+          </>
         ) : (
           <>
             <div className="bearbeitenkopf">
@@ -337,11 +387,24 @@ export default function Personen() {
               </fieldset>
             )}
 
+            {darfAendern && entwurf.id && (
+              <div className="knopfpaar">
+                <button type="button" className="gefahrknopf" onClick={() => void personLoeschen()}>
+                  Person löschen
+                </button>
+                <span className="hinweis">
+                  Möglich, solange keine Partien, Turnierteilnahmen oder 14.1-Aufnahmen vorliegen. Sonst bleibt die
+                  Person erhalten und wird auf „Ausgetreten“ gesetzt, damit Ergebnisse und Rating stimmig bleiben.
+                </span>
+              </div>
+            )}
+
             {fehler && <p className="fehler">{fehler}</p>}
             {meldung && <p className="meldung">{meldung}</p>}
           </>
         )}
       </section>
+      {rueckfrage}
     </div>
   );
 }
