@@ -57,6 +57,10 @@ export type TurnierEinstellungen = {
     gegner: string; // Name der gegnerischen Mannschaft
     eigene: string; // Name der eigenen Mannschaft
     ziele: Ausspielziele;
+    // Ein Spieltag besteht aus zwei Begegnungen am selben Tag; in der zweiten
+    // wechselt das Heimrecht (BLVN, 2er-Spieltage).
+    begegnung: 1 | 2;
+    partner?: string; // die jeweils andere Begegnung des Spieltags
     quelle?: string; // URL des eingelesenen Spielberichts
   };
   vorgabe?: { aktiv: boolean; staerke: number; obergrenze: number };
@@ -139,7 +143,8 @@ export default function Turniere() {
               heim,
               gegner: gegner.trim(),
               eigene: eigeneMannschaft.trim() || verein.name,
-              ziele: LIGEN[liga].ziele
+              ziele: LIGEN[liga].ziele,
+              begegnung: 1 as const
             }
           }
         : {}),
@@ -182,6 +187,10 @@ export default function Turniere() {
     return (
       <LigaAnsicht
         turnierId={offen}
+        oeffnen={(id) => {
+          setOffen(id);
+          void laden();
+        }}
         zurueck={() => {
           setOffen(null);
           void laden();

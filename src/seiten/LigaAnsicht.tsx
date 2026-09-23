@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from '../supabase';
 import { useSitzung } from '../sitzung';
 import { personName } from '../namen';
@@ -23,7 +23,15 @@ const DISZIPLIN_KURZ: Record<string, string> = {
 const datumLang = (iso: string) =>
   new Date(`${iso}T12:00:00`).toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' });
 
-export default function LigaAnsicht({ turnierId, zurueck }: { turnierId: string; zurueck: () => void }) {
+export default function LigaAnsicht({
+  turnierId,
+  zurueck,
+  oeffnen
+}: {
+  turnierId: string;
+  zurueck: () => void;
+  oeffnen: (id: string) => void;
+}) {
   const { verein, darf } = useSitzung();
   const darfLeiten = darf('vereinsadmin', 'sportwart', 'turnierleiter');
   const istAdmin = darf('vereinsadmin');
@@ -70,7 +78,8 @@ export default function LigaAnsicht({ turnierId, zurueck }: { turnierId: string;
   );
 
   const einstellungen = (turnier?.einstellungen ?? {}) as TurnierEinstellungen;
-  const liga = einstellungen.liga;
+  // Aeltere Spieltage kennen die Begegnungsnummer noch nicht
+  const liga = einstellungen.liga ? { ...einstellungen.liga, begegnung: einstellungen.liga.begegnung ?? 1 } : undefined;
   const spiele = useMemo(() => (liga ? spielplan(liga.ziele) : []), [liga]);
 
   // Partie zu einem Spiel des Plans (Runde 1 = Hinrunde, 2 = Rueckrunde)
@@ -245,6 +254,46 @@ export default function LigaAnsicht({ turnierId, zurueck }: { turnierId: string;
     await laden();
   }
 
+  // Die zweite Begegnung eines Spieltags: gleicher Tag, gleicher Gegner,
+  // getauschtes Heimrecht. Sie entsteht beim ersten Aufruf.
+  async function begegnungOeffnen(nummer: 1 | 2) {
+    if (!turnier || !liga || nummer === liga.begegnung) return;
+    if (liga.partner) return oeffnen(liga.partner);
+    if (!darfLeiten) return setFehler('Die zweite Begegnung legt die Turnierleitung an.');
+    setArbeitet(true);
+    const andere = {
+      ...liga,
+      heim: !liga.heim,
+      begegnung: nummer,
+      partner: turnier.id
+    };
+    const { data, error } = await supabase
+      .from('turniere')
+      .insert({
+        verein_id: turnier.verein_id,
+        name: `${turnier.name.replace(/ · [12]\. Begegnung$/, '')} · ${nummer}. Begegnung`,
+        datum: turnier.datum,
+        disziplin: 'multi-ball',
+        modus: 'liga',
+        status: 'geplant',
+        rating_werten: turnier.rating_werten,
+        einstellungen: { ...einstellungen, liga: andere }
+      })
+      .select('id')
+      .single();
+    if (error || !data) {
+      setArbeitet(false);
+      return setFehler(error?.message ?? 'Zweite Begegnung nicht angelegt.');
+    }
+    // Rueckverweis in der ersten Begegnung merken
+    await supabase
+      .from('turniere')
+      .update({ einstellungen: { ...einstellungen, liga: { ...liga, partner: data.id } } })
+      .eq('id', turnier.id);
+    setArbeitet(false);
+    oeffnen(data.id);
+  }
+
   async function ratingUmschalten() {
     if (!turnier) return;
     const { error } = await supabase.from('turniere').update({ rating_werten: !turnier.rating_werten }).eq('id', turnier.id);
@@ -301,6 +350,27 @@ export default function LigaAnsicht({ turnierId, zurueck }: { turnierId: string;
             <h2>
               {LIGEN[liga.liga].name} · {liga.spieltag}. Spieltag
             </h2>
+            <div className="zeile">
+              <span className="hinweis">Begegnung:</span>
+              <span className="umschalter">
+                {([1, 2] as const).map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    className={liga.begegnung === n ? 'aktiv' : ''}
+                    disabled={arbeitet}
+                    onClick={() => void begegnungOeffnen(n)}
+                  >
+                    {n}. Begegnung
+                  </button>
+                ))}
+              </span>
+              <span className="hinweis">
+                {liga.begegnung === 1
+                  ? 'zuerst gespielt'
+                  : 'danach gespielt, mit getauschtem Heimrecht'}
+              </span>
+            </div>
             <p className="hinweis">
               {datumLang(turnier.datum)} · {eigenerName} gegen {liga.gegner} · {liga.heim ? 'Heimspiel' : 'Auswärtsspiel'} ·
               14.1 {liga.ziele.punkte141} Punkte / {liga.ziele.aufnahmen141} Aufnahmen · 8-Ball {liga.ziele['8-ball']} ·
@@ -450,14 +520,20 @@ function Spielzeile(props: {
   const gegenErgebnis = partie ? (props.eigeneSeiteIstA ? partie.ergebnis_b : partie.ergebnis_a) : null;
   const [a, setA] = useState(wert(eigenErgebnis));
   const [b, setB] = useState(wert(gegenErgebnis));
+  const zeile = useRef<HTMLTableRowElement>(null);
 
+  // Aenderungen von aussen uebernehmen, solange hier niemand tippt
   useEffect(() => {
+    if (zeile.current?.contains(document.activeElement)) return;
     setA(wert(eigenErgebnis));
     setB(wert(gegenErgebnis));
   }, [eigenErgebnis, gegenErgebnis]);
 
   const zahl = (t: string) => (t.trim() === '' ? null : Number(t));
-  const uebernehmen = () => {
+  // Gespeichert wird erst beim Verlassen der Zeile, nicht beim Wechsel
+  // zwischen den beiden Feldern desselben Spiels.
+  const uebernehmen = (e: React.FocusEvent<HTMLInputElement>) => {
+    if (e.relatedTarget && zeile.current?.contains(e.relatedTarget as Node)) return;
     if (zahl(a) === eigenErgebnis && zahl(b) === gegenErgebnis) return;
     props.ergebnisSetzen(zahl(a), zahl(b));
   };
@@ -477,8 +553,15 @@ function Spielzeile(props: {
     );
 
   const fertig = eigenErgebnis !== null && gegenErgebnis !== null;
+  // Enter springt ins zweite Feld und speichert dort, wie im Turnier-Spielplan
+  const beiTaste = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key !== 'Enter') return;
+    const felder = zeile.current?.querySelectorAll('input.zahlfeld') ?? [];
+    if (e.target === felder[0] && felder[1]) (felder[1] as HTMLInputElement).focus();
+    else (e.target as HTMLInputElement).blur();
+  };
   return (
-    <tr className={fertig ? 'gespielt' : ''}>
+    <tr ref={zeile} className={fertig ? 'gespielt' : ''}>
       <td>{spiel.nr}</td>
       <td>
         {DISZIPLIN_KURZ[spiel.disziplin]}
@@ -492,20 +575,39 @@ function Spielzeile(props: {
       <td className="rechts">
         {props.bearbeitbar && partie ? (
           <>
-            <input className="zahlfeld" inputMode="numeric" value={a} onChange={(e) => setA(e.target.value.replace(/\D/g, '').slice(0, 3))} onBlur={uebernehmen} />
+            <input
+              className="zahlfeld"
+              inputMode="numeric"
+              value={a}
+              onChange={(e) => setA(e.target.value.replace(/\D/g, '').slice(0, 3))}
+              onBlur={uebernehmen}
+              onKeyDown={beiTaste}
+            />
             {' : '}
-            <input className="zahlfeld" inputMode="numeric" value={b} onChange={(e) => setB(e.target.value.replace(/\D/g, '').slice(0, 3))} onBlur={uebernehmen} />
+            <input
+              className="zahlfeld"
+              inputMode="numeric"
+              value={b}
+              onChange={(e) => setB(e.target.value.replace(/\D/g, '').slice(0, 3))}
+              onBlur={uebernehmen}
+              onKeyDown={beiTaste}
+            />
           </>
         ) : (
           <span>{fertig ? `${eigenErgebnis} : ${gegenErgebnis}` : '–'}</span>
         )}
       </td>
       <td className="rechts">
-        {partie && props.bearbeitbar && (
+        {spiel.disziplin === '14-1' ? (
+          <span className="hinweis">zählt nicht fürs Rating</span>
+        ) : (
+          partie &&
+          props.bearbeitbar && (
           <label className="ankreuz" title="Diese Partie fürs Rating werten">
             <input type="checkbox" checked={partie.rating_werten} onChange={(e) => props.wertungSetzen(e.target.checked)} />
             Rating
           </label>
+          )
         )}
       </td>
     </tr>

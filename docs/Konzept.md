@@ -28,7 +28,8 @@ Export und Import zwischen Programmteilen entfallen.
 | Programmiersprache | TypeScript, Oberfläche mit React und Vite |
 | Rating | Vereins-Rating aus Turnier light (Fargo-Skala), unverändert im Verfahren, je Verein getrennt |
 | Einzelspiele im Rating | **werden nie gewertet**, kein Schalter |
-| Gäste | kein Rating, in keiner Rangliste; Vorgabe mit 500, im Turnier änderbar; Partien mit Gastbeteiligung werden nicht gewertet |
+| Gäste | kein Rating, in keiner Rangliste; Vorgabe mit 500, im Turnier änderbar; Partien mit Gastbeteiligung werden nicht gewertet, Ausnahme: Liga-Spieltage (dort zählen sie, damit die Stärke des Gegners eingeht) |
+| 14.1 im Rating | zählt nie; das Rating rechnet in Racks, 14.1 in Punkten |
 | Pool-Protokoll | **kein** Protokoll je Rack; Pool-Statistik nur aus Partieergebnissen |
 | 14.1 | vor allem als Einzelspiel; vollständiges Aufnahme-Protokoll wird gespeichert und ausgewertet |
 | Sichtbarkeit Statistik | jedes Mitglied sieht nur die **eigene** Statistik, dazu die Ranglisten |
