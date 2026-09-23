@@ -20,6 +20,10 @@ const DISZIPLIN_KURZ: Record<string, string> = {
   '10-ball': '10-Ball'
 };
 
+// Wer die Aufstellung des Gegners sehen will, braucht dieses Wort. Es ist
+// bewusst einfach: Es soll nur den versehentlichen Blick verhindern.
+const AUFSTELLUNG_PASSWORT = '8-ball';
+
 const datumLang = (iso: string) =>
   new Date(`${iso}T12:00:00`).toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' });
 
@@ -41,6 +45,8 @@ export default function LigaAnsicht({
   const [partien, setPartien] = useState<Partie[]>([]);
   const [personen, setPersonen] = useState<Person[]>([]);
   const [gastName, setGastName] = useState('');
+  const [passwortFrage, setPasswortFrage] = useState<{ runde: 'hin' | 'rueck'; seite: 'heim' | 'gast' } | null>(null);
+  const [passwort, setPasswort] = useState('');
   // Halbe Aufstellung: solange nur eine Seite gewaehlt ist, gibt es noch keine
   // Partie in der Datenbank. Die Wahl haelt deshalb die Ansicht fest.
   const [wahl, setWahl] = useState<Record<number, { heim?: string | null; gast?: string | null }>>({});
@@ -100,6 +106,8 @@ export default function LigaAnsicht({
     return gemerkt !== undefined ? gemerkt : partieVon(s)?.spieler_b ?? null;
   };
   const unsererSpieler = (s: LigaSpiel) => (wirSindHeim ? heimSpieler(s) : gastSpieler(s));
+  const istVerdeckt = (runde: 'hin' | 'rueck', seite: 'heim' | 'gast') =>
+    Boolean(liga?.verdeckt?.[runde]?.[seite]);
 
   const ergebnisse = useMemo(
     () =>
@@ -290,6 +298,33 @@ export default function LigaAnsicht({
     oeffnen(data.id);
   }
 
+  // Aufstellung einer Mannschaft verbergen oder wieder zeigen. Verbergen geht
+  // ohne Nachfrage, zeigen nur mit dem Passwort.
+  async function verdeckenSetzen(runde: 'hin' | 'rueck', seite: 'heim' | 'gast', verbergen: boolean) {
+    if (!turnier || !liga) return;
+    const verdeckt = {
+      ...(liga.verdeckt ?? {}),
+      [runde]: { ...(liga.verdeckt?.[runde] ?? {}), [seite]: verbergen }
+    };
+    const neu = { ...einstellungen, liga: { ...liga, verdeckt } };
+    const { error } = await supabase.from('turniere').update({ einstellungen: neu }).eq('id', turnier.id);
+    if (error) return setFehler(error.message);
+    setTurnier({ ...turnier, einstellungen: neu });
+  }
+
+  async function passwortPruefen() {
+    if (!passwortFrage) return;
+    if (passwort.trim().toLowerCase() !== AUFSTELLUNG_PASSWORT) {
+      setFehler('Das Passwort stimmt nicht.');
+      return;
+    }
+    setFehler(null);
+    const { runde, seite } = passwortFrage;
+    setPasswortFrage(null);
+    setPasswort('');
+    await verdeckenSetzen(runde, seite, false);
+  }
+
   async function ratingUmschalten() {
     if (!turnier) return;
     const { error } = await supabase.from('turniere').update({ rating_werten: !turnier.rating_werten }).eq('id', turnier.id);
@@ -459,6 +494,8 @@ export default function LigaAnsicht({
                       gast={gastSpieler(s)}
                       heimWahl={wirSindHeim ? eigeneMitglieder : gaeste}
                       gastWahl={wirSindHeim ? gaeste : eigeneMitglieder}
+                      heimVerdeckt={istVerdeckt(r.runde, 'heim')}
+                      gastVerdeckt={istVerdeckt(r.runde, 'gast')}
                       anzeige={anzeige}
                       bearbeitbar={bearbeitbar}
                       spielerSetzen={(seite, id) => void spielerSetzen(s, seite, id)}
@@ -469,6 +506,31 @@ export default function LigaAnsicht({
                 })}
             </tbody>
           </table>
+          {bearbeitbar && (
+            <div className="zeile">
+              {(
+                [
+                  ['heim', heimMannschaft],
+                  ['gast', gastMannschaft]
+                ] as const
+              ).map(([seite, mannschaft]) => (
+                <button
+                  key={seite}
+                  type="button"
+                  onClick={() =>
+                    istVerdeckt(r.runde, seite)
+                      ? setPasswortFrage({ runde: r.runde, seite })
+                      : void verdeckenSetzen(r.runde, seite, true)
+                  }
+                >
+                  {mannschaft}: Aufstellung {istVerdeckt(r.runde, seite) ? 'zeigen' : 'verbergen'}
+                </button>
+              ))}
+              <span className="hinweis">
+                Verborgene Aufstellungen sieht der Gegner nicht. Zum Zeigen wird das Passwort gebraucht.
+              </span>
+            </div>
+          )}
         </section>
       ))}
 
@@ -498,6 +560,39 @@ export default function LigaAnsicht({
         </section>
       )}
       {rueckfrage}
+      {passwortFrage && (
+        <div className="dialoghintergrund" onClick={() => setPasswortFrage(null)}>
+          <div className="dialog" onClick={(e) => e.stopPropagation()}>
+            <h2>Aufstellung zeigen</h2>
+            <p>
+              Aufstellung von {passwortFrage.seite === 'heim' ? heimMannschaft : gastMannschaft} in der{' '}
+              {passwortFrage.runde === 'hin' ? 'Hinrunde' : 'Rückrunde'} sichtbar machen.
+            </p>
+            <div className="zeile">
+              <input
+                type="password"
+                placeholder="Passwort"
+                value={passwort}
+                autoFocus
+                onChange={(e) => setPasswort(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && void passwortPruefen()}
+              />
+              <button type="button" onClick={() => void passwortPruefen()}>
+                Zeigen
+              </button>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setPasswortFrage(null);
+                setPasswort('');
+              }}
+            >
+              Abbrechen
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -511,6 +606,8 @@ function Spielzeile(props: {
   gast: string | null;
   heimWahl: Person[];
   gastWahl: Person[];
+  heimVerdeckt: boolean;
+  gastVerdeckt: boolean;
   anzeige: (id: string | null) => string;
   bearbeitbar: boolean;
   spielerSetzen: (seite: 'heim' | 'gast', id: string | null) => void;
@@ -541,8 +638,11 @@ function Spielzeile(props: {
     props.ergebnisSetzen(zahl(a), zahl(b));
   };
 
-  const auswahl = (seite: 'heim' | 'gast', gewaehlt: string | null, liste: Person[]) =>
-    props.bearbeitbar ? (
+  const auswahl = (seite: 'heim' | 'gast', gewaehlt: string | null, liste: Person[], verborgen: boolean) =>
+    verborgen ? (
+      // Der Name steht bewusst nicht im Seitenquelltext
+      <span className="verdeckt" title="Aufstellung verborgen">{gewaehlt ? 'verdeckt' : 'noch offen'}</span>
+    ) : props.bearbeitbar ? (
       <select value={gewaehlt ?? ''} onChange={(e) => props.spielerSetzen(seite, e.target.value || null)}>
         <option value="">– offen –</option>
         {liste.map((p) => (
@@ -573,8 +673,8 @@ function Spielzeile(props: {
           {spiel.disziplin === '14-1' ? `${spiel.ziel} Pkt. / ${spiel.aufnahmen} Aufn.` : `${spiel.ziel} Gewinnsätze`}
         </small>
       </td>
-      <td>{auswahl('heim', props.heim, props.heimWahl)}</td>
-      <td>{auswahl('gast', props.gast, props.gastWahl)}</td>
+      <td>{auswahl('heim', props.heim, props.heimWahl, props.heimVerdeckt)}</td>
+      <td>{auswahl('gast', props.gast, props.gastWahl, props.gastVerdeckt)}</td>
       <td className="rechts">
         {props.bearbeitbar && partie ? (
           <>

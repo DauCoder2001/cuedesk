@@ -9,7 +9,7 @@
 // Ausspielziele stammen aus den Ausschreibungen "OH Ausschreibung V2 ...
 // 2026-27"; 14.1 wird auf Punkte mit Aufnahmenbegrenzung gespielt.
 
-export type LigaKennung = 'kreisklasse' | 'kreisliga' | 'bezirksliga' | 'landesliga';
+export type LigaKennung = 'kreisklasse' | 'kreisliga' | 'bezirksliga' | 'landesliga' | 'spass';
 
 export type Ausspielziele = {
   punkte141: number; // 14.1-endlos: Punkteziel
@@ -35,6 +35,11 @@ export const LIGEN: Record<LigaKennung, { name: string; ziele: Ausspielziele }> 
   landesliga: {
     name: 'Landesliga',
     ziele: { punkte141: 85, aufnahmen141: 25, '8-ball': 5, '9-ball': 6, '10-ball': 5 }
+  },
+  // Eigene Runde ohne Verband: die Ausspielziele legt der Verein selbst fest
+  spass: {
+    name: 'Spaß-Liga',
+    ziele: { punkte141: 50, aufnahmen141: 20, '8-ball': 4, '9-ball': 5, '10-ball': 4 }
   }
 };
 

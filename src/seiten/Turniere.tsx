@@ -60,6 +60,8 @@ export type TurnierEinstellungen = {
     // Ein Spieltag besteht aus zwei Begegnungen am selben Tag; in der zweiten
     // wechselt das Heimrecht (BLVN, 2er-Spieltage).
     begegnung: 1 | 2;
+    // Verdeckte Aufstellung: je Runde und Mannschaft, bis der Kapitaen sie freigibt
+    verdeckt?: { hin?: { heim?: boolean; gast?: boolean }; rueck?: { heim?: boolean; gast?: boolean } };
     partner?: string; // die jeweils andere Begegnung des Spieltags
     quelle?: string; // URL des eingelesenen Spielberichts
   };
@@ -95,6 +97,8 @@ export default function Turniere() {
   const [heim, setHeim] = useState(true);
   const [gegner, setGegner] = useState('');
   const [eigeneMannschaft, setEigeneMannschaft] = useState('');
+  // Spaß-Liga: eigene Ausspielziele
+  const [ziele, setZiele] = useState({ punkte141: '50', aufnahmen141: '20', '8-ball': '4', '9-ball': '5', '10-ball': '4' });
   const [serieId, setSerieId] = useState('');
   const [vorgabeAn, setVorgabeAn] = useState(true);
   const [staerke, setStaerke] = useState('75');
@@ -133,6 +137,20 @@ export default function Turniere() {
       return setFehler('Race to je Runde zwischen 1 und 25.');
     }
     if (modus === 'liga' && !gegner.trim()) return setFehler('Bitte die gegnerische Mannschaft eintragen.');
+    const eigeneZiele: Ausspielziele = {
+      punkte141: Number(ziele.punkte141),
+      aufnahmen141: Number(ziele.aufnahmen141),
+      '8-ball': Number(ziele['8-ball']),
+      '9-ball': Number(ziele['9-ball']),
+      '10-ball': Number(ziele['10-ball'])
+    };
+    if (
+      modus === 'liga' &&
+      liga === 'spass' &&
+      Object.values(eigeneZiele).some((x) => !Number.isInteger(x) || x < 1 || x > 200)
+    ) {
+      return setFehler('Ausspielziele: ganze Zahlen zwischen 1 und 200.');
+    }
     const einstellungen: TurnierEinstellungen = {
       raceTo: race,
       ...(modus === 'liga'
@@ -143,7 +161,7 @@ export default function Turniere() {
               heim,
               gegner: gegner.trim(),
               eigene: eigeneMannschaft.trim() || verein.name,
-              ziele: LIGEN[liga].ziele,
+              ziele: liga === 'spass' ? eigeneZiele : LIGEN[liga].ziele,
               begegnung: 1 as const
             }
           }
@@ -153,7 +171,8 @@ export default function Turniere() {
         ? { raceKo: { R16: ko.R16, QF: ko.QF, SF: ko.SF, FIN: ko.FIN }, racePhase3: ko.P3 }
         : {}),
       vorgabe: {
-        aktiv: vorgabeAn,
+        // In der Liga wird ohne Vorgabe gespielt (Ausschreibung, Abschnitt Modus)
+        aktiv: modus === 'liga' ? false : vorgabeAn,
         staerke: Math.min(100, Math.max(0, Number(staerke) || 0)),
         obergrenze: Math.max(0, Number(obergrenze) || 0)
       }
@@ -235,6 +254,7 @@ export default function Turniere() {
                 <span>Datum</span>
                 <input type="date" value={datum} onChange={(e) => setDatum(e.target.value)} />
               </label>
+              {modus !== 'liga' && (
               <label className="feld">
                 <span>Disziplin</span>
                 <select value={disziplin} onChange={(e) => setDisziplin(e.target.value as Disziplin)}>
@@ -243,6 +263,7 @@ export default function Turniere() {
                   <option value="10-ball">10-Ball</option>
                 </select>
               </label>
+              )}
               <label className="feld">
                 <span>Modus</span>
                 <select value={modus} onChange={(e) => setModus(e.target.value as TurnierModus)}>
@@ -268,6 +289,21 @@ export default function Turniere() {
                     <span>Spieltag</span>
                     <input inputMode="numeric" value={spieltag} onChange={(e) => setSpieltag(e.target.value)} />
                   </label>
+                  {liga === 'spass' &&
+                    (
+                      [
+                        ['punkte141', '14.1: Punkte'],
+                        ['aufnahmen141', '14.1: höchstens Aufnahmen'],
+                        ['8-ball', '8-Ball: Gewinnsätze'],
+                        ['9-ball', '9-Ball: Gewinnsätze'],
+                        ['10-ball', '10-Ball: Gewinnsätze']
+                      ] as const
+                    ).map(([k, text]) => (
+                      <label key={k} className="feld">
+                        <span>{text}</span>
+                        <input inputMode="numeric" value={ziele[k]} onChange={(e) => setZiele({ ...ziele, [k]: e.target.value })} />
+                      </label>
+                    ))}
                   <label className="feld">
                     <span>Heimrecht</span>
                     <select value={heim ? 'heim' : 'gast'} onChange={(e) => setHeim(e.target.value === 'heim')}>
@@ -325,6 +361,7 @@ export default function Turniere() {
                 </select>
               </label>
             </div>
+            {modus !== 'liga' && (
             <label className="ankreuz">
               <input type="checkbox" checked={vorgabeAn} onChange={(e) => setVorgabeAn(e.target.checked)} />
               <span>
@@ -332,7 +369,8 @@ export default function Turniere() {
                 <small>Der schwächere Spieler startet mit Sätzen Vorsprung, berechnet aus dem Vereins-Rating.</small>
               </span>
             </label>
-            {vorgabeAn && (
+            )}
+            {vorgabeAn && modus !== 'liga' && (
               <div className="felder">
                 <label className="feld">
                   <span>Ausgleich in Prozent</span>
@@ -348,7 +386,11 @@ export default function Turniere() {
               <input type="checkbox" checked={ratingWerten} onChange={(e) => setRatingWerten(e.target.checked)} />
               <span>
                 Zählt für das Vereins-Rating
-                <small>Partien mit Gästen zählen nie.</small>
+                <small>
+                  {modus === 'liga'
+                    ? 'Im Liga-Spieltag zählen auch die Partien gegen die gegnerische Mannschaft; 14.1 zählt nie.'
+                    : 'Partien mit Gästen zählen nie.'}
+                </small>
               </span>
             </label>
             <div className="knopfpaar">
