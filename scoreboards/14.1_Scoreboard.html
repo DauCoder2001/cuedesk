@@ -870,6 +870,11 @@
     db, auth, ref, set, onValue, push, serverTimestamp, runTransaction, signInAnonymously,
     starten, istAngebunden, startseite, spielerWaehlen, ergebnisSpeichern141, ergebnis141InPartie
   } from "./js/anbindung.ts";
+  // Die Regeln des Boards (getestet in test/board-regeln.test.ts)
+  import {
+    freiesSpielLaeuft, offeneSpiele, wartetText, zeige141Auswahl, spielBeanspruchen, spielZuruecklegen,
+    ergebnisSchonEingetragen, siegerText
+  } from "./js/board-regeln.ts";
   import { startIdleRedirect } from "./js/idle-timeout.js";
   import { keepScreenAwake } from "./js/wake-lock.js";
   import { setupFullscreenButton } from "./js/fullscreen.js";
@@ -936,27 +941,11 @@
   function tournamentActive() { return !!(tournament && tournament.status === 'running'); }
   let frei141 = false;   // Spieler hat "Frei spielen" gewaehlt
 
-  // Hat an diesem Tisch schon ein freies 14.1-Spiel angefangen? Dann keine
-  // Spielauswahl darueberlegen - auch nicht nach dem Neuladen.
-  function freiesSpielLaeuft(d) {
-    if (!d || d.tournamentMatchId) return false;
-    if (d.frei) return true;
-    return (d.s1 || 0) !== 0 || (d.s2 || 0) !== 0 || (Array.isArray(d.log) && d.log.length > 0) || !!d.startedAt
-      || (d.player1 && d.player1 !== 'Spieler 1') || (d.player2 && d.player2 !== 'Spieler 2');
-  }
   let freigabeGemeldet = false;   // Hinweis "steht schon in CueDesk" nur einmal je Spiel
 
-  // Die 14.1-Partien des laufenden Turniers (Liga-Spieltag). 8-, 9- und
-  // 10-Ball laufen am Pool-Board.
-  function spiele141() {
-    if (!tournament || !tournament.schedule) return [];
-    return Object.entries(tournament.schedule)
-      .filter(([, m]) => m.discipline === '14.1')
-      .map(([id, m]) => ({ id, ...m }));
-  }
-  function offene141() { return spiele141().filter(m => m.status === 'pending' && m.player1 && m.player2); }
-  // Gehoert dieses Spiel noch zu unserem Tisch?
-  function unserSpiel(m) { return !!(m && m.status === 'running' && String(m.table) === String(tableId)); }
+  // Die offenen 14.1-Partien des laufenden Turniers (Liga-Spieltag). 8-, 9-
+  // und 10-Ball laufen am Pool-Board.
+  function offene141() { return offeneSpiele(tournament, '14.1'); }
 
   // Wer am Pool-Board eine 14.1-Paarung antippt, landet ueber ?spiel=<id>
   // hier und steht gleich in diesem Spiel.
@@ -996,17 +985,10 @@
   }
 
   // 8-, 9- und 10-Ball laufen am Pool-Board
-  function offenePool() {
-    if (!tournament || !tournament.schedule) return [];
-    return Object.entries(tournament.schedule)
-      .filter(([, m]) => m.status === 'pending' && m.discipline && m.discipline !== '14.1' && m.player1 && m.player2)
-      .map(([id, m]) => ({ id, ...m }));
-  }
-
   function zeigeWechselZumPool() {
-    const offen = offenePool();
+    const offen = offeneSpiele(tournament, 'pool');
     if (offen.length === 0) return;
-    const kopf = offen.length === 1 ? 'Ein weiteres Spiel wartet noch:' : offen.length + ' weitere Spiele warten noch:';
+    const kopf = wartetText(offen.length, 'pool');
     const zeile = document.createElement('div');
     zeile.innerHTML = '<span class="pick-notiz">' + kopf + '</span>'
       + offen.map(m => '<button class="pick141" type="button" data-id="' + m.id + '">'
@@ -1029,12 +1011,7 @@
     if (tournament && tournament.paused) { alert("Der Spieltag ist pausiert."); return; }
     let res;
     try {
-      res = await runTransaction(ref(db, 'tournament/active/schedule/' + matchId), (m) => {
-        if (!m || m.status !== 'pending') return;
-        if (m.player1 == null || m.player2 == null) return;
-        m.status = 'running'; m.table = tableId; m.startedAt = Date.now();
-        return m;
-      });
+      res = await runTransaction(ref(db, 'tournament/active/schedule/' + matchId), (m) => spielBeanspruchen(m, tableId, Date.now()));
     } catch (e) { alert("Fehler beim Starten: " + e.message); return; }
     if (!res.committed) { alert("Dieses Spiel läuft bereits an einem anderen Tisch."); return; }
     const m = res.snapshot.val();
@@ -1057,11 +1034,7 @@
     const matchId = state.tournamentMatchId;
     if (!matchId) return;
     try {
-      const res = await runTransaction(ref(db, 'tournament/active/schedule/' + matchId), (m) => {
-        if (!unserSpiel(m)) return;
-        m.status = 'pending'; m.table = null; m.startedAt = null;
-        return m;
-      });
+      const res = await runTransaction(ref(db, 'tournament/active/schedule/' + matchId), (m) => spielZuruecklegen(m, tableId));
       if (!res.committed) alert("Dieses Spiel gehört nicht mehr zu diesem Tisch. Der Tisch wird trotzdem freigegeben.");
     } catch (e) { alert("Fehler: " + e.message); return; }
     try { await set(dbRef, null); } catch (e) { alert("Fehler: " + e.message); }
@@ -1815,18 +1788,15 @@
 
     // Ergebnis woanders eingetragen? Dann den Tisch freigeben - mit Hinweis,
     // sonst verschwindet das Bestaetigen-Panel scheinbar grundlos.
-    if (imTurnier && tournamentActive() && tournament.schedule && !yielded) {
-      const eintrag = tournament.schedule[state.tournamentMatchId];
-      if (eintrag && eintrag.status === 'completed') {
-        if (!freigabeGemeldet) {
-          freigabeGemeldet = true;
-          alert("Das Ergebnis dieses Spiels steht schon in CueDesk.\n\nDer Tisch ist wieder frei.");
-        }
-        set(dbRef, null).catch(() => {});
-        return;
+    if (imTurnier && ergebnisSchonEingetragen(tournament, state.tournamentMatchId, yielded)) {
+      if (!freigabeGemeldet) {
+        freigabeGemeldet = true;
+        alert("Das Ergebnis dieses Spiels steht schon in CueDesk.\n\nDer Tisch ist wieder frei.");
       }
+      set(dbRef, null).catch(() => {});
+      return;
     }
-    const zeigePicker = tournamentActive() && !imTurnier && !frei141 && offene141().length > 0;
+    const zeigePicker = zeige141Auswahl(tournamentActive(), imTurnier, frei141, offene141().length);
     const overlay = document.getElementById('picker141');
     if (overlay) {
       overlay.style.display = zeigePicker ? 'flex' : 'none';
@@ -1842,10 +1812,8 @@
     if (panel) {
       panel.style.display = fertig ? 'block' : 'none';
       if (fertig) {
-        const sieger = state.s1 > state.s2 ? state.player1 : state.s2 > state.s1 ? state.player2 : null;
-        document.getElementById('confirm-141-text').textContent = sieger
-          ? '🏁 ' + sieger + ' gewinnt ' + Math.max(state.s1, state.s2) + ':' + Math.min(state.s1, state.s2)
-          : '🏁 Unentschieden ' + state.s1 + ':' + state.s2;
+        document.getElementById('confirm-141-text').textContent =
+          siegerText(state.player1, state.player2, state.s1, state.s2, '14.1');
       }
     }
 
@@ -1905,7 +1873,7 @@
         // bereits 14.1-Daten -> uebernehmen (Defaults mergen, falls aelterer Stand ohne neue Felder)
         claimed = true;
         state = Object.assign(freshState141(), data);
-        if (freiesSpielLaeuft(data)) frei141 = true;
+        if (freiesSpielLaeuft(data, '14.1')) frei141 = true;
         if (!Array.isArray(state.log)) state.log = [];
         state.gameType = "14.1";
       }

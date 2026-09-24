@@ -544,6 +544,12 @@ button:disabled { opacity: 0.4; }
     db, auth, ref, set, update, onValue, push, get, serverTimestamp, runTransaction, signInAnonymously,
     starten, istAngebunden, startseite, spielerWaehlen, disziplinWaehlen, ergebnisSpeichernPool
   } from "./js/anbindung.ts";
+  // Die Regeln des Boards (getestet in test/board-regeln.test.ts)
+  import {
+    freiesSpielLaeuft, offeneSpiele, wartetText, filterNamen, poolAuswahl, poolModus,
+    spielBeanspruchen, spielZuruecklegen, spielAbschliessen, freilosAbschliessen, freilosWertung,
+    ergebnisSchonEingetragen, ausspielziel, zielErreicht, koFortschreibung, siegerText
+  } from "./js/board-regeln.ts";
   import { startIdleRedirect } from "./js/idle-timeout.js";
   import { keepScreenAwake } from "./js/wake-lock.js";
   import { setupFullscreenButton } from "./js/fullscreen.js";
@@ -583,16 +589,6 @@ button:disabled { opacity: 0.4; }
   let tableData = null;        // letzter tables/<id>-Wert
   let freeOverride = false;    // "Frei spielen" aktiv?
 
-  // Hat an diesem Tisch schon ein freies Spiel angefangen? Dann bleibt das
-  // Board im Frei-Modus - auch nach dem Neuladen und auch, wenn nebenher ein
-  // Turnier laeuft. Frueher fiel es in die Spielauswahl, und "Frei spielen"
-  // ueberschrieb das laufende Spiel.
-  function freiesSpielLaeuft(d) {
-    if (!d || d.gameType !== 'pool' || d.tournamentMatchId) return false;
-    if (d.frei) return true;
-    return (d.score1 || 0) !== 0 || (d.score2 || 0) !== 0 || !!d.startedAt
-      || (d.player1 && d.player1 !== 'Spieler 1') || (d.player2 && d.player2 !== 'Spieler 2');
-  }
   let tournamentLoaded = false; // wurde tournament/active schon mind. einmal geladen?
   let claimed = false;         // hat dieses Board den Tisch bereits beansprucht?
   let yielded = false;         // Tisch an anderes Geraet abgegeben -> nichts mehr schreiben
@@ -617,10 +613,9 @@ button:disabled { opacity: 0.4; }
   function tournamentActive() { return !!(tournament && tournament.status === 'running'); }
   function isMatch() { return tournamentActive() && !freeOverride && !!(tableData && tableData.tournamentMatchId); }
   function currentRaceTo() {
-    if (isMatch()) return (tableData && tableData.raceTo) || (tournament && tournament.raceTo) || 0;
-    return state.raceTo || 0;   // Frei-Modus-Ziel (optional von den Spielern gesetzt)
+    return ausspielziel(isMatch(), tableData && tableData.raceTo, tournament && tournament.raceTo, state.raceTo);
   }
-  function matchOver() { const r = currentRaceTo(); return r > 0 && (state.score1 >= r || state.score2 >= r); }
+  function matchOver() { return zielErreicht(currentRaceTo(), state.score1, state.score2); }
 
   /* ===========================
      Hilfsfunktionen & Firebase Sync
@@ -920,7 +915,7 @@ async function newGame() {
       } else {
         claimed = true;
         state = data;
-        if (freiesSpielLaeuft(data)) freeOverride = true;
+        if (freiesSpielLaeuft(data, 'pool')) freeOverride = true;
       }
       render();
     } else {
@@ -950,30 +945,10 @@ async function newGame() {
   const confirmText    = document.getElementById('confirm-text');
   document.getElementById('picker-table').textContent = tableId;
 
-  // Welche Spieler stecken gerade in einem laufenden Match? (zum Ausgrauen)
-  function busyPlayers() {
-    const busy = new Set();
-    if (tournament && tournament.schedule) {
-      Object.values(tournament.schedule).forEach(m => {
-        if (m.status === 'running') { busy.add(m.player1); busy.add(m.player2); }
-      });
-    }
-    return busy;
-  }
-
   // Filter-Dropdown mit Namen befüllen, die noch offene Spiele haben
   function rebuildFilterOptions() {
-    const names = new Set();
-    if (tournament && tournament.schedule) {
-      Object.values(tournament.schedule).forEach(m => {
-        if (m.status === 'pending') {
-          if (m.player1 && !String(m.player1).includes('FREILOS')) names.add(m.player1);
-          if (m.player2 && !String(m.player2).includes('FREILOS')) names.add(m.player2);
-        }
-      });
-    }
     const current = pickerFilterEl.value;
-    const sorted = [...names].sort((a, b) => a.localeCompare(b));
+    const sorted = filterNamen(tournament);
     pickerFilterEl.innerHTML = '<option value="">— alle offenen Spiele —</option>' +
       sorted.map(n => `<option value="${n}">${n}</option>`).join('');
     if (sorted.includes(current)) pickerFilterEl.value = current;
@@ -1001,27 +976,13 @@ async function newGame() {
         + '<p style="text-align:center; color:#888;">Es kann gerade kein Spiel ausgewählt werden. Bitte auf die Fortsetzung durch die Turnierleitung warten.</p>';
       return;
     }
-    const busy = busyPlayers();
     const filter = pickerFilterEl.value;
-    let pend = Object.entries(tournament.schedule)
-      // 14.1 wird am 14.1-Board gespielt, nicht hier
-      .filter(([id, m]) => m.status === 'pending' && m.discipline !== '14.1')
-      .map(([id, m]) => ({ id, ...m }));
-    if (filter) pend = pend.filter(m => m.player1 === filter || m.player2 === filter);
+    // Offene Spiele ohne 14.1, spielbare zuerst, wartende KO-Spiele zuletzt
+    const pend = poolAuswahl(tournament, filter);
     const isFL = (n) => String(n).includes('FREILOS');
-    pend.forEach(m => {
-      m._waiting = (m.player1 == null || m.player2 == null);   // KO: Vorrunde noch nicht entschieden
-      m._freilos = !m._waiting && (isFL(m.player1) || isFL(m.player2));
-      m._playable = !m._waiting && (m._freilos || (!busy.has(m.player1) && !busy.has(m.player2)));
-    });
-    pend.sort((a, b) => {
-      if (a._playable !== b._playable) return a._playable ? -1 : 1;   // spielbar zuerst
-      if (a._waiting !== b._waiting) return a._waiting ? 1 : -1;       // wartende zuletzt
-      return 0;
-    });
 
     if (pend.length === 0) {
-      pickerListEl.innerHTML = offene141().length > 0
+      pickerListEl.innerHTML = offeneSpiele(tournament, '14.1').length > 0
         ? '<p style="text-align:center; color:#888;">Alle 8-, 9- und 10-Ball-Spiele sind vergeben.</p>'
         : '<p style="text-align:center; color:#888;">Keine offenen Spiele.</p>';
       zeigeWechselZu141();
@@ -1063,17 +1024,10 @@ async function newGame() {
   }
 
   // Die 14.1-Spiele werden am 14.1-Board gespielt; hier stehen sie nur.
-  function offene141() {
-    if (!tournament || !tournament.schedule) return [];
-    return Object.entries(tournament.schedule)
-      .filter(([, m]) => m.status === 'pending' && m.discipline === '14.1' && m.player1 && m.player2)
-      .map(([id, m]) => ({ id, ...m }));
-  }
-
   function zeigeWechselZu141() {
-    const offen = offene141();
+    const offen = offeneSpiele(tournament, '14.1');
     if (offen.length === 0) return;
-    const kopf = offen.length === 1 ? 'Ein 14.1-Spiel wartet noch:' : offen.length + ' 14.1-Spiele warten noch:';
+    const kopf = wartetText(offen.length, '14.1');
     const zeile = document.createElement('div');
     zeile.innerHTML = '<span class="pick-notiz">' + kopf + '</span>'
       + offen.map(m => '<button class="pick-item" type="button" data-id="' + m.id + '">'
@@ -1099,12 +1053,8 @@ async function newGame() {
     const matchRef = ref(db, `tournament/active/schedule/${matchId}`);
     let res;
     try {
-      res = await runTransaction(matchRef, (m) => {
-        if (!m || m.status !== 'pending') return;   // bereits vergeben -> abbrechen
-        if (m.player1 == null || m.player2 == null) return;   // KO: Spieler stehen noch nicht fest
-        m.status = 'running'; m.table = tableId; m.startedAt = Date.now();
-        return m;
-      });
+      // bereits vergeben oder Spieler noch offen (KO) -> abbrechen
+      res = await runTransaction(matchRef, (m) => spielBeanspruchen(m, tableId, Date.now()));
     } catch (e) { alert("Fehler beim Starten: " + e.message); return; }
     if (!res.committed) { alert("Dieses Spiel läuft bereits an einem anderen Tisch."); return; }
     const m = res.snapshot.val();
@@ -1126,9 +1076,8 @@ async function newGame() {
     const m = tournament && tournament.schedule ? tournament.schedule[matchId] : null;
     if (!m || m.status !== 'pending') return;
     const raceTo = m.raceTo || tournament.raceTo || 0;
-    const p1IsFreilos = String(m.player1).includes('FREILOS');
-    const real = p1IsFreilos ? m.player2 : m.player1;
-    if (!await confirmModal(`${real} gewinnt kampflos ${raceTo}:0 (Freilos)?`)) return;
+    const wertung = freilosWertung(m, raceTo);
+    if (!await confirmModal(`${wertung.spieler} gewinnt kampflos ${raceTo}:0 (Freilos)?`)) return;
 
     const key = push(ref(db, 'results')).key;
     const now = new Date();
@@ -1138,11 +1087,8 @@ async function newGame() {
     // erst der Anspruch, dann der results-Write (Rules erlauben anonym kein Loeschen).
     let res;
     try {
-      res = await runTransaction(ref(db, `tournament/active/schedule/${matchId}`), (cur) => {
-        if (!cur || cur.status !== 'pending') return;   // bereits gewertet oder vergeben
-        cur.status = 'completed'; cur.resultId = key;
-        return cur;
-      });
+      // bereits gewertet oder vergeben -> abbrechen
+      res = await runTransaction(ref(db, `tournament/active/schedule/${matchId}`), (cur) => freilosAbschliessen(cur, key));
     } catch (e) { alert("Fehler: " + e.message); return; }
     if (!res.committed) { alert("Dieses Freilos wurde bereits gewertet."); return; }
 
@@ -1150,8 +1096,8 @@ async function newGame() {
     u['results/' + key] = {
       table: tableId, gameType: "pool",
       player1: m.player1, player2: m.player2,
-      score1: p1IsFreilos ? 0 : raceTo,
-      score2: p1IsFreilos ? raceTo : 0,
+      score1: wertung.score1,
+      score2: wertung.score2,
       date: now.toLocaleDateString("de-DE"),
       timestamp: now.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" }),
       serverTimestamp: serverTimestamp(),
@@ -1160,10 +1106,6 @@ async function newGame() {
     };
     try { await update(ref(db), u); } catch (e) { alert("Fehler: " + e.message); }
   }
-
-  // Besitzt DIESER Tisch das Spiel gerade? Schuetzt vor verspaeteten Offline-Writes,
-  // die den frischen Anspruch eines anderen Tisches ueberschreiben wuerden.
-  const ownsMatch = (m) => !!m && m.status === 'running' && String(m.table) === String(tableId);
 
   // Damit der Hinweis "steht schon in CueDesk" nur einmal je Spiel kommt
   let freigabeGemeldet = false;
@@ -1211,11 +1153,8 @@ async function newGame() {
     //    Tablet nicht mehr entfernen (Rules erlauben anonym nur das Anlegen).
     let res;
     try {
-      res = await runTransaction(ref(db, `tournament/active/schedule/${matchId}`), (m) => {
-        if (!ownsMatch(m)) return;   // fremder Tisch / bereits abgeschlossen -> abbrechen
-        m.status = 'completed'; m.resultId = key;
-        return m;
-      });
+      // fremder Tisch / bereits abgeschlossen -> abbrechen
+      res = await runTransaction(ref(db, `tournament/active/schedule/${matchId}`), (m) => spielAbschliessen(m, tableId, key));
     } catch (e) { alert("Fehler beim Speichern: " + e.message); return; }
 
     if (!res.committed) {
@@ -1244,19 +1183,7 @@ async function newGame() {
 
     // KO: Sieger (und Halbfinal-Verlierer) direkt ins Folgespiel eintragen –
     // laeuft am Tisch (angemeldet) mit, unabhaengig von der Live-Seite.
-    const koM = tournament && tournament.schedule && tournament.schedule[matchId];
-    if (koM && koM.phase === 'ko') {
-      const winner = state.score1 >= state.score2 ? state.player1 : state.player2;
-      const loser  = state.score1 >= state.score2 ? state.player2 : state.player1;
-      if (koM.winnerTo) {
-        u['tournament/active/schedule/' + koM.winnerTo.match + '/player' + koM.winnerTo.slot] = winner;
-        u['tournament/active/schedule/' + koM.winnerTo.match + '/status'] = 'pending';   // verwaisten 'running'-Status heilen
-      }
-      if (koM.loserTo) {
-        u['tournament/active/schedule/' + koM.loserTo.match + '/player' + koM.loserTo.slot] = loser;
-        u['tournament/active/schedule/' + koM.loserTo.match + '/status'] = 'pending';
-      }
-    }
+    Object.assign(u, koFortschreibung(tournament && tournament.schedule && tournament.schedule[matchId], state));
 
     try { await update(ref(db), u); } catch (e) { alert("Fehler beim Speichern: " + e.message); }
   }
@@ -1268,11 +1195,8 @@ async function newGame() {
     const matchId = tableData.tournamentMatchId;
     let res;
     try {
-      res = await runTransaction(ref(db, `tournament/active/schedule/${matchId}`), (m) => {
-        if (!ownsMatch(m)) return;   // gehoert nicht (mehr) diesem Tisch -> nichts anfassen
-        m.status = 'pending'; m.table = null; m.startedAt = null;
-        return m;
-      });
+      // gehoert nicht (mehr) diesem Tisch -> nichts anfassen
+      res = await runTransaction(ref(db, `tournament/active/schedule/${matchId}`), (m) => spielZuruecklegen(m, tableId));
     } catch (e) { alert("Fehler: " + e.message); return; }
     if (!res.committed) {
       alert("Dieses Spiel gehört nicht mehr zu diesem Tisch.\n\nDer Spielplan bleibt unverändert; nur der Tisch wurde freigegeben.");
@@ -1284,7 +1208,7 @@ async function newGame() {
   function enableFreeMode() {
     freeOverride = true;
     // Steht am Tisch schon ein angefangenes freies Spiel, geht es damit weiter
-    if (freiesSpielLaeuft(tableData)) {
+    if (freiesSpielLaeuft(tableData, 'pool')) {
       state = Object.assign({}, tableData, { frei: true });
     } else {
       state = { gameType: "pool", player1: "Spieler 1", player2: "Spieler 2", score1: 0, score2: 0, nextBreak: 1, frei: true };
@@ -1407,21 +1331,15 @@ async function newGame() {
     // Wurde das Ergebnis dieses Spiels woanders eingetragen (etwa am Notebook),
     // gibt der Tisch es frei - sonst haengt das Tablet in einem Spiel fest,
     // das es nicht mehr abschliessen kann. Einmal wird gesagt, warum.
-    if (hasMatch && tActive && tournament.schedule) {
-      const eintrag = tournament.schedule[tableData.tournamentMatchId];
-      if (eintrag && eintrag.status === 'completed' && !yielded) {
-        if (!freigabeGemeldet) {
-          freigabeGemeldet = true;
-          alert("Das Ergebnis dieses Spiels steht schon in CueDesk.\n\nDer Tisch ist wieder frei.");
-        }
-        set(dbRef, null).catch(() => {});
-        return;
+    if (hasMatch && ergebnisSchonEingetragen(tournament, tableData.tournamentMatchId, yielded)) {
+      if (!freigabeGemeldet) {
+        freigabeGemeldet = true;
+        alert("Das Ergebnis dieses Spiels steht schon in CueDesk.\n\nDer Tisch ist wieder frei.");
       }
+      set(dbRef, null).catch(() => {});
+      return;
     }
-    let mode;
-    if (tActive && !freeOverride && !hasMatch) mode = 'picker';
-    else if (tActive && !freeOverride && hasMatch) mode = 'match';
-    else mode = 'free';
+    const mode = poolModus(tActive, freeOverride, hasMatch);
 
     pickerEl.style.display = (mode === 'picker') ? 'flex' : 'none';
     if (mode === 'picker') {
@@ -1432,8 +1350,7 @@ async function newGame() {
     const over = (mode !== 'picker') && matchOver();
     confirmPanel.style.display = over ? 'block' : 'none';
     if (over) {
-      const w = state.score1 > state.score2 ? state.player1 : state.player2;
-      confirmText.textContent = `🏁 ${w} gewinnt ${state.score1}:${state.score2}`;
+      confirmText.textContent = siegerText(state.player1, state.player2, state.score1, state.score2, 'pool');
     }
     // Panel-Aktion je Modus: Turnier bestaetigen vs. Frei-Modus neues Match
     showBtn('btn-confirm',  over && mode === 'match');
