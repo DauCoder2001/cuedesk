@@ -3,7 +3,7 @@ import { supabase } from '../supabase';
 import { useSitzung } from '../sitzung';
 import { personName } from '../namen';
 import { useRueckfrage } from '../rueckfrage';
-import { LIGEN, aufstellungPruefen, spielplan, wertung } from '../liga';
+import { LIGEN, aufstellungPruefen, gesperrteSpieler, spielplan, wertung } from '../liga';
 import { kaderHinweise } from '../mannschaften';
 import { schutzwortStimmt } from '../schutzwort';
 import { STATUS_TEXT } from './Turniere';
@@ -121,6 +121,18 @@ export default function LigaAnsicht({
     return gemerkt !== undefined ? gemerkt : partieVon(s)?.spieler_b ?? null;
   };
   const unsererSpieler = (s: LigaSpiel) => (wirSindHeim ? heimSpieler(s) : gastSpieler(s));
+  // Aufstellung einer Seite ueber alle acht Spiele, fuer die Auswahllisten
+  const planVon = (seite: 'heim' | 'gast') => {
+    const plan: Record<number, string | null> = {};
+    spiele.forEach((s) => (plan[s.nr] = seite === 'heim' ? heimSpieler(s) : gastSpieler(s)));
+    return plan;
+  };
+  // Nur anbieten, wer fuer dieses Spiel noch in Frage kommt; der schon
+  // Eingetragene bleibt sichtbar, auch wenn er eigentlich nicht passt.
+  const moeglich = (liste: Person[], s: LigaSpiel, seite: 'heim' | 'gast', gewaehlt: string | null) => {
+    const gesperrt = gesperrteSpieler(spiele, planVon(seite), s.nr);
+    return liste.filter((p) => p.id === gewaehlt || !gesperrt.has(p.id));
+  };
   const istVerdeckt = (runde: 'hin' | 'rueck', seite: 'heim' | 'gast') =>
     Boolean(liga?.verdeckt?.[runde]?.[seite]);
 
@@ -601,8 +613,8 @@ export default function LigaAnsicht({
                       partie={p}
                       heim={heimSpieler(s)}
                       gast={gastSpieler(s)}
-                      heimWahl={wirSindHeim ? eigeneMitglieder : gaeste}
-                      gastWahl={wirSindHeim ? gaeste : eigeneMitglieder}
+                      heimWahl={moeglich(wirSindHeim ? eigeneMitglieder : gaeste, s, 'heim', heimSpieler(s))}
+                      gastWahl={moeglich(wirSindHeim ? gaeste : eigeneMitglieder, s, 'gast', gastSpieler(s))}
                       heimVerdeckt={istVerdeckt(r.runde, 'heim')}
                       gastVerdeckt={istVerdeckt(r.runde, 'gast')}
                       anzeige={anzeige}

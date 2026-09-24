@@ -166,3 +166,22 @@ export function aufstellungPruefen(
   });
   return fehler;
 }
+
+// Wer fuer ein Spiel nicht mehr in Frage kommt: schon in derselben Runde
+// eingesetzt oder dieselbe Disziplin schon in der anderen Runde. Gilt fuer
+// jede Seite fuer sich; die Auswahllisten bieten diese Spieler nicht an.
+export function gesperrteSpieler(
+  spiele: LigaSpiel[],
+  spielerJeSpiel: Record<number, string | null>,
+  nr: number
+): Set<string> {
+  const gesperrt = new Set<string>();
+  const spiel = spiele.find((s) => s.nr === nr);
+  if (!spiel) return gesperrt;
+  spiele.forEach((s) => {
+    const id = spielerJeSpiel[s.nr];
+    if (!id || s.nr === nr) return;
+    if (s.runde === spiel.runde || s.disziplin === spiel.disziplin) gesperrt.add(id);
+  });
+  return gesperrt;
+}

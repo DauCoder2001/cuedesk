@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { LIGEN, aufstellungPruefen, entfaelltBeiDritt, spielplan, wertung } from '../src/liga';
+import { LIGEN, aufstellungPruefen, entfaelltBeiDritt, gesperrteSpieler, spielplan, wertung } from '../src/liga';
 
 describe('Spielplan einer Begegnung', () => {
   test('acht Partien, Reihenfolge und Ausspielziele der Bezirksliga', () => {
@@ -82,6 +82,17 @@ describe('Aufstellung', () => {
     const plan = { 1: 'a', 2: 'b', 3: 'c', 4: 'd', 5: 'a', 6: 'b', 7: 'd', 8: 'c' };
     const fehler = aufstellungPruefen(spiele, plan, name);
     expect(fehler.some((f) => f.includes('dieselbe Disziplin'))).toBe(true);
+  });
+
+  test('Auswahl sperrt Spieler derselben Runde und derselben Disziplin', () => {
+    // Hinrunde: 1 14.1 a, 2 8-Ball b, 3 9-Ball c; Rueckrunde: 6 10-Ball d
+    const plan = { 1: 'a', 2: 'b', 3: 'c', 4: null, 5: null, 6: 'd', 7: null, 8: null };
+    // Spiel 4 (10-Ball, Hinrunde): a, b, c schon in der Runde, d hat 10-Ball schon
+    expect([...gesperrteSpieler(spiele, plan, 4)].sort()).toEqual(['a', 'b', 'c', 'd']);
+    // Spiel 8 (8-Ball, Rueckrunde): d in der Runde, b hat 8-Ball schon
+    expect([...gesperrteSpieler(spiele, plan, 8)].sort()).toEqual(['b', 'd']);
+    // Der eigene Eintrag sperrt sich nicht selbst
+    expect(gesperrteSpieler(spiele, plan, 1).has('a')).toBe(false);
   });
 
   test('zu zweit ist zu wenig', () => {
