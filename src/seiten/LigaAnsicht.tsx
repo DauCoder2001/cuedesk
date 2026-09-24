@@ -45,6 +45,8 @@ export default function LigaAnsicht({
   const [personen, setPersonen] = useState<Person[]>([]);
   const [mannschaften, setMannschaften] = useState<Mannschaft[]>([]);
   const [kader, setKader] = useState<MannschaftSpieler[]>([]);
+  // Status der anderen Begegnung desselben Spieltags (null: gibt es noch nicht)
+  const [partnerStatus, setPartnerStatus] = useState<Turnier['status'] | null>(null);
   const [gastName, setGastName] = useState('');
   const [passwortFrage, setPasswortFrage] = useState<{ runde: 'hin' | 'rueck'; seite: 'heim' | 'gast' } | null>(null);
   const [passwort, setPasswort] = useState('');
@@ -74,6 +76,13 @@ export default function LigaAnsicht({
     setPersonen(pe.data ?? []);
     setMannschaften(ma.data ?? []);
     setKader(ka.data ?? []);
+    const partnerId = (t.data?.einstellungen as TurnierEinstellungen | null)?.liga?.partner;
+    if (partnerId) {
+      const { data: partner } = await supabase.from('turniere').select('status').eq('id', partnerId).maybeSingle();
+      setPartnerStatus(partner?.status ?? null);
+    } else {
+      setPartnerStatus(null);
+    }
   }, [verein, turnierId]);
 
   useEffect(() => {
@@ -359,19 +368,46 @@ export default function LigaAnsicht({
     await laden();
   }
 
+  // Jede Begegnung wird fuer sich abgeschlossen; danach sind ihre Ergebnisse
+  // gesperrt. Gerechnet wird das Rating erst, wenn der ganze Spieltag - also
+  // auch die andere Begegnung - abgeschlossen ist.
   async function abschliessen() {
-    if (!turnier) return;
-    if (punkte.offen > 0 && !(await fragen(`Noch ${punkte.offen} Partien ohne Ergebnis. Trotzdem abschließen?`))) return;
-    if (!(await fragen('Spieltag abschließen?\nDas Rating wird danach neu berechnet.', 'Abschließen'))) return;
+    if (!turnier || !liga) return;
+    const name = `${liga.begegnung}. Begegnung`;
+    if (punkte.offen > 0 && !(await fragen(`Noch ${punkte.offen} Partien ohne Ergebnis. ${name} trotzdem abschließen?`))) return;
+    // Zweite Begegnung noch nicht angelegt oder schon fertig: dann ist das hier der Schluss
+    const letzte = partnerStatus === null || partnerStatus === 'beendet';
+    const zusatz = letzte
+      ? turnier.rating_werten
+        ? '\nDamit ist der Spieltag komplett, das Rating wird neu berechnet.'
+        : '\nDamit ist der Spieltag komplett.'
+      : '\nDie Ergebnisse sind danach gesperrt. Neu gerechnet wird, wenn auch die andere Begegnung abgeschlossen ist.';
+    if (!(await fragen(`${name} abschließen?${zusatz}`, 'Abschließen'))) return;
     setArbeitet(true);
     const { error } = await supabase.from('turniere').update({ status: 'beendet' }).eq('id', turnier.id);
     if (error) {
       setArbeitet(false);
       return setFehler(error.message);
     }
+    if (!letzte) {
+      setArbeitet(false);
+      setMeldung(`${name} abgeschlossen. Neu gerechnet wird, wenn auch die andere Begegnung abgeschlossen ist.`);
+      await laden();
+      return;
+    }
+    if (!turnier.rating_werten) {
+      setArbeitet(false);
+      setMeldung('Spieltag abgeschlossen. Er zählt nicht fürs Rating.');
+      await laden();
+      return;
+    }
     const rating = await supabase.functions.invoke('rating', { body: { verein_id: turnier.verein_id } });
     setArbeitet(false);
-    setMeldung(rating.error ? 'Spieltag abgeschlossen. Das Rating wird heute Nacht neu berechnet.' : 'Spieltag abgeschlossen, Rating neu berechnet.');
+    setMeldung(
+      rating.error
+        ? 'Spieltag abgeschlossen. Das Rating wird heute Nacht neu berechnet.'
+        : 'Spieltag abgeschlossen, Rating neu berechnet.'
+    );
     await laden();
   }
 
@@ -438,6 +474,7 @@ export default function LigaAnsicht({
                     onClick={() => void begegnungOeffnen(n)}
                   >
                     {n}. Begegnung
+                    {(n === liga.begegnung ? turnier.status : partnerStatus) === 'beendet' ? ' ✓' : ''}
                   </button>
                 ))}
               </span>
@@ -475,7 +512,7 @@ export default function LigaAnsicht({
             )}
             {bearbeitbar && (
               <button type="button" onClick={() => void abschliessen()} disabled={arbeitet}>
-                Abschließen
+                Begegnung abschließen
               </button>
             )}
             {istAdmin && turnier.status === 'beendet' && (
