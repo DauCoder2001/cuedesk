@@ -180,6 +180,13 @@ export default function LigaAnsicht({
   async function spielerSetzen(s: LigaSpiel, seite: 'heim' | 'gast', personId: string | null) {
     if (!turnier || !liga) return;
     const vorhanden = partieVon(s);
+    if (vorhanden && (vorhanden.tisch_id || vorhanden.status === 'beendet')) {
+      return setFehler(
+        vorhanden.status === 'beendet'
+          ? 'Die Partie ist beendet. Zum Ändern zuerst das Ergebnis löschen.'
+          : 'Die Partie läuft gerade an einem Tisch. Sie lässt sich erst ändern, wenn sie dort abgeschlossen oder abgebrochen ist.'
+      );
+    }
     const heim = seite === 'heim' ? personId : heimSpieler(s);
     const gast = seite === 'gast' ? personId : gastSpieler(s);
     setFehler(null);
@@ -706,11 +713,14 @@ function Spielzeile(props: {
     props.ergebnisSetzen(zahl(a), zahl(b));
   };
 
+  // Solange die Partie an einem Tisch laeuft, bleibt die Aufstellung stehen
+  const festgezurrt = Boolean(partie && (partie.tisch_id || partie.status === 'beendet'));
+
   const auswahl = (seite: 'heim' | 'gast', gewaehlt: string | null, liste: Person[], verborgen: boolean) =>
     verborgen ? (
       // Der Name steht bewusst nicht im Seitenquelltext
       <span className="verdeckt" title="Aufstellung verborgen">{gewaehlt ? 'verdeckt' : 'noch offen'}</span>
-    ) : props.bearbeitbar ? (
+    ) : props.bearbeitbar && !festgezurrt ? (
       <select value={gewaehlt ?? ''} onChange={(e) => props.spielerSetzen(seite, e.target.value || null)}>
         <option value="">– offen –</option>
         {liste.map((p) => (

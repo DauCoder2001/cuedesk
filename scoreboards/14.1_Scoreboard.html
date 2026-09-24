@@ -433,6 +433,22 @@
   .pick141 .note { font-size: 2.2vmin; color: #666; }
   #btn-frei-141 { margin-top: 3vmin; width: 100%; background: #6c757d; color: #fff; }
 
+  /* Bestaetigungs-Panel am Ende eines Turnierspiels (wie am Pool-Board) */
+  #confirm-141 {
+    display: none;
+    position: fixed; left: 50%; top: 8vh; transform: translateX(-50%);
+    z-index: 90; text-align: center;
+    background: #fff7e6; border: 0.3vmin solid #e67e22; border-radius: 1.2vmin;
+    padding: 1.2vmin 2.5vmin; box-shadow: 0 0.5vmin 2vmin rgba(0,0,0,0.35); max-width: 92vw;
+  }
+  #confirm-141-text { font-size: 2.8vmin; font-weight: bold; color: #1f3b73; margin-bottom: 0.6vmin; }
+  #confirm-141 .hinweis { display: block; font-size: 1.8vmin; color: #666; margin-top: 0.5vmin; }
+  #btn-confirm-141 { background: #28a745; color: #fff; font-size: 2.8vmin; padding: 1vmin 2.5vmin; margin: 0.5vmin; }
+  /* Wechsel zum Pool-Board: kein Spiel, deshalb andere Optik als die Liste */
+  .pick-wechsel { width: 100%; margin-top: 2vmin; background: #fff; color: #1f3b73;
+    border: 0.3vmin solid #1f3b73; font-size: 3vmin; padding: 1.8vmin; border-radius: 1.2vmin; }
+  .pick-notiz { display: block; text-align: center; font-size: 2.4vmin; color: #666; margin-top: 2.5vmin; }
+
   /* Nachgeben-Overlay: ein anderes Geraet steuert diesen Tisch (verhindert Schreib-Krieg) */
   #yield-overlay {
     display: none;
@@ -831,6 +847,13 @@
   </div>
 </div>
 
+<!-- Turnierspiel zu Ende: Ergebnis in CueDesk uebernehmen -->
+<div id="confirm-141">
+  <div id="confirm-141-text"></div>
+  <button id="btn-confirm-141" type="button">✅ Ergebnis bestätigen</button>
+  <span class="hinweis">Falsch gezählt? Mit ↩️ Undo korrigieren.</span>
+</div>
+
 <!-- Turnier-Picker: 14.1-Partien des laufenden Spieltags -->
 <div id="picker141">
   <div id="picker141-box">
@@ -925,6 +948,17 @@
   // Gehoert dieses Spiel noch zu unserem Tisch?
   function unserSpiel(m) { return !!(m && m.status === 'running' && String(m.table) === String(tableId)); }
 
+  // Wer am Pool-Board eine 14.1-Paarung antippt, landet ueber ?spiel=<id>
+  // hier und steht gleich in diesem Spiel.
+  let spielAusAdresse = new URLSearchParams(window.location.search).get('spiel');
+  function spielAusAdresseStarten() {
+    if (!spielAusAdresse || !tournament || !tournament.schedule) return;
+    const id = spielAusAdresse;
+    spielAusAdresse = null;
+    const m = tournament.schedule[id];
+    if (m && m.status === 'pending' && m.player1 && m.player2) void startMatch141(id);
+  }
+
   function renderPicker141() {
     const liste = document.getElementById('picker141-list');
     document.getElementById('picker141-table').textContent = tableId;
@@ -934,7 +968,8 @@
     }
     const offen = offene141();
     if (offen.length === 0) {
-      liste.innerHTML = '<p style="text-align:center; color:#888;">Keine offenen 14.1-Spiele.</p>';
+      liste.innerHTML = '<p style="text-align:center; color:#888;">Alle 14.1-Spiele sind vergeben.</p>';
+      zeigeWechselZumPool();
       return;
     }
     liste.innerHTML = offen.map(m => {
@@ -947,6 +982,36 @@
     liste.querySelectorAll('.pick141').forEach(btn => {
       btn.addEventListener('click', () => startMatch141(btn.getAttribute('data-id')));
     });
+    zeigeWechselZumPool();
+  }
+
+  // 8-, 9- und 10-Ball laufen am Pool-Board
+  function offenePool() {
+    if (!tournament || !tournament.schedule) return [];
+    return Object.entries(tournament.schedule)
+      .filter(([, m]) => m.status === 'pending' && m.discipline && m.discipline !== '14.1' && m.player1 && m.player2)
+      .map(([id, m]) => ({ id, ...m }));
+  }
+
+  function zeigeWechselZumPool() {
+    const offen = offenePool();
+    if (offen.length === 0) return;
+    const kopf = offen.length === 1 ? 'Ein weiteres Spiel wartet noch:' : offen.length + ' weitere Spiele warten noch:';
+    const zeile = document.createElement('div');
+    zeile.innerHTML = '<span class="pick-notiz">' + kopf + '</span>'
+      + offen.map(m => '<button class="pick141" type="button" data-id="' + m.id + '">'
+          + '<span>' + m.player1 + '</span><span class="vs">vs</span><span>' + m.player2 + '</span>'
+          + ' <span class="note">' + (m.discipline || '') + '</span></button>').join('')
+      + '<button class="pick-wechsel" type="button">🎱 Zum Pool-Board</button>';
+    zeile.querySelectorAll('.pick141').forEach(btn => {
+      btn.addEventListener('click', () => {
+        window.location.href = 'Pool_Scoreboard.html?table=' + tableId + '&spiel=' + btn.getAttribute('data-id');
+      });
+    });
+    zeile.querySelector('.pick-wechsel').addEventListener('click', () => {
+      window.location.href = 'Pool_Scoreboard.html?table=' + tableId;
+    });
+    document.getElementById('picker141-list').appendChild(zeile);
   }
 
   // Spiel am Tisch beanspruchen - die Transaktion verhindert den Doppelstart
@@ -1730,12 +1795,38 @@
   function applyMode() {
     // Laeuft ein Spieltag mit offenen 14.1-Partien, wird zuerst gewaehlt.
     const imTurnier = !!(state && state.tournamentMatchId);
+
+    // Ergebnis woanders eingetragen? Dann den Tisch freigeben.
+    if (imTurnier && tournamentActive() && tournament.schedule && !yielded) {
+      const eintrag = tournament.schedule[state.tournamentMatchId];
+      if (eintrag && eintrag.status === 'completed') {
+        set(dbRef, null).catch(() => {});
+        return;
+      }
+    }
     const zeigePicker = tournamentActive() && !imTurnier && !frei141 && offene141().length > 0;
     const overlay = document.getElementById('picker141');
     if (overlay) {
       overlay.style.display = zeigePicker ? 'flex' : 'none';
-      if (zeigePicker) renderPicker141();
+      if (zeigePicker) {
+        spielAusAdresseStarten();
+        renderPicker141();
+      }
     }
+    // Ist das Turnierspiel durch, wird das Ergebnis bestaetigt - wie am
+    // Pool-Board. Ohne das musste man "Neues Match" nehmen, was niemand sucht.
+    const fertig = imTurnier && state.locked;
+    const panel = document.getElementById('confirm-141');
+    if (panel) {
+      panel.style.display = fertig ? 'block' : 'none';
+      if (fertig) {
+        const sieger = state.s1 > state.s2 ? state.player1 : state.s2 > state.s1 ? state.player2 : null;
+        document.getElementById('confirm-141-text').textContent = sieger
+          ? '🏁 ' + sieger + ' gewinnt ' + Math.max(state.s1, state.s2) + ':' + Math.min(state.s1, state.s2)
+          : '🏁 Unentschieden ' + state.s1 + ':' + state.s2;
+      }
+    }
+
     // "Zurueck zum Turnier" fuehrt zum Pool-Picker, solange ein Turnier laeuft.
     const backBtn = document.getElementById('btn-back-141');
     if (backBtn) backBtn.style.display = tournamentActive() && !imTurnier ? 'inline-block' : 'none';
@@ -1820,6 +1911,31 @@
 
   // "Zurueck zum Turnier": Turnierspiele laufen ueber das Pool-Board (Picker). Das
   // 14.1-Board hat keinen Picker -> Tisch freigeben und direkt zum Pool-Board.
+  document.getElementById('btn-confirm-141').addEventListener('click', () => void ergebnisBestaetigen());
+
+  // Ergebnis in die Partie des Spieltags schreiben und den Tisch freigeben
+  async function ergebnisBestaetigen() {
+    try {
+      if (!state.tournamentMatchId) return;
+      if (!istAngebunden()) {
+        alert("Dieses Tablet ist gerade nicht mit CueDesk verbunden.\n\n" +
+          "Bitte neu koppeln oder das Ergebnis " + state.s1 + ":" + state.s2 + " in CueDesk eintragen.");
+        return;
+      }
+      const erg = await ergebnis141InPartie(state.tournamentMatchId, state, { abgebrochen: false });
+      if (!erg.ok) {
+        alert("Speichern fehlgeschlagen: " + erg.fehler +
+          "\n\nDas Ergebnis " + state.s1 + ":" + state.s2 + " bitte in CueDesk eintragen.");
+        return;
+      }
+      frei141 = false;
+      try { await set(dbRef, null); } catch (e) { alert("Fehler: " + e.message); }
+    } catch (e) {
+      alert("Bestätigen fehlgeschlagen: " + ((e && e.message) || e) +
+        "\n\nDas Ergebnis " + state.s1 + ":" + state.s2 + " bitte in CueDesk eintragen.");
+    }
+  }
+
   document.getElementById('btn-frei-141').addEventListener('click', () => {
     frei141 = true;
     applyMode();

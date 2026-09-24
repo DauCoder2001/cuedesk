@@ -728,7 +728,7 @@ async function turnierBeobachten(pfad: string) {
 // Firebase lieferte bei push sofort einen Schluessel (.key). Der Turniermodus
 // nutzt ihn nur als Kennung des Ergebnisses; gespeichert wird ueber update().
 export function push(_verweis: Verweis): { key: string; then: (weiter: () => void) => Promise<void> } {
-  return { key: crypto.randomUUID(), then: (weiter) => Promise.resolve().then(weiter) };
+  return { key: neueKennung(), then: (weiter) => Promise.resolve().then(weiter) };
 }
 
 type Transaktion = { committed: boolean; snapshot: { val: () => unknown } };
@@ -766,6 +766,19 @@ export async function runTransaction(
     // Abschluss: das Ergebnis selbst kommt gleich mit update(); hier nur pruefen,
     // dass das Spiel noch diesem Tisch gehoert.
     geklappt = alt.table === tischNummer;
+  } else if (neu.status === 'completed' && alt.status === 'pending') {
+    // Die Partie hat ihren Tisch zwischendurch verloren (zum Beispiel, weil sie
+    // in CueDesk zurueckgelegt wurde). Solange sie offen ist und an keinem
+    // anderen Tisch laeuft, darf der Tisch sie trotzdem abschliessen - sonst
+    // waere das am Tisch gespielte Ergebnis verloren.
+    const { data } = await v.supabase
+      .from('partien')
+      .update({ tisch_id: v.tischId })
+      .eq('id', partieId)
+      .is('tisch_id', null)
+      .neq('status', 'beendet')
+      .select('id');
+    geklappt = (data ?? []).length === 1;
   } else if (neu.status === 'pending' && alt.status === 'running') {
     // Abbrechen: zurueck in den Spielplan
     const { data } = await v.supabase
@@ -964,6 +977,7 @@ export async function ergebnisSpeichernPool(
 
 export { aufnahmenAusProtokoll } from './protokoll-141';
 import { ergebnisVomTablet, fuersTablet, seitenGetauscht, tabletSpielplan, tvErgebnis } from './turnier-plan';
+import { neueKennung } from './kennung';
 import type { PlanEintrag, PlanPartie, TabletTurnier, TvErgebnis, Verdeckt } from './turnier-plan';
 import { aufnahmenAusProtokoll, protokollAusAufnahmen } from './protokoll-141';
 import type { AufnahmeZeile, Zustand141 } from './protokoll-141';

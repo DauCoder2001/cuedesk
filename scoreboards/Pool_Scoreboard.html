@@ -269,6 +269,10 @@ button:disabled { opacity: 0.4; }
 .pick-vs { color: #888; margin: 0 1.2vmin; font-size: 2.8vmin; }
 .busy-note { font-size: 2.2vmin; color: #c0392b; }
 #btn-free { margin-top: 3vmin; width: 100%; background: #6c757d; color: #fff; }
+/* Wechsel zum 14.1-Board: kein Spiel, deshalb andere Optik als die Liste */
+.pick-wechsel { width: 100%; margin-top: 2vmin; background: #fff; color: #1f3b73;
+  border: 0.3vmin solid #1f3b73; font-size: 3vmin; padding: 1.8vmin; border-radius: 1.2vmin; }
+.pick-notiz { display: block; text-align: center; font-size: 2.4vmin; color: #666; margin-top: 2.5vmin; }
 
 /* Nachgeben-Overlay: ein anderes Geraet steuert diesen Tisch (verhindert Schreib-Krieg) */
 #yield-overlay {
@@ -957,6 +961,17 @@ async function newGame() {
     if (sorted.includes(current)) pickerFilterEl.value = current;
   }
 
+  // Wer am 14.1-Board eine Paarung antippt, landet ueber ?spiel=<id> hier und
+  // steht gleich in diesem Spiel.
+  let spielAusAdresse = new URLSearchParams(window.location.search).get('spiel');
+  function spielAusAdresseStarten() {
+    if (!spielAusAdresse || !tournament || !tournament.schedule) return;
+    const id = spielAusAdresse;
+    spielAusAdresse = null;   // nur ein Versuch, sonst dreht es sich im Kreis
+    const m = tournament.schedule[id];
+    if (m && m.status === 'pending' && m.player1 && m.player2) void startMatch(id);
+  }
+
   function renderPicker() {
     rebuildFilterOptions();
     if (!tournament || !tournament.schedule) {
@@ -988,17 +1003,10 @@ async function newGame() {
     });
 
     if (pend.length === 0) {
-      const offene141 = Object.values(tournament.schedule)
-        .filter(m => m.status === 'pending' && m.discipline === '14.1').length;
-      pickerListEl.innerHTML = offene141 > 0
-        ? '<p style="text-align:center; color:#888;">Keine offenen 8-, 9- oder 10-Ball-Spiele.</p>'
-          + '<button id="zum-141" class="pick-item" type="button" style="justify-content:center;">'
-          + '➡ ' + offene141 + ' offene 14.1-Spiele am 14.1-Board</button>'
+      pickerListEl.innerHTML = offene141().length > 0
+        ? '<p style="text-align:center; color:#888;">Alle 8-, 9- und 10-Ball-Spiele sind vergeben.</p>'
         : '<p style="text-align:center; color:#888;">Keine offenen Spiele.</p>';
-      const knopf = document.getElementById('zum-141');
-      if (knopf) knopf.addEventListener('click', () => {
-        window.location.href = '14.1_Scoreboard.html?table=' + tableId;
-      });
+      zeigeWechselZu141();
       return;
     }
     const raceTo = (tournament && tournament.raceTo) || 0;
@@ -1033,6 +1041,38 @@ async function newGame() {
         btn.addEventListener('click', () => startMatch(btn.getAttribute('data-id')));
       }
     });
+    zeigeWechselZu141();
+  }
+
+  // Die 14.1-Spiele werden am 14.1-Board gespielt; hier stehen sie nur.
+  function offene141() {
+    if (!tournament || !tournament.schedule) return [];
+    return Object.entries(tournament.schedule)
+      .filter(([, m]) => m.status === 'pending' && m.discipline === '14.1' && m.player1 && m.player2)
+      .map(([id, m]) => ({ id, ...m }));
+  }
+
+  function zeigeWechselZu141() {
+    const offen = offene141();
+    if (offen.length === 0) return;
+    const kopf = offen.length === 1 ? 'Ein 14.1-Spiel wartet noch:' : offen.length + ' 14.1-Spiele warten noch:';
+    const zeile = document.createElement('div');
+    zeile.innerHTML = '<span class="pick-notiz">' + kopf + '</span>'
+      + offen.map(m => '<button class="pick-item" type="button" data-id="' + m.id + '">'
+          + '<span class="pick-p1">' + m.player1 + '</span><span class="pick-vs">vs</span>'
+          + '<span class="pick-p2">' + m.player2 + '</span>'
+          + ' <span class="busy-note" style="color:#1f3b73; font-weight:bold;">14.1</span></button>').join('')
+      + '<button class="pick-wechsel" type="button">🎯 Zum 14.1-Board</button>';
+    // Eine Paarung antippen fuehrt gleich in dieses Spiel
+    zeile.querySelectorAll('.pick-item').forEach(btn => {
+      btn.addEventListener('click', () => {
+        window.location.href = '14.1_Scoreboard.html?table=' + tableId + '&spiel=' + btn.getAttribute('data-id');
+      });
+    });
+    zeile.querySelector('.pick-wechsel').addEventListener('click', () => {
+      window.location.href = '14.1_Scoreboard.html?table=' + tableId;
+    });
+    pickerListEl.appendChild(zeile);
   }
 
   // Spiel am Tisch starten – Transaktion verhindert Doppelstart
@@ -1108,7 +1148,34 @@ async function newGame() {
 
   // Ergebnis bestätigen -> Anspruch sichern, dann archivieren + Tisch freigeben
   async function confirmMatch() {
-    if (!matchOver()) return;
+    try {
+      await confirmMatchIntern();
+    } catch (e) {
+      alert("Bestätigen fehlgeschlagen: " + ((e && e.message) || e) +
+        "\n\nDas Ergebnis " + state.score1 + ":" + state.score2 + " bitte in CueDesk eintragen.");
+    }
+  }
+
+  async function confirmMatchIntern() {
+    if (!matchOver()) {
+      alert("Das Ausspielziel ist noch nicht erreicht (Race to " + currentRaceTo() + ").");
+      return;
+    }
+    if (!istAngebunden()) {
+      alert("Dieses Tablet ist gerade nicht mit CueDesk verbunden.\n\n" +
+        "Bitte neu koppeln oder das Ergebnis " + state.score1 + ":" + state.score2 + " in CueDesk eintragen.");
+      return;
+    }
+    // Ohne Tischdaten oder Turnier liefe der Abschluss ins Leere. Frueher gab
+    // es dann gar keine Rueckmeldung - der Knopf schien tot zu sein.
+    if (!tableData || !tableData.tournamentMatchId) {
+      alert("Dieses Spiel ist am Tisch nicht mehr eingetragen.\n\nBitte das Ergebnis in CueDesk eintragen.");
+      return;
+    }
+    if (!tournament) {
+      alert("Der Spielplan ist gerade nicht erreichbar.\n\nBitte kurz warten und noch einmal bestätigen.");
+      return;
+    }
     const matchId = tableData.tournamentMatchId;
     const group   = tableData.group;
     const tId     = tournament.id;
@@ -1130,7 +1197,11 @@ async function newGame() {
     } catch (e) { alert("Fehler beim Speichern: " + e.message); return; }
 
     if (!res.committed) {
-      alert("Dieses Spiel wurde bereits abgeschlossen oder gehört jetzt zu einem anderen Tisch.\n\nEs wurde nichts gespeichert; der Tisch ist wieder frei.");
+      const imPlan = tournament.schedule && tournament.schedule[matchId];
+      alert(imPlan
+        ? "Dieses Spiel wurde bereits abgeschlossen oder gehört jetzt zu einem anderen Tisch.\n\nEs wurde nichts gespeichert; der Tisch ist wieder frei."
+        : "Dieses Spiel steht nicht mehr im Spielplan - vermutlich wurde die Aufstellung geändert.\n\n"
+          + "Bitte das Ergebnis " + state.score1 + ":" + state.score2 + " in CueDesk eintragen.");
       try { await set(dbRef, null); } catch (e) {}
       return;
     }
@@ -1305,13 +1376,27 @@ async function newGame() {
   function applyMode() {
     const tActive  = tournamentActive();
     const hasMatch = !!(tableData && tableData.tournamentMatchId);
+
+    // Wurde das Ergebnis dieses Spiels woanders eingetragen (etwa am Notebook),
+    // gibt der Tisch es frei - sonst haengt das Tablet in einem Spiel fest,
+    // das es nicht mehr abschliessen kann.
+    if (hasMatch && tActive && tournament.schedule) {
+      const eintrag = tournament.schedule[tableData.tournamentMatchId];
+      if (eintrag && eintrag.status === 'completed' && !yielded) {
+        set(dbRef, null).catch(() => {});
+        return;
+      }
+    }
     let mode;
     if (tActive && !freeOverride && !hasMatch) mode = 'picker';
     else if (tActive && !freeOverride && hasMatch) mode = 'match';
     else mode = 'free';
 
     pickerEl.style.display = (mode === 'picker') ? 'flex' : 'none';
-    if (mode === 'picker') renderPicker();
+    if (mode === 'picker') {
+      spielAusAdresseStarten();
+      renderPicker();
+    }
 
     const over = (mode !== 'picker') && matchOver();
     confirmPanel.style.display = over ? 'block' : 'none';
