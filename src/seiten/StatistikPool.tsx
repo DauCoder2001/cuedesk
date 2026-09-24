@@ -261,7 +261,7 @@ export default function StatistikPool() {
       <section className="block">
         <div className="statkopf">
           {alleSehen ? (
-            <select value={person} onChange={(e) => setPerson(e.target.value)} aria-label="Person">
+            <select value={person} onChange={(e) => setPerson(e.target.value)} aria-label="Spieler">
               {auswahl.length === 0 && <option value="">keine Pool-Partien</option>}
               {auswahl.map((id) => {
                 const p = personen.find((x) => x.id === id);

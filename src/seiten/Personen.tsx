@@ -178,7 +178,7 @@ export default function Personen() {
       ].filter(Boolean);
       const frage =
         `${name} kann nicht gelöscht werden: ${teile.join(', ')} hängen daran.\n\n` +
-        'Stattdessen auf „Ausgetreten“ setzen? Die Person verschwindet dann aus Auswahllisten und Ranglisten, ' +
+        'Stattdessen auf „Ausgetreten“ setzen? Der Spieler verschwindet dann aus Auswahllisten und Ranglisten, ' +
         'die Ergebnisse bleiben erhalten.';
       if (!(await fragen(frage, 'Ausgetreten'))) return;
       const { error } = await supabase.from('personen').update({ status: 'ausgetreten' }).eq('id', id);
@@ -242,13 +242,13 @@ export default function Personen() {
               </button>
             </li>
           ))}
-          {gefiltert.length === 0 && <li className="hinweis">Keine Person gefunden.</li>}
+          {gefiltert.length === 0 && <li className="hinweis">Kein Spieler gefunden.</li>}
         </ul>
 
         {darfAendern && (
           <div className="listenfuss">
             <button type="button" onClick={neu}>
-              Person anlegen
+              Spieler anlegen
             </button>
           </div>
         )}
@@ -259,7 +259,7 @@ export default function Personen() {
           <>
             {meldung && <p className="meldung">{meldung}</p>}
             {fehler && <p className="fehler">{fehler}</p>}
-            <p className="hinweis">Links eine Person auswählen oder eine neue anlegen.</p>
+            <p className="hinweis">Links einen Spieler auswählen oder einen neuen anlegen.</p>
           </>
         ) : (
           <>
@@ -267,7 +267,7 @@ export default function Personen() {
               <h2>
                 {entwurf.id
                   ? `${entwurf.vorname} ${entwurf.nachname}`.trim()
-                  : 'Neue Person'}
+                  : 'Neuer Spieler'}
               </h2>
               {darfAendern && (
                 <button type="button" onClick={() => void speichern()}>
@@ -407,11 +407,11 @@ export default function Personen() {
             {darfAendern && entwurf.id && (
               <div className="knopfpaar">
                 <button type="button" className="gefahrknopf" onClick={() => void personLoeschen()}>
-                  Person löschen
+                  Spieler löschen
                 </button>
                 <span className="hinweis">
-                  Möglich, solange keine Partien, Turnierteilnahmen oder 14.1-Aufnahmen vorliegen. Sonst bleibt die
-                  Person erhalten und wird auf „Ausgetreten“ gesetzt, damit Ergebnisse und Rating stimmig bleiben.
+                  Möglich, solange keine Partien, Turnierteilnahmen oder 14.1-Aufnahmen vorliegen. Sonst bleibt der
+                  Spieler erhalten und wird auf „Ausgetreten“ gesetzt, damit Ergebnisse und Rating stimmig bleiben.
                 </span>
               </div>
             )}

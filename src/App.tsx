@@ -74,11 +74,16 @@ export default function App() {
   if (laedt) return <p className="hinweis">Lädt.</p>;
   if (!sitzung) return <Anmeldung />;
 
-  const bereiche: { wert: Bereich; name: string; sichtbar: boolean }[] = [
+  const bereiche: { wert: Bereich; name: string; sichtbar: boolean; tipp?: string }[] = [
     { wert: 'live', name: 'Live', sichtbar: true },
     { wert: 'turniere', name: 'Turniere', sichtbar: true },
     { wert: 'mannschaften', name: 'Mannschaften', sichtbar: true },
-    { wert: 'personen', name: 'Personen', sichtbar: true },
+    {
+      wert: 'personen',
+      name: 'Spieler',
+      sichtbar: true,
+      tipp: 'Alle Spieler des Vereins: Mitglieder, Gäste anderer Vereine und Ausgetretene. Hier werden Namen, Status und Stammdaten gepflegt.'
+    },
     { wert: 'rating', name: 'Rating', sichtbar: true },
     { wert: 'serien', name: 'Serien', sichtbar: true },
     { wert: 'ranglisten', name: 'Ranglisten', sichtbar: true },
@@ -110,7 +115,7 @@ export default function App() {
                 ]
                   .filter(Boolean)
                   .join(' ')}
-                title={eintrag.wert === 'live' && turnierLaeuft ? 'Ein Turnier läuft gerade' : undefined}
+                title={eintrag.wert === 'live' && turnierLaeuft ? 'Ein Turnier läuft gerade' : eintrag.tipp}
                 onClick={() => setBereich(eintrag.wert)}
               >
                 {eintrag.name}

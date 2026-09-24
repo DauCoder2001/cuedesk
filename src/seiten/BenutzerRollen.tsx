@@ -13,7 +13,7 @@ type Konto = Benutzer & {
 
 const ROLLEN: { wert: Rolle; name: string; erklaerung: string }[] = [
   { wert: 'vereinsadmin', name: 'Vereins-Administrator', erklaerung: 'Benutzer, Rollen, Geräte, Löschen' },
-  { wert: 'sportwart', name: 'Sportwart', erklaerung: 'Personen, Serien, Rating' },
+  { wert: 'sportwart', name: 'Sportwart', erklaerung: 'Spieler, Serien, Rating' },
   { wert: 'turnierleiter', name: 'Turnierleiter', erklaerung: 'Turniere, Auslosung, Ergebnisse' },
   { wert: 'mitglied', name: 'Mitglied', erklaerung: 'Eigene Statistik, Ranglisten' }
 ];
@@ -174,7 +174,7 @@ export default function BenutzerRollen() {
     }
     const legtNeuAn = personWahl === 'neu';
     if (legtNeuAn && (!neuVorname.trim() || !neuNachname.trim())) {
-      setFehler('Für eine neue Person sind Vorname und Nachname nötig.');
+      setFehler('Für einen neuen Spieler sind Vorname und Nachname nötig.');
       return;
     }
 
@@ -279,10 +279,10 @@ export default function BenutzerRollen() {
                 />
               </label>
               <label className="feld">
-                <span>Person zuordnen</span>
+                <span>Spieler zuordnen</span>
                 <select value={personWahl} onChange={(e) => setPersonWahl(e.target.value)}>
                   <option value="">— keine —</option>
-                  <option value="neu">— neue Person anlegen —</option>
+                  <option value="neu">— neuen Spieler anlegen —</option>
                   {freiePersonen.map((person) => (
                     <option key={person.id} value={person.id}>
                       {person.nachname}, {person.vorname}
@@ -408,7 +408,7 @@ export default function BenutzerRollen() {
             )}
 
             <label className="feld">
-              <span>Verknüpfte Person</span>
+              <span>Verknüpfter Spieler</span>
               <select
                 value={konto.person_id ?? ''}
                 disabled={!darfVerwalten}
@@ -435,8 +435,8 @@ export default function BenutzerRollen() {
                   Zugang entziehen
                   <small>
                     {entziehenBestaetigen
-                      ? 'Wirklich alle Rollen entfernen? Person und Ergebnisse bleiben.'
-                      : 'Alle Rollen werden entfernt. Person und Ergebnisse bleiben.'}
+                      ? 'Wirklich alle Rollen entfernen? Spieler und Ergebnisse bleiben.'
+                      : 'Alle Rollen werden entfernt. Spieler und Ergebnisse bleiben.'}
                   </small>
                 </div>
                 {entziehenBestaetigen ? (

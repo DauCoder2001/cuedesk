@@ -167,7 +167,7 @@ export default function Statistik141() {
       <section className="block">
         <div className="statkopf">
           {alleSehen ? (
-            <select value={person} onChange={(e) => setPerson(e.target.value)} aria-label="Person">
+            <select value={person} onChange={(e) => setPerson(e.target.value)} aria-label="Spieler">
               {auswahl.length === 0 && <option value="">keine 14.1-Partien</option>}
               {auswahl.map((id) => {
                 const p = personNachId(id);

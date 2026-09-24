@@ -104,7 +104,7 @@ export default function Altdaten() {
       .filter((partie) => personNachName.get(partie.a) === personNachName.get(partie.b))
       .forEach((partie) =>
         melde(
-          `Übersprungen in "${turnier.name}": ${partie.a} gegen ${partie.b} — nach dem Zusammenführen dieselbe Person.`
+          `Übersprungen in "${turnier.name}": ${partie.a} gegen ${partie.b} — nach dem Zusammenführen derselbe Spieler.`
         )
       );
 
@@ -374,7 +374,7 @@ export default function Altdaten() {
           </section>
 
           <section className="block">
-            <h2>Namen zu Personen</h2>
+            <h2>Namen zu Spielern</h2>
             <table className="tabelle">
               <thead>
                 <tr>
@@ -462,11 +462,11 @@ export default function Altdaten() {
 // damit im Programm nichts Unverstaendliches steht.
 function deutscherFehler(text: string): string {
   const regeln: [RegExp, string][] = [
-    [/violates check constraint "partien_check"/, "Eine Partie hat auf beiden Seiten dieselbe Person."],
+    [/violates check constraint "partien_check"/, "Eine Partie hat auf beiden Seiten denselben Spieler."],
     [/duplicate key value violates unique constraint "turniere_name_datum"/, "Dieses Turnier gibt es schon (gleicher Name und gleiches Datum)."],
     [/duplicate key value violates unique constraint "turniere_alt_id"/, "Dieses Turnier wurde schon einmal uebernommen."],
     [/duplicate key value violates unique constraint/, "Dieser Eintrag ist schon vorhanden."],
-    [/violates foreign key constraint/, "Ein Verweis zeigt ins Leere — vermutlich fehlt eine Person."],
+    [/violates foreign key constraint/, "Ein Verweis zeigt ins Leere — vermutlich fehlt ein Spieler."],
     [/violates row-level security policy/, "Dafuer fehlen dir die Rechte."],
     [/null value in column "(w+)"/, "Ein Pflichtfeld ist leer geblieben."],
     [/Failed to fetch/, "Keine Verbindung zur Datenbank."]
