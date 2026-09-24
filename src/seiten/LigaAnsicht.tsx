@@ -593,6 +593,7 @@ export default function LigaAnsicht({
                   {heimMannschaft}
                   <small> {wirSindHeim ? 'wir, Heim' : 'Heim'}</small>
                 </th>
+                <th className="doppelpunkt"></th>
                 <th>
                   {gastMannschaft}
                   <small> {wirSindHeim ? 'Gast' : 'wir, Gast'}</small>
@@ -631,7 +632,7 @@ export default function LigaAnsicht({
                 <tr>
                   <td colSpan={2}></td>
                   {(['heim', 'gast'] as const).map((seite) => (
-                    <td key={seite} className="mittig">
+                    <td key={seite} colSpan={seite === 'heim' ? 2 : 1}>
                       <button
                         type="button"
                         title="Verborgene Aufstellungen sieht der Gegner nicht. Zum Zeigen wird das Passwort gebraucht."
@@ -804,6 +805,7 @@ function Spielzeile(props: {
         </small>
       </td>
       <td>{auswahl('heim', props.heim, props.heimWahl, props.heimVerdeckt)}</td>
+      <td className="doppelpunkt">:</td>
       <td>{auswahl('gast', props.gast, props.gastWahl, props.gastVerdeckt)}</td>
       <td className="rechts">
         {props.bearbeitbar && partie ? (
