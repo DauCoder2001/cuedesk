@@ -1090,6 +1090,7 @@ async function newGame() {
     } catch (e) { alert("Fehler beim Starten: " + e.message); return; }
     if (!res.committed) { alert("Dieses Spiel läuft bereits an einem anderen Tisch."); return; }
     const m = res.snapshot.val();
+    freigabeGemeldet = false;
     await set(dbRef, {
       gameType: "pool", player1: m.player1, player2: m.player2,
       // CueDesk: Turnierspiele mit Vorgabe starten beim Vorgabe-Stand (z.B. 1:0)
@@ -1145,6 +1146,9 @@ async function newGame() {
   // Besitzt DIESER Tisch das Spiel gerade? Schuetzt vor verspaeteten Offline-Writes,
   // die den frischen Anspruch eines anderen Tisches ueberschreiben wuerden.
   const ownsMatch = (m) => !!m && m.status === 'running' && String(m.table) === String(tableId);
+
+  // Damit der Hinweis "steht schon in CueDesk" nur einmal je Spiel kommt
+  let freigabeGemeldet = false;
 
   // Ergebnis bestätigen -> Anspruch sichern, dann archivieren + Tisch freigeben
   async function confirmMatch() {
@@ -1379,10 +1383,14 @@ async function newGame() {
 
     // Wurde das Ergebnis dieses Spiels woanders eingetragen (etwa am Notebook),
     // gibt der Tisch es frei - sonst haengt das Tablet in einem Spiel fest,
-    // das es nicht mehr abschliessen kann.
+    // das es nicht mehr abschliessen kann. Einmal wird gesagt, warum.
     if (hasMatch && tActive && tournament.schedule) {
       const eintrag = tournament.schedule[tableData.tournamentMatchId];
       if (eintrag && eintrag.status === 'completed' && !yielded) {
+        if (!freigabeGemeldet) {
+          freigabeGemeldet = true;
+          alert("Das Ergebnis dieses Spiels steht schon in CueDesk.\n\nDer Tisch ist wieder frei.");
+        }
         set(dbRef, null).catch(() => {});
         return;
       }

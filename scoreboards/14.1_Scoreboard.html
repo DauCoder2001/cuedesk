@@ -935,6 +935,7 @@
   let yieldCount = 0;          // wie oft dieses Board verdraengt wurde (>=2 -> Uebernehmen sperren)
   function tournamentActive() { return !!(tournament && tournament.status === 'running'); }
   let frei141 = false;   // Spieler hat "Frei spielen" gewaehlt
+  let freigabeGemeldet = false;   // Hinweis "steht schon in CueDesk" nur einmal je Spiel
 
   // Die 14.1-Partien des laufenden Turniers (Liga-Spieltag). 8-, 9- und
   // 10-Ball laufen am Pool-Board.
@@ -1035,6 +1036,7 @@
     state.targetInn = m.innings || 0;
     state.startedAt = Date.now();
     state.tournamentMatchId = matchId;
+    freigabeGemeldet = false;
     claimed = true;
     save();
     render();
@@ -1796,10 +1798,15 @@
     // Laeuft ein Spieltag mit offenen 14.1-Partien, wird zuerst gewaehlt.
     const imTurnier = !!(state && state.tournamentMatchId);
 
-    // Ergebnis woanders eingetragen? Dann den Tisch freigeben.
+    // Ergebnis woanders eingetragen? Dann den Tisch freigeben - mit Hinweis,
+    // sonst verschwindet das Bestaetigen-Panel scheinbar grundlos.
     if (imTurnier && tournamentActive() && tournament.schedule && !yielded) {
       const eintrag = tournament.schedule[state.tournamentMatchId];
       if (eintrag && eintrag.status === 'completed') {
+        if (!freigabeGemeldet) {
+          freigabeGemeldet = true;
+          alert("Das Ergebnis dieses Spiels steht schon in CueDesk.\n\nDer Tisch ist wieder frei.");
+        }
         set(dbRef, null).catch(() => {});
         return;
       }
