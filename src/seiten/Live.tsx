@@ -156,7 +156,7 @@ export default function Live() {
                 onChange={(e) => setWort(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && void neuLadenAusloesen()}
               />
-              <button type="button" onClick={() => void neuLadenAusloesen()}>
+              <button type="button" title="Lädt das Tablet an diesem Tisch neu. Der Spielstand bleibt erhalten." onClick={() => void neuLadenAusloesen()}>
                 Neu laden
               </button>
             </div>

@@ -292,7 +292,7 @@ export default function Mannschaften() {
               </select>
             </label>
             {darfVerwalten && !formular && (
-              <button type="button" onClick={() => setFormular(leeresFormular())}>
+              <button type="button" title="Eine Mannschaft für diese Saison anlegen" onClick={() => setFormular(leeresFormular())}>
                 Mannschaft melden
               </button>
             )}
@@ -359,7 +359,7 @@ export default function Mannschaften() {
               </label>
             </div>
             <div className="knopfpaar">
-              <button type="button" onClick={() => void speichern()}>
+              <button type="button" title="Die Angaben zur Mannschaft speichern" onClick={() => void speichern()}>
                 Speichern
               </button>
               <button type="button" onClick={() => setFormular(null)}>
@@ -409,6 +409,7 @@ export default function Mannschaften() {
                 <div className="knopfpaar">
                   <button
                     type="button"
+                    title="Name, Liga, Staffel und Nummer im Mannschaftspass ändern"
                     onClick={() =>
                       setFormular({
                         id: m.id,
@@ -424,7 +425,7 @@ export default function Mannschaften() {
                   >
                     Ändern
                   </button>
-                  <button type="button" className="gefahrknopf" onClick={() => void mannschaftLoeschen(m)}>
+                  <button type="button" title="Löscht die Mannschaft mit ihrem Kader. Ihre Spieltage bleiben erhalten." className="gefahrknopf" onClick={() => void mannschaftLoeschen(m)}>
                     Löschen
                   </button>
                 </div>
@@ -510,7 +511,7 @@ export default function Mannschaften() {
                       <td>{einsatz?.partien ?? 0}</td>
                       {darfVerwalten && (
                         <td>
-                          <button type="button" className="gefahrknopf" onClick={() => void spielerEntfernen(k)}>
+                          <button type="button" title="Nimmt den Spieler aus dem Kader dieser Mannschaft." className="gefahrknopf" onClick={() => void spielerEntfernen(k)}>
                             Entfernen
                           </button>
                         </td>
@@ -550,7 +551,7 @@ export default function Mannschaften() {
                     </option>
                   ))}
                 </select>
-                <button type="button" onClick={() => void spielerAufnehmen(m)}>
+                <button type="button" title="Nimmt den gewählten Spieler in den Kader dieser Mannschaft auf." onClick={() => void spielerAufnehmen(m)}>
                   In den Kader
                 </button>
               </div>

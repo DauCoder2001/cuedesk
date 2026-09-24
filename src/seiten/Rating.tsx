@@ -176,6 +176,7 @@ export default function Rating() {
               key={eintrag.wert}
               type="button"
               className={ansicht === eintrag.wert ? 'chip aktiv' : 'chip'}
+              title={`Rating-Liste ${eintrag.name} anzeigen`}
               onClick={() => setAnsicht(eintrag.wert)}
             >
               {eintrag.name}
@@ -213,7 +214,7 @@ export default function Rating() {
                     <span className={`marke quelle-${zeile.quelle}`}>{QUELLE_TEXT[zeile.quelle]}</span>
                   </td>
                   <td className="rechts">
-                    <button type="button" onClick={() => void lupe(zeile.person_id)}>
+                    <button type="button" title={offen === zeile.person_id ? 'Partienliste schließen' : 'Alle Partien zeigen, die in diesen Wert eingegangen sind'} onClick={() => void lupe(zeile.person_id)}>
                       {offen === zeile.person_id ? 'Zu' : 'Partien'}
                     </button>
                   </td>

@@ -436,7 +436,7 @@ export default function Altdaten() {
             </label>
 
             <div className="zeile">
-              <button type="button" onClick={() => void uebernehmen()} disabled={laeuft}>
+              <button type="button" title="Schreibt den gelesenen Datenbestand in CueDesk." onClick={() => void uebernehmen()} disabled={laeuft}>
                 {laeuft ? 'Wird übernommen' : 'Übernehmen'}
               </button>
               <span className="hinweis">

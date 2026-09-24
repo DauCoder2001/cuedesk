@@ -256,6 +256,7 @@ export default function Turniere() {
           {darfLeiten && !formular && (
             <button
               type="button"
+              title="Ein neues Turnier oder einen Liga-Spieltag anlegen"
               onClick={() => {
                 // Standard ist die erste gemeldete Mannschaft der Saison
                 setMannschaftId(mannschaftenDerSaison[0]?.id ?? '');
@@ -437,7 +438,7 @@ export default function Turniere() {
               </span>
             </label>
             <div className="knopfpaar">
-              <button type="button" onClick={() => void anlegen()}>
+              <button type="button" title="Legt das Turnier mit diesen Angaben an." onClick={() => void anlegen()}>
                 Anlegen
               </button>
               <button type="button" onClick={() => setFormular(false)}>

@@ -216,6 +216,7 @@ export default function Personen() {
                 key={wert}
                 type="button"
                 className={filter === wert ? 'chip aktiv' : 'chip'}
+                title={wert === 'alle' ? 'Alle Spieler zeigen' : `Nur Spieler mit Status „${STATUS_TEXT[wert]}“ zeigen`}
                 onClick={() => setFilter(wert)}
               >
                 {wert === 'alle' ? `Alle ${personen.length}` : `${STATUS_TEXT[wert]} ${anzahl[wert]}`}
@@ -247,7 +248,7 @@ export default function Personen() {
 
         {darfAendern && (
           <div className="listenfuss">
-            <button type="button" onClick={neu}>
+            <button type="button" title="Einen neuen Spieler anlegen" onClick={neu}>
               Spieler anlegen
             </button>
           </div>
@@ -270,7 +271,7 @@ export default function Personen() {
                   : 'Neuer Spieler'}
               </h2>
               {darfAendern && (
-                <button type="button" onClick={() => void speichern()}>
+                <button type="button" title="Änderungen an diesem Spieler speichern" onClick={() => void speichern()}>
                   Speichern
                 </button>
               )}
@@ -406,7 +407,7 @@ export default function Personen() {
 
             {darfAendern && entwurf.id && (
               <div className="knopfpaar">
-                <button type="button" className="gefahrknopf" onClick={() => void personLoeschen()}>
+                <button type="button" title="Löscht den Spieler. Hat er schon Partien, bleibt er erhalten und wird auf „Ausgetreten“ gesetzt." className="gefahrknopf" onClick={() => void personLoeschen()}>
                   Spieler löschen
                 </button>
                 <span className="hinweis">

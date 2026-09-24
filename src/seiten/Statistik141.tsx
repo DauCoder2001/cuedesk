@@ -300,6 +300,7 @@ export default function Statistik141() {
                     key={v.wert}
                     type="button"
                     className={verlauf === v.wert ? 'chip aktiv' : 'chip'}
+                    title={`Entwicklung von ${v.name} anzeigen`}
                     onClick={() => setVerlauf(v.wert)}
                   >
                     {v.name}

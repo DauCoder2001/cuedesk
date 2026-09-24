@@ -177,7 +177,7 @@ export default function TischeGeraete() {
                       />
                     </td>
                     <td className="rechts">
-                      <button type="button" onClick={() => void tischLoeschen(tisch)}>
+                      <button type="button" title="Löscht den Tisch. Wird er noch gebraucht, stattdessen auf nicht aktiv schalten." onClick={() => void tischLoeschen(tisch)}>
                         Löschen
                       </button>
                     </td>
@@ -205,7 +205,7 @@ export default function TischeGeraete() {
                 value={neueBezeichnung}
                 onChange={(e) => setNeueBezeichnung(e.target.value)}
               />
-              <button type="button" onClick={() => void tischAnlegen()}>
+              <button type="button" title="Einen weiteren Tisch anlegen" onClick={() => void tischAnlegen()}>
                 Tisch anlegen
               </button>
             </div>
@@ -234,7 +234,7 @@ export default function TischeGeraete() {
               ))}
             </select>
             {darfVerwalten && (
-              <button type="button" onClick={() => void trennen(geraet)}>
+              <button type="button" title="Trennt das Tablet von CueDesk. Es zeigt danach wieder einen Kopplungscode." onClick={() => void trennen(geraet)}>
                 Trennen
               </button>
             )}
@@ -269,7 +269,7 @@ export default function TischeGeraete() {
                 </option>
               ))}
             </select>
-            <button type="button" onClick={() => void koppeln()}>
+            <button type="button" title="Koppelt das Tablet mit dem angezeigten Code an den gewählten Tisch." onClick={() => void koppeln()}>
               Koppeln
             </button>
           </div>

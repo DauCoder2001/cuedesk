@@ -251,7 +251,7 @@ export default function BenutzerRollen() {
         </ul>
         {darfEinladen && (
           <div className="listenfuss">
-            <button type="button" onClick={() => setZeigeEinladung((wert) => !wert)}>
+            <button type="button" title={zeigeEinladung ? 'Das Einladungsformular schließen' : 'Jemanden per E-Mail zu CueDesk einladen'} onClick={() => setZeigeEinladung((wert) => !wert)}>
               {zeigeEinladung ? 'Einladen abbrechen' : 'Einladen'}
             </button>
           </div>
@@ -263,7 +263,7 @@ export default function BenutzerRollen() {
           <>
             <div className="bearbeitenkopf">
               <h2>Einladen</h2>
-              <button type="button" onClick={() => void einladen()} disabled={sendet}>
+              <button type="button" title="Schickt eine Einladung mit Anmeldelink an diese Adresse." onClick={() => void einladen()} disabled={sendet}>
                 {sendet ? 'Wird verschickt' : 'Einladung schicken'}
               </button>
             </div>
@@ -351,7 +351,7 @@ export default function BenutzerRollen() {
             <div className="bearbeitenkopf">
               <h2>{konto.anzeigename ?? konto.email}</h2>
               {!konto.angemeldet_am && konto.email && (
-                <button type="button" onClick={() => void erneutSchicken(konto.email!)}>
+                <button type="button" title="Schickt den Anmeldelink noch einmal an diese Adresse." onClick={() => void erneutSchicken(konto.email!)}>
                   Link erneut schicken
                 </button>
               )}
@@ -444,12 +444,12 @@ export default function BenutzerRollen() {
                     <button type="button" onClick={() => setEntziehenBestaetigen(false)}>
                       Abbrechen
                     </button>
-                    <button type="button" onClick={() => void zugangEntziehen()}>
+                    <button type="button" title="Entfernt alle Rollen dieses Kontos. Spieler und Ergebnisse bleiben." onClick={() => void zugangEntziehen()}>
                       Ja, entziehen
                     </button>
                   </div>
                 ) : (
-                  <button type="button" onClick={() => setEntziehenBestaetigen(true)}>
+                  <button type="button" title="Diesem Konto den Zugang zum Verein entziehen. Es folgt eine Rückfrage." onClick={() => setEntziehenBestaetigen(true)}>
                     Entziehen
                   </button>
                 )}

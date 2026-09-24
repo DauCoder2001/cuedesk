@@ -474,7 +474,7 @@ export default function LigaAnsicht({
       <section className="block">
         <div className="bearbeitenkopf">
           <div>
-            <button type="button" className="zurueck" onClick={zurueck}>
+            <button type="button" title="Zurück zur Turnierliste" className="zurueck" onClick={zurueck}>
               ← Turniere
             </button>
             <h2>
@@ -489,6 +489,7 @@ export default function LigaAnsicht({
                     type="button"
                     className={liga.begegnung === n ? 'aktiv' : ''}
                     disabled={arbeitet}
+                    title={n === liga.begegnung ? `Die ${n}. Begegnung wird gerade angezeigt.` : liga.partner ? `Die ${n}. Begegnung anzeigen.` : `Die ${n}. Begegnung anlegen und anzeigen: gleicher Tag, gleicher Gegner, getauschtes Heimrecht.`}
                     onClick={() => void begegnungOeffnen(n)}
                   >
                     {n}. Begegnung
@@ -514,32 +515,32 @@ export default function LigaAnsicht({
           <div className="knopfpaar">
             <span className={`marke ${turnier.status === 'laeuft' ? 'livelaeuft' : ''}`}>{STATUS_TEXT[turnier.status]}</span>
             {bearbeitbar && turnier.status === 'geplant' && (
-              <button type="button" onClick={() => void starten()}>
+              <button type="button" title="Gibt den Spieltag für die Tablets frei. Erst danach stehen die Partien an den Tischen zur Auswahl; die Aufstellung lässt sich vorher in Ruhe eintragen." onClick={() => void starten()}>
                 Spieltag starten
               </button>
             )}
             {bearbeitbar && (
-              <button type="button" onClick={() => setImportOffen(true)}>
+              <button type="button" title="Den Spielbericht des Verbands einlesen und die Ergebnisse in diese Begegnung übernehmen. Vorher zeigt eine Vorschau jede Partie." onClick={() => setImportOffen(true)}>
                 Spielbericht einlesen
               </button>
             )}
             {bearbeitbar && (
-              <button type="button" onClick={() => void ratingUmschalten()}>
+              <button type="button" title={turnier.rating_werten ? 'Nimmt die Partien dieses Spieltags aus dem Vereins-Rating.' : 'Lässt die Pool-Partien dieses Spieltags ins Vereins-Rating eingehen.'} onClick={() => void ratingUmschalten()}>
                 {turnier.rating_werten ? 'Nicht fürs Rating werten' : 'Fürs Rating werten'}
               </button>
             )}
             {bearbeitbar && (
-              <button type="button" onClick={() => void abschliessen()} disabled={arbeitet}>
+              <button type="button" title="Beendet diese Begegnung und sperrt ihre Ergebnisse. Ist die andere Begegnung schon abgeschlossen, wird das Rating sofort neu berechnet." onClick={() => void abschliessen()} disabled={arbeitet}>
                 Begegnung abschließen
               </button>
             )}
             {istAdmin && turnier.status === 'beendet' && (
-              <button type="button" onClick={() => void wiederOeffnen()}>
+              <button type="button" title="Öffnet die Begegnung wieder, damit sich Aufstellung und Ergebnisse ändern lassen." onClick={() => void wiederOeffnen()}>
                 Wieder öffnen
               </button>
             )}
             {istAdmin && (
-              <button type="button" className="gefahrknopf" onClick={() => void loeschen()}>
+              <button type="button" title="Löscht diese Begegnung mit allen Partien. Vorher kommt eine Rückfrage." className="gefahrknopf" onClick={() => void loeschen()}>
                 Löschen
               </button>
             )}
@@ -664,7 +665,7 @@ export default function LigaAnsicht({
               onChange={(e) => setGastName(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && void gastAnlegen()}
             />
-            <button type="button" onClick={() => void gastAnlegen()}>
+            <button type="button" title="Legt den Spieler als Gast an. Danach steht er in den Auswahllisten der Gegnerseite." onClick={() => void gastAnlegen()}>
               Als Gast anlegen
             </button>
           </div>
@@ -705,7 +706,7 @@ export default function LigaAnsicht({
                 onChange={(e) => setPasswort(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && void passwortPruefen()}
               />
-              <button type="button" onClick={() => void passwortPruefen()}>
+              <button type="button" title="Mit dem Passwort die verborgene Aufstellung sichtbar machen" onClick={() => void passwortPruefen()}>
                 Zeigen
               </button>
             </div>

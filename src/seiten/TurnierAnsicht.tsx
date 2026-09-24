@@ -1476,7 +1476,7 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
       <section className="block">
         <div className="bearbeitenkopf">
           <div>
-            <button type="button" className="zurueck" onClick={zurueck}>
+            <button type="button" title="Zurück zur Turnierliste" className="zurueck" onClick={zurueck}>
               ← Turniere
             </button>
             <h2>{turnier.name}</h2>
@@ -1506,27 +1506,27 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
           <div className="knopfpaar">
             <span className={`marke ${turnier.status === 'laeuft' ? 'livelaeuft' : ''}`}>{STATUS_TEXT[turnier.status]}</span>
             {bearbeitbar && turnier.status === 'laeuft' && (
-              <button type="button" onClick={() => void einstellungenSetzen({ pausiert: !einstellungen.pausiert })}>
+              <button type="button" title={einstellungen.pausiert ? 'An den Tablets lassen sich wieder neue Spiele starten.' : 'An den Tablets lässt sich kein neues Spiel starten, laufende Spiele gehen weiter.'} onClick={() => void einstellungenSetzen({ pausiert: !einstellungen.pausiert })}>
                 {einstellungen.pausiert ? 'Fortsetzen' : 'Pausieren'}
               </button>
             )}
             {turnier.quelle !== 'import' && turnier.status !== 'geplant' && (
-              <button type="button" onClick={berichtErzeugen}>
+              <button type="button" title="Erstellt den Turnierbericht als PDF zum Drucken oder Weitergeben." onClick={berichtErzeugen}>
                 Bericht (PDF)
               </button>
             )}
             {bearbeitbar && turnier.status === 'laeuft' && (
-              <button type="button" onClick={() => void abschliessen()} disabled={arbeitet}>
+              <button type="button" title="Beendet das Turnier und sperrt die Ergebnisse. Zählt es fürs Rating, wird das Rating neu berechnet." onClick={() => void abschliessen()} disabled={arbeitet}>
                 Abschließen
               </button>
             )}
             {istAdmin && turnier.status === 'beendet' && turnier.quelle !== 'import' && (
-              <button type="button" onClick={() => void wiederOeffnen()}>
+              <button type="button" title="Öffnet das Turnier wieder, damit sich Ergebnisse ändern lassen." onClick={() => void wiederOeffnen()}>
                 Wieder öffnen
               </button>
             )}
             {istAdmin && turnier.status !== 'geplant' && (
-              <button type="button" className="gefahrknopf" onClick={() => void loeschen()}>
+              <button type="button" title="Löscht das Turnier mit allen Partien. Vorher kommt eine Rückfrage." className="gefahrknopf" onClick={() => void loeschen()}>
                 Löschen
               </button>
             )}
@@ -1547,6 +1547,7 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
                   key={wert}
                   type="button"
                   className={(einstellungen.tvAnsicht ?? 'live') === wert ? 'aktiv' : ''}
+                  title={`Legt fest, was die TV-Anzeige zeigt: ${name}`}
                   onClick={() => void einstellungenSetzen({ tvAnsicht: wert })}
                 >
                   {name}
@@ -1560,7 +1561,7 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
             <strong>Turnier pausiert.</strong> An den Tablets kann kein neues Spiel gestartet werden; laufende Spiele gehen
             weiter.
             {bearbeitbar && (
-              <button type="button" className="klein" onClick={() => void einstellungenSetzen({ pausiert: false })}>
+              <button type="button" title="An den Tablets lassen sich wieder neue Spiele starten." className="klein" onClick={() => void einstellungenSetzen({ pausiert: false })}>
                 Fortsetzen
               </button>
             )}
@@ -1613,7 +1614,7 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
                       )}
                       <td className="rechts">
                         {bearbeitbar && (
-                          <button type="button" onClick={() => void teilnehmerWeg(t.person_id)}>
+                          <button type="button" title="Nimmt den Spieler aus der Teilnehmerliste." onClick={() => void teilnehmerWeg(t.person_id)}>
                             Entfernen
                           </button>
                         )}
@@ -1637,7 +1638,7 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
               {vorschlaege.length > 0 && (
                 <div className="filterzeile">
                   {vorschlaege.map((p) => (
-                    <button key={p.id} type="button" className="chip" onClick={() => void teilnehmerHinzu(p.id)}>
+                    <button key={p.id} type="button" title="In die Teilnehmerliste aufnehmen" className="chip" onClick={() => void teilnehmerHinzu(p.id)}>
                       + {personName(p)}
                       {p.status === 'gast' ? ' (Gast)' : ''}
                     </button>
@@ -1646,15 +1647,15 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
               )}
               <div className="zeile">
                 <input placeholder="Neuer Gast: Vor- und Nachname" value={gastName} onChange={(e) => setGastName(e.target.value)} />
-                <button type="button" onClick={() => void gastAnlegen()}>
+                <button type="button" title="Legt den Namen als Gast an und nimmt ihn in die Teilnehmerliste auf." onClick={() => void gastAnlegen()}>
                   Gast hinzufügen
                 </button>
               </div>
               <div className="knopfpaar">
-                <button type="button" onClick={() => void auslosenUndStarten()} disabled={arbeitet || !teilnehmerOk}>
+                <button type="button" title="Lost Gruppen und Spielplan aus und startet das Turnier. Danach stehen die Spiele an den Tablets zur Auswahl." onClick={() => void auslosenUndStarten()} disabled={arbeitet || !teilnehmerOk}>
                   Auslosen und starten
                 </button>
-                <button type="button" className="gefahrknopf" onClick={() => void loeschen()}>
+                <button type="button" title="Löscht das Turnier mit allen Partien. Vorher kommt eine Rückfrage." className="gefahrknopf" onClick={() => void loeschen()}>
                   Turnier löschen
                 </button>
               </div>
@@ -1791,7 +1792,7 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
               <div className="bearbeitenkopf">
                 <h2>Spielplan</h2>
                 {bearbeitbar && (
-                  <button type="button" onClick={() => void rueckgaengig()} disabled={stapel.length === 0}>
+                  <button type="button" title="Nimmt die letzte Ergebnisänderung zurück, die hier gemacht wurde." onClick={() => void rueckgaengig()} disabled={stapel.length === 0}>
                     Rückgängig{stapel.length > 0 ? ` (${stapel.length})` : ''}
                   </button>
                 )}
@@ -1807,6 +1808,7 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
                         key={a.schluessel}
                         type="button"
                         className={a.schluessel === aktiv?.schluessel ? 'chip aktiv' : 'chip'}
+                        title={`${a.titel} im Spielplan anzeigen`}
                         onClick={() => setAbschnitt(a.schluessel)}
                       >
                         {istGruppenzeile(zeile) ? a.titel.replace('Runde ', '') : a.titel}
@@ -1890,12 +1892,12 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
                 <div className="bearbeitenkopf">
                   <h2>Platzierungsduelle (Race to {race2})</h2>
                   {bearbeitbar && !einstellungen.phase2 && (
-                    <button type="button" onClick={() => void phase2Starten()} disabled={arbeitet || offeneGruppenspiele > 0}>
+                    <button type="button" title="Setzt die Platzierungsduelle an. Geht erst, wenn alle Gruppenspiele beendet sind." onClick={() => void phase2Starten()} disabled={arbeitet || offeneGruppenspiele > 0}>
                       Duelle starten
                     </button>
                   )}
                   {bearbeitbar && einstellungen.phase2 && (
-                    <button type="button" className="gefahrknopf" onClick={() => void phase2Zuruecksetzen()}>
+                    <button type="button" title="Löscht die Platzierungsduelle, damit sie neu angesetzt werden können." className="gefahrknopf" onClick={() => void phase2Zuruecksetzen()}>
                       Duelle zurücksetzen
                     </button>
                   )}
@@ -1949,12 +1951,12 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
                     <div className="bearbeitenkopf">
                       <h2>KO-Runde ({feld} Spieler)</h2>
                       {bearbeitbar && !koFest && (
-                        <button type="button" onClick={() => void koStarten()} disabled={arbeitet || offeneGruppenspiele > 0 || weiter === null}>
+                        <button type="button" title="Setzt die KO-Runde aus den Gruppentabellen an. Geht erst, wenn alle Gruppenspiele beendet sind." onClick={() => void koStarten()} disabled={arbeitet || offeneGruppenspiele > 0 || weiter === null}>
                           KO-Runde starten
                         </button>
                       )}
                       {bearbeitbar && koFest && (
-                        <button type="button" className="gefahrknopf" onClick={() => void koZuruecksetzen()}>
+                        <button type="button" title="Löscht die KO-Runde, damit sie neu angesetzt werden kann." className="gefahrknopf" onClick={() => void koZuruecksetzen()}>
                           KO-Runde zurücksetzen
                         </button>
                       )}
@@ -2003,12 +2005,12 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
                       <div className="bearbeitenkopf">
                         <h2>Platzierungsspiele (Race to {race3})</h2>
                         {bearbeitbar && !einstellungen.phase3 && nichtImKo.length >= 2 && (
-                          <button type="button" onClick={() => void phase3Starten()} disabled={arbeitet}>
+                          <button type="button" title="Setzt die Platzierungsspiele für alle an, die nicht in der KO-Runde stehen." onClick={() => void phase3Starten()} disabled={arbeitet}>
                             Spiele starten
                           </button>
                         )}
                         {bearbeitbar && einstellungen.phase3 && (
-                          <button type="button" className="gefahrknopf" onClick={() => void phase3Zuruecksetzen()}>
+                          <button type="button" title="Löscht die Platzierungsspiele, damit sie neu angesetzt werden können." className="gefahrknopf" onClick={() => void phase3Zuruecksetzen()}>
                             Spiele zurücksetzen
                           </button>
                         )}
@@ -2117,6 +2119,7 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
                     type="button"
                     className="chip"
                     disabled={arbeitet}
+                    title="Diesen Spieler nachtragen"
                     onClick={() => {
                       const ziel = nachtrag.ziel;
                       setNachtrag(null);
@@ -2138,6 +2141,7 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
               <button
                 type="button"
                 disabled={arbeitet}
+                title="Legt den Namen als Gast an und trägt ihn nach."
                 onClick={async () => {
                   const { gast, ziel } = nachtrag;
                   const id = await gastErzeugen(gast);
@@ -2168,7 +2172,7 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
               {aufstellung
                 .filter((t) => t.gruppe === tausch.nach)
                 .map((t) => (
-                  <button key={t.person_id} type="button" disabled={arbeitet} onClick={() => void gruppeTauschen(tausch.raus, t.person_id)}>
+                  <button key={t.person_id} type="button" title={`${anzeige(t.person_id)} wechselt dafür nach Gruppe ${tausch.von}`} disabled={arbeitet} onClick={() => void gruppeTauschen(tausch.raus, t.person_id)}>
                     {anzeige(t.person_id)}
                   </button>
                 ))}
@@ -2196,7 +2200,7 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
                     </td>
                     <td className="rechts">
                       {i > 0 && bearbeitbar && (
-                        <button type="button" onClick={() => void standWiederherstellen(verlauf.partie, z)}>
+                        <button type="button" title="Setzt das Ergebnis auf diesen Stand zurück." onClick={() => void standWiederherstellen(verlauf.partie, z)}>
                           Wiederherstellen
                         </button>
                       )}
@@ -2322,7 +2326,7 @@ function Tabelle(props: {
                       ↓
                     </button>
                     {gruppe.entschieden && inGruppe === 0 && (
-                      <button type="button" className="klein" onClick={() => props.setzen(gruppe.schluessel, null)}>
+                      <button type="button" title="Hebt die von Hand festgelegte Reihenfolge bei Gleichstand wieder auf." className="klein" onClick={() => props.setzen(gruppe.schluessel, null)}>
                         zurücksetzen
                       </button>
                     )}

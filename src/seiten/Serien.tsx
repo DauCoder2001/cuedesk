@@ -209,17 +209,17 @@ export default function Serien() {
           <h2>Serienwertung</h2>
           <div className="knopfpaar">
             {serie && turniere.length > 0 && (
-              <button type="button" onClick={pdf}>
+              <button type="button" title="Die Serienwertung als PDF zum Drucken oder Aushängen" onClick={pdf}>
                 Rangliste (PDF)
               </button>
             )}
             {darfVerwalten && serie && !formular && (
-              <button type="button" onClick={() => serieAendern(serie)}>
+              <button type="button" title="Name, Saison, Disziplin und Wertung dieser Serie ändern" onClick={() => serieAendern(serie)}>
                 Serie ändern
               </button>
             )}
             {darfVerwalten && !formular && (
-              <button type="button" onClick={neueSerie}>
+              <button type="button" title="Eine neue Serienwertung anlegen" onClick={neueSerie}>
                 Neue Serie
               </button>
             )}
@@ -231,6 +231,7 @@ export default function Serien() {
               key={eintrag.id}
               type="button"
               className={gewaehlt === eintrag.id ? 'chip aktiv' : 'chip'}
+              title="Diese Serie anzeigen"
               onClick={() => {
                 setGewaehlt(eintrag.id);
                 setFormular(null);
@@ -295,14 +296,14 @@ export default function Serien() {
               </span>
             </label>
             <div className="knopfpaar">
-              <button type="button" onClick={() => void speichern()}>
+              <button type="button" title="Die Angaben zur Serie speichern" onClick={() => void speichern()}>
                 Speichern
               </button>
               <button type="button" onClick={() => setFormular(null)}>
                 Abbrechen
               </button>
               {formular.id && (
-                <button type="button" className="gefahrknopf" onClick={() => void serieLoeschen()}>
+                <button type="button" title="Löscht die Serie. Die zugeordneten Turniere bleiben erhalten." className="gefahrknopf" onClick={() => void serieLoeschen()}>
                   Serie löschen
                 </button>
               )}
@@ -379,7 +380,7 @@ export default function Serien() {
                       {t.quelle === 'import' && <span className="marke">aus Turnier light</span>}
                     </td>
                     <td className="rechts">
-                      <button type="button" className="klein" onClick={() => void turnierZuordnen(t.id, null)}>
+                      <button type="button" title="Das Turnier zählt dann nicht mehr für diese Serie." className="klein" onClick={() => void turnierZuordnen(t.id, null)}>
                         aus der Serie nehmen
                       </button>
                     </td>
@@ -400,7 +401,7 @@ export default function Serien() {
                 );
               })}
             </select>
-            <button type="button" disabled={!zuordnen} onClick={() => void turnierZuordnen(zuordnen, serie.id)}>
+            <button type="button" title="Das gewählte Turnier zählt ab jetzt für diese Serie." disabled={!zuordnen} onClick={() => void turnierZuordnen(zuordnen, serie.id)}>
               Der Serie zuordnen
             </button>
           </div>

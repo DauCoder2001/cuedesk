@@ -152,7 +152,7 @@ export default function Geraet() {
             <div className="klein abstand">Code für die Kopplung</div>
             <div className="code">{code ?? '······'}</div>
             <div className="klein">gültig 15 Minuten</div>
-            <button type="button" onClick={() => void neuerCode()}>
+            <button type="button" title="Einen neuen Kopplungscode holen, falls der alte abgelaufen ist" onClick={() => void neuerCode()}>
               Neuen Code anzeigen
             </button>
           </>

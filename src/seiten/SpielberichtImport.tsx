@@ -229,7 +229,7 @@ export default function SpielberichtImport({
             onKeyDown={(e) => e.key === 'Enter' && void lesen()}
             style={{ flex: '1 1 320px' }}
           />
-          <button type="button" onClick={() => void lesen()} disabled={arbeitet}>
+          <button type="button" title="Den Spielbericht lesen und als Vorschau zeigen. Gespeichert wird noch nichts." onClick={() => void lesen()} disabled={arbeitet}>
             Lesen
           </button>
         </div>
@@ -301,7 +301,7 @@ export default function SpielberichtImport({
 
         <div className="knopfpaar">
           {bericht && (
-            <button type="button" onClick={() => void uebernehmen()} disabled={arbeitet}>
+            <button type="button" title="Schreibt die ausgewählten Partien in die Begegnung." onClick={() => void uebernehmen()} disabled={arbeitet}>
               Übernehmen
             </button>
           )}

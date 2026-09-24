@@ -98,11 +98,12 @@ export default function Anmeldung() {
               }}
             />
             {fehler && <p className="fehler">{fehler}</p>}
-            <button type="submit" disabled={zustand === 'prueft'}>
+            <button type="submit" title="Mit dem Code aus der E-Mail anmelden" disabled={zustand === 'prueft'}>
               {zustand === 'prueft' ? 'Wird geprüft' : 'Anmelden'}
             </button>
             <button
               type="button"
+              title="Zurück zur Eingabe der E-Mail-Adresse"
               onClick={() => {
                 setZustand('ruhe');
                 setCode('');
@@ -127,7 +128,7 @@ export default function Anmeldung() {
               placeholder="name@beispiel.de"
             />
             {fehler && <p className="fehler">{fehler}</p>}
-            <button type="submit" disabled={zustand === 'sendet'}>
+            <button type="submit" title="Schickt einen Anmeldelink an diese Adresse" disabled={zustand === 'sendet'}>
               {zustand === 'sendet' ? 'Wird gesendet' : 'Anmeldelink schicken'}
             </button>
             <p className="hinweis">
