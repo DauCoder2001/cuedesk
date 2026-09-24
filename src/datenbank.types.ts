@@ -124,6 +124,7 @@ export type Geraet = {
   tisch_id: string | null;
   aktiv: boolean;
   zuletzt_gesehen: string | null;
+  neu_laden_am: string | null;   // von der Live-Uebersicht gesetzt
   erstellt_am: string;
 };
 

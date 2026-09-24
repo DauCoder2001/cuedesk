@@ -206,6 +206,9 @@ function spielLaeuft(): boolean {
   return zahl(z.s1) !== 0 || zahl(z.s2) !== 0 || zahl(z.score1) !== 0 || zahl(z.score2) !== 0 || log > 0;
 }
 
+// Wann dieses Board gestartet ist - aeltere Bitten um Neuladen sind erledigt.
+const gestartet = Date.now();
+
 async function kopplungPruefen(): Promise<void> {
   const konto = geraetKonto;
   if (!konto || pruefungLaeuft) return;
@@ -213,10 +216,17 @@ async function kopplungPruefen(): Promise<void> {
   try {
     const { data: g, error } = await konto.supabase
       .from('geraete')
-      .select('tisch_id, aktiv')
+      .select('tisch_id, aktiv, neu_laden_am')
       .eq('auth_id', konto.authId)
       .maybeSingle();
     if (error) return; // Netz weg: nichts behaupten
+
+    // Die Turnierleitung kann das Tablet aus der Live-Uebersicht neu laden
+    // lassen. Der Spielstand liegt in der Cloud und kommt danach zurueck.
+    if (g?.neu_laden_am && Date.parse(g.neu_laden_am) > gestartet) {
+      window.location.reload();
+      return;
+    }
 
     if (!g || !g.aktiv) {
       kopplung = 'entkoppelt';

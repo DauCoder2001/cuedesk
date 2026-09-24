@@ -7,7 +7,8 @@
 export const VERALTET_NACH_MS = 3 * 60 * 60 * 1000;
 
 export type Kachel =
-  | { art: 'frei' }
+  // "bereit": am Tisch steht ein Tablet, gespielt wird aber noch nicht
+  | { art: 'frei'; bereit: boolean }
   | {
       art: 'pool' | '14.1';
       laeuft: boolean; // false = Spiel ist zu Ende
@@ -25,18 +26,25 @@ const zahl = (w: unknown) => (typeof w === 'number' && Number.isFinite(w) ? w : 
 const text = (w: unknown, ersatz: string) => (typeof w === 'string' && w.trim() ? w : ersatz);
 
 export function kachel(zustand: unknown, aktualisiert: string | null, jetzt = Date.now()): Kachel {
-  if (!zustand || typeof zustand !== 'object') return { art: 'frei' };
-  if (!aktualisiert || jetzt - Date.parse(aktualisiert) > VERALTET_NACH_MS) return { art: 'frei' };
+  if (!zustand || typeof zustand !== 'object') return { art: 'frei', bereit: false };
+  if (!aktualisiert || jetzt - Date.parse(aktualisiert) > VERALTET_NACH_MS) return { art: 'frei', bereit: false };
   const z = zustand as Record<string, unknown>;
   const spieler1 = text(z.player1, 'Spieler 1');
   const spieler2 = text(z.player2, 'Spieler 2');
   const seit = typeof z.startedAt === 'number' ? z.startedAt : null;
+  // Ein Spiel ist im Gang, sobald Namen eingetragen sind, die Uhr laeuft oder
+  // es zu einem Turnierspiel gehoert - auch wenn es noch 0:0 steht.
+  const angefangen =
+    seit !== null ||
+    Boolean(z.tournamentMatchId) ||
+    spieler1 !== 'Spieler 1' ||
+    spieler2 !== 'Spieler 2';
 
   if (z.gameType === '14.1') {
     const stand1 = zahl(z.s1);
     const stand2 = zahl(z.s2);
     const log = Array.isArray(z.log) ? z.log.length : 0;
-    if (stand1 === 0 && stand2 === 0 && log === 0) return { art: 'frei' };
+    if (stand1 === 0 && stand2 === 0 && log === 0 && !angefangen) return { art: 'frei', bereit: true };
     const amTisch = z.turn === 2 ? spieler2 : spieler1;
     const aufnahme = Math.max(zahl(z.inn1), zahl(z.inn2));
     const zielAufn = zahl(z.targetInn);
@@ -56,7 +64,7 @@ export function kachel(zustand: unknown, aktualisiert: string | null, jetzt = Da
 
   const stand1 = zahl(z.score1);
   const stand2 = zahl(z.score2);
-  if (stand1 === 0 && stand2 === 0) return { art: 'frei' };
+  if (stand1 === 0 && stand2 === 0 && !angefangen) return { art: 'frei', bereit: true };
   const raceTo = zahl(z.raceTo) > 0 ? zahl(z.raceTo) : null;
   const ende = raceTo !== null && (stand1 >= raceTo || stand2 >= raceTo);
   const anstoss = z.nextBreak === 2 ? spieler2 : spieler1;

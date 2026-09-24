@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../supabase';
 import { useSitzung } from '../sitzung';
 import { dauerText, kachel } from '../live';
+import { schutzwortStimmt } from '../schutzwort';
 import type { Kachel } from '../live';
-import type { Tisch } from '../datenbank.types';
+import type { Geraet, Tisch } from '../datenbank.types';
 
 // Live-Tische: eine Kachel je aktivem Tisch, aktualisiert sich bei jedem
 // Stoss am Tablet (Realtime auf live_stand). Sichtbar fuer alle Mitglieder.
@@ -11,9 +12,15 @@ import type { Tisch } from '../datenbank.types';
 type Stand = { zustand: unknown; aktualisiert: string };
 
 export default function Live() {
-  const { verein } = useSitzung();
+  const { verein, darf } = useSitzung();
+  const darfLeiten = darf('vereinsadmin', 'sportwart', 'turnierleiter');
   const [tische, setTische] = useState<Tisch[]>([]);
   const [staende, setStaende] = useState<Record<string, Stand>>({});
+  const [geraete, setGeraete] = useState<Geraet[]>([]);
+  const [frage, setFrage] = useState<Tisch | null>(null); // Tisch, dessen Tablet neu laden soll
+  const [wort, setWort] = useState('');
+  const [fehler, setFehler] = useState<string | null>(null);
+  const [meldung, setMeldung] = useState<string | null>(null);
   const [, setTakt] = useState(0);
 
   useEffect(() => {
@@ -21,12 +28,16 @@ export default function Live() {
     let vorbei = false;
 
     (async () => {
-      const [tischAntwort, standAntwort] = await Promise.all([
+      const [tischAntwort, standAntwort, geraetAntwort] = await Promise.all([
         supabase.from('tische').select('*').eq('verein_id', verein.id).eq('aktiv', true).order('nummer'),
-        supabase.from('live_stand').select('tisch_id, zustand, aktualisiert').eq('verein_id', verein.id)
+        supabase.from('live_stand').select('tisch_id, zustand, aktualisiert').eq('verein_id', verein.id),
+        // Die Geraeteliste sehen nur Turnierleitung und Vereins-Admin; fuer
+        // alle anderen bleibt sie leer und der Knopf verschwindet.
+        supabase.from('geraete').select('*').eq('verein_id', verein.id).eq('aktiv', true)
       ]);
       if (vorbei) return;
       setTische(tischAntwort.data ?? []);
+      setGeraete(geraetAntwort.data ?? []);
       const neu: Record<string, Stand> = {};
       (standAntwort.data ?? []).forEach((z) => {
         neu[z.tisch_id] = { zustand: z.zustand, aktualisiert: z.aktualisiert };
@@ -74,26 +85,96 @@ export default function Live() {
     <div className="einspaltig">
       <section className="block">
         {tische.length === 0 && <p className="hinweis">Es ist noch kein Tisch angelegt.</p>}
+        {fehler && <p className="fehler">{fehler}</p>}
+        {meldung && <p className="meldung">{meldung}</p>}
         <div className="livetische">
           {tische.map((tisch) => (
             <Tischkachel
               key={tisch.id}
               tisch={tisch}
               k={kachel(staende[tisch.id]?.zustand ?? null, staende[tisch.id]?.aktualisiert ?? null)}
+              neuLaden={
+                darfLeiten && geraete.some((g) => g.tisch_id === tisch.id)
+                  ? () => {
+                      setFehler(null);
+                      setMeldung(null);
+                      setWort('');
+                      setFrage(tisch);
+                    }
+                  : null
+              }
             />
           ))}
         </div>
       </section>
+      {frage && (
+        <div className="dialoghintergrund" onClick={() => setFrage(null)}>
+          <div className="dialog" onClick={(e) => e.stopPropagation()}>
+            <h2>Tablet neu laden</h2>
+            <p>
+              Das Tablet an Tisch {frage.nummer} lädt die Seite neu. Ein laufendes Spiel bleibt erhalten, es kommt
+              danach aus der Cloud zurück. Bis zu 30 Sekunden kann es dauern.
+            </p>
+            <div className="zeile">
+              <input
+                type="password"
+                placeholder="Passwort"
+                value={wort}
+                autoFocus
+                onChange={(e) => setWort(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && void neuLadenAusloesen()}
+              />
+              <button type="button" onClick={() => void neuLadenAusloesen()}>
+                Neu laden
+              </button>
+            </div>
+            <button type="button" onClick={() => setFrage(null)}>
+              Abbrechen
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
+
+  // Bitte an alle Tablets dieses Tisches
+  async function neuLadenAusloesen() {
+    if (!frage) return;
+    if (!schutzwortStimmt(wort)) {
+      setFehler('Das Passwort stimmt nicht.');
+      return;
+    }
+    const betroffen = geraete.filter((g) => g.tisch_id === frage.id);
+    const tischNummer = frage.nummer;
+    setFrage(null);
+    setFehler(null);
+    const { error } = await supabase
+      .from('geraete')
+      .update({ neu_laden_am: new Date().toISOString() })
+      .in(
+        'id',
+        betroffen.map((g) => g.id)
+      );
+    if (error) return setFehler(error.message);
+    setMeldung(
+      betroffen.length === 1
+        ? `Tisch ${tischNummer}: Das Tablet lädt in den nächsten 30 Sekunden neu.`
+        : `Tisch ${tischNummer}: ${betroffen.length} Tablets laden in den nächsten 30 Sekunden neu.`
+    );
+  }
 }
 
-function Tischkachel({ tisch, k }: { tisch: Tisch; k: Kachel }) {
+function Tischkachel({ tisch, k, neuLaden }: { tisch: Tisch; k: Kachel; neuLaden: (() => void) | null }) {
   const titel = (
     <>
       Tisch {tisch.nummer}
       {tisch.bezeichnung ? ` · ${tisch.bezeichnung}` : ''}
     </>
+  );
+  const knopf = neuLaden && (
+    <button type="button" className="klein" onClick={neuLaden} title="Das Tablet an diesem Tisch neu laden">
+      Neu laden
+    </button>
   );
 
   if (k.art === 'frei') {
@@ -101,9 +182,10 @@ function Tischkachel({ tisch, k }: { tisch: Tisch; k: Kachel }) {
       <div className="livekachel">
         <div className="livekopf">
           <span>{titel}</span>
-          <span>frei</span>
+          <span>{k.bereit ? 'bereit' : 'frei'}</span>
         </div>
-        <div className="livefrei">Kein Spiel</div>
+        <div className="livefrei">{k.bereit ? 'Tablet bereit, noch kein Spiel' : 'Kein Spiel'}</div>
+        {knopf && <div className="livefuss rechts">{knopf}</div>}
       </div>
     );
   }
@@ -140,6 +222,7 @@ function Tischkachel({ tisch, k }: { tisch: Tisch; k: Kachel }) {
             </a>
           </>
         )}
+        {knopf && <> {knopf}</>}
       </div>
     </div>
   );

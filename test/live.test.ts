@@ -5,11 +5,27 @@ const jetzt = Date.parse('2026-09-22T20:00:00Z');
 const frisch = '2026-09-22T19:59:00Z';
 
 describe('Kachel eines Tisches', () => {
-  test('ohne Stand, veraltet oder ohne Punkte ist der Tisch frei', () => {
-    expect(kachel(null, null, jetzt).art).toBe('frei');
-    expect(kachel({ gameType: 'pool', score1: 3, score2: 1 }, '2026-09-22T16:00:00Z', jetzt).art).toBe('frei');
-    expect(kachel({ gameType: 'pool', score1: 0, score2: 0, player1: 'Kai' }, frisch, jetzt).art).toBe('frei');
-    expect(kachel({ gameType: '14.1', s1: 0, s2: 0, log: [] }, frisch, jetzt).art).toBe('frei');
+  test('ohne Stand oder veraltet ist der Tisch frei', () => {
+    expect(kachel(null, null, jetzt)).toEqual({ art: 'frei', bereit: false });
+    expect(kachel({ gameType: 'pool', score1: 3, score2: 1 }, '2026-09-22T16:00:00Z', jetzt)).toEqual({
+      art: 'frei',
+      bereit: false
+    });
+  });
+
+  test('frisches Board ohne Spiel ist bereit, nicht besetzt', () => {
+    expect(kachel({ gameType: 'pool', score1: 0, score2: 0 }, frisch, jetzt)).toEqual({ art: 'frei', bereit: true });
+    expect(kachel({ gameType: '14.1', s1: 0, s2: 0, log: [] }, frisch, jetzt)).toEqual({ art: 'frei', bereit: true });
+  });
+
+  test('ein Spiel zaehlt auch bei 0:0, sobald es angefangen hat', () => {
+    // Namen eingetragen
+    expect(kachel({ gameType: 'pool', score1: 0, score2: 0, player1: 'Kai' }, frisch, jetzt).art).toBe('pool');
+    // Uhr laeuft
+    expect(kachel({ gameType: 'pool', score1: 0, score2: 0, startedAt: jetzt - 60000 }, frisch, jetzt).art).toBe('pool');
+    // Turnierspiel
+    expect(kachel({ gameType: 'pool', score1: 0, score2: 0, tournamentMatchId: 'x' }, frisch, jetzt).art).toBe('pool');
+    expect(kachel({ gameType: '14.1', s1: 0, s2: 0, log: [], player2: 'Olli' }, frisch, jetzt).art).toBe('14.1');
   });
 
   test('Pool: Stand, Race-to und Anstoss', () => {

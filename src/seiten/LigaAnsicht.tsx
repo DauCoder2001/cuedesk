@@ -5,6 +5,7 @@ import { personName } from '../namen';
 import { useRueckfrage } from '../rueckfrage';
 import { LIGEN, aufstellungPruefen, spielplan, wertung } from '../liga';
 import { kaderHinweise } from '../mannschaften';
+import { schutzwortStimmt } from '../schutzwort';
 import { STATUS_TEXT } from './Turniere';
 import SpielberichtImport from './SpielberichtImport';
 import type { LigaSpiel } from '../liga';
@@ -21,10 +22,6 @@ const DISZIPLIN_KURZ: Record<string, string> = {
   '9-ball': '9-Ball',
   '10-ball': '10-Ball'
 };
-
-// Wer die Aufstellung des Gegners sehen will, braucht dieses Wort. Es ist
-// bewusst einfach: Es soll nur den versehentlichen Blick verhindern.
-const AUFSTELLUNG_PASSWORT = '8-ball';
 
 const datumLang = (iso: string) =>
   new Date(`${iso}T12:00:00`).toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' });
@@ -344,7 +341,7 @@ export default function LigaAnsicht({
 
   async function passwortPruefen() {
     if (!passwortFrage) return;
-    if (passwort.trim().toLowerCase() !== AUFSTELLUNG_PASSWORT) {
+    if (!schutzwortStimmt(passwort)) {
       setFehler('Das Passwort stimmt nicht.');
       return;
     }
