@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import {
   abschnittName,
+  dieselbenSpieler,
   ergebnisVomTablet,
   fuersTablet,
   ohneZusatz,
@@ -185,5 +186,15 @@ describe('Ergebnis fuer den Fernseher', () => {
     expect(laufend.finalPlacement).toBeUndefined();
     const fertig = tvErgebnis({ name: 'T', disziplin: '9-Ball', raceTo: 3, datum: '2026-10-10', beendet: true }, teilnehmer, partien, {}, (id) => namen[id]);
     expect(fertig.finalPlacement?.map((x) => x.name)).toEqual(['Olli', 'Sven', 'Kai', 'Gerd']);
+  });
+});
+
+describe('Dieselben Spieler', () => {
+  test('Seiten und Vereinszusatz sind egal', () => {
+    expect(dieselbenSpieler({ player1: 'Marcel B. (Bassum)', player2: 'Frank' }, { player1: 'Frank', player2: 'Marcel B.' })).toBe(true);
+  });
+  test('anderer Spieler oder fehlender Name', () => {
+    expect(dieselbenSpieler({ player1: 'Marcel B.', player2: 'Frank' }, { player1: 'Frank', player2: 'Thomas B.' })).toBe(false);
+    expect(dieselbenSpieler({ player1: 'Marcel B.', player2: null }, { player1: 'Marcel B.', player2: '' })).toBe(false);
   });
 });

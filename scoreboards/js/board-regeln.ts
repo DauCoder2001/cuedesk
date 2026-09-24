@@ -6,6 +6,7 @@
 // Die Boards sind reines JavaScript und kennen die Eintraege aus dem Spielplan
 // (tournament/active/schedule). Die Typen hier sind deshalb bewusst locker.
 
+import { dieselbenSpieler } from './turnier-plan';
 import type { PlanEintrag } from './turnier-plan';
 
 export type BoardArt = 'pool' | '14.1';
@@ -187,9 +188,18 @@ export function spielZuruecklegen(m: BoardSpiel | null, tisch: string): BoardSpi
   return eintrag;
 }
 
-// Ergebnis bestaetigen: abschliessen, nur wenn es noch diesem Tisch gehoert
-export function spielAbschliessen(m: BoardSpiel | null, tisch: string, ergebnisId: string): BoardSpiel | undefined {
-  if (!gehoertZumTisch(m, tisch)) return undefined;
+// Ergebnis bestaetigen: abschliessen, wenn das Spiel noch diesem Tisch gehoert.
+// Wurde es in CueDesk zurueck in den Plan gelegt, waehrend hier weitergespielt
+// wurde, gilt das Ergebnis trotzdem - solange es an keinem anderen Tisch laeuft
+// und noch dieselben zwei Spieler darin stehen.
+export function spielAbschliessen(
+  m: BoardSpiel | null,
+  tisch: string,
+  ergebnisId: string,
+  amTisch?: { player1?: string | null; player2?: string | null }
+): BoardSpiel | undefined {
+  const zurueckgelegt = !!m && m.status === 'pending' && !m.table && !!amTisch && dieselbenSpieler(m, amTisch);
+  if (!gehoertZumTisch(m, tisch) && !zurueckgelegt) return undefined;
   const eintrag = m as BoardSpiel;
   eintrag.status = 'completed';
   eintrag.resultId = ergebnisId;

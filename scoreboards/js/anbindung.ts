@@ -826,13 +826,17 @@ export async function update(_verweis: Verweis, werte: Record<string, unknown>):
       const r = wert as { matchId?: string; player1: string; player2: string; score1: number; score2: number };
       const eintrag = r.matchId ? aktuellesTurnier?.schedule[r.matchId] : undefined;
       if (!r.matchId || !eintrag) continue;
-      const { error } = await v.supabase
+      const { data: geschrieben, error } = await v.supabase
         .from('partien')
         .update({ ...ergebnisVomTablet(eintrag, r), status: 'beendet', beendet: new Date().toISOString() })
         .eq('id', r.matchId)
         .eq('tisch_id', v.tischId as string)
-        .neq('status', 'beendet');
+        .neq('status', 'beendet')
+        .select('id');
       if (error) throw new Error(error.message);
+      // Frueher ging ein Ergebnis hier still verloren, wenn die Partie nicht
+      // mehr zu diesem Tisch gehoerte
+      if ((geschrieben ?? []).length === 0) throw new Error('Die Partie hat das Ergebnis nicht angenommen.');
     } else if (tischAusPfad(pfad) && wert === null) {
       await set({ pfad }, null);
     }
@@ -1017,7 +1021,15 @@ export async function ergebnisSpeichernPool(
 // ---------- Ergebnis 14.1 speichern ----------
 
 export { aufnahmenAusProtokoll } from './protokoll-141';
-import { ergebnisVomTablet, fuersTablet, ohneZusatz, seitenGetauscht, tabletSpielplan, tvErgebnis } from './turnier-plan';
+import {
+  dieselbenSpieler,
+  ergebnisVomTablet,
+  fuersTablet,
+  ohneZusatz,
+  seitenGetauscht,
+  tabletSpielplan,
+  tvErgebnis
+} from './turnier-plan';
 import { neueKennung } from './kennung';
 import type { PlanEintrag, PlanPartie, TabletTurnier, TvErgebnis, Verdeckt } from './turnier-plan';
 import { aufnahmenAusProtokoll, protokollAusAufnahmen } from './protokoll-141';
@@ -1115,6 +1127,10 @@ export async function ergebnis141InPartie(
     .maybeSingle();
   if (fehlerPartie || !partie) return { ok: false, fehler: fehlerPartie?.message ?? 'Partie nicht gefunden.' };
 
+  if (!dieselbenSpieler(eintrag, zustand)) {
+    return { ok: false, fehler: 'Die Aufstellung dieser Partie wurde in CueDesk geändert.' };
+  }
+
   const getauscht = seitenGetauscht(eintrag, zustand);
   const { ergebnis_a, ergebnis_b } = ergebnisVomTablet(eintrag, {
     player1: zustand.player1,
@@ -1129,19 +1145,28 @@ export async function ergebnis141InPartie(
     ? Math.max(0, Math.round(((zustand.endedAt ?? Date.now()) - zustand.startedAt) / 1000))
     : null;
 
-  const { error: fehlerUpdate } = await v.supabase
+  // Die Partie gehoert diesem Tisch - oder sie wurde in CueDesk zurueck in den
+  // Plan gelegt, waehrend hier weitergespielt wurde. Dann uebernimmt der Tisch
+  // sie wieder; laeuft sie an einem anderen Tisch, bleibt sie unangetastet.
+  const { data: geschrieben, error: fehlerUpdate } = await v.supabase
     .from('partien')
     .update({
       ergebnis_a,
       ergebnis_b,
+      tisch_id: v.tischId,
       status: optionen.abgebrochen ? 'abgebrochen' : 'beendet',
       begonnen: zustand.startedAt ? new Date(zustand.startedAt).toISOString() : null,
       beendet: new Date(zustand.endedAt ?? Date.now()).toISOString()
     })
     .eq('id', matchId)
-    .eq('tisch_id', v.tischId as string)
-    .neq('status', 'beendet');
+    .or(v.tischId ? `tisch_id.eq.${v.tischId},tisch_id.is.null` : 'tisch_id.is.null')
+    .neq('status', 'beendet')
+    .select('id');
   if (fehlerUpdate) return { ok: false, fehler: fehlerUpdate.message };
+  // Ohne diese Pruefung meldete das Board "gespeichert", obwohl die Partie offen blieb
+  if ((geschrieben ?? []).length === 0) {
+    return { ok: false, fehler: 'Die Partie läuft an einem anderen Tisch oder ist schon abgeschlossen.' };
+  }
 
   const { error: fehler141 } = await v.supabase.from('partien_141').upsert({
     partie_id: matchId,

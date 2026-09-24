@@ -169,11 +169,27 @@ describe('Spiel und Tisch', () => {
     expect(spielAbschliessen(spiel({ status: 'completed', table: '4' }), '4', 'r1')).toBeUndefined();
   });
 
-  // Festgehalten, wie es heute ist: Wurde die Partie in CueDesk zurueck in
-  // den Plan gelegt, waehrend am Tisch noch gespielt wurde, laesst sich das
-  // Ergebnis am Pool-Board nicht mehr bestaetigen.
-  test('zurueckgelegtes Spiel laesst sich am Tisch nicht mehr abschliessen', () => {
-    expect(spielAbschliessen(spiel({ status: 'pending', table: null }), '4', 'r1')).toBeUndefined();
+  // Wurde die Partie in CueDesk zurueck in den Plan gelegt, waehrend am Tisch
+  // weitergespielt wurde, zaehlt das Ergebnis trotzdem - aber nur mit
+  // denselben Spielern und nur, solange sie an keinem anderen Tisch laeuft.
+  test('zurueckgelegtes Spiel wird mit denselben Spielern trotzdem abgeschlossen', () => {
+    const zurueck = () => spiel({ status: 'pending', table: null, player1: 'Marcel B. (Bassum)', player2: 'Frank' });
+    // Seiten am Board getauscht, Vereinszusatz fehlt: egal
+    expect(spielAbschliessen(zurueck(), '4', 'r1', { player1: 'Frank', player2: 'Marcel B.' })).toMatchObject({
+      status: 'completed',
+      resultId: 'r1'
+    });
+    // Aufstellung inzwischen geaendert: nicht speichern
+    expect(spielAbschliessen(zurueck(), '4', 'r1', { player1: 'Frank', player2: 'Thomas B.' })).toBeUndefined();
+    // Ohne Angabe der Spieler am Tisch: nicht speichern
+    expect(spielAbschliessen(zurueck(), '4', 'r1')).toBeUndefined();
+    // Laeuft schon an einem anderen Tisch: nicht anfassen
+    expect(
+      spielAbschliessen(spiel({ status: 'running', table: '2', player1: 'Marcel B.', player2: 'Frank' }), '4', 'r1', {
+        player1: 'Marcel B.',
+        player2: 'Frank'
+      })
+    ).toBeUndefined();
   });
 
   test('Freilos wird nur einmal gewertet', () => {

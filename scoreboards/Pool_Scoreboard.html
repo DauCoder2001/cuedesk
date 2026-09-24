@@ -1153,8 +1153,9 @@ async function newGame() {
     //    Tablet nicht mehr entfernen (Rules erlauben anonym nur das Anlegen).
     let res;
     try {
-      // fremder Tisch / bereits abgeschlossen -> abbrechen
-      res = await runTransaction(ref(db, `tournament/active/schedule/${matchId}`), (m) => spielAbschliessen(m, tableId, key));
+      // fremder Tisch / bereits abgeschlossen -> abbrechen; zurueckgelegt, aber
+      // mit denselben Spielern -> trotzdem speichern
+      res = await runTransaction(ref(db, `tournament/active/schedule/${matchId}`), (m) => spielAbschliessen(m, tableId, key, state));
     } catch (e) { alert("Fehler beim Speichern: " + e.message); return; }
 
     if (!res.committed) {

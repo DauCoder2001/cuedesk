@@ -105,6 +105,21 @@ export function ohneZusatz(text: string): string {
   return kurz || text;
 }
 
+// Spielen am Board noch dieselben zwei Personen wie im Spielplan? Die Seiten
+// sind egal, der Vereinszusatz auch. Gebraucht wird das, wenn ein Ergebnis fuer
+// eine Partie ankommt, die zwischendurch zurueck in den Plan gelegt wurde:
+// Wurde danach die Aufstellung geaendert, darf es nicht mehr hinein.
+export function dieselbenSpieler(
+  eintrag: { player1?: string | null; player2?: string | null },
+  amTisch: { player1?: string | null; player2?: string | null }
+): boolean {
+  const paar = (x: { player1?: string | null; player2?: string | null }) =>
+    [ohneZusatz(String(x.player1 ?? '')), ohneZusatz(String(x.player2 ?? ''))].sort();
+  const [a1, a2] = paar(eintrag);
+  const [b1, b2] = paar(amTisch);
+  return a1 !== '' && a2 !== '' && a1 === b1 && a2 === b2;
+}
+
 // Wie die Disziplin am Tisch heissen soll
 const DISZIPLIN_NAME: Record<string, string> = {
   '8-ball': '8-Ball',
