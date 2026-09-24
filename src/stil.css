@@ -167,6 +167,13 @@ button:disabled { cursor: default; color: var(--text-leise); }
 .knopfpaar { display: flex; gap: 6px; }
 /* Auswahlfeld neben Knoepfen, z.B. die Saison: nicht zusammenschrumpfen */
 .knopfpaar .feld { min-width: 110px; }
+/* Aktionen im Kopf einer Begegnung: etwas kleiner und in zwei Reihen, damit keine Beschriftung umbricht */
+/* Wird es zu eng, rutschen die Aktionen unter den Titel statt ueber den Rand */
+.bearbeitenkopf.kopf-umbruch { flex-wrap: wrap; align-items: flex-start; }
+.bearbeitenkopf.kopf-umbruch > div:first-child { flex: 1 1 320px; min-width: 0; }
+.knopfpaar.kopfaktionen { display: grid; grid-template-columns: repeat(3, auto); align-items: center; flex-shrink: 0; }
+.kopfaktionen button { font-size: 13px; padding: 5px 10px; white-space: nowrap; }
+.bearbeitenkopf .kopfaktionen .marke { margin-left: 0; font-size: 12px; white-space: nowrap; justify-self: center; }
 
 .einspaltig {
   background: var(--flaeche); border: 1px solid var(--rand); border-radius: 0 0 12px 12px;

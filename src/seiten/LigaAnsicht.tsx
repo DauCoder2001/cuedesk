@@ -472,7 +472,7 @@ export default function LigaAnsicht({
   return (
     <div className="einspaltig">
       <section className="block">
-        <div className="bearbeitenkopf">
+        <div className="bearbeitenkopf kopf-umbruch">
           <div>
             <button type="button" title="Zurück zur Turnierliste" className="zurueck" onClick={zurueck}>
               ← Turniere
@@ -512,7 +512,7 @@ export default function LigaAnsicht({
               <p className="hinweis">Keine Partie dieses Spieltags zählt fürs Rating.</p>
             )}
           </div>
-          <div className="knopfpaar">
+          <div className="knopfpaar kopfaktionen">
             <span className={`marke ${turnier.status === 'laeuft' ? 'livelaeuft' : ''}`}>{STATUS_TEXT[turnier.status]}</span>
             {bearbeitbar && turnier.status === 'geplant' && (
               <button type="button" title="Gibt den Spieltag für die Tablets frei. Erst danach stehen die Partien an den Tischen zur Auswahl; die Aufstellung lässt sich vorher in Ruhe eintragen." onClick={() => void starten()}>
