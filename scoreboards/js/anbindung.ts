@@ -223,9 +223,15 @@ async function kopplungPruefen(): Promise<void> {
 
     // Die Turnierleitung kann das Tablet aus der Live-Uebersicht neu laden
     // lassen. Der Spielstand liegt in der Cloud und kommt danach zurueck.
-    if (g?.neu_laden_am && Date.parse(g.neu_laden_am) > gestartet) {
-      window.location.reload();
-      return;
+    if (g?.neu_laden_am) {
+      if (Date.parse(g.neu_laden_am) > gestartet) {
+        window.location.reload();
+        return;
+      }
+      // Schon erledigt: quittieren, damit die Live-Uebersicht nicht ewig
+      // "lädt neu" zeigt. Die eigene Zeile darf das Tablet nicht aendern,
+      // deshalb die Serverfunktion.
+      await konto.supabase.rpc('geraet_neu_geladen');
     }
 
     if (!g || !g.aktiv) {
@@ -875,9 +881,25 @@ export async function get(verweis: Verweis): Promise<{ val: () => unknown }> {
 
 export type Spieler = { id: string; name: string };
 
+// Am Tisch zaehlt der Name, nicht der Verein: "Matthias H. (Bassum)" wird zu
+// "Matthias H.". Nur wenn beide Seiten sonst gleich hiessen, bleibt er stehen.
+function amTisch(name: string, gegner?: string | null): string {
+  const kurz = ohneZusatz(name);
+  if (gegner && ohneZusatz(gegner) === kurz && gegner !== name) return name;
+  return kurz;
+}
+
 // Liefert eine Person aus der Mitgliederliste oder einen neu angelegten Gast.
 // Offline gibt es keine Liste; dann entscheidet das Scoreboard selbst (Freitext).
-export async function spielerWaehlen(titel: string, vorgabe = ''): Promise<Spieler | null> {
+//
+// "gegner" ist die andere Seite des Tisches: Diese Person steht nicht zur
+// Auswahl (niemand spielt gegen sich selbst), und ihr Name entscheidet, ob der
+// Vereinszusatz noetig ist.
+export async function spielerWaehlen(
+  titel: string,
+  vorgabe = '',
+  gegner: { id?: string | null; name?: string | null } = {}
+): Promise<Spieler | null> {
   const v = verbindung;
   if (!v) return null;
   if (geraetKonto) {
@@ -896,6 +918,7 @@ export async function spielerWaehlen(titel: string, vorgabe = ''): Promise<Spiel
     .order('nachname');
 
   const personen = (data ?? [])
+    .filter((p) => !gegner.id || p.id !== gegner.id)
     .map((p) => ({
       id: p.id as string,
       name: (p.anzeigename as string | null) || `${p.vorname} ${p.nachname}`.trim(),
@@ -906,7 +929,7 @@ export async function spielerWaehlen(titel: string, vorgabe = ''): Promise<Spiel
   const { spielerDialog } = await import('./spieler-dialog');
   const wahl = await spielerDialog(titel, personen, vorgabe);
   if (!wahl) return null;
-  if (wahl.id) return { id: wahl.id, name: wahl.name };
+  if (wahl.id) return { id: wahl.id, name: amTisch(wahl.name, gegner.name) };
 
   // Neuer Gast
   const teile = wahl.name.trim().split(/\s+/);
@@ -960,6 +983,9 @@ export async function ergebnisSpeichernPool(
   if (!zustand.player1Id || !zustand.player2Id) {
     return { ok: false, fehler: 'Beide Spieler müssen aus der Liste gewählt sein.' };
   }
+  if (zustand.player1Id === zustand.player2Id) {
+    return { ok: false, fehler: 'Beide Seiten zeigen auf dieselbe Person. Bitte einen Spieler ändern.' };
+  }
   const getrennt = await nichtGekoppelt(`${zustand.score1} : ${zustand.score2}`);
   if (getrennt) return { ok: false, fehler: getrennt };
   const jetzt = Date.now();
@@ -986,7 +1012,7 @@ export async function ergebnisSpeichernPool(
 // ---------- Ergebnis 14.1 speichern ----------
 
 export { aufnahmenAusProtokoll } from './protokoll-141';
-import { ergebnisVomTablet, fuersTablet, seitenGetauscht, tabletSpielplan, tvErgebnis } from './turnier-plan';
+import { ergebnisVomTablet, fuersTablet, ohneZusatz, seitenGetauscht, tabletSpielplan, tvErgebnis } from './turnier-plan';
 import { neueKennung } from './kennung';
 import type { PlanEintrag, PlanPartie, TabletTurnier, TvErgebnis, Verdeckt } from './turnier-plan';
 import { aufnahmenAusProtokoll, protokollAusAufnahmen } from './protokoll-141';
@@ -1000,6 +1026,9 @@ export async function ergebnisSpeichern141(
   if (!v) return { ok: false, fehler: 'Nicht mit CueDesk verbunden.' };
   if (!zustand.player1Id || !zustand.player2Id) {
     return { ok: false, fehler: 'Beide Spieler müssen aus der Liste gewählt sein.' };
+  }
+  if (zustand.player1Id === zustand.player2Id) {
+    return { ok: false, fehler: 'Beide Seiten zeigen auf dieselbe Person. Bitte einen Spieler ändern.' };
   }
   const getrennt = await nichtGekoppelt(`${zustand.s1} : ${zustand.s2}`);
   if (getrennt) return { ok: false, fehler: getrennt };

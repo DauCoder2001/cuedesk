@@ -11,6 +11,12 @@ import type { Geraet, Tisch } from '../datenbank.types';
 
 type Stand = { zustand: unknown; aktualisiert: string };
 
+// Eine Bitte ums Neuladen gilt nach fuenf Minuten als erledigt - falls die
+// Quittung des Tablets einmal nicht ankommt, haengt die Anzeige nicht fest.
+const BITTE_GILT_MS = 5 * 60 * 1000;
+const offeneBitte = (zeitpunkt: string | null) =>
+  Boolean(zeitpunkt) && Date.now() - Date.parse(zeitpunkt as string) < BITTE_GILT_MS;
+
 export default function Live() {
   const { verein, darf } = useSitzung();
   const darfLeiten = darf('vereinsadmin', 'sportwart', 'turnierleiter');
@@ -72,9 +78,17 @@ export default function Live() {
     // Jede Minute neu zeichnen: Spieldauer und liegengebliebene Staende
     const uhr = window.setInterval(() => setTakt((t) => t + 1), 60000);
 
+    // Die Geraete oefter nachsehen: so ist zu sehen, ob ein Tablet die Bitte
+    // ums Neuladen schon erledigt hat.
+    const geraeteUhr = window.setInterval(async () => {
+      const { data } = await supabase.from('geraete').select('*').eq('verein_id', verein.id).eq('aktiv', true);
+      if (!vorbei && data) setGeraete(data);
+    }, 15000);
+
     return () => {
       vorbei = true;
       window.clearInterval(uhr);
+      window.clearInterval(geraeteUhr);
       void supabase.removeChannel(kanal);
     };
   }, [verein]);
@@ -103,6 +117,7 @@ export default function Live() {
                     }
                   : null
               }
+              laedtNeu={geraete.some((g) => g.tisch_id === tisch.id && offeneBitte(g.neu_laden_am))}
             />
           ))}
         </div>
@@ -164,17 +179,31 @@ export default function Live() {
   }
 }
 
-function Tischkachel({ tisch, k, neuLaden }: { tisch: Tisch; k: Kachel; neuLaden: (() => void) | null }) {
+function Tischkachel({
+  tisch,
+  k,
+  neuLaden,
+  laedtNeu
+}: {
+  tisch: Tisch;
+  k: Kachel;
+  neuLaden: (() => void) | null;
+  laedtNeu: boolean;
+}) {
   const titel = (
     <>
       Tisch {tisch.nummer}
       {tisch.bezeichnung ? ` · ${tisch.bezeichnung}` : ''}
     </>
   );
-  const knopf = neuLaden && (
-    <button type="button" className="klein" onClick={neuLaden} title="Das Tablet an diesem Tisch neu laden">
-      Neu laden
-    </button>
+  const knopf = laedtNeu ? (
+    <span className="marke">lädt neu …</span>
+  ) : (
+    neuLaden && (
+      <button type="button" className="klein" onClick={neuLaden} title="Das Tablet an diesem Tisch neu laden">
+        Neu laden
+      </button>
+    )
   );
 
   if (k.art === 'frei') {
@@ -222,8 +251,8 @@ function Tischkachel({ tisch, k, neuLaden }: { tisch: Tisch; k: Kachel; neuLaden
             </a>
           </>
         )}
-        {knopf && <> {knopf}</>}
       </div>
+      {knopf && <div className="livefuss rechts">{knopf}</div>}
     </div>
   );
 }

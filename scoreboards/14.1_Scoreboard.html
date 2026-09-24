@@ -1307,7 +1307,10 @@
     if (state.locked) return;
     if (istAngebunden()) {
       // CueDesk: Spieler aus der Mitgliederliste oder neuer Gast
-      const wahl = await spielerWaehlen(player === 1 ? "Spieler Rot" : "Spieler Blau");
+      const andere = player === 1 ? 2 : 1;
+      const wahl = await spielerWaehlen(player === 1 ? "Spieler Rot" : "Spieler Blau", '', {
+        id: state["player" + andere + "Id"], name: state["player" + andere]
+      });
       if (!wahl) return;
       if (player === 1) { state.player1 = wahl.name; state.player1Id = wahl.id; }
       else              { state.player2 = wahl.name; state.player2Id = wahl.id; }
@@ -1366,7 +1369,10 @@
         // Beide Spieler muessen Personen aus CueDesk sein
         for (const seite of [1, 2]) {
           if (!state["player" + seite + "Id"]) {
-            const wahl = await spielerWaehlen("Wer war " + state["player" + seite] + "?", state["player" + seite]);
+            const andere = seite === 1 ? 2 : 1;
+            const wahl = await spielerWaehlen("Wer war " + state["player" + seite] + "?", state["player" + seite], {
+              id: state["player" + andere + "Id"], name: state["player" + andere]
+            });
             if (!wahl) { alert("Ohne Spielerzuordnung wird nichts gespeichert."); return; }
             state["player" + seite] = wahl.name;
             state["player" + seite + "Id"] = wahl.id;
@@ -1410,7 +1416,7 @@
       if (istAngebunden()) {
         const w1 = await spielerWaehlen("Spieler Rot");
         if (w1) { state.player1 = w1.name; state.player1Id = w1.id; }
-        const w2 = await spielerWaehlen("Spieler Blau");
+        const w2 = await spielerWaehlen("Spieler Blau", '', { id: state.player1Id, name: state.player1 });
         if (w2) { state.player2 = w2.name; state.player2Id = w2.id; }
       } else {
         const n1 = await promptModal("Name Spieler 1 (Rot):", state.player1);

@@ -333,6 +333,7 @@ export type Database = {
       geraet_verein: { Args: Record<string, never>; Returns: string };
       kopplung_anfordern: { Args: Record<string, never>; Returns: string };
       geraet_meldet_sich: { Args: Record<string, never>; Returns: undefined };
+      geraet_neu_geladen: { Args: Record<string, never>; Returns: undefined };
       geraet_tisch_setzen: { Args: { p_tisch: string | null }; Returns: undefined };
       geraet_koppeln: {
         Args: { p_code: string; p_verein: string; p_name: string; p_tisch?: string };
