@@ -5,15 +5,17 @@ describe('Spielplan einer Begegnung', () => {
   test('acht Partien, Reihenfolge und Ausspielziele der Bezirksliga', () => {
     const spiele = spielplan(LIGEN.bezirksliga.ziele);
     expect(spiele).toHaveLength(8);
+    // In der Rueckrunde dreht sich die Reihenfolge nach dem 14.1 um
     expect(spiele.map((s) => s.disziplin)).toEqual([
       '14-1', '8-ball', '9-ball', '10-ball',
-      '14-1', '8-ball', '9-ball', '10-ball'
+      '14-1', '10-ball', '9-ball', '8-ball'
     ]);
     expect(spiele.map((s) => s.runde)).toEqual(['hin', 'hin', 'hin', 'hin', 'rueck', 'rueck', 'rueck', 'rueck']);
     // aus der Ausschreibung: 75 Punkte/25 Aufnahmen, 8-Ball 4, 9-Ball 6, 10-Ball 5
     expect(spiele[0]).toMatchObject({ nr: 1, ziel: 75, aufnahmen: 25 });
     expect(spiele.slice(1, 4).map((s) => s.ziel)).toEqual([4, 6, 5]);
-    expect(spiele[5].ziel).toBe(4);
+    expect(spiele[5].ziel).toBe(5); // Rueckrunde Partie 6 ist 10-Ball
+    expect(spiele[7].ziel).toBe(4); // Partie 8 ist 8-Ball
   });
 
   test('jede Liga hat ihre eigenen Ziele', () => {

@@ -6,6 +6,7 @@ import { useRueckfrage } from '../rueckfrage';
 import { LIGEN, aufstellungPruefen, spielplan, wertung } from '../liga';
 import { kaderHinweise } from '../mannschaften';
 import { STATUS_TEXT } from './Turniere';
+import SpielberichtImport from './SpielberichtImport';
 import type { LigaSpiel } from '../liga';
 import type { TurnierEinstellungen } from './Turniere';
 import type { Mannschaft, MannschaftSpieler, Partie, Person, Turnier, TurnierTeilnehmer } from '../datenbank.types';
@@ -50,6 +51,7 @@ export default function LigaAnsicht({
   const [gastName, setGastName] = useState('');
   const [passwortFrage, setPasswortFrage] = useState<{ runde: 'hin' | 'rueck'; seite: 'heim' | 'gast' } | null>(null);
   const [passwort, setPasswort] = useState('');
+  const [importOffen, setImportOffen] = useState(false);
   // Halbe Aufstellung: solange nur eine Seite gewaehlt ist, gibt es noch keine
   // Partie in der Datenbank. Die Wahl haelt deshalb die Ansicht fest.
   const [wahl, setWahl] = useState<Record<number, { heim?: string | null; gast?: string | null }>>({});
@@ -458,6 +460,11 @@ export default function LigaAnsicht({
               </button>
             )}
             {bearbeitbar && (
+              <button type="button" onClick={() => setImportOffen(true)}>
+                Spielbericht einlesen
+              </button>
+            )}
+            {bearbeitbar && (
               <button type="button" onClick={() => void ratingUmschalten()}>
                 {turnier.rating_werten ? 'Nicht fürs Rating werten' : 'Fürs Rating werten'}
               </button>
@@ -608,6 +615,19 @@ export default function LigaAnsicht({
         </section>
       )}
       {rueckfrage}
+      {importOffen && (
+        <SpielberichtImport
+          turnier={turnier}
+          liga={liga}
+          personen={personen}
+          partien={partien}
+          schliessen={() => setImportOffen(false)}
+          fertig={() => {
+            setImportOffen(false);
+            void laden();
+          }}
+        />
+      )}
       {passwortFrage && (
         <div className="dialoghintergrund" onClick={() => setPasswortFrage(null)}>
           <div className="dialog" onClick={(e) => e.stopPropagation()}>

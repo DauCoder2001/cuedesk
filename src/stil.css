@@ -210,6 +210,7 @@ button:disabled { cursor: default; color: var(--text-leise); }
 .kennzahlen small { display: block; font-size: 11px; color: var(--text-leise); }
 
 .verdeckt { filter: blur(5px); user-select: none; color: var(--text-leise); }
+.dialog.breit { max-width: 820px; width: 92vw; max-height: 86vh; overflow-y: auto; }
 .tabelle td.mittig { text-align: center; }
 .tabelle tfoot td { border-top: none; padding-top: 10px; }
 

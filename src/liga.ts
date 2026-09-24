@@ -55,13 +55,17 @@ export type LigaSpiel = {
   aufnahmen: number | null; // nur 14.1
 };
 
+// Hinrunde: 14.1, 8-, 9-, 10-Ball. In der Rueckrunde dreht sich die
+// Reihenfolge nach dem 14.1 um (so stehen es auch die Spielberichte des
+// Verbands: 14/1e, 10-Ball, 9-Ball, 8-Ball).
 const REIHENFOLGE: LigaDisziplin[] = ['14-1', '8-ball', '9-ball', '10-ball'];
+const REIHENFOLGE_RUECK: LigaDisziplin[] = ['14-1', '10-ball', '9-ball', '8-ball'];
 
 // Der feste Ablauf einer Begegnung (Ausschreibung Abschnitt "Modus")
 export function spielplan(ziele: Ausspielziele): LigaSpiel[] {
   const spiele: LigaSpiel[] = [];
   (['hin', 'rueck'] as Runde[]).forEach((runde, r) => {
-    REIHENFOLGE.forEach((disziplin, i) => {
+    (runde === 'hin' ? REIHENFOLGE : REIHENFOLGE_RUECK).forEach((disziplin, i) => {
       spiele.push({
         nr: r * 4 + i + 1,
         runde,
