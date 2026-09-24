@@ -381,7 +381,9 @@ export default function LigaAnsicht({
       ? turnier.rating_werten
         ? '\nDamit ist der Spieltag komplett, das Rating wird neu berechnet.'
         : '\nDamit ist der Spieltag komplett.'
-      : '\nDie Ergebnisse sind danach gesperrt. Neu gerechnet wird, wenn auch die andere Begegnung abgeschlossen ist.';
+      : turnier.rating_werten
+        ? '\nDie Ergebnisse sind danach gesperrt. Ins Rating gehen sie beim nächtlichen Lauf ein, sofort erst mit dem Abschluss der anderen Begegnung.'
+        : '\nDie Ergebnisse sind danach gesperrt.';
     if (!(await fragen(`${name} abschließen?${zusatz}`, 'Abschließen'))) return;
     setArbeitet(true);
     const { error } = await supabase.from('turniere').update({ status: 'beendet' }).eq('id', turnier.id);
@@ -391,7 +393,11 @@ export default function LigaAnsicht({
     }
     if (!letzte) {
       setArbeitet(false);
-      setMeldung(`${name} abgeschlossen. Neu gerechnet wird, wenn auch die andere Begegnung abgeschlossen ist.`);
+      setMeldung(
+        turnier.rating_werten
+          ? `${name} abgeschlossen. Ins Rating gehen die Ergebnisse heute Nacht ein, sofort erst mit dem Abschluss der anderen Begegnung.`
+          : `${name} abgeschlossen.`
+      );
       await laden();
       return;
     }
