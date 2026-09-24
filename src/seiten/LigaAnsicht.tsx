@@ -76,7 +76,19 @@ export default function LigaAnsicht({
     setPersonen(pe.data ?? []);
     setMannschaften(ma.data ?? []);
     setKader(ka.data ?? []);
-    const partnerId = (t.data?.einstellungen as TurnierEinstellungen | null)?.liga?.partner;
+    // Die Datenbank ist massgeblich: halbe Aufstellung nur fuer Spiele, zu
+    // denen es noch keine Partie gibt
+    const geladeneLiga = (t.data?.einstellungen as TurnierEinstellungen | null)?.liga;
+    const halb: Record<number, { heim?: string | null; gast?: string | null }> = {};
+    if (geladeneLiga) {
+      spielplan(geladeneLiga.ziele).forEach((s) => {
+        const gemerkt = geladeneLiga.aufstellung?.[String(s.nr)];
+        const hatPartie = (p.data ?? []).some((x) => x.runde === (s.runde === 'hin' ? 1 : 2) && x.paarung === s.paarung);
+        if (gemerkt && !hatPartie) halb[s.nr] = { heim: gemerkt.heim ?? null, gast: gemerkt.gast ?? null };
+      });
+    }
+    setWahl(halb);
+    const partnerId = geladeneLiga?.partner;
     if (partnerId) {
       const { data: partner } = await supabase.from('turniere').select('status').eq('id', partnerId).maybeSingle();
       setPartnerStatus(partner?.status ?? null);
@@ -211,11 +223,11 @@ export default function LigaAnsicht({
     setWahl((bisher) => ({ ...bisher, [s.nr]: { heim, gast } }));
 
     if (!heim || !gast) {
-      // Ohne beide Spieler gibt es noch keine Partie; eine bestehende entfaellt
-      if (vorhanden) {
-        await supabase.from('partien').delete().eq('id', vorhanden.id);
-        await laden();
-      }
+      // Ohne beide Spieler gibt es noch keine Partie; eine bestehende entfaellt.
+      // Die eine gewaehlte Seite wird am Spieltag gemerkt.
+      if (vorhanden) await supabase.from('partien').delete().eq('id', vorhanden.id);
+      await halbeAufstellungMerken(s.nr, heim || gast ? { heim, gast } : null);
+      await laden();
       return;
     }
     const spieler_a = heim;
@@ -243,8 +255,30 @@ export default function LigaAnsicht({
       });
       if (error) return setFehler(error.message);
     }
+    await halbeAufstellungMerken(s.nr, null);
     await teilnehmerPflegen([heim, gast]);
     await laden();
+  }
+
+  // Halbe Aufstellung in den Einstellungen des Spieltags ablegen (null: Eintrag
+  // entfernen). Gelesen wird frisch aus der Datenbank, damit nichts anderes
+  // in den Einstellungen ueberschrieben wird.
+  async function halbeAufstellungMerken(nr: number, eintrag: { heim: string | null; gast: string | null } | null) {
+    if (!turnier) return;
+    const { data } = await supabase.from('turniere').select('einstellungen').eq('id', turnier.id).maybeSingle();
+    const aktuell = (data?.einstellungen ?? {}) as TurnierEinstellungen;
+    if (!aktuell.liga) return;
+    const bisher = aktuell.liga.aufstellung ?? {};
+    const schluessel = String(nr);
+    if (!eintrag && !(schluessel in bisher)) return;
+    const neu = { ...bisher };
+    if (eintrag) neu[schluessel] = eintrag;
+    else delete neu[schluessel];
+    const { error } = await supabase
+      .from('turniere')
+      .update({ einstellungen: { ...aktuell, liga: { ...aktuell.liga, aufstellung: neu } } })
+      .eq('id', turnier.id);
+    if (error) setFehler(error.message);
   }
 
   // Wer in der Begegnung spielt, steht auch in der Teilnehmerliste
@@ -315,6 +349,7 @@ export default function LigaAnsicht({
     setArbeitet(true);
     const andere = {
       ...liga,
+      aufstellung: undefined,
       heim: !liga.heim,
       begegnung: nummer,
       partner: turnier.id

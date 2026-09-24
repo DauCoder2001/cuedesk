@@ -66,6 +66,9 @@ export type TurnierEinstellungen = {
     // Verdeckte Aufstellung: je Runde und Mannschaft, bis der Kapitaen sie freigibt
     verdeckt?: { hin?: { heim?: boolean; gast?: boolean }; rueck?: { heim?: boolean; gast?: boolean } };
     partner?: string; // die jeweils andere Begegnung des Spieltags
+    // Halbe Aufstellung: Spiele, in denen erst eine Seite feststeht (Schluessel
+    // ist die Spielnummer). Mit beiden Spielern wird daraus eine Partie.
+    aufstellung?: Record<string, { heim?: string | null; gast?: string | null }>;
     quelle?: string; // URL des eingelesenen Spielberichts
   };
   vorgabe?: { aktiv: boolean; staerke: number; obergrenze: number };
