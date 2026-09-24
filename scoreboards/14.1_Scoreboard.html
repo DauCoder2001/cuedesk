@@ -935,6 +935,15 @@
   let yieldCount = 0;          // wie oft dieses Board verdraengt wurde (>=2 -> Uebernehmen sperren)
   function tournamentActive() { return !!(tournament && tournament.status === 'running'); }
   let frei141 = false;   // Spieler hat "Frei spielen" gewaehlt
+
+  // Hat an diesem Tisch schon ein freies 14.1-Spiel angefangen? Dann keine
+  // Spielauswahl darueberlegen - auch nicht nach dem Neuladen.
+  function freiesSpielLaeuft(d) {
+    if (!d || d.tournamentMatchId) return false;
+    if (d.frei) return true;
+    return (d.s1 || 0) !== 0 || (d.s2 || 0) !== 0 || (Array.isArray(d.log) && d.log.length > 0) || !!d.startedAt
+      || (d.player1 && d.player1 !== 'Spieler 1') || (d.player2 && d.player2 !== 'Spieler 2');
+  }
   let freigabeGemeldet = false;   // Hinweis "steht schon in CueDesk" nur einmal je Spiel
 
   // Die 14.1-Partien des laufenden Turniers (Liga-Spieltag). 8-, 9- und
@@ -1896,6 +1905,7 @@
         // bereits 14.1-Daten -> uebernehmen (Defaults mergen, falls aelterer Stand ohne neue Felder)
         claimed = true;
         state = Object.assign(freshState141(), data);
+        if (freiesSpielLaeuft(data)) frei141 = true;
         if (!Array.isArray(state.log)) state.log = [];
         state.gameType = "14.1";
       }
@@ -1951,6 +1961,9 @@
 
   document.getElementById('btn-frei-141').addEventListener('click', () => {
     frei141 = true;
+    // Merken, damit das Board auch nach dem Neuladen im freien Spiel bleibt
+    state.frei = true;
+    save();
     applyMode();
   });
   document.getElementById('btn-back-141').addEventListener('click', async () => {

@@ -243,7 +243,9 @@ async function kopplungPruefen(): Promise<void> {
     kopplungsCode = null;
     // Lebenszeichen fuer die Live-Uebersicht ("Tablet an"). Bisher meldete
     // sich nur die Geraete-Startseite, das Scoreboard selbst nie.
-    void konto.supabase.rpc('geraet_meldet_sich');
+    // Wichtig: Supabase schickt eine Anfrage erst ab, wenn jemand auf das
+    // Ergebnis wartet - ohne then() wuerde sie nie gesendet.
+    konto.supabase.rpc('geraet_meldet_sich').then(() => undefined);
     const v = verbindung;
     if (!v) {
       // Offline gestartet und inzwischen gekoppelt: neu laden verbindet das

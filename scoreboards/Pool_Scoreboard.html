@@ -582,6 +582,17 @@ button:disabled { opacity: 0.4; }
   let tournament = null;       // tournament/active
   let tableData = null;        // letzter tables/<id>-Wert
   let freeOverride = false;    // "Frei spielen" aktiv?
+
+  // Hat an diesem Tisch schon ein freies Spiel angefangen? Dann bleibt das
+  // Board im Frei-Modus - auch nach dem Neuladen und auch, wenn nebenher ein
+  // Turnier laeuft. Frueher fiel es in die Spielauswahl, und "Frei spielen"
+  // ueberschrieb das laufende Spiel.
+  function freiesSpielLaeuft(d) {
+    if (!d || d.gameType !== 'pool' || d.tournamentMatchId) return false;
+    if (d.frei) return true;
+    return (d.score1 || 0) !== 0 || (d.score2 || 0) !== 0 || !!d.startedAt
+      || (d.player1 && d.player1 !== 'Spieler 1') || (d.player2 && d.player2 !== 'Spieler 2');
+  }
   let tournamentLoaded = false; // wurde tournament/active schon mind. einmal geladen?
   let claimed = false;         // hat dieses Board den Tisch bereits beansprucht?
   let yielded = false;         // Tisch an anderes Geraet abgegeben -> nichts mehr schreiben
@@ -909,6 +920,7 @@ async function newGame() {
       } else {
         claimed = true;
         state = data;
+        if (freiesSpielLaeuft(data)) freeOverride = true;
       }
       render();
     } else {
@@ -1271,7 +1283,12 @@ async function newGame() {
   // "Frei spielen" / "Zurück zum Turnier"
   function enableFreeMode() {
     freeOverride = true;
-    state = { gameType: "pool", player1: "Spieler 1", player2: "Spieler 2", score1: 0, score2: 0, nextBreak: 1 };
+    // Steht am Tisch schon ein angefangenes freies Spiel, geht es damit weiter
+    if (freiesSpielLaeuft(tableData)) {
+      state = Object.assign({}, tableData, { frei: true });
+    } else {
+      state = { gameType: "pool", player1: "Spieler 1", player2: "Spieler 2", score1: 0, score2: 0, nextBreak: 1, frei: true };
+    }
     save();
     applyMode();
   }
