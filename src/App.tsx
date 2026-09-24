@@ -75,23 +75,78 @@ export default function App() {
   if (!sitzung) return <Anmeldung />;
 
   const bereiche: { wert: Bereich; name: string; sichtbar: boolean; tipp?: string }[] = [
-    { wert: 'live', name: 'Live', sichtbar: true },
-    { wert: 'turniere', name: 'Turniere', sichtbar: true },
-    { wert: 'mannschaften', name: 'Mannschaften', sichtbar: true },
+    {
+      wert: 'live',
+      name: 'Live',
+      sichtbar: true,
+      tipp: 'Alle Tische auf einen Blick: laufende Spiele mit Spielstand, freie Tische und ob das Tablet an ist.'
+    },
+    {
+      wert: 'turniere',
+      name: 'Turniere',
+      sichtbar: true,
+      tipp: 'Turniere und Liga-Spieltage anlegen, Spielplan führen, Ergebnisse eintragen und abschließen.'
+    },
+    {
+      wert: 'mannschaften',
+      name: 'Mannschaften',
+      sichtbar: true,
+      tipp: 'Mannschaften einer Saison mit Kader, Stammspielern und Einsätzen, dazu die Saisonübersicht.'
+    },
     {
       wert: 'personen',
       name: 'Spieler',
       sichtbar: true,
       tipp: 'Alle Spieler des Vereins: Mitglieder, Gäste anderer Vereine und Ausgetretene. Hier werden Namen, Status und Stammdaten gepflegt.'
     },
-    { wert: 'rating', name: 'Rating', sichtbar: true },
-    { wert: 'serien', name: 'Serien', sichtbar: true },
-    { wert: 'ranglisten', name: 'Ranglisten', sichtbar: true },
-    { wert: 'statistikPool', name: 'Pool-Statistik', sichtbar: true },
-    { wert: 'statistik141', name: '14.1-Statistik', sichtbar: true },
-    { wert: 'benutzer', name: 'Benutzer und Rollen', sichtbar: darf('vereinsadmin', 'sportwart') },
-    { wert: 'tische', name: 'Tische und Geräte', sichtbar: darf('vereinsadmin', 'turnierleiter') },
-    { wert: 'altdaten', name: 'Altdaten übernehmen', sichtbar: darf('vereinsadmin', 'sportwart') }
+    {
+      wert: 'rating',
+      name: 'Rating',
+      sichtbar: true,
+      tipp: 'Vereins-Rating je Disziplin. Die Lupe zeigt, welche Partien in den Wert eines Spielers eingegangen sind.'
+    },
+    {
+      wert: 'serien',
+      name: 'Serien',
+      sichtbar: true,
+      tipp: 'Serienwertung: Punkte aus den Platzierungen mehrerer Turniere, mit Streichergebnissen.'
+    },
+    {
+      wert: 'ranglisten',
+      name: 'Ranglisten',
+      sichtbar: true,
+      tipp: 'Siegquote, Bestenliste 14.1, Titel aus Turniersiegen und Platzierungen in den Serien.'
+    },
+    {
+      wert: 'statistikPool',
+      name: 'Pool-Statistik',
+      sichtbar: true,
+      tipp: 'Bilanz, Rating-Verlauf, Form und Gegner eines Spielers in 8-, 9- und 10-Ball. Mitglieder sehen nur sich selbst.'
+    },
+    {
+      wert: 'statistik141',
+      name: '14.1-Statistik',
+      sichtbar: true,
+      tipp: 'Serien, Quoten und Entwicklung aus dem Aufnahme-Protokoll der 14.1-Partien. Mitglieder sehen nur sich selbst.'
+    },
+    {
+      wert: 'benutzer',
+      name: 'Benutzer und Rollen',
+      sichtbar: darf('vereinsadmin', 'sportwart'),
+      tipp: 'Konten einladen, Rollen vergeben und Konten mit Spielern verknüpfen.'
+    },
+    {
+      wert: 'tische',
+      name: 'Tische und Geräte',
+      sichtbar: darf('vereinsadmin', 'turnierleiter'),
+      tipp: 'Tische anlegen und die Tablets an den Tischen koppeln.'
+    },
+    {
+      wert: 'altdaten',
+      name: 'Altdaten übernehmen',
+      sichtbar: darf('vereinsadmin', 'sportwart'),
+      tipp: 'Den Datenbestand aus Turnier light einlesen und den Spielern zuordnen.'
+    }
   ];
 
   return (
@@ -115,7 +170,7 @@ export default function App() {
                 ]
                   .filter(Boolean)
                   .join(' ')}
-                title={eintrag.wert === 'live' && turnierLaeuft ? 'Ein Turnier läuft gerade' : eintrag.tipp}
+                title={eintrag.wert === 'live' && turnierLaeuft ? `Ein Turnier läuft gerade. ${eintrag.tipp}` : eintrag.tipp}
                 onClick={() => setBereich(eintrag.wert)}
               >
                 {eintrag.name}
@@ -123,9 +178,15 @@ export default function App() {
             ))}
         </nav>
         <div className="konto">
-          {rollen.length > 0 && <span className="rolle">{hoechsteRolle(rollen)}</span>}
-          <span className="name">{benutzer?.anzeigename ?? benutzer?.email}</span>
-          <button type="button" onClick={() => void abmelden()}>
+          {rollen.length > 0 && (
+            <span className="rolle" title="Deine höchste Rolle in diesem Verein. Sie bestimmt, was du sehen und ändern darfst.">
+              {hoechsteRolle(rollen)}
+            </span>
+          )}
+          <span className="name" title={benutzer?.email ?? undefined}>
+            {benutzer?.anzeigename ?? benutzer?.email}
+          </span>
+          <button type="button" title="Von CueDesk abmelden" onClick={() => void abmelden()}>
             Abmelden
           </button>
         </div>
