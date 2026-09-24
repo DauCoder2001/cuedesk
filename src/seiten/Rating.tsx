@@ -153,7 +153,12 @@ export default function Rating() {
         <div className="bearbeitenkopf">
           <h2>Vereins-Rating</h2>
           {darfRechnen && (
-            <button type="button" onClick={() => void neuRechnen()} disabled={rechnet}>
+            <button
+              type="button"
+              onClick={() => void neuRechnen()}
+              disabled={rechnet}
+              title="Rechnet das Rating sofort aus allen gewerteten Partien neu. Sonst geschieht das jede Nacht um 2:30 Uhr und beim Abschließen eines Turniers. Nützlich nach Korrekturen, gelöschten Turnieren oder geänderten Einstellungen."
+            >
               {rechnet ? 'Rechnet' : 'Jetzt neu berechnen'}
             </button>
           )}
