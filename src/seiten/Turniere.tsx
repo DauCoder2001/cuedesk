@@ -6,6 +6,7 @@ import TurnierAnsicht from './TurnierAnsicht';
 import { LIGEN } from '../liga';
 import type { Ausspielziele, LigaKennung } from '../liga';
 import { saisonAus } from '../mannschaften';
+import { kurzesRaceHinweis } from '../vorgabe';
 import type { Disziplin, Mannschaft, Serie, Turnier, TurnierModus, TurnierStatus } from '../datenbank.types';
 
 // Turnierliste. Turnierleiter, Sportwart und Vereins-Admin legen Turniere an
@@ -138,6 +139,13 @@ export default function Turniere() {
     const m = mannschaftenDerSaison.find((x) => x.id === id);
     if (m?.liga && m.liga in LIGEN) setLiga(m.liga as LigaKennung);
   }
+
+  // Kurze Races stufen die Vorgabe grob ab; beim Anlegen darauf hinweisen
+  const hinweisKurzesRace = kurzesRaceHinweis([
+    Number(raceTo),
+    ...(modus === 'zwei-gruppen' ? [Number(racePhase2)] : []),
+    ...(modus === 'gruppen-ko' ? Object.values(raceKo).map(Number) : [])
+  ]);
 
   async function anlegen() {
     if (!verein) return;
@@ -426,6 +434,7 @@ export default function Turniere() {
                 </label>
               </div>
             )}
+            {vorgabeAn && modus !== 'liga' && hinweisKurzesRace && <p className="hinweis">{hinweisKurzesRace}</p>}
             <label className="ankreuz">
               <input type="checkbox" checked={ratingWerten} onChange={(e) => setRatingWerten(e.target.checked)} />
               <span>

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from '../supabase';
 import { useSitzung } from '../sitzung';
 import { personName } from '../namen';
-import { vorgabe } from '../vorgabe';
+import { kurzesRaceHinweis, vorgabe } from '../vorgabe';
 import { useRueckfrage } from '../rueckfrage';
 import { prognose, prognoseText } from '../zeitprognose';
 import { berichtDateiname, berichtPdf, gruppenBerichtPdf } from '../turnierbericht';
@@ -1407,6 +1407,20 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
   // Gruppenplaetze fixiert (Phase 2 oder KO-Runde gestartet)
   const fixiert = Boolean(einstellungen.phase2 || koFest);
   const feld = koFest ? koFest.gruppenzahl * koFest.weiter : (weiter ?? 0) * gruppenzahl;
+  // Alle Races, die in diesem Turnier tatsaechlich gespielt werden
+  const hinweisKurzesRace = kurzesRaceHinweis([
+    raceTo,
+    ...(zwei ? [race2] : []),
+    ...(mitKo
+      ? [
+          ...(feld >= 16 ? [raceFuer('R16')] : []),
+          ...(feld >= 8 ? [raceFuer('QF')] : []),
+          ...(feld >= 4 ? [raceFuer('SF')] : []),
+          raceFuer('FIN'),
+          race3
+        ]
+      : [])
+  ]);
   const nichtImKo = koFest ? nichtQualifiziert(gruppenListen, koFest.seeds) : [];
   const offenP3 = p3Partien.filter((x) => !beendetBei(x)).length;
 
@@ -1498,6 +1512,9 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
             </p>
             {!turnier.rating_werten && (
               <p className="hinweis">Keine Partie dieses Turniers zählt fürs Rating.</p>
+            )}
+            {va.aktiv && turnier.quelle !== 'import' && hinweisKurzesRace && (
+              <p className="hinweis">{hinweisKurzesRace}</p>
             )}
             {turnier.quelle !== 'import' && prognoseText(zeitDaten()) && (
               <p className="hinweis">{prognoseText(zeitDaten())}</p>
