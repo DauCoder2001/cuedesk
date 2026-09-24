@@ -17,6 +17,11 @@ const BITTE_GILT_MS = 5 * 60 * 1000;
 const offeneBitte = (zeitpunkt: string | null) =>
   Boolean(zeitpunkt) && Date.now() - Date.parse(zeitpunkt as string) < BITTE_GILT_MS;
 
+// Ein Tablet gilt als an, wenn es sich in den letzten zwei Minuten gemeldet
+// hat (es meldet sich alle 30 Sekunden).
+const ONLINE_MS = 2 * 60 * 1000;
+const istOnline = (g: Geraet) => Boolean(g.zuletzt_gesehen) && Date.now() - Date.parse(g.zuletzt_gesehen as string) < ONLINE_MS;
+
 export default function Live() {
   const { verein, darf } = useSitzung();
   const darfLeiten = darf('vereinsadmin', 'sportwart', 'turnierleiter');
@@ -102,13 +107,24 @@ export default function Live() {
         {fehler && <p className="fehler">{fehler}</p>}
         {meldung && <p className="meldung">{meldung}</p>}
         <div className="livetische">
-          {tische.map((tisch) => (
+          {tische.map((tisch) => {
+            const amTisch = geraete.filter((g) => g.tisch_id === tisch.id);
+            // Ein frisch geschriebener Spielstand ist auch ein Lebenszeichen
+            const stand = staende[tisch.id];
+            const standFrisch = Boolean(stand) && Date.now() - Date.parse(stand.aktualisiert) < ONLINE_MS;
+            const online = amTisch.some(istOnline) || (amTisch.length > 0 && standFrisch);
+            let k = kachel(staende[tisch.id]?.zustand ?? null, staende[tisch.id]?.aktualisiert ?? null);
+            // "bereit" nur, wenn wirklich ein Tablet an ist - ein alter Stand
+            // ohne Tablet ist bloss ein Rest.
+            if (k.art === 'frei' && k.bereit && !online) k = { art: 'frei', bereit: false };
+            return (
             <Tischkachel
               key={tisch.id}
               tisch={tisch}
-              k={kachel(staende[tisch.id]?.zustand ?? null, staende[tisch.id]?.aktualisiert ?? null)}
+              k={k}
+              tabletAus={amTisch.length > 0 && !online}
               neuLaden={
-                darfLeiten && geraete.some((g) => g.tisch_id === tisch.id)
+                darfLeiten && online
                   ? () => {
                       setFehler(null);
                       setMeldung(null);
@@ -117,9 +133,10 @@ export default function Live() {
                     }
                   : null
               }
-              laedtNeu={geraete.some((g) => g.tisch_id === tisch.id && offeneBitte(g.neu_laden_am))}
+              laedtNeu={amTisch.some((g) => offeneBitte(g.neu_laden_am))}
             />
-          ))}
+            );
+          })}
         </div>
       </section>
       {frage && (
@@ -183,12 +200,14 @@ function Tischkachel({
   tisch,
   k,
   neuLaden,
-  laedtNeu
+  laedtNeu,
+  tabletAus
 }: {
   tisch: Tisch;
   k: Kachel;
   neuLaden: (() => void) | null;
   laedtNeu: boolean;
+  tabletAus: boolean;
 }) {
   const titel = (
     <>
@@ -198,6 +217,10 @@ function Tischkachel({
   );
   const knopf = laedtNeu ? (
     <span className="marke">lädt neu …</span>
+  ) : tabletAus ? (
+    <span className="hinweis" title="Das zugeordnete Tablet hat sich seit über zwei Minuten nicht gemeldet">
+      Tablet aus
+    </span>
   ) : (
     neuLaden && (
       <button type="button" className="klein" onClick={neuLaden} title="Das Tablet an diesem Tisch neu laden">

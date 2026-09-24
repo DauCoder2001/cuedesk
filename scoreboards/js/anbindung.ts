@@ -241,6 +241,9 @@ async function kopplungPruefen(): Promise<void> {
     }
 
     kopplungsCode = null;
+    // Lebenszeichen fuer die Live-Uebersicht ("Tablet an"). Bisher meldete
+    // sich nur die Geraete-Startseite, das Scoreboard selbst nie.
+    void konto.supabase.rpc('geraet_meldet_sich');
     const v = verbindung;
     if (!v) {
       // Offline gestartet und inzwischen gekoppelt: neu laden verbindet das
