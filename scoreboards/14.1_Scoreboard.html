@@ -873,7 +873,7 @@
   // Die Regeln des Boards (getestet in test/board-regeln.test.ts)
   import {
     freiesSpielLaeuft, offeneSpiele, wartetText, zeige141Auswahl, spielBeanspruchen, spielZuruecklegen,
-    ergebnisSchonEingetragen, siegerText
+    ergebnisSchonEingetragen, ohneSpielParameter, siegerText
   } from "./js/board-regeln.ts";
   import { startIdleRedirect } from "./js/idle-timeout.js";
   import { keepScreenAwake } from "./js/wake-lock.js";
@@ -954,6 +954,8 @@
     if (!spielAusAdresse || !tournament || !tournament.schedule) return;
     const id = spielAusAdresse;
     spielAusAdresse = null;
+    // window.history: 'history' ist hier der Undo-Stapel des Boards
+    window.history.replaceState(null, '', ohneSpielParameter(location.href));   // auch nicht nach dem Neuladen
     const m = tournament.schedule[id];
     if (m && m.status === 'pending' && m.player1 && m.player2) void startMatch141(id);
   }
@@ -1334,8 +1336,15 @@
         return;
       }
       if (!await confirmModal("Ergebnis speichern und Tisch freigeben?")) return;
+      // Das eigene Ergebnis kommt gleich als "beendet" zurueck - kein Hinweis "steht schon in CueDesk"
+      freigabeGemeldet = true;
       const erg = await ergebnis141InPartie(state.tournamentMatchId, state, { abgebrochen: false });
-      if (!erg.ok) { alert("Speichern fehlgeschlagen: " + erg.fehler); return; }
+      if (!erg.ok) {
+        freigabeGemeldet = false;
+        alert("Speichern fehlgeschlagen: " + erg.fehler + (erg.endgueltig ? "\n\nDas Ergebnis bitte in CueDesk eintragen. Der Tisch wird freigegeben." : ""));
+        if (erg.endgueltig) { frei141 = false; try { await set(dbRef, null); } catch (e) {} }
+        return;
+      }
       frei141 = false;
       try { await set(dbRef, null); } catch (e) { alert("Fehler: " + e.message); }
       return;
@@ -1913,10 +1922,18 @@
           "Bitte neu koppeln oder das Ergebnis " + state.s1 + ":" + state.s2 + " in CueDesk eintragen.");
         return;
       }
+      // Das eigene Ergebnis kommt gleich als "beendet" zurueck. Frueher hielt das
+      // Board es fuer einen Eintrag von aussen und meldete "steht schon in CueDesk".
+      freigabeGemeldet = true;
       const erg = await ergebnis141InPartie(state.tournamentMatchId, state, { abgebrochen: false });
       if (!erg.ok) {
+        freigabeGemeldet = false;
         alert("Speichern fehlgeschlagen: " + erg.fehler +
-          "\n\nDas Ergebnis " + state.s1 + ":" + state.s2 + " bitte in CueDesk eintragen.");
+          "\n\nDas Ergebnis " + state.s1 + ":" + state.s2 + " bitte in CueDesk eintragen." +
+          (erg.endgueltig ? " Der Tisch wird freigegeben." : ""));
+        // Liegt der Grund in CueDesk (Aufstellung geaendert, Partie woanders),
+        // hilft kein neuer Versuch - sonst haengt der Tisch in diesem Spiel fest
+        if (erg.endgueltig) { frei141 = false; try { await set(dbRef, null); } catch (e) {} }
         return;
       }
       frei141 = false;

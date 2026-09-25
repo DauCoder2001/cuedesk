@@ -9,6 +9,7 @@ import {
   freilosWertung,
   gehoertZumTisch,
   koFortschreibung,
+  ohneSpielParameter,
   offeneSpiele,
   poolAuswahl,
   poolModus,
@@ -237,5 +238,14 @@ describe('Ergebnisse', () => {
     expect(siegerText('Sven', 'Kai', 4, 2, 'pool')).toBe('🏁 Sven gewinnt 4:2');
     expect(siegerText('Sven', 'Kai', 54, 60, '14.1')).toBe('🏁 Kai gewinnt 60:54');
     expect(siegerText('Sven', 'Kai', 40, 40, '14.1')).toBe('🏁 Unentschieden 40:40');
+  });
+});
+
+describe('Direktlink', () => {
+  test('spiel verschwindet, der Tisch bleibt', () => {
+    expect(ohneSpielParameter('http://192.168.178.22:5173/scoreboards/14.1_Scoreboard.html?table=2&spiel=abc')).toBe(
+      '/scoreboards/14.1_Scoreboard.html?table=2'
+    );
+    expect(ohneSpielParameter('http://x/scoreboards/Pool_Scoreboard.html?spiel=abc')).toBe('/scoreboards/Pool_Scoreboard.html');
   });
 });

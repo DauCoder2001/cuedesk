@@ -1112,11 +1112,12 @@ export async function ergebnis141InPartie(
   matchId: string,
   zustand: Zustand141 & { player1: string; player2: string },
   optionen: { abgebrochen: boolean }
-): Promise<{ ok: true } | { ok: false; fehler: string }> {
+): Promise<{ ok: true } | { ok: false; fehler: string; endgueltig?: boolean }> {
   const v = verbindung;
   if (!v) return { ok: false, fehler: 'Nicht mit CueDesk verbunden.' };
   const eintrag = aktuellesTurnier?.schedule[matchId];
-  if (!eintrag) return { ok: false, fehler: 'Das Spiel steht nicht mehr im Spielplan.' };
+  // endgueltig: Der Grund liegt in CueDesk, ein neuer Versuch am Tisch aendert nichts
+  if (!eintrag) return { ok: false, fehler: 'Das Spiel steht nicht mehr im Spielplan.', endgueltig: true };
   const getrennt = await nichtGekoppelt(`${zustand.s1} : ${zustand.s2}`);
   if (getrennt) return { ok: false, fehler: getrennt };
 
@@ -1128,7 +1129,7 @@ export async function ergebnis141InPartie(
   if (fehlerPartie || !partie) return { ok: false, fehler: fehlerPartie?.message ?? 'Partie nicht gefunden.' };
 
   if (!dieselbenSpieler(eintrag, zustand)) {
-    return { ok: false, fehler: 'Die Aufstellung dieser Partie wurde in CueDesk geändert.' };
+    return { ok: false, fehler: 'Die Aufstellung dieser Partie wurde in CueDesk geändert.', endgueltig: true };
   }
 
   const getauscht = seitenGetauscht(eintrag, zustand);
@@ -1165,7 +1166,7 @@ export async function ergebnis141InPartie(
   if (fehlerUpdate) return { ok: false, fehler: fehlerUpdate.message };
   // Ohne diese Pruefung meldete das Board "gespeichert", obwohl die Partie offen blieb
   if ((geschrieben ?? []).length === 0) {
-    return { ok: false, fehler: 'Die Partie läuft an einem anderen Tisch oder ist schon abgeschlossen.' };
+    return { ok: false, fehler: 'Die Partie läuft an einem anderen Tisch oder ist schon abgeschlossen.', endgueltig: true };
   }
 
   const { error: fehler141 } = await v.supabase.from('partien_141').upsert({

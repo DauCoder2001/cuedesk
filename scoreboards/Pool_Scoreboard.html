@@ -548,7 +548,7 @@ button:disabled { opacity: 0.4; }
   import {
     freiesSpielLaeuft, offeneSpiele, wartetText, filterNamen, poolAuswahl, poolModus,
     spielBeanspruchen, spielZuruecklegen, spielAbschliessen, freilosAbschliessen, freilosWertung,
-    ergebnisSchonEingetragen, ausspielziel, zielErreicht, koFortschreibung, siegerText
+    ergebnisSchonEingetragen, ohneSpielParameter, ausspielziel, zielErreicht, koFortschreibung, siegerText
   } from "./js/board-regeln.ts";
   import { startIdleRedirect } from "./js/idle-timeout.js";
   import { keepScreenAwake } from "./js/wake-lock.js";
@@ -961,6 +961,8 @@ async function newGame() {
     if (!spielAusAdresse || !tournament || !tournament.schedule) return;
     const id = spielAusAdresse;
     spielAusAdresse = null;   // nur ein Versuch, sonst dreht es sich im Kreis
+    // window.history: 'history' ist hier der Undo-Stapel des Boards
+    window.history.replaceState(null, '', ohneSpielParameter(location.href));   // auch nicht nach dem Neuladen
     const m = tournament.schedule[id];
     if (m && m.status === 'pending' && m.player1 && m.player2) void startMatch(id);
   }
@@ -1186,7 +1188,9 @@ async function newGame() {
     // laeuft am Tisch (angemeldet) mit, unabhaengig von der Live-Seite.
     Object.assign(u, koFortschreibung(tournament && tournament.schedule && tournament.schedule[matchId], state));
 
-    try { await update(ref(db), u); } catch (e) { alert("Fehler beim Speichern: " + e.message); }
+    // Das eigene Ergebnis kommt gleich als "beendet" zurueck - kein Hinweis "steht schon in CueDesk"
+    freigabeGemeldet = true;
+    try { await update(ref(db), u); } catch (e) { freigabeGemeldet = false; alert("Fehler beim Speichern: " + e.message); }
   }
 
   // Spiel abbrechen -> zurück in den Plan (nur, wenn es noch diesem Tisch gehoert)

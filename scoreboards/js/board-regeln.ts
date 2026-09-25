@@ -157,6 +157,18 @@ export function zeige141Auswahl(turnierAktiv: boolean, imTurnierspiel: boolean, 
   return turnierAktiv && !imTurnierspiel && !freiGewaehlt && offen > 0;
 }
 
+// ---------- Direktlink ----------
+
+// Wer am anderen Board eine Paarung antippt, kommt mit ?spiel=<id> an. Nach
+// dem Start muss der Parameter aus der Adresse, sonst startet ein spaeteres
+// Neuladen (etwa ueber "Neu laden" in der Live-Uebersicht) dieselbe Partie
+// erneut, falls sie inzwischen wieder offen ist.
+export function ohneSpielParameter(adresse: string): string {
+  const url = new URL(adresse);
+  url.searchParams.delete('spiel');
+  return url.pathname + url.search + url.hash;
+}
+
 // ---------- Tisch und Spiel ----------
 
 // Gehoert das Spiel gerade diesem Tisch? Schuetzt vor verspaeteten Writes, die
