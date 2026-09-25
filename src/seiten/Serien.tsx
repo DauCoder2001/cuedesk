@@ -7,6 +7,7 @@ import { herunterladen } from '../pdf';
 import { serienwertung } from '../serien';
 import { serienDateiname, serienPdf } from '../serienbericht';
 import { DISZIPLIN_TEXT } from './Turniere';
+import { Pflichthinweis, usePflicht } from '../pflicht';
 import type { SerienTurnier } from '../serien';
 import type { Disziplin, Person, Serie, Turnier } from '../datenbank.types';
 
@@ -38,6 +39,7 @@ export default function Serien() {
   const [teilnahmen, setTeilnahmen] = useState<Teilnahme[]>([]);
   const [personen, setPersonen] = useState<Person[]>([]);
   const [fehler, setFehler] = useState<string | null>(null);
+  const pflicht = usePflicht();
   const [formular, setFormular] = useState<Formular | null>(null);
   const [zuordnen, setZuordnen] = useState('');
   const [rueckfrage, fragen] = useRueckfrage();
@@ -139,9 +141,9 @@ export default function Serien() {
     if (!verein || !formular) return;
     const streicher = Number(formular.streicher);
     const bonus = Number(formular.bonus);
-    if (!formular.name.trim()) return setFehler('Bitte einen Namen eingeben.');
-    if (!Number.isInteger(streicher) || streicher < 0) return setFehler('Gewertete Turniere: 0 (alle) oder eine positive Zahl.');
-    if (!Number.isInteger(bonus) || bonus < 0) return setFehler('Sieger-Bonus: 0 oder eine positive Zahl.');
+    if (!pflicht.pruefen()) return;
+    if (!Number.isInteger(streicher) || streicher < 0) return pflicht.melden('Gewertete Turniere: 0 (alle) oder eine positive Zahl.');
+    if (!Number.isInteger(bonus) || bonus < 0) return pflicht.melden('Sieger-Bonus: 0 oder eine positive Zahl.');
     const daten = {
       name: formular.name.trim(),
       saison: formular.saison.trim() || null,
@@ -254,20 +256,21 @@ export default function Serien() {
         )}
 
         {formular && (
-          <div className="kasten">
+          <div className="kasten" ref={pflicht.bereich}>
             <div className="feldkopf">{formular.id ? 'Serie ändern' : 'Neue Serie'}</div>
             <div className="felder">
               <label className="feld">
                 <span>Name</span>
                 <input
+                  required
                   value={formular.name}
                   onChange={(e) => setFormular({ ...formular, name: e.target.value })}
-                  placeholder="8-Ball Serie am 3. Freitag"
+                  placeholder="z. B. 8-Ball Serie am 3. Freitag"
                 />
               </label>
               <label className="feld">
                 <span>Saison</span>
-                <input value={formular.saison} onChange={(e) => setFormular({ ...formular, saison: e.target.value })} placeholder="26/27" />
+                <input value={formular.saison} onChange={(e) => setFormular({ ...formular, saison: e.target.value })} placeholder="z. B. 26/27" />
               </label>
               <label className="feld">
                 <span>Disziplin</span>
@@ -299,7 +302,14 @@ export default function Serien() {
               <button type="button" title="Die Angaben zur Serie speichern" onClick={() => void speichern()}>
                 Speichern
               </button>
-              <button type="button" onClick={() => setFormular(null)}>
+              <button
+                type="button"
+                title="Ohne Speichern schließen"
+                onClick={() => {
+                  pflicht.zuruecksetzen();
+                  setFormular(null);
+                }}
+              >
                 Abbrechen
               </button>
               {formular.id && (
@@ -307,6 +317,7 @@ export default function Serien() {
                   Serie löschen
                 </button>
               )}
+              <Pflichthinweis hinweis={pflicht.hinweis} />
             </div>
           </div>
         )}

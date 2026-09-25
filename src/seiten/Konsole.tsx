@@ -13,6 +13,7 @@ import {
 import { AUFRAEUMEN_ARTEN, datumText, loeschStand } from '../datenpflege';
 import type { AufraeumenArt, AufraeumenZahlen } from '../datenpflege';
 import { exportHerunterladen } from '../vereinExport';
+import { Pflichthinweis, usePflicht } from '../pflicht';
 import type {
   Benutzer,
   BenutzerRolle,
@@ -80,6 +81,8 @@ export default function Konsole() {
   const [einladen, setEinladen] = useState<{ id: string; email: string } | null>(null);
   const [neuerAdmin, setNeuerAdmin] = useState('');
   const [sofortLoeschen, setSofortLoeschen] = useState<{ id: string; name: string } | null>(null);
+  const neuPflicht = usePflicht<HTMLElement>();
+  const adminPflicht = usePflicht<HTMLDivElement>();
 
   const laden = useCallback(async () => {
     const [v, r, k, e, p, z, d, s, a] = await Promise.all([
@@ -134,9 +137,10 @@ export default function Konsole() {
   }
 
   async function vereinAnlegen() {
-    if (name.trim().length < 2) return zeigeFehler('Der Verein braucht einen Namen.');
-    if (!/^[a-z0-9-]{2,30}$/.test(adresse)) return zeigeFehler('Die Adresse besteht aus 2 bis 30 Kleinbuchstaben, Ziffern und Bindestrichen.');
-    if (adminMail.trim() && !adminMail.includes('@')) return zeigeFehler('Die E-Mail-Adresse des Vereins-Administrators stimmt nicht.');
+    if (!neuPflicht.pruefen()) return;
+    if (name.trim().length < 2) return neuPflicht.melden('Der Name braucht mindestens zwei Zeichen.');
+    if (!/^[a-z0-9-]{2,30}$/.test(adresse)) return neuPflicht.melden('Die Adresse besteht aus 2 bis 30 Kleinbuchstaben, Ziffern und Bindestrichen.');
+    if (adminMail.trim() && !adminMail.includes('@')) return neuPflicht.melden('Die E-Mail-Adresse des Vereins-Administrators stimmt nicht.');
     setArbeitet(true);
     const { data: id, error } = await supabase.rpc('verein_anlegen', {
       p_name: name.trim(),
@@ -146,7 +150,7 @@ export default function Konsole() {
     });
     if (error || !id) {
       setArbeitet(false);
-      return zeigeFehler(error?.message.includes('vereine_slug_key') ? 'Diese Adresse ist schon vergeben.' : error?.message ?? 'Nicht angelegt.');
+      return neuPflicht.melden(error?.message.includes('vereine_slug_key') ? 'Diese Adresse ist schon vergeben.' : error?.message ?? 'Nicht angelegt.');
     }
     let text = `Verein „${name.trim()}“ angelegt.`;
     if (adminMail.trim()) {
@@ -160,6 +164,7 @@ export default function Konsole() {
     setAdresseVonHand(false);
     setIstTest(false);
     setAdminMail('');
+    neuPflicht.zuruecksetzen();
     erfolg(text);
     await laden();
   }
@@ -581,14 +586,15 @@ export default function Konsole() {
         </div>
       </section>
 
-      <section className="block">
+      <section className="block" ref={neuPflicht.bereich}>
         <h2>Neuer Verein</h2>
         <div className="felder">
           <label className="feld">
             <span>Name</span>
             <input
+              required
               value={name}
-              placeholder="Billardverein Musterstadt"
+              placeholder="z. B. Billardverein Musterstadt"
               onChange={(e) => {
                 setName(e.target.value);
                 if (!adresseVonHand) setAdresse(adresseAusName(e.target.value));
@@ -597,13 +603,14 @@ export default function Konsole() {
           </label>
           <label className="feld">
             <span>Kurzname</span>
-            <input value={kurzname} placeholder="Musterstadt" onChange={(e) => setKurzname(e.target.value)} />
+            <input value={kurzname} placeholder="leer = wie der Name" onChange={(e) => setKurzname(e.target.value)} />
           </label>
           <label className="feld">
             <span>Adresse (für spätere Vereinsseiten)</span>
             <input
+              required
               value={adresse}
-              placeholder="musterstadt"
+              placeholder="wird aus dem Namen erzeugt"
               onChange={(e) => {
                 setAdresse(e.target.value.toLowerCase());
                 setAdresseVonHand(true);
@@ -611,8 +618,8 @@ export default function Konsole() {
             />
           </label>
           <label className="feld">
-            <span>E-Mail des Vereins-Administrators (optional)</span>
-            <input type="email" value={adminMail} placeholder="name@verein.de" onChange={(e) => setAdminMail(e.target.value)} />
+            <span>E-Mail des Vereins-Administrators</span>
+            <input type="email" value={adminMail} placeholder="optional, z. B. name@verein.de" onChange={(e) => setAdminMail(e.target.value)} />
           </label>
         </div>
         <label className="ankreuz">
@@ -624,8 +631,9 @@ export default function Konsole() {
         </label>
         <div className="knopfpaar">
           <button type="button" title="Den Verein anlegen und, falls angegeben, den Vereins-Administrator einladen" onClick={() => void vereinAnlegen()} disabled={arbeitet}>
-            Verein anlegen
+            {arbeitet ? 'Wird angelegt …' : 'Verein anlegen'}
           </button>
+          <Pflichthinweis hinweis={neuPflicht.hinweis} />
         </div>
       </section>
 
@@ -641,11 +649,25 @@ export default function Konsole() {
             </li>
           ))}
         </ul>
-        <div className="zeile">
-          <input type="email" placeholder="E-Mail eines vorhandenen Kontos" value={neuerAdmin} onChange={(e) => setNeuerAdmin(e.target.value)} />
-          <button type="button" title="Dieses Konto zum Super-Admin machen. Es muss schon ein Konto sein." onClick={() => void superAdminSetzen(neuerAdmin.trim(), true)}>
+        <div className="zeile" ref={adminPflicht.bereich}>
+          <input
+            type="email"
+            required
+            aria-label="E-Mail eines vorhandenen Kontos"
+            placeholder="E-Mail eines vorhandenen Kontos"
+            value={neuerAdmin}
+            onChange={(e) => setNeuerAdmin(e.target.value)}
+          />
+          <button
+            type="button"
+            title="Dieses Konto zum Super-Admin machen. Es muss schon ein Konto sein."
+            onClick={() => {
+              if (adminPflicht.pruefen()) void superAdminSetzen(neuerAdmin.trim(), true);
+            }}
+          >
             Zum Super-Admin machen
           </button>
+          <Pflichthinweis hinweis={adminPflicht.hinweis} ohneLegende />
         </div>
         <p className="hinweis">Nur vorhandene Konten; wer noch keines hat, meldet sich zuerst einmal an oder wird in einen Verein eingeladen.</p>
       </section>

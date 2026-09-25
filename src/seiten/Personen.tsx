@@ -4,6 +4,7 @@ import { useSitzung } from '../sitzung';
 import type { Person, PersonIntern, PersonenStatus } from '../datenbank.types';
 import { personName, kuerzelAus } from '../namen';
 import { useRueckfrage } from '../rueckfrage';
+import { Pflichthinweis, usePflicht } from '../pflicht';
 
 type Entwurf = Omit<Person, 'id' | 'erstellt_am' | 'geaendert_am'> & { id: string | null };
 type EntwurfIntern = Omit<PersonIntern, 'person_id' | 'verein_id'>;
@@ -37,6 +38,7 @@ export default function Personen() {
   const [intern, setIntern] = useState<EntwurfIntern>(LEER_INTERN);
   const [meldung, setMeldung] = useState<string | null>(null);
   const [fehler, setFehler] = useState<string | null>(null);
+  const pflicht = usePflicht<HTMLElement>();
 
   useEffect(() => {
     if (!verein) return;
@@ -95,10 +97,7 @@ export default function Personen() {
 
   async function speichern() {
     if (!entwurf || !verein) return;
-    if (!entwurf.vorname.trim() || !entwurf.nachname.trim()) {
-      setFehler('Vorname und Nachname sind Pflicht.');
-      return;
-    }
+    if (!pflicht.pruefen()) return;
     setFehler(null);
 
     const stamm = {
@@ -255,7 +254,7 @@ export default function Personen() {
         )}
       </aside>
 
-      <section className="bearbeiten">
+      <section className="bearbeiten" ref={pflicht.bereich}>
         {!entwurf ? (
           <>
             {meldung && <p className="meldung">{meldung}</p>}
@@ -271,15 +270,19 @@ export default function Personen() {
                   : 'Neuer Spieler'}
               </h2>
               {darfAendern && (
-                <button type="button" title="Änderungen an diesem Spieler speichern" onClick={() => void speichern()}>
-                  Speichern
-                </button>
+                <div className="knopfpaar">
+                  <Pflichthinweis hinweis={pflicht.hinweis} />
+                  <button type="button" title="Änderungen an diesem Spieler speichern" onClick={() => void speichern()}>
+                    Speichern
+                  </button>
+                </div>
               )}
             </div>
 
             <div className="felder">
               <Feld beschriftung="Vorname">
                 <input
+                  required={darfAendern}
                   value={entwurf.vorname}
                   disabled={!darfAendern}
                   onChange={(e) => setEntwurf({ ...entwurf, vorname: e.target.value })}
@@ -287,6 +290,7 @@ export default function Personen() {
               </Feld>
               <Feld beschriftung="Nachname">
                 <input
+                  required={darfAendern}
                   value={entwurf.nachname}
                   disabled={!darfAendern}
                   onChange={(e) => setEntwurf({ ...entwurf, nachname: e.target.value })}

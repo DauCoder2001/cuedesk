@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../supabase';
 import { useSitzung } from '../sitzung';
+import { Pflichthinweis, usePflicht } from '../pflicht';
 import type { Geraet, Tisch } from '../datenbank.types';
 
 export default function TischeGeraete() {
@@ -19,6 +20,8 @@ export default function TischeGeraete() {
   const [geraetTisch, setGeraetTisch] = useState('');
   const [meldung, setMeldung] = useState<string | null>(null);
   const [fehler, setFehler] = useState<string | null>(null);
+  const tischPflicht = usePflicht();
+  const koppelPflicht = usePflicht();
 
   useEffect(() => {
     if (!verein) return;
@@ -40,11 +43,9 @@ export default function TischeGeraete() {
     if (!verein) return;
     setFehler(null);
     setMeldung(null);
+    if (!tischPflicht.pruefen()) return;
     const nummer = Number(neueNummer);
-    if (!Number.isInteger(nummer) || nummer < 1) {
-      setFehler('Bitte eine Tischnummer ab 1 eingeben.');
-      return;
-    }
+    if (!Number.isInteger(nummer) || nummer < 1) return tischPflicht.melden('Bitte eine Tischnummer ab 1 eingeben.');
     const { error } = await supabase
       .from('tische')
       .insert({ verein_id: verein.id, nummer, bezeichnung: neueBezeichnung.trim() || null, aktiv: true });
@@ -80,14 +81,8 @@ export default function TischeGeraete() {
     if (!verein) return;
     setFehler(null);
     setMeldung(null);
-    if (!/^[A-Za-z0-9]{6}$/.test(code.trim())) {
-      setFehler('Der Code besteht aus sechs Zeichen.');
-      return;
-    }
-    if (!geraetName.trim()) {
-      setFehler('Bitte einen Namen für das Gerät eingeben.');
-      return;
-    }
+    if (!koppelPflicht.pruefen()) return;
+    if (!/^[A-Za-z0-9]{6}$/.test(code.trim())) return koppelPflicht.melden('Der Code besteht aus sechs Zeichen.');
     const { error } = await supabase.rpc('geraet_koppeln', {
       p_code: code.trim().toUpperCase(),
       p_verein: verein.id,
@@ -193,21 +188,24 @@ export default function TischeGeraete() {
               </tbody>
             </table>
 
-            <div className="zeile">
+            <div className="zeile" ref={tischPflicht.bereich}>
               <input
                 style={{ width: '80px' }}
-                placeholder="Nr."
+                required
+                aria-label="Nr."
+                placeholder="Nr. *"
                 value={neueNummer}
                 onChange={(e) => setNeueNummer(e.target.value)}
               />
               <input
-                placeholder="Bezeichnung"
+                placeholder="Bezeichnung (optional)"
                 value={neueBezeichnung}
                 onChange={(e) => setNeueBezeichnung(e.target.value)}
               />
               <button type="button" title="Einen weiteren Tisch anlegen" onClick={() => void tischAnlegen()}>
                 Tisch anlegen
               </button>
+              <Pflichthinweis hinweis={tischPflicht.hinweis} />
             </div>
           </>
         )}
@@ -248,16 +246,20 @@ export default function TischeGeraete() {
             Auf dem Tablet die Adresse mit dem Zusatz <code>?geraet</code> öffnen. Dort steht ein
             sechsstelliger Code, der 15 Minuten gilt.
           </p>
-          <div className="zeile">
+          <div className="zeile" ref={koppelPflicht.bereich}>
             <input
               style={{ width: '120px', letterSpacing: '2px', textTransform: 'uppercase' }}
-              placeholder="Code"
+              required
+              aria-label="Code"
+              placeholder="Code *"
               maxLength={6}
               value={code}
               onChange={(e) => setCode(e.target.value)}
             />
             <input
-              placeholder="Name des Geräts"
+              required
+              aria-label="Name des Geräts"
+              placeholder="Name des Geräts *"
               value={geraetName}
               onChange={(e) => setGeraetName(e.target.value)}
             />
@@ -272,6 +274,7 @@ export default function TischeGeraete() {
             <button type="button" title="Koppelt das Tablet mit dem angezeigten Code an den gewählten Tisch." onClick={() => void koppeln()}>
               Koppeln
             </button>
+            <Pflichthinweis hinweis={koppelPflicht.hinweis} />
           </div>
         </div>
 

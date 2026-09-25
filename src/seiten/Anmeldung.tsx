@@ -125,7 +125,7 @@ export default function Anmeldung() {
                 setEmail(e.target.value);
                 setFehler(null);
               }}
-              placeholder="name@beispiel.de"
+              placeholder="z. B. name@beispiel.de"
             />
             {fehler && <p className="fehler">{fehler}</p>}
             <button type="submit" title="Schickt einen Anmeldelink an diese Adresse" disabled={zustand === 'sendet'}>

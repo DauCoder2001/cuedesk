@@ -133,6 +133,12 @@ ul.schlicht { list-style: none; padding: 0; margin: 0; display: flex; flex-direc
 .felder { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
 .feld { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--text-leise); }
 .feld input, .feld select { width: 100%; font-size: 14px; color: var(--text); }
+/* Pflichtfelder (src/pflicht.tsx): Sternchen an der Beschriftung, nach
+   einem Fehlversuch leere Felder rot, Hinweis neben dem Knopf */
+.feld:has(> :is(input, select, textarea):required) > span:first-child::after { content: ' *'; color: var(--fehler); }
+.versucht :is(input, select, textarea):required:invalid { border-color: var(--fehler); box-shadow: 0 0 0 1px var(--fehler); }
+.pflichthinweis { align-self: center; font-size: 12px; color: var(--text-leise); }
+.pflichthinweis.fehlt { color: var(--fehler); }
 
 .ankreuz { display: flex; align-items: flex-start; gap: 8px; font-size: 14px; }
 .ankreuz input { width: auto; margin-top: 3px; }

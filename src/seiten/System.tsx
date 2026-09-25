@@ -8,6 +8,7 @@ import { vereinsEinstellungen, vereinsKuerzel } from '../vereinseinstellungen';
 import type { VereinsEinstellungen } from '../vereinseinstellungen';
 import type { Disziplin, Mannschaft, SupportFreigabe, TurnierModus } from '../datenbank.types';
 import { exportHerunterladen } from '../vereinExport';
+import { Pflichthinweis, usePflicht } from '../pflicht';
 
 // Seite "System": Einstellungen des Vereins, nur fuer den Vereins-Administrator.
 // Verein (Name, Kuerzel, Logo), Vorgaben fuer neue Turniere und Liga-Spieltage,
@@ -106,6 +107,8 @@ export default function System() {
   // Laufende Support-Freigabe (null: keine)
   const [freigabe, setFreigabe] = useState<SupportFreigabe | null>(null);
   const [tage, setTage] = useState(3);
+  const vereinPflicht = usePflicht();
+  const schutzPflicht = usePflicht<HTMLElement>();
 
   const zuruecksetzen = useCallback(() => {
     if (!verein) return;
@@ -167,12 +170,12 @@ export default function System() {
     const race = zahl(f.raceTo);
     const staerke = zahl(f.staerke);
     const grenze = zahl(f.obergrenze) ?? 0;
-    if (!f.name.trim()) return setFehler('Der Verein braucht einen Namen.');
-    if (race === null || !Number.isInteger(race) || race < 1 || race > 25) return setFehler('Race to zwischen 1 und 25.');
+    if (!vereinPflicht.pruefen()) return;
+    if (race === null || !Number.isInteger(race) || race < 1 || race > 25) return vereinPflicht.melden('Race to zwischen 1 und 25.');
     if (staerke !== null && (!Number.isInteger(staerke) || staerke < 0 || staerke > 100)) {
-      return setFehler('Ausgleich in Prozent zwischen 0 und 100, oder leer lassen.');
+      return vereinPflicht.melden('Ausgleich in Prozent zwischen 0 und 100, oder leer lassen.');
     }
-    if (!Number.isInteger(grenze) || grenze < 0 || grenze > 24) return setFehler('Höchstens Sätze Vorgabe zwischen 0 und 24.');
+    if (!Number.isInteger(grenze) || grenze < 0 || grenze > 24) return vereinPflicht.melden('Höchstens Sätze Vorgabe zwischen 0 und 24.');
 
     const einstellungen: VereinsEinstellungen = {
       turnier: {
@@ -235,8 +238,9 @@ export default function System() {
 
   async function schutzwortAendern() {
     if (!verein) return;
-    if (wort.trim().length < 3) return setFehler('Das Schutzwort braucht mindestens drei Zeichen.');
-    if (wort.trim() !== wortWieder.trim()) return setFehler('Die beiden Eingaben stimmen nicht überein.');
+    if (!schutzPflicht.pruefen()) return;
+    if (wort.trim().length < 3) return schutzPflicht.melden('Das Schutzwort braucht mindestens drei Zeichen.');
+    if (wort.trim() !== wortWieder.trim()) return schutzPflicht.melden('Die beiden Eingaben stimmen nicht überein.');
     const { error } = await supabase.rpc('schutzwort_setzen', { p_verein: verein.id, p_wort: wort.trim() });
     if (error) return setFehler(error.message);
     setWort('');
@@ -254,16 +258,17 @@ export default function System() {
         {meldung && <p className="meldung">{meldung}</p>}
       </section>
 
+      <div ref={vereinPflicht.bereich} style={{ display: 'contents' }}>
       <section className="block">
         <h2>Verein</h2>
         <div className="felder">
           <label className="feld">
             <span>Name</span>
-            <input value={f.name} onChange={(e) => setze({ name: e.target.value })} />
+            <input required value={f.name} onChange={(e) => setze({ name: e.target.value })} />
           </label>
           <label className="feld">
             <span>Kurzname (die ersten zwei Buchstaben stehen im Kästchen, wenn es kein Logo gibt)</span>
-            <input value={f.kurzname} onChange={(e) => setze({ kurzname: e.target.value })} />
+            <input value={f.kurzname} placeholder="leer = aus dem Namen" onChange={(e) => setze({ kurzname: e.target.value })} />
           </label>
         </div>
         <div className="logozeile">
@@ -297,7 +302,7 @@ export default function System() {
         <div className="felder">
           <label className="feld">
             <span>Race to</span>
-            <input inputMode="numeric" value={f.raceTo} onChange={(e) => setze({ raceTo: e.target.value })} />
+            <input inputMode="numeric" required value={f.raceTo} onChange={(e) => setze({ raceTo: e.target.value })} />
           </label>
           <label className="feld">
             <span>Disziplin</span>
@@ -380,15 +385,17 @@ export default function System() {
       </section>
 
       <div className="knopfpaar rechts">
-        <button type="button" title="Die Eingaben dieser Seite verwerfen." onClick={() => { zuruecksetzen(); setFehler(null); setMeldung(null); }}>
+        <Pflichthinweis hinweis={vereinPflicht.hinweis} />
+        <button type="button" title="Die Eingaben dieser Seite verwerfen." onClick={() => { zuruecksetzen(); vereinPflicht.zuruecksetzen(); setFehler(null); setMeldung(null); }}>
           Verwerfen
         </button>
         <button type="button" title="Verein, Vorgaben und Saisonbeginn speichern." onClick={() => void speichern()} disabled={arbeitet}>
-          Speichern
+          {arbeitet ? 'Wird gespeichert …' : 'Speichern'}
         </button>
       </div>
+      </div>
 
-      <section className="block">
+      <section className="block" ref={schutzPflicht.bereich}>
         <h2>Schutzwort</h2>
         <p className="hinweis">
           Gilt für „Tablet neu laden“ in der Live-Übersicht und „Aufstellung zeigen“ beim Liga-Spieltag. Das aktuelle Wort
@@ -397,17 +404,18 @@ export default function System() {
         <div className="felder">
           <label className="feld">
             <span>Neues Schutzwort</span>
-            <input type="password" autoComplete="new-password" value={wort} onChange={(e) => setWort(e.target.value)} />
+            <input type="password" required autoComplete="new-password" value={wort} onChange={(e) => setWort(e.target.value)} />
           </label>
           <label className="feld">
             <span>Noch einmal</span>
-            <input type="password" autoComplete="new-password" value={wortWieder} onChange={(e) => setWortWieder(e.target.value)} />
+            <input type="password" required autoComplete="new-password" value={wortWieder} onChange={(e) => setWortWieder(e.target.value)} />
           </label>
         </div>
         <div className="knopfpaar">
           <button type="button" title="Das neue Schutzwort speichern. Es gilt sofort." onClick={() => void schutzwortAendern()}>
             Schutzwort ändern
           </button>
+          <Pflichthinweis hinweis={schutzPflicht.hinweis} />
         </div>
       </section>
 

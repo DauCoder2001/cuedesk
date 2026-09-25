@@ -8,6 +8,7 @@ import type { Ausspielziele, LigaKennung } from '../liga';
 import { saisonAus } from '../mannschaften';
 import { vereinsEinstellungen } from '../vereinseinstellungen';
 import { kurzesRaceHinweis } from '../vorgabe';
+import { Pflichthinweis, usePflicht } from '../pflicht';
 import type { Disziplin, Mannschaft, Serie, Turnier, TurnierModus, TurnierStatus } from '../datenbank.types';
 
 // Turnierliste. Turnierleiter, Sportwart und Vereins-Admin legen Turniere an
@@ -90,6 +91,7 @@ export default function Turniere() {
   const [offen, setOffen] = useState<string | null>(null);
   const [formular, setFormular] = useState(false);
   const [fehler, setFehler] = useState<string | null>(null);
+  const pflicht = usePflicht();
 
   // Formularfelder
   const [name, setName] = useState('');
@@ -158,17 +160,16 @@ export default function Turniere() {
     if (!verein) return;
     setFehler(null);
     const race = Number(raceTo);
-    if (!name.trim()) return setFehler('Bitte einen Namen eingeben.');
+    if (!pflicht.pruefen()) return;
     const race2 = Number(racePhase2);
-    if (!Number.isInteger(race) || race < 1 || race > 25) return setFehler('Race to zwischen 1 und 25.');
+    if (!Number.isInteger(race) || race < 1 || race > 25) return pflicht.melden('Race to zwischen 1 und 25.');
     if (modus === 'zwei-gruppen' && (!Number.isInteger(race2) || race2 < 1 || race2 > 25)) {
-      return setFehler('Race to für die Platzierungsduelle zwischen 1 und 25.');
+      return pflicht.melden('Race to für die Platzierungsduelle zwischen 1 und 25.');
     }
     const ko = Object.fromEntries(Object.entries(raceKo).map(([k, v]) => [k, Number(v)]));
     if (modus === 'gruppen-ko' && Object.values(ko).some((x) => !Number.isInteger(x) || x < 1 || x > 25)) {
-      return setFehler('Race to je Runde zwischen 1 und 25.');
+      return pflicht.melden('Race to je Runde zwischen 1 und 25.');
     }
-    if (modus === 'liga' && !gegner.trim()) return setFehler('Bitte die gegnerische Mannschaft eintragen.');
     const eigeneZiele: Ausspielziele = {
       punkte141: Number(ziele.punkte141),
       aufnahmen141: Number(ziele.aufnahmen141),
@@ -181,7 +182,7 @@ export default function Turniere() {
       liga === 'spass' &&
       Object.values(eigeneZiele).some((x) => !Number.isInteger(x) || x < 1 || x > 200)
     ) {
-      return setFehler('Ausspielziele: ganze Zahlen zwischen 1 und 200.');
+      return pflicht.melden('Ausspielziele: ganze Zahlen zwischen 1 und 200.');
     }
     const einstellungen: TurnierEinstellungen = {
       raceTo: race,
@@ -301,16 +302,16 @@ export default function Turniere() {
         </div>
 
         {formular && (
-          <div className="kasten">
+          <div className="kasten" ref={pflicht.bereich}>
             <div className="feldkopf">Neues Turnier</div>
             <div className="felder">
               <label className="feld">
                 <span>Name</span>
-                <input value={name} onChange={(e) => setName(e.target.value)} placeholder="3. Serienturnier 9-Ball" />
+                <input required value={name} onChange={(e) => setName(e.target.value)} placeholder="z. B. 3. Serienturnier 9-Ball" />
               </label>
               <label className="feld">
                 <span>Datum</span>
-                <input type="date" value={datum} onChange={(e) => setDatum(e.target.value)} />
+                <input type="date" required value={datum} onChange={(e) => setDatum(e.target.value)} />
               </label>
               {modus !== 'liga' && (
               <label className="feld">
@@ -345,7 +346,7 @@ export default function Turniere() {
                   </label>
                   <label className="feld">
                     <span>Spieltag</span>
-                    <input inputMode="numeric" value={spieltag} onChange={(e) => setSpieltag(e.target.value)} />
+                    <input inputMode="numeric" required value={spieltag} onChange={(e) => setSpieltag(e.target.value)} />
                   </label>
                   {liga === 'spass' &&
                     (
@@ -359,7 +360,7 @@ export default function Turniere() {
                     ).map(([k, text]) => (
                       <label key={k} className="feld">
                         <span>{text}</span>
-                        <input inputMode="numeric" value={ziele[k]} onChange={(e) => setZiele({ ...ziele, [k]: e.target.value })} />
+                        <input inputMode="numeric" required value={ziele[k]} onChange={(e) => setZiele({ ...ziele, [k]: e.target.value })} />
                       </label>
                     ))}
                   <label className="feld">
@@ -382,31 +383,31 @@ export default function Turniere() {
                         <option value="">andere, von Hand eintragen</option>
                       </select>
                     ) : (
-                      <input value={eigeneMannschaft} onChange={(e) => setEigeneMannschaft(e.target.value)} placeholder={verein.name} />
+                      <input value={eigeneMannschaft} onChange={(e) => setEigeneMannschaft(e.target.value)} placeholder={`leer = ${verein.name}`} />
                     )}
                   </label>
                   {mannschaftenDerSaison.length > 0 && !mannschaftId && (
                     <label className="feld">
                       <span>Name der Mannschaft</span>
-                      <input value={eigeneMannschaft} onChange={(e) => setEigeneMannschaft(e.target.value)} placeholder={verein.name} />
+                      <input value={eigeneMannschaft} onChange={(e) => setEigeneMannschaft(e.target.value)} placeholder={`leer = ${verein.name}`} />
                     </label>
                   )}
                   <label className="feld">
                     <span>Gegner</span>
-                    <input value={gegner} onChange={(e) => setGegner(e.target.value)} placeholder="BC Achim 2" />
+                    <input required value={gegner} onChange={(e) => setGegner(e.target.value)} placeholder="z. B. BC Achim 2" />
                   </label>
                 </>
               )}
               {modus !== 'liga' && (
               <label className="feld">
                 <span>{modus === 'einzelgruppe' ? 'Race to' : 'Race to Gruppenphase'}</span>
-                <input inputMode="numeric" value={raceTo} onChange={(e) => setRaceTo(e.target.value)} />
+                <input inputMode="numeric" required value={raceTo} onChange={(e) => setRaceTo(e.target.value)} />
               </label>
               )}
               {modus === 'zwei-gruppen' && (
                 <label className="feld">
                   <span>Race to Platzierungsduelle</span>
-                  <input inputMode="numeric" value={racePhase2} onChange={(e) => setRacePhase2(e.target.value)} />
+                  <input inputMode="numeric" required value={racePhase2} onChange={(e) => setRacePhase2(e.target.value)} />
                 </label>
               )}
               {modus === 'gruppen-ko' &&
@@ -421,7 +422,7 @@ export default function Turniere() {
                 ).map(([k, text]) => (
                   <label key={k} className="feld">
                     <span>{text}</span>
-                    <input inputMode="numeric" value={raceKo[k]} onChange={(e) => setRaceKo({ ...raceKo, [k]: e.target.value })} />
+                    <input inputMode="numeric" required value={raceKo[k]} onChange={(e) => setRaceKo({ ...raceKo, [k]: e.target.value })} />
                   </label>
                 ))}
               <label className="feld">
@@ -474,9 +475,17 @@ export default function Turniere() {
               <button type="button" title="Legt das Turnier mit diesen Angaben an." onClick={() => void anlegen()}>
                 Anlegen
               </button>
-              <button type="button" onClick={() => setFormular(false)}>
+              <button
+                type="button"
+                title="Ohne Anlegen schließen"
+                onClick={() => {
+                  pflicht.zuruecksetzen();
+                  setFormular(false);
+                }}
+              >
                 Abbrechen
               </button>
+              <Pflichthinweis hinweis={pflicht.hinweis} />
             </div>
           </div>
         )}

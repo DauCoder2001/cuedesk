@@ -224,7 +224,7 @@ export default function SpielberichtImport({
         <div className="zeile">
           <input
             value={adresse}
-            placeholder="https://billard-niedersachsen.de/sb_spielbericht.php?p=..."
+            placeholder="z. B. https://billard-niedersachsen.de/sb_spielbericht.php?p=..."
             onChange={(e) => setAdresse(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && void lesen()}
             style={{ flex: '1 1 320px' }}

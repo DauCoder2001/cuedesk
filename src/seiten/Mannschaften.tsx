@@ -6,6 +6,7 @@ import { useRueckfrage } from '../rueckfrage';
 import { LIGEN, wertung } from '../liga';
 import { einsaetze, saisonAus, saisonBilanz, saisonListe, stammspielerHinweis } from '../mannschaften';
 import { vereinsEinstellungen } from '../vereinseinstellungen';
+import { Pflichthinweis, usePflicht } from '../pflicht';
 import type { LigaKennung } from '../liga';
 import type { Mannschaft, MannschaftSpieler, Partie, Person, Turnier } from '../datenbank.types';
 import type { TurnierEinstellungen } from './Turniere';
@@ -44,6 +45,7 @@ export default function Mannschaften() {
   const [formular, setFormular] = useState<Formular | null>(null);
   const [zugang, setZugang] = useState<Record<string, string>>({}); // je Mannschaft der gewaehlte Spieler
   const [fehler, setFehler] = useState<string | null>(null);
+  const pflicht = usePflicht();
   const [meldung, setMeldung] = useState<string | null>(null);
   const [rueckfrage, fragen] = useRueckfrage();
 
@@ -163,7 +165,7 @@ export default function Mannschaften() {
     if (!formular || !verein) return;
     setFehler(null);
     setMeldung(null);
-    if (!formular.name.trim()) return setFehler('Bitte einen Namen eingeben.');
+    if (!pflicht.pruefen()) return;
     const satz = {
       verein_id: verein.id,
       name: formular.name.trim(),
@@ -307,11 +309,16 @@ export default function Mannschaften() {
         {meldung && <p className="meldung">{meldung}</p>}
 
         {formular && (
-          <div className="formular">
+          <div className="formular" ref={pflicht.bereich}>
             <div className="formzeile">
               <label className="feld">
                 <span>Name</span>
-                <input value={formular.name} onChange={(e) => setFormular({ ...formular, name: e.target.value })} />
+                <input
+                  required
+                  value={formular.name}
+                  placeholder="z. B. Musterstadt 2"
+                  onChange={(e) => setFormular({ ...formular, name: e.target.value })}
+                />
               </label>
               <label className="feld">
                 <span>Saison</span>
@@ -339,7 +346,7 @@ export default function Mannschaften() {
                 <input
                   value={formular.staffel}
                   onChange={(e) => setFormular({ ...formular, staffel: e.target.value })}
-                  placeholder="OH / B"
+                  placeholder="z. B. OH / B"
                 />
               </label>
               <label className="feld">
@@ -367,9 +374,17 @@ export default function Mannschaften() {
               <button type="button" title="Die Angaben zur Mannschaft speichern" onClick={() => void speichern()}>
                 Speichern
               </button>
-              <button type="button" onClick={() => setFormular(null)}>
+              <button
+                type="button"
+                title="Ohne Speichern schließen"
+                onClick={() => {
+                  pflicht.zuruecksetzen();
+                  setFormular(null);
+                }}
+              >
                 Abbrechen
               </button>
+              <Pflichthinweis hinweis={pflicht.hinweis} />
             </div>
           </div>
         )}

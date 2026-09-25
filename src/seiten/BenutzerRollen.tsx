@@ -3,6 +3,7 @@ import { supabase } from '../supabase';
 import { ANWENDUNGSADRESSE } from '../adresse';
 import { funktionsFehlerText } from '../funktionsfehler';
 import { useSitzung } from '../sitzung';
+import { Pflichthinweis, usePflicht } from '../pflicht';
 import type { Benutzer, Person, Rolle } from '../datenbank.types';
 
 type Konto = Benutzer & {
@@ -29,6 +30,7 @@ export default function BenutzerRollen() {
   const [zeigeEinladung, setZeigeEinladung] = useState(false);
   const [meldung, setMeldung] = useState<string | null>(null);
   const [fehler, setFehler] = useState<string | null>(null);
+  const pflicht = usePflicht<HTMLElement>();
   const [entziehenBestaetigen, setEntziehenBestaetigen] = useState(false);
 
   // Formular fuer die Einladung
@@ -167,16 +169,10 @@ export default function BenutzerRollen() {
     if (!verein) return;
     setFehler(null);
     setMeldung(null);
+    if (!pflicht.pruefen()) return;
     const adresse = email.trim().toLowerCase();
-    if (!adresse.includes('@')) {
-      setFehler('Bitte eine gültige E-Mail-Adresse eingeben.');
-      return;
-    }
+    if (!adresse.includes('@')) return pflicht.melden('Bitte eine gültige E-Mail-Adresse eingeben.');
     const legtNeuAn = personWahl === 'neu';
-    if (legtNeuAn && (!neuVorname.trim() || !neuNachname.trim())) {
-      setFehler('Für einen neuen Spieler sind Vorname und Nachname nötig.');
-      return;
-    }
 
     setSendet(true);
     const { data, error } = await supabase.functions.invoke('einladung', {
@@ -258,14 +254,17 @@ export default function BenutzerRollen() {
         )}
       </aside>
 
-      <section className="bearbeiten">
+      <section className="bearbeiten" ref={pflicht.bereich}>
         {zeigeEinladung ? (
           <>
             <div className="bearbeitenkopf">
               <h2>Einladen</h2>
               <button type="button" title="Schickt eine Einladung mit Anmeldelink an diese Adresse." onClick={() => void einladen()} disabled={sendet}>
-                {sendet ? 'Wird verschickt' : 'Einladung schicken'}
+                {sendet ? 'Wird verschickt …' : 'Einladung schicken'}
               </button>
+            </div>
+            <div className="knopfpaar">
+              <Pflichthinweis hinweis={pflicht.hinweis} />
             </div>
 
             <div className="felder">
@@ -273,8 +272,9 @@ export default function BenutzerRollen() {
                 <span>E-Mail-Adresse</span>
                 <input
                   type="email"
+                  required
                   value={email}
-                  placeholder="name@beispiel.de"
+                  placeholder="z. B. name@beispiel.de"
                   onChange={(e) => setEmail(e.target.value)}
                 />
               </label>
@@ -296,11 +296,11 @@ export default function BenutzerRollen() {
               <div className="felder">
                 <label className="feld">
                   <span>Vorname</span>
-                  <input value={neuVorname} onChange={(e) => setNeuVorname(e.target.value)} />
+                  <input required value={neuVorname} onChange={(e) => setNeuVorname(e.target.value)} />
                 </label>
                 <label className="feld">
                   <span>Nachname</span>
-                  <input value={neuNachname} onChange={(e) => setNeuNachname(e.target.value)} />
+                  <input required value={neuNachname} onChange={(e) => setNeuNachname(e.target.value)} />
                 </label>
               </div>
             )}
