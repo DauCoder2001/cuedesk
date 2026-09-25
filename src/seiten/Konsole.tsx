@@ -3,8 +3,23 @@ import { supabase } from '../supabase';
 import { useSitzung } from '../sitzung';
 import { useRueckfrage } from '../rueckfrage';
 import { ANWENDUNGSADRESSE } from '../adresse';
-import { adresseAusName } from '../mandanten';
-import type { Benutzer, BenutzerRolle, Einladung, SystemProtokoll, Verein } from '../datenbank.types';
+import {
+  DATENBANK_GRENZE_BYTES,
+  adresseAusName,
+  groesseText,
+  ratingWarnung,
+  sicherungsWarnung
+} from '../mandanten';
+import type {
+  Benutzer,
+  BenutzerRolle,
+  Einladung,
+  KonsoleDatenbank,
+  KonsoleVerein,
+  SystemEreignis,
+  SystemProtokoll,
+  Verein
+} from '../datenbank.types';
 
 // Konsole des Super-Admins (docs/Mandanten.md, Phase 1): Vereine anlegen,
 // sperren und entsperren, ersten Vereins-Administrator einladen, Super-Admins
@@ -31,6 +46,9 @@ export default function Konsole() {
   const [konten, setKonten] = useState<Benutzer[]>([]);
   const [einladungen, setEinladungen] = useState<Einladung[]>([]);
   const [protokoll, setProtokoll] = useState<SystemProtokoll[]>([]);
+  const [zahlen, setZahlen] = useState<KonsoleVerein[]>([]);
+  const [datenbank, setDatenbank] = useState<KonsoleDatenbank | null>(null);
+  const [sicherung, setSicherung] = useState<SystemEreignis | null>(null);
   const [fehler, setFehler] = useState<string | null>(null);
   const [meldung, setMeldung] = useState<string | null>(null);
   const [arbeitet, setArbeitet] = useState(false);
@@ -50,14 +68,20 @@ export default function Konsole() {
   const [neuerAdmin, setNeuerAdmin] = useState('');
 
   const laden = useCallback(async () => {
-    const [v, r, k, e, p] = await Promise.all([
+    const [v, r, k, e, p, z, d, s] = await Promise.all([
       supabase.from('vereine').select('*').order('name'),
       supabase.from('benutzer_rollen').select('*').eq('rolle', 'vereinsadmin'),
       supabase.from('benutzer').select('*'),
       supabase.from('einladungen').select('*').is('angenommen_am', null),
-      supabase.from('system_protokoll').select('*').order('zeit', { ascending: false }).limit(40)
+      supabase.from('system_protokoll').select('*').order('zeit', { ascending: false }).limit(40),
+      supabase.rpc('konsole_vereine'),
+      supabase.rpc('konsole_datenbank'),
+      supabase.from('system_ereignisse').select('*').eq('art', 'sicherung').order('zeit', { ascending: false }).limit(1)
     ]);
-    const erster = [v, r, k, e, p].find((x) => x.error)?.error;
+    const erster = [v, r, k, e, p, z, d, s].find((x) => x.error)?.error;
+    setZahlen((z.data ?? []) as KonsoleVerein[]);
+    setDatenbank((d.data ?? null) as KonsoleDatenbank | null);
+    setSicherung(s.data?.[0] ?? null);
     if (erster) setFehler(erster.message);
     setVereine(v.data ?? []);
     setRollen(r.data ?? []);
@@ -161,6 +185,11 @@ export default function Konsole() {
   }
 
   const superAdmins = konten.filter((k) => k.systemadmin);
+  const jetzt = new Date();
+  const warnungSicherung = sicherungsWarnung(sicherung, jetzt);
+  const laeufe = datenbank?.rating_laeufe ?? [];
+  const warnungRating = ratingWarnung(laeufe, jetzt);
+  const anteil = datenbank ? datenbank.groesse_bytes / DATENBANK_GRENZE_BYTES : 0;
 
   return (
     <div className="einspaltig">
@@ -264,6 +293,117 @@ export default function Konsole() {
             })}
           </tbody>
         </table>
+      </section>
+
+      <section className="block">
+        <h2>Nutzung</h2>
+        <p className="hinweis">Nur Zahlen. Test-Vereine sind markiert und zählen später in keiner Auswertung.</p>
+        <table className="tabelle">
+          <thead>
+            <tr>
+              <th>Verein</th>
+              <th className="rechts" title="Konten mit einer Rolle im Verein">Konten</th>
+              <th title="Jüngste Anmeldung eines dieser Konten">zuletzt angemeldet</th>
+              <th className="rechts" title="Spieler mit Status Mitglied, dahinter die Gäste">Mitglieder / Gäste</th>
+              <th className="rechts" title="Turniere und Spieltage der letzten 30 Tage">Turniere 30 T.</th>
+              <th className="rechts" title="Beendete Partien der letzten 30 Tage, dahinter alle">Partien 30 T. / alle</th>
+              <th className="rechts" title="Tablets, die sich in den letzten 2 Minuten gemeldet haben, dahinter alle gekoppelten">Tablets an / alle</th>
+              <th className="rechts" title="Grobe Größe: Zeilen in den Vereinstabellen">Datensätze</th>
+            </tr>
+          </thead>
+          <tbody>
+            {vereine.map((v) => {
+              const z = zahlen.find((x) => x.verein_id === v.id);
+              return (
+                <tr key={v.id}>
+                  <td>
+                    {v.name}
+                    {v.ist_test && <span className="marke">Test</span>}
+                    {!v.aktiv && <span className="marke ausgang-niederlage">gesperrt</span>}
+                  </td>
+                  <td className="rechts">{z?.konten ?? '–'}</td>
+                  <td>{z?.letzte_anmeldung ? zeit(z.letzte_anmeldung) : '–'}</td>
+                  <td className="rechts">{z ? `${z.mitglieder} / ${z.gaeste}` : '–'}</td>
+                  <td className="rechts">{z?.turniere_30 ?? '–'}</td>
+                  <td className="rechts">{z ? `${z.partien_30} / ${z.partien_gesamt}` : '–'}</td>
+                  <td className="rechts">{z ? `${z.tablets_online} / ${z.tablets}` : '–'}</td>
+                  <td className="rechts">{z ? z.datensaetze.toLocaleString('de-DE') : '–'}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </section>
+
+      <section className="block">
+        <h2>Sicherung und Rating</h2>
+        <div className="kennzahlen">
+          <div className={warnungSicherung ? 'warnkachel' : ''}>
+            <span>Wöchentliche Sicherung</span>
+            <strong>{sicherung ? zeit(sicherung.zeit) : '–'}</strong>
+            <small>
+              {warnungSicherung ??
+                `erfolgreich${sicherung?.groesse_bytes ? `, ${groesseText(sicherung.groesse_bytes)}` : ''}`}
+            </small>
+          </div>
+          <div className={warnungRating ? 'warnkachel' : ''}>
+            <span>Nächtliches Rating</span>
+            <strong>{laeufe[0] ? zeit(laeufe[0].start) : '–'}</strong>
+            <small>{warnungRating ?? 'erfolgreich'}</small>
+          </div>
+        </div>
+        {laeufe.some((l) => l.status !== 'succeeded') && (
+          <p className="hinweis">
+            In den letzten {laeufe.length} Läufen fehlgeschlagen:{' '}
+            {laeufe
+              .filter((l) => l.status !== 'succeeded')
+              .map((l) => `${zeit(l.start)} (${(l.meldung ?? '').split('\n')[0]})`)
+              .join(' · ')}
+          </p>
+        )}
+      </section>
+
+      <section className="block">
+        <h2>Datenbank</h2>
+        {datenbank ? (
+          <>
+            <div className="kennzahlen">
+              <div className={anteil > 0.8 ? 'warnkachel' : ''}>
+                <span>Größe</span>
+                <strong>{groesseText(datenbank.groesse_bytes)}</strong>
+                <small>
+                  {(anteil * 100).toLocaleString('de-DE', { maximumFractionDigits: 1 })} % von {groesseText(DATENBANK_GRENZE_BYTES)} (Gratis-Tarif)
+                </small>
+                <meter min={0} max={1} low={0.6} high={0.8} optimum={0} value={anteil} />
+              </div>
+              <div>
+                <span>Verbindungen</span>
+                <strong>{datenbank.verbindungen}</strong>
+                <small>gerade offen, auch die der Serverfunktionen</small>
+              </div>
+            </div>
+            <table className="tabelle">
+              <thead>
+                <tr>
+                  <th>Größte Tabellen</th>
+                  <th className="rechts">Größe</th>
+                  <th className="rechts">Zeilen (geschätzt)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {datenbank.tabellen.map((t) => (
+                  <tr key={t.name}>
+                    <td>{t.name}</td>
+                    <td className="rechts">{groesseText(t.bytes)}</td>
+                    <td className="rechts">{t.zeilen < 0 ? '–' : t.zeilen.toLocaleString('de-DE')}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </>
+        ) : (
+          <p className="hinweis">Lädt.</p>
+        )}
       </section>
 
       <section className="block">

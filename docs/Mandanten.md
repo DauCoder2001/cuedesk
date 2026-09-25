@@ -42,6 +42,8 @@ Lücken:
 
 ## Phase 2 · Konsole
 
+**Stand 25.09.2026: umgesetzt** (Migration stufe12_konsole, Konsole mit Nutzung, Sicherung und Rating, Datenbank). Die Rückmeldung der Sicherung wirkt erst nach dem Push von .github/workflows/sicherung.yml und dem nächsten Lauf. Ausgelassen: Super-Admins und Protokoll gab es schon in Phase 1.
+
 Eigene Ansicht für Super-Admins (statt der Vereinsreiter, wenn kein Verein gewählt ist):
 - **Vereine:** Status, Test-Kennzeichen, Konten, Mitglieder, letzte Anmeldung, Partien der letzten 30 Tage, Tablets online, belegter Speicher (geschätzt). Aktionen: anlegen, sperren/entsperren, Vereins-Administrator einladen.
 - **Super-Admins:** Liste, hinzufügen, entfernen.

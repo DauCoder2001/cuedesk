@@ -41,6 +41,37 @@ export type SystemProtokoll = {
   details: Record<string, unknown>;
 };
 
+// Zahlen je Verein fuer die Konsole (konsole_vereine), ohne Namen und Ergebnisse
+export type KonsoleVerein = {
+  verein_id: string;
+  konten: number;
+  letzte_anmeldung: string | null;
+  mitglieder: number;
+  gaeste: number;
+  turniere_30: number;
+  partien_30: number;
+  partien_gesamt: number;
+  tablets: number;
+  tablets_online: number;
+  datensaetze: number;
+};
+
+export type KonsoleDatenbank = {
+  groesse_bytes: number;
+  verbindungen: number;
+  tabellen: { name: string; bytes: number; zeilen: number }[];
+  rating_laeufe: { status: string; start: string; ende: string | null; meldung: string | null }[];
+};
+
+export type SystemEreignis = {
+  id: number;
+  zeit: string;
+  art: string;
+  erfolg: boolean;
+  groesse_bytes: number | null;
+  text: string | null;
+};
+
 export type SupportFreigabe = {
   id: number;
   verein_id: string;
@@ -354,6 +385,7 @@ export type Database = {
       mannschaften: Tabelle<Mannschaft, Partial<Mannschaft> & Pick<Mannschaft, 'verein_id' | 'name' | 'saison'>>;
       system_protokoll: Tabelle<SystemProtokoll, never, never>;
       support_freigaben: Tabelle<SupportFreigabe, never, never>;
+      system_ereignisse: Tabelle<SystemEreignis, never, never>;
       mannschaft_spieler: Tabelle<
         MannschaftSpieler,
         Partial<MannschaftSpieler> & Pick<MannschaftSpieler, 'verein_id' | 'mannschaft_id' | 'person_id'>
@@ -379,6 +411,8 @@ export type Database = {
       verein_anlegen: { Args: { p_name: string; p_kurzname: string; p_slug: string; p_test: boolean }; Returns: string };
       verein_sperren: { Args: { p_verein: string; p_grund: string }; Returns: undefined };
       verein_entsperren: { Args: { p_verein: string }; Returns: undefined };
+      konsole_vereine: { Args: Record<string, never>; Returns: KonsoleVerein[] };
+      konsole_datenbank: { Args: Record<string, never>; Returns: KonsoleDatenbank };
       geraet_koppeln: {
         Args: { p_code: string; p_verein: string; p_name: string; p_tisch?: string };
         Returns: string;

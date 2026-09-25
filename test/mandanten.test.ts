@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { adresseAusName } from '../src/mandanten';
+import { adresseAusName, groesseText, ratingWarnung, sicherungsWarnung } from '../src/mandanten';
 
 describe('Adresse aus dem Vereinsnamen', () => {
   test('Umlaute, Leer- und Sonderzeichen', () => {
@@ -12,5 +12,34 @@ describe('Adresse aus dem Vereinsnamen', () => {
     expect(lang.length).toBeLessThanOrEqual(30);
     expect(lang).toMatch(/^[a-z0-9-]{2,30}$/);
     expect(lang.endsWith('-')).toBe(false);
+  });
+});
+
+
+describe('Konsole: Warnungen', () => {
+  const jetzt = new Date('2026-09-25T10:00:00Z');
+
+  test('Sicherung', () => {
+    expect(sicherungsWarnung(null, jetzt)).toContain('noch keine Meldung');
+    expect(sicherungsWarnung({ zeit: '2026-09-21T03:30:00Z', erfolg: false }, jetzt)).toContain('fehlgeschlagen');
+    expect(sicherungsWarnung({ zeit: '2026-09-21T03:30:00Z', erfolg: true }, jetzt)).toBeNull();
+    expect(sicherungsWarnung({ zeit: '2026-09-14T03:30:00Z', erfolg: true }, jetzt)).toBe('Die letzte Sicherung ist 11 Tage alt.');
+  });
+
+  test('Rating: der juengste Lauf zaehlt', () => {
+    const laeufe = [
+      { status: 'failed', start: '2026-09-21T02:30:00Z' },
+      { status: 'succeeded', start: '2026-09-25T02:30:00Z' }
+    ];
+    expect(ratingWarnung(laeufe, jetzt)).toBeNull();
+    expect(ratingWarnung([{ status: 'failed', start: '2026-09-25T02:30:00Z' }], jetzt)).toContain('fehlgeschlagen');
+    expect(ratingWarnung([{ status: 'succeeded', start: '2026-09-21T02:30:00Z' }], jetzt)).toContain('mehr als zwei Tagen');
+    expect(ratingWarnung([], jetzt)).toContain('noch nie');
+  });
+
+  test('Groesse lesbar', () => {
+    expect(groesseText(17058963)).toBe('16,3 MB');
+    expect(groesseText(512)).toBe('512 B');
+    expect(groesseText(null)).toBe('–');
   });
 });

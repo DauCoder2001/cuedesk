@@ -65,3 +65,18 @@ jobs:
             git commit -m "Sicherung vom $(date +%d.%m.%Y)"
             git push
           fi
+
+      # Rueckmeldung fuer die Konsole in CueDesk - auch wenn ein Schritt davor
+      # gescheitert ist. Scheitert die Rueckmeldung selbst, bleibt der Lauf gruen:
+      # Die Konsole warnt dann, weil die letzte Meldung zu alt wird.
+      - name: Rueckmeldung an CueDesk
+        if: always()
+        continue-on-error: true
+        env:
+          DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          ERFOLG: ${{ job.status == 'success' }}
+        run: |
+          groesse=$(du -sb "sicherung/$(date +%Y-%m-%d)" 2>/dev/null | cut -f1)
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -c \
+            "insert into public.system_ereignisse (art, erfolg, groesse_bytes, text)
+             values ('sicherung', $ERFOLG, ${groesse:-null}, 'GitHub-Lauf ${{ github.run_id }}')"
