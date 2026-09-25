@@ -16,6 +16,7 @@ import Live from './seiten/Live';
 import Turniere from './seiten/Turniere';
 import Mannschaften from './seiten/Mannschaften';
 import System from './seiten/System';
+import Konsole from './seiten/Konsole';
 import { vereinsKuerzel } from './vereinseinstellungen';
 
 type Bereich =
@@ -31,15 +32,21 @@ type Bereich =
   | 'benutzer'
   | 'tische'
   | 'altdaten'
-  | 'system';
+  | 'system'
+  | 'konsole';
 
 // Tablets und TV rufen die Adresse mit ?geraet auf und bekommen die
 // Geraeteansicht statt der Anmeldung.
 const istGeraet = new URLSearchParams(window.location.search).has('geraet');
 
 export default function App() {
-  const { laedt, sitzung, benutzer, verein, rollen, abmelden, darf } = useSitzung();
+  const { laedt, sitzung, benutzer, verein, rollen, abmelden, darf, vereine, gesperrt, istSuperAdmin, vereinWaehlen } =
+    useSitzung();
   const [bereich, setBereich] = useState<Bereich>('live');
+  // Ohne nutzbaren Verein gibt es nur die Konsole (Super-Admin). Ist der
+  // gewaehlte Verein gesperrt, steht zuerst der Hinweis da.
+  const nurKonsole = !verein;
+  const angezeigt: Bereich = nurKonsole && istSuperAdmin && !gesperrt ? 'konsole' : bereich;
   // Laeuft gerade ein Turnier, faellt der Live-Reiter gruen auf.
   const [turnierLaeuft, setTurnierLaeuft] = useState(false);
 
@@ -151,6 +158,12 @@ export default function App() {
       tipp: 'Den Datenbestand aus Turnier light einlesen und den Spielern zuordnen.'
     },
     {
+      wert: 'konsole',
+      name: 'Konsole',
+      sichtbar: istSuperAdmin,
+      tipp: 'Nur für Super-Admins: Vereine anlegen, sperren und freigeben, Vereins-Administratoren einladen, Super-Admins verwalten.'
+    },
+    {
       wert: 'system',
       name: 'System',
       sichtbar: darf('vereinsadmin'),
@@ -163,20 +176,43 @@ export default function App() {
       <header className="kopfzeile">
         <div className="vereinsmarke">
           <span className="zeichen">
-            {verein?.logo_url ? <img src={verein.logo_url} alt="" /> : vereinsKuerzel(verein?.kurzname, verein?.name)}
+            {(verein ?? gesperrt)?.logo_url ? (
+              <img src={(verein ?? gesperrt)?.logo_url ?? ''} alt="" />
+            ) : (
+              vereinsKuerzel((verein ?? gesperrt)?.kurzname, (verein ?? gesperrt)?.name)
+            )}
           </span>
-          <strong>{verein?.name ?? 'CueDesk'}</strong>
+          {vereine.length > 1 ? (
+            <select
+              className="vereinswahl"
+              title="Zwischen deinen Vereinen wechseln"
+              value={verein?.id ?? gesperrt?.id ?? ''}
+              onChange={(e) => {
+                vereinWaehlen(e.target.value);
+                setBereich('live');
+              }}
+            >
+              {vereine.map((v) => (
+                <option key={v.id} value={v.id}>
+                  {v.name}
+                  {v.aktiv ? '' : ' (gesperrt)'}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <strong>{verein?.name ?? gesperrt?.name ?? 'CueDesk'}</strong>
+          )}
         </div>
         <nav className="reiter">
           {bereiche
-            .filter((eintrag) => eintrag.sichtbar)
+            .filter((eintrag) => eintrag.sichtbar && (!nurKonsole || eintrag.wert === 'konsole'))
             .map((eintrag) => (
               <button
                 key={eintrag.wert}
                 type="button"
                 className={[
                   'reiter-knopf',
-                  bereich === eintrag.wert ? 'aktiv' : '',
+                  angezeigt === eintrag.wert ? 'aktiv' : '',
                   eintrag.wert === 'live' && turnierLaeuft ? 'laeuft' : ''
                 ]
                   .filter(Boolean)
@@ -203,19 +239,35 @@ export default function App() {
         </div>
       </header>
       <main>
-        {bereich === 'live' && <Live />}
-        {bereich === 'turniere' && <Turniere />}
-        {bereich === 'mannschaften' && <Mannschaften />}
-        {bereich === 'personen' && <Personen />}
-        {bereich === 'rating' && <Rating />}
-        {bereich === 'serien' && <Serien />}
-        {bereich === 'ranglisten' && <Ranglisten />}
-        {bereich === 'statistikPool' && <StatistikPool />}
-        {bereich === 'statistik141' && <Statistik141 />}
-        {bereich === 'benutzer' && <BenutzerRollen />}
-        {bereich === 'tische' && <TischeGeraete />}
-        {bereich === 'system' && <System />}
-        {bereich === 'altdaten' && <Altdaten />}
+        {gesperrt && angezeigt !== 'konsole' ? (
+          <div className="einspaltig">
+            <section className="block">
+              <h2>{gesperrt.name} ist gesperrt</h2>
+              <p>
+                Der Zugang zu diesem Verein ist zurzeit gesperrt. Wende dich an den Vereins-Administrator oder an den
+                Betreiber von CueDesk.
+              </p>
+              {gesperrt.sperrgrund && <p className="hinweis">Grund: {gesperrt.sperrgrund}</p>}
+            </section>
+          </div>
+        ) : (
+          <>
+        {angezeigt === 'konsole' && <Konsole />}
+        {angezeigt === 'live' && <Live />}
+        {angezeigt === 'turniere' && <Turniere />}
+        {angezeigt === 'mannschaften' && <Mannschaften />}
+        {angezeigt === 'personen' && <Personen />}
+        {angezeigt === 'rating' && <Rating />}
+        {angezeigt === 'serien' && <Serien />}
+        {angezeigt === 'ranglisten' && <Ranglisten />}
+        {angezeigt === 'statistikPool' && <StatistikPool />}
+        {angezeigt === 'statistik141' && <Statistik141 />}
+        {angezeigt === 'benutzer' && <BenutzerRollen />}
+        {angezeigt === 'tische' && <TischeGeraete />}
+        {angezeigt === 'system' && <System />}
+        {angezeigt === 'altdaten' && <Altdaten />}
+          </>
+        )}
       </main>
     </div>
   );

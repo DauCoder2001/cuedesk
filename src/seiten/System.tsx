@@ -6,7 +6,7 @@ import type { LigaKennung } from '../liga';
 import { saisonAus } from '../mannschaften';
 import { vereinsEinstellungen, vereinsKuerzel } from '../vereinseinstellungen';
 import type { VereinsEinstellungen } from '../vereinseinstellungen';
-import type { Disziplin, Mannschaft, TurnierModus } from '../datenbank.types';
+import type { Disziplin, Mannschaft, SupportFreigabe, TurnierModus } from '../datenbank.types';
 
 // Seite "System": Einstellungen des Vereins, nur fuer den Vereins-Administrator.
 // Verein (Name, Kuerzel, Logo), Vorgaben fuer neue Turniere und Liga-Spieltage,
@@ -102,6 +102,9 @@ export default function System() {
   const [fehler, setFehler] = useState<string | null>(null);
   const [meldung, setMeldung] = useState<string | null>(null);
   const dateiFeld = useRef<HTMLInputElement>(null);
+  // Laufende Support-Freigabe (null: keine)
+  const [freigabe, setFreigabe] = useState<SupportFreigabe | null>(null);
+  const [tage, setTage] = useState(3);
 
   const zuruecksetzen = useCallback(() => {
     if (!verein) return;
@@ -115,12 +118,21 @@ export default function System() {
   useEffect(() => {
     if (!verein) return;
     void (async () => {
-      const [r, m] = await Promise.all([
+      const [r, m, f] = await Promise.all([
         supabase.from('rating_einstellungen').select('*').eq('verein_id', verein.id).maybeSingle(),
-        supabase.from('mannschaften').select('*').eq('verein_id', verein.id).order('rang')
+        supabase.from('mannschaften').select('*').eq('verein_id', verein.id).order('rang'),
+        supabase
+          .from('support_freigaben')
+          .select('*')
+          .eq('verein_id', verein.id)
+          .is('beendet_am', null)
+          .gt('bis', new Date().toISOString())
+          .order('bis', { ascending: false })
+          .limit(1)
       ]);
       setRating((r.data as RatingWerte | null) ?? null);
       setMannschaften(m.data ?? []);
+      setFreigabe(f.data?.[0] ?? null);
     })();
   }, [verein]);
 
@@ -189,6 +201,24 @@ export default function System() {
     setFehler(null);
     setMeldung('Gespeichert.');
     await vereinNeuLaden();
+  }
+
+  async function supportFreigeben() {
+    if (!verein) return;
+    const { data: bis, error } = await supabase.rpc('support_freigeben', { p_verein: verein.id, p_tage: tage });
+    if (error || !bis) return setFehler(error?.message ?? 'Nicht freigegeben.');
+    setFreigabe({ id: 0, verein_id: verein.id, bis, erteilt_von: null, erteilt_am: new Date().toISOString(), beendet_am: null });
+    setFehler(null);
+    setMeldung(`Support-Zugang freigegeben bis ${new Date(bis).toLocaleString('de-DE')}.`);
+  }
+
+  async function supportBeenden() {
+    if (!verein) return;
+    const { error } = await supabase.rpc('support_beenden', { p_verein: verein.id });
+    if (error) return setFehler(error.message);
+    setFreigabe(null);
+    setFehler(null);
+    setMeldung('Support-Zugang beendet.');
   }
 
   async function schutzwortAendern() {
@@ -367,6 +397,33 @@ export default function System() {
             Schutzwort ändern
           </button>
         </div>
+      </section>
+
+      <section className="block">
+        <h2>Support-Zugang</h2>
+        <p className="hinweis">
+          Der Betreiber von CueDesk sieht von eurem Verein sonst nur Zahlen, keine Namen und keine Ergebnisse. Braucht ihr
+          Hilfe, gebt ihr ihm hier für einige Tage Lesezugriff. Ändern kann er auch dann nichts.
+        </p>
+        {freigabe ? (
+          <div className="knopfpaar">
+            <span className="marke">freigegeben bis {new Date(freigabe.bis).toLocaleString('de-DE')}</span>
+            <button type="button" title="Den Support-Zugang sofort beenden" onClick={() => void supportBeenden()}>
+              Zugang beenden
+            </button>
+          </div>
+        ) : (
+          <div className="knopfpaar">
+            <select value={tage} onChange={(e) => setTage(Number(e.target.value))} title="Wie lange der Zugang gilt">
+              <option value={1}>1 Tag</option>
+              <option value={3}>3 Tage</option>
+              <option value={7}>7 Tage</option>
+            </select>
+            <button type="button" title="Dem Betreiber für die gewählte Zeit Lesezugriff geben" onClick={() => void supportFreigeben()}>
+              Zugang freigeben
+            </button>
+          </div>
+        )}
       </section>
 
       <section className="block">

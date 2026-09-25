@@ -3,20 +3,20 @@
 // Legt eine Einladung an und verschickt die Einladungsmail. Der Mailversand
 // braucht den Dienstschluessel, deshalb laeuft er hier und nicht im Browser.
 //
-// Ablauf:
-//  1. Aufrufer aus dem mitgeschickten Anmeldezeichen ermitteln.
-//  2. Recht pruefen (darf_einladen im betreffenden Verein).
-//  3. Wer nicht Vereins-Administrator ist, darf nur die Rolle "mitglied" vergeben.
-//  4. Auf Wunsch eine neue Person anlegen.
-//  5. Einladung eintragen (die Rechte der Datenbank greifen dabei weiter).
-//  6. Mail verschicken. Gibt es das Konto schon, hat die Datenbank die Rollen
-//     bereits zugeordnet; dann wird nur das gemeldet.
+// Die Plattformpruefung (verify_jwt) ist ausgeschaltet, weil der Browser die
+// Vorabfrage (OPTIONS) ohne Anmeldezeichen schickt und sie sonst abgewiesen
+// wird. Die Funktion prueft das Anmeldezeichen selbst: ohne gueltiges Konto
+// und ohne Einladungsrecht passiert nichts.
+//
+// Wer nicht Vereins-Administrator ist, darf nur die Rolle "mitglied" vergeben.
+// Ausnahme: Ein Super-Admin ohne Rolle im Verein setzt dessen
+// Vereins-Administrator ein - und nur diesen (docs/Mandanten.md, Phase 1).
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.58.0';
 
 const KOPFZEILEN = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, content-type',
+  'Access-Control-Allow-Headers': 'authorization, content-type, apikey, x-client-info',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
   'Content-Type': 'application/json'
 };
@@ -64,7 +64,12 @@ Deno.serve(async (anfrage) => {
   if (!konto?.user) return antwort({ fehler: 'Nicht angemeldet' }, 401);
 
   const { data: darf } = await alsBenutzer.rpc('darf_einladen', { p_verein: daten.verein_id });
-  if (!darf) return antwort({ fehler: 'Keine Berechtigung zum Einladen' }, 403);
+  const { data: istSuperAdmin } = await alsBenutzer.rpc('ist_systemadmin');
+  if (!darf && !istSuperAdmin) return antwort({ fehler: 'Keine Berechtigung zum Einladen' }, 403);
+  const alsSuperAdmin = !darf && istSuperAdmin === true;
+  if (alsSuperAdmin && (daten.neue_person || daten.person_id)) {
+    return antwort({ fehler: 'Spieler ordnet der Verein selbst zu, nicht der Super-Admin.' }, 400);
+  }
 
   const { data: istAdmin } = await alsBenutzer.rpc('hat_rolle', {
     p_verein: daten.verein_id,
@@ -72,7 +77,7 @@ Deno.serve(async (anfrage) => {
   });
 
   const gewuenschte = daten.rollen?.length ? daten.rollen : ['mitglied'];
-  const rollen = istAdmin ? gewuenschte : ['mitglied'];
+  const rollen = istAdmin ? gewuenschte : alsSuperAdmin ? ['vereinsadmin'] : ['mitglied'];
 
   let personId = daten.person_id ?? null;
   if (!personId && daten.neue_person) {
@@ -104,10 +109,8 @@ Deno.serve(async (anfrage) => {
   });
 
   if (mailFehler) {
-    const bereitsVorhanden =
-      mailFehler.message.toLowerCase().includes('already') ||
-      mailFehler.message.toLowerCase().includes('registered');
-    if (bereitsVorhanden) {
+    const text = mailFehler.message.toLowerCase();
+    if (text.includes('already') || text.includes('registered')) {
       return antwort({
         stand: 'konto_vorhanden',
         meldung: 'Zu dieser Adresse gibt es bereits ein Konto. Rollen und Person sind zugeordnet.'

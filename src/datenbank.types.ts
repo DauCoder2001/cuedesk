@@ -16,6 +16,38 @@ export type Verein = {
   aktiv: boolean;
   erstellt_am: string;
   einstellungen: unknown; // gelesen ueber vereinsEinstellungen()
+  ist_test: boolean;
+  gesperrt_am: string | null;
+  sperrgrund: string | null;
+};
+
+// Ein eigener Verein aus meine_vereine(), auch wenn er gesperrt ist
+export type MeinVerein = {
+  id: string;
+  name: string;
+  kurzname: string;
+  logo_url: string | null;
+  aktiv: boolean;
+  sperrgrund: string | null;
+  rollen: Rolle[];
+};
+
+export type SystemProtokoll = {
+  id: number;
+  zeit: string;
+  benutzer_id: string | null;
+  aktion: string;
+  verein_id: string | null;
+  details: Record<string, unknown>;
+};
+
+export type SupportFreigabe = {
+  id: number;
+  verein_id: string;
+  bis: string;
+  erteilt_von: string | null;
+  erteilt_am: string;
+  beendet_am: string | null;
 };
 
 export type Benutzer = {
@@ -320,6 +352,8 @@ export type Database = {
       rating_einstellungen: Tabelle<RatingEinstellungen, Partial<RatingEinstellungen> & Pick<RatingEinstellungen, 'verein_id'>>;
       rating_stand: Tabelle<RatingStand, RatingStand>;
       mannschaften: Tabelle<Mannschaft, Partial<Mannschaft> & Pick<Mannschaft, 'verein_id' | 'name' | 'saison'>>;
+      system_protokoll: Tabelle<SystemProtokoll, never, never>;
+      support_freigaben: Tabelle<SupportFreigabe, never, never>;
       mannschaft_spieler: Tabelle<
         MannschaftSpieler,
         Partial<MannschaftSpieler> & Pick<MannschaftSpieler, 'verein_id' | 'mannschaft_id' | 'person_id'>
@@ -338,6 +372,13 @@ export type Database = {
       geraet_tisch_setzen: { Args: { p_tisch: string | null }; Returns: undefined };
       schutzwort_stimmt: { Args: { p_verein: string; p_wort: string }; Returns: boolean };
       schutzwort_setzen: { Args: { p_verein: string; p_wort: string }; Returns: undefined };
+      meine_vereine: { Args: Record<string, never>; Returns: MeinVerein[] };
+      support_freigeben: { Args: { p_verein: string; p_tage: number }; Returns: string };
+      support_beenden: { Args: { p_verein: string }; Returns: undefined };
+      systemadmin_setzen: { Args: { p_email: string; p_ja: boolean }; Returns: undefined };
+      verein_anlegen: { Args: { p_name: string; p_kurzname: string; p_slug: string; p_test: boolean }; Returns: string };
+      verein_sperren: { Args: { p_verein: string; p_grund: string }; Returns: undefined };
+      verein_entsperren: { Args: { p_verein: string }; Returns: undefined };
       geraet_koppeln: {
         Args: { p_code: string; p_verein: string; p_name: string; p_tisch?: string };
         Returns: string;

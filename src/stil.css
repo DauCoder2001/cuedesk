@@ -77,6 +77,9 @@ button:disabled { cursor: default; color: var(--text-leise); }
   background: var(--akzent-hell); color: var(--akzent); font-size: 18px;
 }
 .knopfpaar.rechts { justify-content: flex-end; }
+/* Auswahl in der Kopfzeile, wenn ein Konto zu mehreren Vereinen gehoert */
+.vereinswahl { font-weight: 600; font-size: 15px; border: none; background: transparent; padding: 2px 4px; }
+ul.schlicht { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px; }
 .vereinsmarke .trenner {
   border-left: 1px solid var(--rand); padding-left: 10px;
   font-size: 13px; color: var(--text-leise);
