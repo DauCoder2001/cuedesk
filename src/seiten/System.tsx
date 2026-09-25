@@ -7,6 +7,7 @@ import { saisonAus } from '../mannschaften';
 import { vereinsEinstellungen, vereinsKuerzel } from '../vereinseinstellungen';
 import type { VereinsEinstellungen } from '../vereinseinstellungen';
 import type { Disziplin, Mannschaft, SupportFreigabe, TurnierModus } from '../datenbank.types';
+import { exportHerunterladen } from '../vereinExport';
 
 // Seite "System": Einstellungen des Vereins, nur fuer den Vereins-Administrator.
 // Verein (Name, Kuerzel, Logo), Vorgaben fuer neue Turniere und Liga-Spieltage,
@@ -221,6 +222,17 @@ export default function System() {
     setMeldung('Support-Zugang beendet.');
   }
 
+  async function exportieren() {
+    if (!verein) return;
+    setArbeitet(true);
+    const problem = await exportHerunterladen(verein.id, verein.slug);
+    setArbeitet(false);
+    if (problem) return setFehler(problem);
+    setFehler(null);
+    setMeldung('Export heruntergeladen.');
+    await vereinNeuLaden();
+  }
+
   async function schutzwortAendern() {
     if (!verein) return;
     if (wort.trim().length < 3) return setFehler('Das Schutzwort braucht mindestens drei Zeichen.');
@@ -424,6 +436,22 @@ export default function System() {
             </button>
           </div>
         )}
+      </section>
+
+      <section className="block">
+        <h2>Daten exportieren</h2>
+        <p className="hinweis">
+          Alle Daten des Vereins als Datei: Spieler, Turniere, Partien, 14.1-Aufnahmen, Rating, Mannschaften, Tische, Tablets
+          und Konten mit ihren Rollen. Ohne das Änderungsprotokoll. Die Datei enthält Mitgliederdaten – sicher aufbewahren.
+        </p>
+        <div className="knopfpaar">
+          <button type="button" title="Alle Vereinsdaten als JSON-Datei herunterladen" onClick={() => void exportieren()} disabled={arbeitet}>
+            Export herunterladen
+          </button>
+          {verein.export_am && (
+            <small className="hinweis">zuletzt am {new Date(verein.export_am).toLocaleString('de-DE')}</small>
+          )}
+        </div>
       </section>
 
       <section className="block">

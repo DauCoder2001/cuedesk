@@ -79,6 +79,8 @@ button:disabled { cursor: default; color: var(--text-leise); }
 .knopfpaar.rechts { justify-content: flex-end; }
 /* Auswahl in der Kopfzeile, wenn ein Konto zu mehreren Vereinen gehoert */
 .vereinswahl { font-weight: 600; font-size: 15px; border: none; background: transparent; padding: 2px 4px; }
+/* Konsole: Loeschung vorgemerkt */
+.marke.warnmarke { background: #fdf0d5; color: #7a4b00; margin-left: 6px; }
 /* Konsole: Kachel mit Warnung */
 .kennzahlen .warnkachel { background: #fbeaea; }
 .kennzahlen .warnkachel small { color: var(--fehler); }

@@ -55,6 +55,8 @@ Alle Kennzahlen kommen aus Funktionen, die nur zählen – keine Namen, keine Er
 
 ## Phase 3 · Datenpflege
 
+**Stand 25.09.2026: umgesetzt** (Migrationen stufe13_datenpflege, stufe13_demo_fix und stufe13_protokoll_namen, Konsole mit Export, Löschen, Demo und Aufräumen, Export auf der Seite System). Entschieden: Der Vereins-Admin exportiert jederzeit, der Super-Admin nur gesperrte Vereine. Beim Löschen fallen die Konten weg, die nur in diesem Verein eine Rolle hatten (Super-Admins bleiben). Test-Vereine lassen sich ohne Frist löschen. Der nächtliche Lauf heißt `vereine-loeschen` (03:00 UTC). Im Export fehlen bewusst das Änderungsprotokoll, die Tischstände und die Anmeldekennungen der Tablets.
+
 - **Verein exportieren:** alle Daten eines Vereins als Datei (JSON), auch für die Datenübertragbarkeit nach DSGVO.
 - **Verein löschen:** Sperren setzt `loeschen_ab` = heute + 30 Tage; ein nächtlicher Lauf löscht danach in fester Reihenfolge. Vorher Pflicht: Export.
 - **Aufräumen mit Vorschau:** verwaiste Geräte, abgelaufene Einladungen und Kopplungscodes, alte Tischstände, Testdaten. Erst „betroffen: …“, dann ausführen.

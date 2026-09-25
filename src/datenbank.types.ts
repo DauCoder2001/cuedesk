@@ -19,6 +19,8 @@ export type Verein = {
   ist_test: boolean;
   gesperrt_am: string | null;
   sperrgrund: string | null;
+  export_am: string | null; // letzter Export (Phase 3)
+  loeschen_ab: string | null; // vorgemerkt zum Loeschen ab diesem Tag
 };
 
 // Ein eigener Verein aus meine_vereine(), auch wenn er gesperrt ist
@@ -413,6 +415,13 @@ export type Database = {
       verein_entsperren: { Args: { p_verein: string }; Returns: undefined };
       konsole_vereine: { Args: Record<string, never>; Returns: KonsoleVerein[] };
       konsole_datenbank: { Args: Record<string, never>; Returns: KonsoleDatenbank };
+      verein_export: { Args: { p_verein: string }; Returns: Record<string, unknown> };
+      verein_loeschen_vormerken: { Args: { p_verein: string }; Returns: string };
+      verein_loeschen_abbrechen: { Args: { p_verein: string }; Returns: undefined };
+      verein_sofort_loeschen: { Args: { p_verein: string; p_name: string }; Returns: undefined };
+      aufraeumen_vorschau: { Args: Record<string, never>; Returns: Record<string, number> };
+      aufraeumen: { Args: { p_arten: string[] }; Returns: Record<string, number> };
+      demo_zuruecksetzen: { Args: { p_verein: string }; Returns: undefined };
       geraet_koppeln: {
         Args: { p_code: string; p_verein: string; p_name: string; p_tisch?: string };
         Returns: string;

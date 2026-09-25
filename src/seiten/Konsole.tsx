@@ -10,6 +10,9 @@ import {
   ratingWarnung,
   sicherungsWarnung
 } from '../mandanten';
+import { AUFRAEUMEN_ARTEN, datumText, loeschStand } from '../datenpflege';
+import type { AufraeumenArt, AufraeumenZahlen } from '../datenpflege';
+import { exportHerunterladen } from '../vereinExport';
 import type {
   Benutzer,
   BenutzerRolle,
@@ -21,9 +24,9 @@ import type {
   Verein
 } from '../datenbank.types';
 
-// Konsole des Super-Admins (docs/Mandanten.md, Phase 1): Vereine anlegen,
+// Konsole des Super-Admins (docs/Mandanten.md, Phasen 1 bis 3): Vereine anlegen,
 // sperren und entsperren, ersten Vereins-Administrator einladen, Super-Admins
-// verwalten, Protokoll. Vereinsdaten (Spieler, Partien) sieht der Super-Admin
+// verwalten, Kennzahlen, Export und Loeschen, Aufraeumen, Protokoll. Vereinsdaten (Spieler, Partien) sieht der Super-Admin
 // hier nicht - nur mit Support-Freigabe des Vereins.
 
 const AKTION_TEXT: Record<string, string> = {
@@ -33,7 +36,13 @@ const AKTION_TEXT: Record<string, string> = {
   systemadmin_ernannt: 'Super-Admin ernannt',
   systemadmin_entzogen: 'Super-Admin entzogen',
   support_freigegeben: 'Support-Zugang freigegeben',
-  support_beendet: 'Support-Zugang beendet'
+  support_beendet: 'Support-Zugang beendet',
+  verein_exportiert: 'Daten exportiert',
+  loeschung_vorgemerkt: 'Löschung vorgemerkt',
+  loeschung_abgebrochen: 'Löschung abgebrochen',
+  verein_geloescht: 'Verein gelöscht',
+  demo_zurueckgesetzt: 'Demo zurückgesetzt',
+  aufgeraeumt: 'Aufgeräumt'
 };
 
 const zeit = (iso: string) =>
@@ -49,6 +58,10 @@ export default function Konsole() {
   const [zahlen, setZahlen] = useState<KonsoleVerein[]>([]);
   const [datenbank, setDatenbank] = useState<KonsoleDatenbank | null>(null);
   const [sicherung, setSicherung] = useState<SystemEreignis | null>(null);
+  const [aufraeumen, setAufraeumen] = useState<AufraeumenZahlen | null>(null);
+  const [auswahl, setAuswahl] = useState<Set<AufraeumenArt>>(
+    () => new Set(AUFRAEUMEN_ARTEN.filter((a) => a.vorgewaehlt).map((a) => a.art))
+  );
   const [fehler, setFehler] = useState<string | null>(null);
   const [meldung, setMeldung] = useState<string | null>(null);
   const [arbeitet, setArbeitet] = useState(false);
@@ -66,9 +79,10 @@ export default function Konsole() {
   const [sperren, setSperren] = useState<{ id: string; grund: string } | null>(null);
   const [einladen, setEinladen] = useState<{ id: string; email: string } | null>(null);
   const [neuerAdmin, setNeuerAdmin] = useState('');
+  const [sofortLoeschen, setSofortLoeschen] = useState<{ id: string; name: string } | null>(null);
 
   const laden = useCallback(async () => {
-    const [v, r, k, e, p, z, d, s] = await Promise.all([
+    const [v, r, k, e, p, z, d, s, a] = await Promise.all([
       supabase.from('vereine').select('*').order('name'),
       supabase.from('benutzer_rollen').select('*').eq('rolle', 'vereinsadmin'),
       supabase.from('benutzer').select('*'),
@@ -76,9 +90,11 @@ export default function Konsole() {
       supabase.from('system_protokoll').select('*').order('zeit', { ascending: false }).limit(40),
       supabase.rpc('konsole_vereine'),
       supabase.rpc('konsole_datenbank'),
-      supabase.from('system_ereignisse').select('*').eq('art', 'sicherung').order('zeit', { ascending: false }).limit(1)
+      supabase.from('system_ereignisse').select('*').eq('art', 'sicherung').order('zeit', { ascending: false }).limit(1),
+      supabase.rpc('aufraeumen_vorschau')
     ]);
-    const erster = [v, r, k, e, p, z, d, s].find((x) => x.error)?.error;
+    const erster = [v, r, k, e, p, z, d, s, a].find((x) => x.error)?.error;
+    setAufraeumen((a.data ?? null) as AufraeumenZahlen | null);
     setZahlen((z.data ?? []) as KonsoleVerein[]);
     setDatenbank((d.data ?? null) as KonsoleDatenbank | null);
     setSicherung(s.data?.[0] ?? null);
@@ -102,6 +118,10 @@ export default function Konsole() {
     setFehler(null);
     setMeldung(text);
   };
+  const zeigeFehler = (text: string) => {
+    setMeldung(null);
+    setFehler(text);
+  };
 
   // Einladung des Vereins-Administrators ueber die Serverfunktion
   async function adminEinladen(vereinId: string, adresseMail: string): Promise<string | null> {
@@ -114,9 +134,9 @@ export default function Konsole() {
   }
 
   async function vereinAnlegen() {
-    if (name.trim().length < 2) return setFehler('Der Verein braucht einen Namen.');
-    if (!/^[a-z0-9-]{2,30}$/.test(adresse)) return setFehler('Die Adresse besteht aus 2 bis 30 Kleinbuchstaben, Ziffern und Bindestrichen.');
-    if (adminMail.trim() && !adminMail.includes('@')) return setFehler('Die E-Mail-Adresse des Vereins-Administrators stimmt nicht.');
+    if (name.trim().length < 2) return zeigeFehler('Der Verein braucht einen Namen.');
+    if (!/^[a-z0-9-]{2,30}$/.test(adresse)) return zeigeFehler('Die Adresse besteht aus 2 bis 30 Kleinbuchstaben, Ziffern und Bindestrichen.');
+    if (adminMail.trim() && !adminMail.includes('@')) return zeigeFehler('Die E-Mail-Adresse des Vereins-Administrators stimmt nicht.');
     setArbeitet(true);
     const { data: id, error } = await supabase.rpc('verein_anlegen', {
       p_name: name.trim(),
@@ -126,7 +146,7 @@ export default function Konsole() {
     });
     if (error || !id) {
       setArbeitet(false);
-      return setFehler(error?.message.includes('vereine_slug_key') ? 'Diese Adresse ist schon vergeben.' : error?.message ?? 'Nicht angelegt.');
+      return zeigeFehler(error?.message.includes('vereine_slug_key') ? 'Diese Adresse ist schon vergeben.' : error?.message ?? 'Nicht angelegt.');
     }
     let text = `Verein „${name.trim()}“ angelegt.`;
     if (adminMail.trim()) {
@@ -149,7 +169,7 @@ export default function Konsole() {
     const v = vereine.find((x) => x.id === sperren.id);
     if (!(await fragen(`Verein „${v?.name}“ sperren?\nSeine Mitglieder kommen danach nicht mehr hinein, seine Tablets laufen nur noch offline.`, 'Sperren'))) return;
     const { error } = await supabase.rpc('verein_sperren', { p_verein: sperren.id, p_grund: sperren.grund });
-    if (error) return setFehler(error.message);
+    if (error) return zeigeFehler(error.message);
     setSperren(null);
     erfolg(`„${v?.name}“ ist gesperrt.`);
     await laden();
@@ -158,18 +178,77 @@ export default function Konsole() {
   async function entsperren(v: Verein) {
     if (!(await fragen(`Verein „${v.name}“ wieder freigeben?`, 'Freigeben'))) return;
     const { error } = await supabase.rpc('verein_entsperren', { p_verein: v.id });
-    if (error) return setFehler(error.message);
+    if (error) return zeigeFehler(error.message);
     erfolg(`„${v.name}“ ist wieder freigegeben.`);
+    await laden();
+  }
+
+  async function exportieren(v: Verein) {
+    setArbeitet(true);
+    const problem = await exportHerunterladen(v.id, v.slug);
+    setArbeitet(false);
+    if (problem) return zeigeFehler(problem);
+    erfolg(`Export von „${v.name}“ heruntergeladen.`);
+    await laden();
+  }
+
+  async function loeschenVormerken(v: Verein) {
+    if (!(await fragen(`„${v.name}“ zum Löschen vormerken?\nNach 30 Tagen löscht ein nächtlicher Lauf den Verein mit allen Daten und den Konten, die nur dort eine Rolle haben. Bis dahin lässt sich das abbrechen.`, 'Vormerken'))) return;
+    const { data: ab, error } = await supabase.rpc('verein_loeschen_vormerken', { p_verein: v.id });
+    if (error) return zeigeFehler(error.message);
+    erfolg(`„${v.name}“ wird ab dem ${datumText(ab ?? '')} gelöscht.`);
+    await laden();
+  }
+
+  async function loeschenAbbrechen(v: Verein) {
+    const { error } = await supabase.rpc('verein_loeschen_abbrechen', { p_verein: v.id });
+    if (error) return zeigeFehler(error.message);
+    erfolg(`Die Löschung von „${v.name}“ ist abgebrochen. Der Verein bleibt gesperrt.`);
+    await laden();
+  }
+
+  async function sofortLoeschenBestaetigen(v: Verein) {
+    if (!sofortLoeschen) return;
+    if (sofortLoeschen.name.trim() !== v.name) return zeigeFehler('Der Name stimmt nicht.');
+    setArbeitet(true);
+    const { error } = await supabase.rpc('verein_sofort_loeschen', { p_verein: v.id, p_name: sofortLoeschen.name.trim() });
+    setArbeitet(false);
+    if (error) return zeigeFehler(error.message);
+    setSofortLoeschen(null);
+    erfolg(`„${v.name}“ ist gelöscht.`);
+    await laden();
+  }
+
+  async function demoZuruecksetzen(v: Verein) {
+    if (!(await fragen(`Demo „${v.name}“ zurücksetzen?\nTurniere, Partien, Rating, Mannschaften und die Spieler ohne Konto werden gelöscht und durch Beispieldaten ersetzt. Konten, Tablets, Tische und Einstellungen bleiben.`, 'Zurücksetzen'))) return;
+    setArbeitet(true);
+    const { error } = await supabase.rpc('demo_zuruecksetzen', { p_verein: v.id });
+    setArbeitet(false);
+    if (error) return zeigeFehler(error.message);
+    erfolg(`„${v.name}“ hat wieder die Beispieldaten.`);
+    await laden();
+  }
+
+  async function aufraeumenAusfuehren() {
+    const arten = AUFRAEUMEN_ARTEN.filter((a) => auswahl.has(a.art) && (aufraeumen?.[a.art] ?? 0) > 0);
+    if (arten.length === 0) return zeigeFehler('Bei den angehakten Punkten ist nichts aufzuräumen.');
+    const liste = arten.map((a) => `${aufraeumen?.[a.art]} × ${a.text}`).join('\n');
+    if (!(await fragen(`Endgültig löschen?\n${liste}`, 'Aufräumen'))) return;
+    setArbeitet(true);
+    const { error } = await supabase.rpc('aufraeumen', { p_arten: arten.map((a) => a.art) });
+    setArbeitet(false);
+    if (error) return zeigeFehler(error.message);
+    erfolg('Aufgeräumt.');
     await laden();
   }
 
   async function einladenAbschicken() {
     if (!einladen) return;
-    if (!einladen.email.includes('@')) return setFehler('Bitte eine E-Mail-Adresse eintragen.');
+    if (!einladen.email.includes('@')) return zeigeFehler('Bitte eine E-Mail-Adresse eintragen.');
     setArbeitet(true);
     const problem = await adminEinladen(einladen.id, einladen.email);
     setArbeitet(false);
-    if (problem) return setFehler(problem);
+    if (problem) return zeigeFehler(problem);
     setEinladen(null);
     erfolg('Einladung verschickt.');
     await laden();
@@ -178,7 +257,7 @@ export default function Konsole() {
   async function superAdminSetzen(adresseMail: string, ja: boolean) {
     if (!ja && !(await fragen(`${adresseMail} die Rechte als Super-Admin entziehen?`, 'Entziehen'))) return;
     const { error } = await supabase.rpc('systemadmin_setzen', { p_email: adresseMail, p_ja: ja });
-    if (error) return setFehler(error.message);
+    if (error) return zeigeFehler(error.message);
     setNeuerAdmin('');
     erfolg(ja ? `${adresseMail} ist jetzt Super-Admin.` : `${adresseMail} ist kein Super-Admin mehr.`);
     await laden();
@@ -255,6 +334,60 @@ export default function Konsole() {
                         gesperrt{v.gesperrt_am ? ` seit ${zeit(v.gesperrt_am)}` : ''}
                       </span>
                     )}
+                    {v.loeschen_ab && (
+                      <span className="marke warnmarke" title="Ein nächtlicher Lauf löscht den Verein ab diesem Tag">
+                        Löschung ab {datumText(v.loeschen_ab)}
+                      </span>
+                    )}
+                    {!v.aktiv && (
+                      <>
+                        <small className="hinweis">
+                          {' '}
+                          · {v.export_am ? `Export vom ${zeit(v.export_am)}` : 'noch kein Export'}
+                        </small>
+                        <div className="knopfpaar">
+                          <button type="button" className="klein" title="Alle Daten des Vereins als Datei herunterladen" onClick={() => void exportieren(v)} disabled={arbeitet}>
+                            Export
+                          </button>
+                          {loeschStand(v) === 'bereit' && (
+                            <button type="button" className="klein gefahrknopf" title="In 30 Tagen endgültig löschen" onClick={() => void loeschenVormerken(v)}>
+                              Löschen vormerken
+                            </button>
+                          )}
+                          {loeschStand(v) === 'export_fehlt' && (
+                            <button type="button" className="klein gefahrknopf" title="Erst exportieren, dann lässt sich die Löschung vormerken" onClick={() => zeigeFehler(`Vor dem Löschen die Daten von „${v.name}“ exportieren.`)}>
+                              Löschen vormerken
+                            </button>
+                          )}
+                          {loeschStand(v) === 'vorgemerkt' && (
+                            <button type="button" className="klein" title="Die vorgemerkte Löschung aufheben; der Verein bleibt gesperrt" onClick={() => void loeschenAbbrechen(v)}>
+                              Löschung abbrechen
+                            </button>
+                          )}
+                          {v.ist_test && (
+                            <button type="button" className="klein gefahrknopf" title="Test-Verein ohne Frist löschen; der Name muss zur Bestätigung eingetippt werden" onClick={() => setSofortLoeschen({ id: v.id, name: '' })}>
+                              Sofort löschen
+                            </button>
+                          )}
+                        </div>
+                      </>
+                    )}
+                    {sofortLoeschen?.id === v.id && (
+                      <div className="zeile">
+                        <input
+                          placeholder={`zur Bestätigung: ${v.name}`}
+                          value={sofortLoeschen.name}
+                          autoFocus
+                          onChange={(e) => setSofortLoeschen({ id: v.id, name: e.target.value })}
+                        />
+                        <button type="button" className="gefahrknopf" title="Den Test-Verein jetzt mit allen Daten löschen" onClick={() => void sofortLoeschenBestaetigen(v)} disabled={arbeitet}>
+                          Endgültig löschen
+                        </button>
+                        <button type="button" title="Nicht löschen" onClick={() => setSofortLoeschen(null)}>
+                          Abbrechen
+                        </button>
+                      </div>
+                    )}
                     {sperren?.id === v.id && (
                       <div className="zeile">
                         <input
@@ -282,8 +415,13 @@ export default function Konsole() {
                           Sperren
                         </button>
                       ) : (
-                        <button type="button" title="Die Sperre aufheben" onClick={() => void entsperren(v)}>
+                        <button type="button" title="Die Sperre aufheben; eine vorgemerkte Löschung entfällt damit" onClick={() => void entsperren(v)}>
                           Freigeben
+                        </button>
+                      )}
+                      {v.ist_test && (
+                        <button type="button" title="Inhalte löschen und Beispieldaten neu anlegen" onClick={() => void demoZuruecksetzen(v)} disabled={arbeitet}>
+                          Demo zurücksetzen
                         </button>
                       )}
                     </div>
@@ -407,6 +545,43 @@ export default function Konsole() {
       </section>
 
       <section className="block">
+        <h2>Aufräumen</h2>
+        <p className="hinweis">Über alle Vereine. Erst zählen, dann die angehakten Punkte löschen.</p>
+        <table className="tabelle">
+          <tbody>
+            {AUFRAEUMEN_ARTEN.map((a) => (
+              <tr key={a.art}>
+                <td>
+                  <label className="ankreuz">
+                    <input
+                      type="checkbox"
+                      checked={auswahl.has(a.art)}
+                      onChange={(e) => {
+                        const neu = new Set(auswahl);
+                        if (e.target.checked) neu.add(a.art);
+                        else neu.delete(a.art);
+                        setAuswahl(neu);
+                      }}
+                    />
+                    <span>{a.text}</span>
+                  </label>
+                </td>
+                <td className="rechts">{aufraeumen?.[a.art] ?? '–'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <div className="knopfpaar">
+          <button type="button" title="Die Zahlen neu ermitteln" onClick={() => void laden()}>
+            Neu zählen
+          </button>
+          <button type="button" title="Die angehakten Punkte endgültig löschen; vorher kommt eine Rückfrage" onClick={() => void aufraeumenAusfuehren()} disabled={arbeitet}>
+            Ausgewählte aufräumen ({AUFRAEUMEN_ARTEN.filter((a) => auswahl.has(a.art)).reduce((n, a) => n + (aufraeumen?.[a.art] ?? 0), 0)})
+          </button>
+        </div>
+      </section>
+
+      <section className="block">
         <h2>Neuer Verein</h2>
         <div className="felder">
           <label className="feld">
@@ -486,7 +661,11 @@ export default function Konsole() {
                 <tr key={p.id}>
                   <td>{zeit(p.zeit)}</td>
                   <td>{AKTION_TEXT[p.aktion] ?? p.aktion}</td>
-                  <td>{vereinName(p.verein_id) || (typeof p.details.email === 'string' ? p.details.email : '')}</td>
+                  <td>
+                    {vereinName(p.verein_id) ||
+                      (typeof p.details.name === 'string' ? p.details.name : '') ||
+                      (typeof p.details.email === 'string' ? p.details.email : '')}
+                  </td>
                   <td className="hinweis">{email(p.benutzer_id)}</td>
                 </tr>
               ))}
