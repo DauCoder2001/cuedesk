@@ -225,6 +225,14 @@ export default function App() {
             ))}
         </nav>
         <div className="konto">
+          {istSuperAdmin && (
+            <span
+              className="rolle"
+              title="Gilt für ganz CueDesk: Vereine anlegen und sperren, Konsole. Keine Rolle im Verein."
+            >
+              Super-Admin
+            </span>
+          )}
           {rollen.length > 0 && (
             <span className="rolle" title="Deine höchste Rolle in diesem Verein. Sie bestimmt, was du sehen und ändern darfst.">
               {hoechsteRolle(rollen)}

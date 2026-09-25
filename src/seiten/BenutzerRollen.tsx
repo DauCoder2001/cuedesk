@@ -362,6 +362,11 @@ export default function BenutzerRollen() {
                 ? ` · zuletzt angemeldet ${new Date(konto.angemeldet_am).toLocaleDateString('de-DE')}`
                 : ' · noch nie angemeldet'}
             </p>
+            {konto.systemadmin && (
+              <p className="hinweis" title="Gilt für ganz CueDesk, nicht nur für diesen Verein">
+                Super-Admin von CueDesk – verwaltet in der Konsole, nicht hier.
+              </p>
+            )}
 
             <div>
               <div className="feldkopf">Rollen im Verein</div>
