@@ -5,7 +5,7 @@ import { personName } from '../namen';
 import { useRueckfrage } from '../rueckfrage';
 import { LIGEN, aufstellungPruefen, gesperrteSpieler, spielplan, wertung } from '../liga';
 import { kaderHinweise } from '../mannschaften';
-import { schutzwortStimmt } from '../schutzwort';
+import { schutzwortPruefen } from '../schutzwort';
 import { STATUS_TEXT } from './Turniere';
 import SpielberichtImport from './SpielberichtImport';
 import type { LigaSpiel } from '../liga';
@@ -397,7 +397,7 @@ export default function LigaAnsicht({
 
   async function passwortPruefen() {
     if (!passwortFrage) return;
-    if (!schutzwortStimmt(passwort)) {
+    if (!verein || !(await schutzwortPruefen(verein.id, passwort))) {
       setFehler('Das Passwort stimmt nicht.');
       return;
     }

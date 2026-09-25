@@ -6,6 +6,7 @@ import TurnierAnsicht from './TurnierAnsicht';
 import { LIGEN } from '../liga';
 import type { Ausspielziele, LigaKennung } from '../liga';
 import { saisonAus } from '../mannschaften';
+import { vereinsEinstellungen } from '../vereinseinstellungen';
 import { kurzesRaceHinweis } from '../vorgabe';
 import type { Disziplin, Mannschaft, Serie, Turnier, TurnierModus, TurnierStatus } from '../datenbank.types';
 
@@ -112,6 +113,9 @@ export default function Turniere() {
   const [staerke, setStaerke] = useState('75');
   const [obergrenze, setObergrenze] = useState('0');
   const [ratingWerten, setRatingWerten] = useState(true);
+  // Ausgleich in Prozent aus den Rating-Einstellungen, falls der Verein keinen eigenen vorgibt
+  const [ratingStaerke, setRatingStaerke] = useState(75);
+  const vorgaben = vereinsEinstellungen(verein?.einstellungen);
 
   const laden = useCallback(async () => {
     if (!verein) return;
@@ -125,7 +129,7 @@ export default function Turniere() {
     setTurniere(turnierAntwort.data ?? []);
     setSerien(serienAntwort.data ?? []);
     setMannschaften(mannschaftAntwort.data ?? []);
-    if (einstellungAntwort.data) setStaerke(String(einstellungAntwort.data.staerke_prozent));
+    if (einstellungAntwort.data) setRatingStaerke(einstellungAntwort.data.staerke_prozent);
   }, [verein]);
 
   useEffect(() => {
@@ -133,7 +137,7 @@ export default function Turniere() {
   }, [laden]);
 
   // Gemeldete Mannschaften der Saison, in die das Datum faellt
-  const mannschaftenDerSaison = mannschaften.filter((m) => m.saison === saisonAus(datum));
+  const mannschaftenDerSaison = mannschaften.filter((m) => m.saison === saisonAus(datum, vorgaben.saisonbeginn));
   const gewaehlteMannschaft = mannschaftenDerSaison.find((m) => m.id === mannschaftId) ?? null;
 
   // Die Mannschaft bringt ihre Liga mit; frei eingetragene Namen nicht.
@@ -269,8 +273,25 @@ export default function Turniere() {
               type="button"
               title="Ein neues Turnier oder einen Liga-Spieltag anlegen"
               onClick={() => {
-                // Standard ist die erste gemeldete Mannschaft der Saison
-                setMannschaftId(mannschaftenDerSaison[0]?.id ?? '');
+                // Vorgaben aus der Seite "System"
+                const t = vorgaben.turnier;
+                const race = String(t.raceTo);
+                setDisziplin(t.disziplin);
+                setModus(t.modus);
+                setRaceTo(race);
+                setRacePhase2(race);
+                setRaceKo({ R16: race, QF: race, SF: race, FIN: race, P3: race });
+                setVorgabeAn(t.vorgabe);
+                setStaerke(String(t.staerke ?? ratingStaerke));
+                setObergrenze(String(t.obergrenze));
+                setRatingWerten(t.ratingWerten);
+                setLiga(vorgaben.liga.liga);
+                // Standard-Mannschaft nach Nummer im Mannschaftspass, sonst die erste der Saison
+                const rang = vorgaben.liga.mannschaftRang;
+                const standard = mannschaftenDerSaison.find((m) => m.rang === rang) ?? mannschaftenDerSaison[0];
+                setMannschaftId(standard?.id ?? '');
+                // Wie beim Waehlen: Die Mannschaft bringt ihre Liga mit
+                if (standard?.liga && standard.liga in LIGEN) setLiga(standard.liga as LigaKennung);
                 setFormular(true);
               }}
             >

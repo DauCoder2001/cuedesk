@@ -15,6 +15,8 @@ import Statistik141 from './seiten/Statistik141';
 import Live from './seiten/Live';
 import Turniere from './seiten/Turniere';
 import Mannschaften from './seiten/Mannschaften';
+import System from './seiten/System';
+import { vereinsKuerzel } from './vereinseinstellungen';
 
 type Bereich =
   | 'live'
@@ -28,7 +30,8 @@ type Bereich =
   | 'statistik141'
   | 'benutzer'
   | 'tische'
-  | 'altdaten';
+  | 'altdaten'
+  | 'system';
 
 // Tablets und TV rufen die Adresse mit ?geraet auf und bekommen die
 // Geraeteansicht statt der Anmeldung.
@@ -146,6 +149,12 @@ export default function App() {
       name: 'Altdaten übernehmen',
       sichtbar: darf('vereinsadmin', 'sportwart'),
       tipp: 'Den Datenbestand aus Turnier light einlesen und den Spielern zuordnen.'
+    },
+    {
+      wert: 'system',
+      name: 'System',
+      sichtbar: darf('vereinsadmin'),
+      tipp: 'Einstellungen des Vereins: Name und Logo, Vorgaben für neue Turniere und Liga-Spieltage, Saisonbeginn, Schutzwort.'
     }
   ];
 
@@ -153,7 +162,9 @@ export default function App() {
     <div className="rahmen">
       <header className="kopfzeile">
         <div className="vereinsmarke">
-          <span className="zeichen">{(verein?.kurzname ?? 'PC').slice(0, 2).toUpperCase()}</span>
+          <span className="zeichen">
+            {verein?.logo_url ? <img src={verein.logo_url} alt="" /> : vereinsKuerzel(verein?.kurzname, verein?.name)}
+          </span>
           <strong>{verein?.name ?? 'CueDesk'}</strong>
         </div>
         <nav className="reiter">
@@ -203,6 +214,7 @@ export default function App() {
         {bereich === 'statistik141' && <Statistik141 />}
         {bereich === 'benutzer' && <BenutzerRollen />}
         {bereich === 'tische' && <TischeGeraete />}
+        {bereich === 'system' && <System />}
         {bereich === 'altdaten' && <Altdaten />}
       </main>
     </div>

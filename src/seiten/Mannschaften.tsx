@@ -5,6 +5,7 @@ import { personName } from '../namen';
 import { useRueckfrage } from '../rueckfrage';
 import { LIGEN, wertung } from '../liga';
 import { einsaetze, saisonAus, saisonBilanz, saisonListe, stammspielerHinweis } from '../mannschaften';
+import { vereinsEinstellungen } from '../vereinseinstellungen';
 import type { LigaKennung } from '../liga';
 import type { Mannschaft, MannschaftSpieler, Partie, Person, Turnier } from '../datenbank.types';
 import type { TurnierEinstellungen } from './Turniere';
@@ -33,7 +34,8 @@ export default function Mannschaften() {
   const { verein, darf } = useSitzung();
   const darfVerwalten = darf('vereinsadmin', 'sportwart');
 
-  const [saison, setSaison] = useState(saisonAus(heute()));
+  const beginn = vereinsEinstellungen(verein?.einstellungen).saisonbeginn;
+  const [saison, setSaison] = useState(saisonAus(heute(), beginn));
   const [mannschaften, setMannschaften] = useState<Mannschaft[]>([]);
   const [kader, setKader] = useState<MannschaftSpieler[]>([]);
   const [personen, setPersonen] = useState<Person[]>([]);
@@ -88,7 +90,7 @@ export default function Mannschaften() {
   );
 
   const saisons = useMemo(() => {
-    const menge = new Set<string>([...saisonListe(), ...mannschaften.map((m) => m.saison), saison]);
+    const menge = new Set<string>([...saisonListe(undefined, beginn), ...mannschaften.map((m) => m.saison), saison]);
     return [...menge].sort().reverse();
   }, [mannschaften, saison]);
 
@@ -99,7 +101,10 @@ export default function Mannschaften() {
 
   const partienVon = useCallback((t: Turnier) => partien.filter((p) => p.turnier_id === t.id), [partien]);
 
-  const spieltageDerSaison = useMemo(() => spieltage.filter((t) => saisonAus(t.datum) === saison), [spieltage, saison]);
+  const spieltageDerSaison = useMemo(
+    () => spieltage.filter((t) => saisonAus(t.datum, beginn) === saison),
+    [spieltage, saison, beginn]
+  );
 
   // Ergebnis einer Begegnung aus Sicht der eigenen Mannschaft
   const ergebnisVon = useCallback(

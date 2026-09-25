@@ -12,6 +12,8 @@ export type SitzungsStand = {
   rollen: Rolle[];
   darf: (...rollen: Rolle[]) => boolean;
   abmelden: () => Promise<void>;
+  // Nach Aenderungen auf der Seite "System": Name, Logo, Einstellungen frisch holen
+  vereinNeuLaden: () => Promise<void>;
 };
 
 const Sitzungskontext = createContext<SitzungsStand | null>(null);
@@ -81,6 +83,11 @@ export function SitzungsRahmen({ children }: { children: ReactNode }) {
       darf: (...gesuchte: Rolle[]) => gesuchte.some((rolle) => rollen.includes(rolle)),
       abmelden: async () => {
         await supabase.auth.signOut();
+      },
+      vereinNeuLaden: async () => {
+        if (!verein) return;
+        const { data } = await supabase.from('vereine').select('*').eq('id', verein.id).maybeSingle();
+        if (data) setVerein(data);
       }
     }),
     [laedt, sitzung, benutzer, verein, rollen]

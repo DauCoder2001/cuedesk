@@ -15,6 +15,7 @@ export type Verein = {
   farbe: string | null;
   aktiv: boolean;
   erstellt_am: string;
+  einstellungen: unknown; // gelesen ueber vereinsEinstellungen()
 };
 
 export type Benutzer = {
@@ -335,6 +336,8 @@ export type Database = {
       geraet_meldet_sich: { Args: Record<string, never>; Returns: undefined };
       geraet_neu_geladen: { Args: Record<string, never>; Returns: undefined };
       geraet_tisch_setzen: { Args: { p_tisch: string | null }; Returns: undefined };
+      schutzwort_stimmt: { Args: { p_verein: string; p_wort: string }; Returns: boolean };
+      schutzwort_setzen: { Args: { p_verein: string; p_wort: string }; Returns: undefined };
       geraet_koppeln: {
         Args: { p_code: string; p_verein: string; p_name: string; p_tisch?: string };
         Returns: string;

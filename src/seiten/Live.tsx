@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../supabase';
 import { useSitzung } from '../sitzung';
 import { dauerText, kachel } from '../live';
-import { schutzwortStimmt } from '../schutzwort';
+import { schutzwortPruefen } from '../schutzwort';
 import type { Kachel } from '../live';
 import type { Geraet, Tisch } from '../datenbank.types';
 
@@ -172,7 +172,7 @@ export default function Live() {
   // Bitte an alle Tablets dieses Tisches
   async function neuLadenAusloesen() {
     if (!frage) return;
-    if (!schutzwortStimmt(wort)) {
+    if (!verein || !(await schutzwortPruefen(verein.id, wort))) {
       setFehler('Das Passwort stimmt nicht.');
       return;
     }

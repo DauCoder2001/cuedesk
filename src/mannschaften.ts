@@ -21,15 +21,16 @@ export type KaderEintrag = {
 };
 
 // Die Saison beginnt im Juli: Spiele ab dem 1. Juli 2026 gehoeren zu 2026/27.
-export function saisonAus(datum: string): string {
+// beginn: Monat, in dem die Saison anfaengt (Seite "System", Standard Juli)
+export function saisonAus(datum: string, beginn = 7): string {
   const d = new Date(`${datum}T12:00:00`);
-  const jahr = d.getMonth() + 1 >= 7 ? d.getFullYear() : d.getFullYear() - 1;
+  const jahr = d.getMonth() + 1 >= beginn ? d.getFullYear() : d.getFullYear() - 1;
   return `${jahr}/${String((jahr + 1) % 100).padStart(2, '0')}`;
 }
 
 // Auswahl im Formular: die laufende Saison und je zwei davor und danach.
-export function saisonListe(heute = new Date().toISOString().slice(0, 10)): string[] {
-  const jetzt = Number(saisonAus(heute).slice(0, 4));
+export function saisonListe(heute = new Date().toISOString().slice(0, 10), beginn = 7): string[] {
+  const jetzt = Number(saisonAus(heute, beginn).slice(0, 4));
   return [-2, -1, 0, 1].map((v) => {
     const jahr = jetzt + v;
     return `${jahr}/${String((jahr + 1) % 100).padStart(2, '0')}`;
