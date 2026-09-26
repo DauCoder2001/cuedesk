@@ -9,6 +9,7 @@ import { saisonAus } from '../mannschaften';
 import { vereinsEinstellungen } from '../vereinseinstellungen';
 import { kurzesRaceHinweis } from '../vorgabe';
 import { Pflichthinweis, usePflicht } from '../pflicht';
+import { useUngespeichert, weichtAb } from '../ungespeichert';
 import type { Disziplin, Mannschaft, Serie, Turnier, TurnierModus, TurnierStatus } from '../datenbank.types';
 
 // Turnierliste. Turnierleiter, Sportwart und Vereins-Admin legen Turniere an
@@ -118,6 +119,26 @@ export default function Turniere() {
   // Ausgleich in Prozent aus den Rating-Einstellungen, falls der Verein keinen eigenen vorgibt
   const [ratingStaerke, setRatingStaerke] = useState(75);
   const vorgaben = vereinsEinstellungen(verein?.einstellungen);
+
+  // Stand des Formulars; beim Oeffnen festgehalten, damit ein Wechsel nach
+  // Aenderungen nachfragt
+  const formularStand = formular
+    ? { name, datum, disziplin, modus, raceTo, racePhase2, raceKo, liga, spieltag, heim, gegner, eigeneMannschaft,
+        mannschaftId, ziele, serieId, vorgabeAn, staerke, obergrenze, ratingWerten }
+    : null;
+  const [ursprung, setUrsprung] = useState<unknown>(null);
+  useEffect(() => {
+    // Laeuft nach dem Rendern, in dem sich das Formular geoeffnet hat - dann
+    // sind alle Vorgaben schon gesetzt.
+    setUrsprung(formularStand);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formular]);
+  const wechselErlaubt = useUngespeichert(
+    'turnier',
+    weichtAb(formularStand, ursprung),
+    name.trim() ? `Das neue Turnier „${name.trim()}“` : 'Das neue Turnier',
+    () => anlegen()
+  );
 
   const laden = useCallback(async () => {
     if (!verein) return;
@@ -231,6 +252,7 @@ export default function Turniere() {
     setName('');
     await laden();
     setOffen(data.id);
+    return true;
   }
 
   if (!verein) return <p className="hinweis">Kein Verein zugeordnet.</p>;
@@ -504,7 +526,15 @@ export default function Turniere() {
           </thead>
           <tbody>
             {turniere.map((t) => (
-              <tr key={t.id} className="klickbar" onClick={() => setOffen(t.id)}>
+              <tr
+                key={t.id}
+                className="klickbar"
+                onClick={() => {
+                  void (async () => {
+                    if (await wechselErlaubt()) setOffen(t.id);
+                  })();
+                }}
+              >
                 <td>{new Date(`${t.datum}T12:00:00`).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}</td>
                 <td>
                   {t.name}

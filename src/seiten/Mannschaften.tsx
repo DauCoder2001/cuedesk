@@ -7,6 +7,7 @@ import { LIGEN, wertung } from '../liga';
 import { einsaetze, saisonAus, saisonBilanz, saisonListe, stammspielerHinweis } from '../mannschaften';
 import { vereinsEinstellungen } from '../vereinseinstellungen';
 import { Pflichthinweis, usePflicht } from '../pflicht';
+import { useUngespeichert, weichtAb } from '../ungespeichert';
 import type { LigaKennung } from '../liga';
 import type { Mannschaft, MannschaftSpieler, Partie, Person, Turnier } from '../datenbank.types';
 import type { TurnierEinstellungen } from './Turniere';
@@ -46,6 +47,13 @@ export default function Mannschaften() {
   const [zugang, setZugang] = useState<Record<string, string>>({}); // je Mannschaft der gewaehlte Spieler
   const [fehler, setFehler] = useState<string | null>(null);
   const pflicht = usePflicht();
+  const [ursprung, setUrsprung] = useState<unknown>(null);
+  const wechselErlaubt = useUngespeichert(
+    'mannschaft',
+    weichtAb(formular, ursprung),
+    formular?.name.trim() ? `Die Mannschaft „${formular.name.trim()}“` : 'Die neue Mannschaft',
+    () => speichern()
+  );
   const [meldung, setMeldung] = useState<string | null>(null);
   const [rueckfrage, fragen] = useRueckfrage();
 
@@ -187,6 +195,15 @@ export default function Mannschaften() {
     setSaison(formular.saison);
     setFormular(null);
     await laden();
+    return true;
+  }
+
+  // Formular oeffnen; ein anderes, geaendertes Formular fragt vorher nach
+  async function oeffnen(neu: NonNullable<typeof formular>) {
+    if (!(await wechselErlaubt())) return;
+    pflicht.zuruecksetzen();
+    setFormular(neu);
+    setUrsprung(neu);
   }
 
   async function mannschaftLoeschen(m: Mannschaft) {
@@ -299,7 +316,7 @@ export default function Mannschaften() {
               </select>
             </label>
             {darfVerwalten && !formular && (
-              <button type="button" title="Eine Mannschaft für diese Saison anlegen" onClick={() => setFormular(leeresFormular())}>
+              <button type="button" title="Eine Mannschaft für diese Saison anlegen" onClick={() => void oeffnen(leeresFormular())}>
                 Mannschaft melden
               </button>
             )}
@@ -431,7 +448,7 @@ export default function Mannschaften() {
                     type="button"
                     title="Name, Liga, Staffel und Nummer im Mannschaftspass ändern"
                     onClick={() =>
-                      setFormular({
+                      void oeffnen({
                         id: m.id,
                         name: m.name,
                         saison: m.saison,

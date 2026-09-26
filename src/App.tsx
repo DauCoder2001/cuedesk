@@ -18,6 +18,7 @@ import Mannschaften from './seiten/Mannschaften';
 import System from './seiten/System';
 import Konsole from './seiten/Konsole';
 import { vereinsKuerzel } from './vereinseinstellungen';
+import { useWechsel } from './ungespeichert';
 
 type Bereich =
   | 'live'
@@ -43,6 +44,7 @@ export default function App() {
   const { laedt, sitzung, benutzer, verein, rollen, abmelden, darf, vereine, gesperrt, istSuperAdmin, vereinWaehlen } =
     useSitzung();
   const [bereich, setBereich] = useState<Bereich>('live');
+  const wechselErlaubt = useWechsel();
   // Ohne nutzbaren Verein gibt es nur die Konsole (Super-Admin). Ist der
   // gewaehlte Verein gesperrt, steht zuerst der Hinweis da.
   const nurKonsole = !verein;
@@ -188,8 +190,12 @@ export default function App() {
               title="Zwischen deinen Vereinen wechseln"
               value={verein?.id ?? gesperrt?.id ?? ''}
               onChange={(e) => {
-                vereinWaehlen(e.target.value);
-                setBereich('live');
+                const ziel = e.target.value;
+                void (async () => {
+                  if (!(await wechselErlaubt())) return;
+                  vereinWaehlen(ziel);
+                  setBereich('live');
+                })();
               }}
             >
               {vereine.map((v) => (
@@ -218,7 +224,12 @@ export default function App() {
                   .filter(Boolean)
                   .join(' ')}
                 title={eintrag.wert === 'live' && turnierLaeuft ? `Ein Turnier läuft gerade. ${eintrag.tipp}` : eintrag.tipp}
-                onClick={() => setBereich(eintrag.wert)}
+                onClick={() => {
+                  if (eintrag.wert === angezeigt) return;
+                  void (async () => {
+                    if (await wechselErlaubt()) setBereich(eintrag.wert);
+                  })();
+                }}
               >
                 {eintrag.name}
               </button>
@@ -241,7 +252,15 @@ export default function App() {
           <span className="name" title={benutzer?.email ?? undefined}>
             {benutzer?.anzeigename ?? benutzer?.email}
           </span>
-          <button type="button" title="Von CueDesk abmelden" onClick={() => void abmelden()}>
+          <button
+            type="button"
+            title="Von CueDesk abmelden"
+            onClick={() => {
+              void (async () => {
+                if (await wechselErlaubt()) await abmelden();
+              })();
+            }}
+          >
             Abmelden
           </button>
         </div>

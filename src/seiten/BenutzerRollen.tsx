@@ -4,6 +4,7 @@ import { ANWENDUNGSADRESSE } from '../adresse';
 import { funktionsFehlerText } from '../funktionsfehler';
 import { useSitzung } from '../sitzung';
 import { Pflichthinweis, usePflicht } from '../pflicht';
+import { useUngespeichert } from '../ungespeichert';
 import type { Benutzer, Person, Rolle } from '../datenbank.types';
 
 type Konto = Benutzer & {
@@ -39,6 +40,12 @@ export default function BenutzerRollen() {
   const [personWahl, setPersonWahl] = useState<string>('');
   const [neuVorname, setNeuVorname] = useState('');
   const [neuNachname, setNeuNachname] = useState('');
+  useUngespeichert(
+    'einladung',
+    zeigeEinladung && `${email}${neuVorname}${neuNachname}`.trim() !== '',
+    email.trim() ? `Die Einladung an ${email.trim()}` : 'Die Einladung',
+    () => einladen()
+  );
   const [sendet, setSendet] = useState(false);
 
   useEffect(() => {
@@ -205,6 +212,7 @@ export default function BenutzerRollen() {
     setEinladungsRollen(['mitglied']);
     setZeigeEinladung(false);
     await laden();
+    return true;
   }
 
   if (!verein) return <p className="hinweis">Kein Verein zugeordnet.</p>;

@@ -5,6 +5,7 @@ import type { Person, PersonIntern, PersonenStatus } from '../datenbank.types';
 import { personName, kuerzelAus } from '../namen';
 import { useRueckfrage } from '../rueckfrage';
 import { Pflichthinweis, usePflicht } from '../pflicht';
+import { useUngespeichert, weichtAb } from '../ungespeichert';
 
 type Entwurf = Omit<Person, 'id' | 'erstellt_am' | 'geaendert_am'> & { id: string | null };
 type EntwurfIntern = Omit<PersonIntern, 'person_id' | 'verein_id'>;
@@ -39,6 +40,15 @@ export default function Personen() {
   const [meldung, setMeldung] = useState<string | null>(null);
   const [fehler, setFehler] = useState<string | null>(null);
   const pflicht = usePflicht<HTMLElement>();
+  // Gespeicherter Stand des offenen Spielers, zum Vergleich mit den Eingaben
+  const [ursprung, setUrsprung] = useState<unknown>(null);
+  const eingetippt = entwurf ? `${entwurf.vorname} ${entwurf.nachname}`.trim() : '';
+  const wechselErlaubt = useUngespeichert(
+    'personen',
+    entwurf !== null && darfAendern && weichtAb({ entwurf, intern }, ursprung),
+    entwurf?.id ? `„${eingetippt}“` : eingetippt ? `Der neue Spieler „${eingetippt}“` : 'Der neue Spieler',
+    () => speichern()
+  );
 
   useEffect(() => {
     if (!verein) return;
@@ -61,10 +71,14 @@ export default function Personen() {
   }
 
   async function auswaehlen(person: Person) {
+    if (entwurf?.id === person.id) return;
+    if (!(await wechselErlaubt())) return;
+    pflicht.zuruecksetzen();
     setMeldung(null);
     setFehler(null);
     setEntwurf({ ...person });
     setIntern(LEER_INTERN);
+    setUrsprung({ entwurf: { ...person }, intern: LEER_INTERN });
     if (!darfSehen) return;
     const { data } = await supabase
       .from('personen_intern')
@@ -74,15 +88,18 @@ export default function Personen() {
     if (data) {
       const { person_id: _p, verein_id: _v, ...rest } = data;
       setIntern(rest);
+      setUrsprung({ entwurf: { ...person }, intern: rest });
     }
   }
 
-  function neu() {
+  async function neu() {
     if (!verein) return;
+    if (!(await wechselErlaubt())) return;
+    pflicht.zuruecksetzen();
     setMeldung(null);
     setFehler(null);
     setIntern(LEER_INTERN);
-    setEntwurf({
+    const leer: Entwurf = {
       id: null,
       verein_id: verein.id,
       vorname: '',
@@ -92,7 +109,9 @@ export default function Personen() {
       status: 'mitglied',
       name_oeffentlich: false,
       rating_ausgeblendet: false
-    });
+    };
+    setEntwurf(leer);
+    setUrsprung({ entwurf: leer, intern: LEER_INTERN });
   }
 
   async function speichern() {
@@ -130,8 +149,10 @@ export default function Personen() {
     }
 
     setEntwurf({ ...data });
+    setUrsprung({ entwurf: { ...data }, intern });
     setMeldung('Gespeichert.');
     await laden(verein.id);
+    return true;
   }
 
   const gefiltert = useMemo(() => {
@@ -247,7 +268,7 @@ export default function Personen() {
 
         {darfAendern && (
           <div className="listenfuss">
-            <button type="button" title="Einen neuen Spieler anlegen" onClick={neu}>
+            <button type="button" title="Einen neuen Spieler anlegen" onClick={() => void neu()}>
               Spieler anlegen
             </button>
           </div>

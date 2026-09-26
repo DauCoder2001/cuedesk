@@ -8,6 +8,7 @@ import { serienwertung } from '../serien';
 import { serienDateiname, serienPdf } from '../serienbericht';
 import { DISZIPLIN_TEXT } from './Turniere';
 import { Pflichthinweis, usePflicht } from '../pflicht';
+import { useUngespeichert, weichtAb } from '../ungespeichert';
 import type { SerienTurnier } from '../serien';
 import type { Disziplin, Person, Serie, Turnier } from '../datenbank.types';
 
@@ -41,6 +42,13 @@ export default function Serien() {
   const [fehler, setFehler] = useState<string | null>(null);
   const pflicht = usePflicht();
   const [formular, setFormular] = useState<Formular | null>(null);
+  const [ursprung, setUrsprung] = useState<unknown>(null);
+  const wechselErlaubt = useUngespeichert(
+    'serie',
+    weichtAb(formular, ursprung),
+    formular?.name.trim() ? `Die Serie „${formular.name.trim()}“` : 'Die neue Serie',
+    () => speichern()
+  );
   const [zuordnen, setZuordnen] = useState('');
   const [rueckfrage, fragen] = useRueckfrage();
 
@@ -113,8 +121,16 @@ export default function Serien() {
 
   // ---------- Verwaltung ----------
 
+  // Formular oeffnen; ein anderes, geaendertes Formular fragt vorher nach
+  async function oeffnen(neu: NonNullable<typeof formular>) {
+    if (!(await wechselErlaubt())) return;
+    pflicht.zuruecksetzen();
+    setFormular(neu);
+    setUrsprung(neu);
+  }
+
   function neueSerie() {
-    setFormular({
+    void oeffnen({
       id: null,
       name: '',
       saison: '',
@@ -126,7 +142,7 @@ export default function Serien() {
   }
 
   function serieAendern(s: Serie) {
-    setFormular({
+    void oeffnen({
       id: s.id,
       name: s.name,
       saison: s.saison ?? '',
@@ -160,6 +176,7 @@ export default function Serien() {
     setFormular(null);
     setGewaehlt(antwort.data.id);
     await serienLaden();
+    return true;
   }
 
   async function serieLoeschen() {
@@ -235,8 +252,11 @@ export default function Serien() {
               className={gewaehlt === eintrag.id ? 'chip aktiv' : 'chip'}
               title="Diese Serie anzeigen"
               onClick={() => {
-                setGewaehlt(eintrag.id);
-                setFormular(null);
+                void (async () => {
+                  if (!(await wechselErlaubt())) return;
+                  setGewaehlt(eintrag.id);
+                  setFormular(null);
+                })();
               }}
             >
               {eintrag.name}

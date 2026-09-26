@@ -16,6 +16,7 @@ import { AUFRAEUMEN_ARTEN, datumText, loeschStand } from '../datenpflege';
 import type { AufraeumenArt, AufraeumenZahlen } from '../datenpflege';
 import { exportHerunterladen } from '../vereinExport';
 import { Pflichthinweis, usePflicht } from '../pflicht';
+import { useUngespeichert, weichtAb } from '../ungespeichert';
 import { AngabenFelder, WEB_PRAEFIX, WebAdresseFeld, angabenAus } from '../vereinsangaben';
 import type { Vereinsangaben } from '../vereinsangaben';
 import type {
@@ -50,6 +51,17 @@ const AKTION_TEXT: Record<string, string> = {
   demo_zurueckgesetzt: 'Demo zurückgesetzt',
   aufgeraeumt: 'Aufgeräumt'
 };
+
+// Formularstand "Bearbeiten" aus einem Verein - beim Oeffnen und als
+// Vergleich fuer ungespeicherte Aenderungen
+const bearbeitenAus = (v: Verein) => ({
+  id: v.id,
+  name: v.name,
+  kurzname: v.kurzname,
+  slug: v.slug,
+  test: v.ist_test,
+  angaben: angabenAus(v)
+});
 
 const zeit = (iso: string) =>
   new Date(iso).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
@@ -97,6 +109,21 @@ export default function Konsole() {
     angaben: Vereinsangaben;
   } | null>(null);
   const bearbeitenPflicht = usePflicht<HTMLTableRowElement>();
+
+  // Ungespeicherte Eingaben: neuer Verein und offenes "Bearbeiten"
+  useUngespeichert(
+    'konsole-neu',
+    `${name}${kurzname}${adminMail}`.trim() !== '' || istTest,
+    name.trim() ? `Der neue Verein „${name.trim()}“` : 'Der neue Verein',
+    () => vereinAnlegen()
+  );
+  const bearbeiteterVerein = vereine.find((x) => x.id === bearbeiten?.id);
+  const wechselErlaubt = useUngespeichert(
+    'konsole-bearbeiten',
+    weichtAb(bearbeiten, bearbeiteterVerein ? bearbeitenAus(bearbeiteterVerein) : null),
+    bearbeiteterVerein ? `Die Änderungen an „${bearbeiteterVerein.name}“` : 'Die Änderungen am Verein',
+    () => vereinSpeichern()
+  );
 
   const laden = useCallback(async () => {
     const [v, r, k, e, p, z, d, s, a] = await Promise.all([
@@ -182,6 +209,7 @@ export default function Konsole() {
     setBearbeiten(null);
     erfolg(`Verein „${b.name.trim()}“ geändert.`);
     await laden();
+    return true;
   }
 
   async function vereinAnlegen() {
@@ -215,6 +243,7 @@ export default function Konsole() {
     neuPflicht.zuruecksetzen();
     erfolg(text);
     await laden();
+    return true;
   }
 
   async function sperrenBestaetigen() {
@@ -468,15 +497,12 @@ export default function Konsole() {
                         type="button"
                         title="Name, Kurzname, Web-Adresse, Test-Kennzeichen, Spiellokal und Kontakt ändern"
                         onClick={() => {
-                          bearbeitenPflicht.zuruecksetzen();
-                          setBearbeiten({
-                            id: v.id,
-                            name: v.name,
-                            kurzname: v.kurzname,
-                            slug: v.slug,
-                            test: v.ist_test,
-                            angaben: angabenAus(v)
-                          });
+                          if (bearbeiten?.id === v.id) return;
+                          void (async () => {
+                            if (!(await wechselErlaubt())) return;
+                            bearbeitenPflicht.zuruecksetzen();
+                            setBearbeiten(bearbeitenAus(v));
+                          })();
                         }}
                       >
                         Bearbeiten

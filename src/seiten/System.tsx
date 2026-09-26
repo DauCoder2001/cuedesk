@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from '../supabase';
 import { useSitzung } from '../sitzung';
 import { LIGEN } from '../liga';
@@ -12,6 +12,7 @@ import { Pflichthinweis, usePflicht } from '../pflicht';
 import { AngabenFelder, WebAdresseFeld, angabenAus } from '../vereinsangaben';
 import type { Vereinsangaben } from '../vereinsangaben';
 import { homepageLink } from '../mandanten';
+import { useUngespeichert, weichtAb } from '../ungespeichert';
 
 // Seite "System": Einstellungen des Vereins, nur fuer den Vereins-Administrator.
 // Verein (Name, Kuerzel, Logo), Vorgaben fuer neue Turniere und Liga-Spieltage,
@@ -121,12 +122,21 @@ export default function System() {
   const vereinPflicht = usePflicht();
   const schutzPflicht = usePflicht<HTMLElement>();
 
+  // Gespeicherter Stand, wie ihn die Datenbank liefert - zugleich Ausgangspunkt
+  // des Formulars und Vergleich fuer "noch nicht gespeichert"
+  const gespeichert = useMemo(
+    () =>
+      verein
+        ? ausEinstellungen(verein.name, verein.kurzname, verein.logo_url, angabenAus(verein), vereinsEinstellungen(verein.einstellungen))
+        : null,
+    [verein]
+  );
+  useUngespeichert('system-verein', weichtAb(formular, gespeichert), 'Die Seite System', () => speichern());
+  useUngespeichert('system-schutzwort', `${wort}${wortWieder}` !== '', 'Das neue Schutzwort', () => schutzwortAendern());
+
   const zuruecksetzen = useCallback(() => {
-    if (!verein) return;
-    setFormular(
-      ausEinstellungen(verein.name, verein.kurzname, verein.logo_url, angabenAus(verein), vereinsEinstellungen(verein.einstellungen))
-    );
-  }, [verein]);
+    if (gespeichert) setFormular(gespeichert);
+  }, [gespeichert]);
 
   useEffect(() => {
     zuruecksetzen();
@@ -226,6 +236,7 @@ export default function System() {
     setFehler(null);
     setMeldung('Gespeichert.');
     await vereinNeuLaden();
+    return true;
   }
 
   async function supportFreigeben() {
@@ -268,6 +279,7 @@ export default function System() {
     setWortWieder('');
     setFehler(null);
     setMeldung('Schutzwort geändert. Es gilt ab sofort für „Tablet neu laden“ und „Aufstellung zeigen“.');
+    return true;
   }
 
   return (
