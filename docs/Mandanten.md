@@ -47,6 +47,7 @@ Lücken:
 Eigene Ansicht für Super-Admins (statt der Vereinsreiter, wenn kein Verein gewählt ist):
 - **Vereine:** Status, Test-Kennzeichen, Konten, Mitglieder, letzte Anmeldung, Partien der letzten 30 Tage, Tablets online, belegter Speicher (geschätzt). Aktionen: anlegen, sperren/entsperren, Vereins-Administrator einladen.
 - **Super-Admins:** Liste, hinzufügen, entfernen.
+- **Verein bearbeiten** (ergänzt 26.09.2026, Migration stufe14_verein_aendern): Name, Kurzname, Adresse und Test-Kennzeichen; im Protokoll mit vorher → nachher. Logo und Vorgaben bleiben beim Vereins-Administrator.
 - **Datenbank:** Größe im Verhältnis zur Tarifgrenze, größte Tabellen, aktive Verbindungen – über eine Funktion nur für Super-Admins.
 - **Sicherung:** Die Sicherung meldet jeden Lauf zurück (Zeit, Erfolg, Größe) in `system_ereignisse`; die Konsole zeigt den letzten Lauf und warnt, wenn er älter als 8 Tage ist oder fehlschlug.
 - **Protokoll** der Super-Admin-Aktionen.

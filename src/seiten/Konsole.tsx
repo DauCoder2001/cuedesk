@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { Fragment, useCallback, useEffect, useState } from 'react';
 import { supabase } from '../supabase';
 import { useSitzung } from '../sitzung';
 import { useRueckfrage } from '../rueckfrage';
@@ -6,6 +6,7 @@ import { ANWENDUNGSADRESSE } from '../adresse';
 import {
   DATENBANK_GRENZE_BYTES,
   adresseAusName,
+  aenderungText,
   groesseText,
   ratingWarnung,
   sicherungsWarnung
@@ -42,6 +43,7 @@ const AKTION_TEXT: Record<string, string> = {
   loeschung_vorgemerkt: 'Löschung vorgemerkt',
   loeschung_abgebrochen: 'Löschung abgebrochen',
   verein_geloescht: 'Verein gelöscht',
+  verein_geaendert: 'Verein geändert',
   demo_zurueckgesetzt: 'Demo zurückgesetzt',
   aufgeraeumt: 'Aufgeräumt'
 };
@@ -83,6 +85,14 @@ export default function Konsole() {
   const [sofortLoeschen, setSofortLoeschen] = useState<{ id: string; name: string } | null>(null);
   const neuPflicht = usePflicht<HTMLElement>();
   const adminPflicht = usePflicht<HTMLDivElement>();
+  const [bearbeiten, setBearbeiten] = useState<{
+    id: string;
+    name: string;
+    kurzname: string;
+    slug: string;
+    test: boolean;
+  } | null>(null);
+  const bearbeitenPflicht = usePflicht<HTMLTableRowElement>();
 
   const laden = useCallback(async () => {
     const [v, r, k, e, p, z, d, s, a] = await Promise.all([
@@ -134,6 +144,32 @@ export default function Konsole() {
     if (error) return error.message;
     if (data?.fehler) return String(data.fehler);
     return null;
+  }
+
+  async function vereinSpeichern() {
+    if (!bearbeiten) return;
+    if (!bearbeitenPflicht.pruefen()) return;
+    const b = bearbeiten;
+    if (b.name.trim().length < 2) return bearbeitenPflicht.melden('Der Name braucht mindestens zwei Zeichen.');
+    if (!/^[a-z0-9-]{2,30}$/.test(b.slug)) {
+      return bearbeitenPflicht.melden('Die Adresse besteht aus 2 bis 30 Kleinbuchstaben, Ziffern und Bindestrichen.');
+    }
+    setArbeitet(true);
+    const { error } = await supabase.rpc('verein_aendern', {
+      p_verein: b.id,
+      p_name: b.name.trim(),
+      p_kurzname: b.kurzname.trim(),
+      p_slug: b.slug,
+      p_test: b.test
+    });
+    setArbeitet(false);
+    if (error) {
+      return bearbeitenPflicht.melden(error.message.includes('vereine_slug_key') ? 'Diese Adresse ist schon vergeben.' : error.message);
+    }
+    bearbeitenPflicht.zuruecksetzen();
+    setBearbeiten(null);
+    erfolg(`Verein „${b.name.trim()}“ geändert.`);
+    await laden();
   }
 
   async function vereinAnlegen() {
@@ -304,7 +340,8 @@ export default function Konsole() {
               const admins = rollen.filter((r) => r.verein_id === v.id).map((r) => email(r.benutzer_id));
               const offen = einladungen.filter((e) => e.verein_id === v.id && e.rollen.includes('vereinsadmin')).map((e) => e.email);
               return (
-                <tr key={v.id}>
+                <Fragment key={v.id}>
+                <tr>
                   <td>
                     {v.name}
                     {v.ist_test && <span className="marke">Test</span>}
@@ -412,6 +449,16 @@ export default function Konsole() {
                   </td>
                   <td className="rechts">
                     <div className="knopfpaar rechts">
+                      <button
+                        type="button"
+                        title="Name, Kurzname, Adresse und Test-Kennzeichen ändern"
+                        onClick={() => {
+                          bearbeitenPflicht.zuruecksetzen();
+                          setBearbeiten({ id: v.id, name: v.name, kurzname: v.kurzname, slug: v.slug, test: v.ist_test });
+                        }}
+                      >
+                        Bearbeiten
+                      </button>
                       <button type="button" title="Einen Vereins-Administrator per E-Mail einladen" onClick={() => setEinladen({ id: v.id, email: '' })}>
                         Admin einladen
                       </button>
@@ -432,6 +479,71 @@ export default function Konsole() {
                     </div>
                   </td>
                 </tr>
+                {bearbeiten?.id === v.id && (
+                  <tr ref={bearbeitenPflicht.bereich}>
+                    <td colSpan={5}>
+                      <div className="kasten">
+                        <div className="felder">
+                          <label className="feld">
+                            <span>Name</span>
+                            <input
+                              required
+                              autoFocus
+                              value={bearbeiten.name}
+                              onChange={(e) => setBearbeiten({ ...bearbeiten, name: e.target.value })}
+                            />
+                          </label>
+                          <label className="feld">
+                            <span>Kurzname</span>
+                            <input
+                              value={bearbeiten.kurzname}
+                              placeholder="leer = wie der Name"
+                              onChange={(e) => setBearbeiten({ ...bearbeiten, kurzname: e.target.value })}
+                            />
+                          </label>
+                          <label className="feld">
+                            <span>Adresse</span>
+                            <input
+                              required
+                              value={bearbeiten.slug}
+                              onChange={(e) => setBearbeiten({ ...bearbeiten, slug: e.target.value.toLowerCase() })}
+                            />
+                            {bearbeiten.slug !== v.slug && <small className="warnung">Ändern macht alte Links ungültig.</small>}
+                          </label>
+                        </div>
+                        <label className="ankreuz">
+                          <input
+                            type="checkbox"
+                            checked={bearbeiten.test}
+                            onChange={(e) => setBearbeiten({ ...bearbeiten, test: e.target.checked })}
+                          />
+                          <span>
+                            Test-Verein
+                            <small>Taucht später in keiner Statistik auf und lässt sich mit Beispieldaten zurücksetzen.</small>
+                          </span>
+                        </label>
+                        <div className="knopfpaar">
+                          <button type="button" title="Die Änderungen speichern" onClick={() => void vereinSpeichern()} disabled={arbeitet}>
+                            {arbeitet ? 'Wird gespeichert …' : 'Speichern'}
+                          </button>
+                          <button
+                            type="button"
+                            title="Ohne Speichern schließen"
+                            onClick={() => {
+                              bearbeitenPflicht.zuruecksetzen();
+                              setBearbeiten(null);
+                            }}
+                          >
+                            Abbrechen
+                          </button>
+                          <Pflichthinweis hinweis={bearbeitenPflicht.hinweis} />
+                        </div>
+                        <p className="hinweis">Logo und Vorgaben pflegt der Vereins-Administrator auf der Seite System.</p>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+                </Fragment>
               );
             })}
           </tbody>
@@ -682,7 +794,10 @@ export default function Konsole() {
               {protokoll.map((p) => (
                 <tr key={p.id}>
                   <td>{zeit(p.zeit)}</td>
-                  <td>{AKTION_TEXT[p.aktion] ?? p.aktion}</td>
+                  <td>
+                    {AKTION_TEXT[p.aktion] ?? p.aktion}
+                    {p.aktion === 'verein_geaendert' && <small className="hinweis"> · {aenderungText(p.details) || 'keine Änderung'}</small>}
+                  </td>
                   <td>
                     {vereinName(p.verein_id) ||
                       (typeof p.details.name === 'string' ? p.details.name : '') ||

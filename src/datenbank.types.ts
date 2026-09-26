@@ -422,6 +422,10 @@ export type Database = {
       aufraeumen_vorschau: { Args: Record<string, never>; Returns: Record<string, number> };
       aufraeumen: { Args: { p_arten: string[] }; Returns: Record<string, number> };
       demo_zuruecksetzen: { Args: { p_verein: string }; Returns: undefined };
+      verein_aendern: {
+        Args: { p_verein: string; p_name: string; p_kurzname: string; p_slug: string; p_test: boolean };
+        Returns: undefined;
+      };
       geraet_koppeln: {
         Args: { p_code: string; p_verein: string; p_name: string; p_tisch?: string };
         Returns: string;

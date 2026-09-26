@@ -57,3 +57,17 @@ export function groesseText(bytes: number | null | undefined): string {
   }
   return `${wert.toLocaleString('de-DE', { maximumFractionDigits: stufe === 0 ? 0 : 1 })} ${einheiten[stufe]}`;
 }
+
+// Protokoll "Verein geändert": nur die Felder, die sich geändert haben,
+// z. B. "Kurzname: Bassum → PBC · Test-Verein: nein → ja"
+const FELD_TEXT: Record<string, string> = { name: 'Name', kurzname: 'Kurzname', slug: 'Adresse', test: 'Test-Verein' };
+
+export function aenderungText(details: Record<string, unknown>): string {
+  const vorher = (details.vorher ?? {}) as Record<string, unknown>;
+  const nachher = (details.nachher ?? {}) as Record<string, unknown>;
+  const wert = (x: unknown) => (typeof x === 'boolean' ? (x ? 'ja' : 'nein') : String(x ?? '–'));
+  return Object.keys(FELD_TEXT)
+    .filter((k) => k in nachher && vorher[k] !== nachher[k])
+    .map((k) => `${FELD_TEXT[k]}: ${wert(vorher[k])} → ${wert(nachher[k])}`)
+    .join(' · ');
+}

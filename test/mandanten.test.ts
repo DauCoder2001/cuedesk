@@ -1,5 +1,20 @@
 import { describe, expect, test } from 'vitest';
-import { adresseAusName, groesseText, ratingWarnung, sicherungsWarnung } from '../src/mandanten';
+import { adresseAusName, aenderungText, groesseText, ratingWarnung, sicherungsWarnung } from '../src/mandanten';
+
+describe('Protokoll: Verein geändert', () => {
+  test('nennt nur geänderte Felder', () => {
+    const details = {
+      name: 'PBC Bassum',
+      vorher: { name: 'PBC Bassum', kurzname: 'Bassum', slug: 'bassum', test: false },
+      nachher: { name: 'PBC Bassum', kurzname: 'PBC', slug: 'bassum', test: true }
+    };
+    expect(aenderungText(details)).toBe('Kurzname: Bassum → PBC · Test-Verein: nein → ja');
+  });
+  test('ohne Änderung leer', () => {
+    const gleich = { name: 'A', kurzname: 'A', slug: 'a', test: false };
+    expect(aenderungText({ vorher: gleich, nachher: gleich })).toBe('');
+  });
+});
 
 describe('Adresse aus dem Vereinsnamen', () => {
   test('Umlaute, Leer- und Sonderzeichen', () => {
