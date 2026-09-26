@@ -9,6 +9,9 @@ import type { VereinsEinstellungen } from '../vereinseinstellungen';
 import type { Disziplin, Mannschaft, SupportFreigabe, TurnierModus } from '../datenbank.types';
 import { exportHerunterladen } from '../vereinExport';
 import { Pflichthinweis, usePflicht } from '../pflicht';
+import { AngabenFelder, WebAdresseFeld, angabenAus } from '../vereinsangaben';
+import type { Vereinsangaben } from '../vereinsangaben';
+import { homepageLink } from '../mandanten';
 
 // Seite "System": Einstellungen des Vereins, nur fuer den Vereins-Administrator.
 // Verein (Name, Kuerzel, Logo), Vorgaben fuer neue Turniere und Liga-Spieltage,
@@ -34,6 +37,7 @@ type Formular = {
   name: string;
   kurzname: string;
   logo: string | null;
+  angaben: Vereinsangaben;
   raceTo: string;
   disziplin: Disziplin;
   modus: TurnierModus;
@@ -73,11 +77,18 @@ function logoVerkleinern(datei: File): Promise<string> {
   });
 }
 
-function ausEinstellungen(name: string, kurzname: string, logo: string | null, e: VereinsEinstellungen): Formular {
+function ausEinstellungen(
+  name: string,
+  kurzname: string,
+  logo: string | null,
+  angaben: Vereinsangaben,
+  e: VereinsEinstellungen
+): Formular {
   return {
     name,
     kurzname,
     logo,
+    angaben,
     raceTo: String(e.turnier.raceTo),
     disziplin: e.turnier.disziplin,
     modus: e.turnier.modus,
@@ -112,7 +123,9 @@ export default function System() {
 
   const zuruecksetzen = useCallback(() => {
     if (!verein) return;
-    setFormular(ausEinstellungen(verein.name, verein.kurzname, verein.logo_url, vereinsEinstellungen(verein.einstellungen)));
+    setFormular(
+      ausEinstellungen(verein.name, verein.kurzname, verein.logo_url, angabenAus(verein), vereinsEinstellungen(verein.einstellungen))
+    );
   }, [verein]);
 
   useEffect(() => {
@@ -172,6 +185,9 @@ export default function System() {
     const grenze = zahl(f.obergrenze) ?? 0;
     if (!vereinPflicht.pruefen()) return;
     if (race === null || !Number.isInteger(race) || race < 1 || race > 25) return vereinPflicht.melden('Race to zwischen 1 und 25.');
+    if (f.angaben.kontakt_email.trim() && !f.angaben.kontakt_email.includes('@')) {
+      return vereinPflicht.melden('Die Kontakt-E-Mail stimmt nicht.');
+    }
     if (staerke !== null && (!Number.isInteger(staerke) || staerke < 0 || staerke > 100)) {
       return vereinPflicht.melden('Ausgleich in Prozent zwischen 0 und 100, oder leer lassen.');
     }
@@ -197,6 +213,11 @@ export default function System() {
         name: f.name.trim(),
         kurzname: f.kurzname.trim() || vereinsKuerzel('', f.name),
         logo_url: f.logo,
+        strasse: f.angaben.strasse.trim() || null,
+        plz: f.angaben.plz.trim() || null,
+        ort: f.angaben.ort.trim() || null,
+        homepage: homepageLink(f.angaben.homepage) || null,
+        kontakt_email: f.angaben.kontakt_email.trim().toLowerCase() || null,
         einstellungen
       })
       .eq('id', verein.id);
@@ -270,7 +291,9 @@ export default function System() {
             <span>Kurzname (die ersten zwei Buchstaben stehen im Kästchen, wenn es kein Logo gibt)</span>
             <input value={f.kurzname} placeholder="leer = aus dem Namen" onChange={(e) => setze({ kurzname: e.target.value })} />
           </label>
+          <WebAdresseFeld wert={verein.slug} nurLesen hinweis="Ändern kann sie nur der Betreiber von CueDesk." />
         </div>
+        <AngabenFelder werte={f.angaben} aendern={(angaben) => setze({ angaben })} />
         <div className="logozeile">
           <span className="zeichen gross">
             {f.logo ? <img src={f.logo} alt="Vereinslogo" /> : vereinsKuerzel(f.kurzname, f.name)}

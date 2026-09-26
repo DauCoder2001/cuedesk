@@ -16,6 +16,27 @@ export function adresseAusName(name: string): string {
     .replace(/-+$/g, '');
 }
 
+// Beim Tippen der Web-Adresse: wie adresseAusName, aber ein Bindestrich am
+// Ende bleibt stehen, sonst liesse sich "pbc-" nie weitertippen.
+export function webAdresseEingabe(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/ä/g, 'ae')
+    .replace(/ö/g, 'oe')
+    .replace(/ü/g, 'ue')
+    .replace(/ß/g, 'ss')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+/g, '')
+    .slice(0, 30);
+}
+
+// Homepage als Link: "www.verein.de" -> "https://www.verein.de"; leer bleibt leer
+export function homepageLink(text: string): string {
+  const t = text.trim();
+  if (!t) return '';
+  return /^https?:\/\//i.test(t) ? t : `https://${t}`;
+}
+
 // ---------- Konsole: Zustand von Sicherung und Rating ----------
 
 export const TAG_MS = 24 * 60 * 60 * 1000;
@@ -60,14 +81,24 @@ export function groesseText(bytes: number | null | undefined): string {
 
 // Protokoll "Verein geändert": nur die Felder, die sich geändert haben,
 // z. B. "Kurzname: Bassum → PBC · Test-Verein: nein → ja"
-const FELD_TEXT: Record<string, string> = { name: 'Name', kurzname: 'Kurzname', slug: 'Adresse', test: 'Test-Verein' };
+const FELD_TEXT: Record<string, string> = {
+  name: 'Name',
+  kurzname: 'Kurzname',
+  slug: 'Web-Adresse',
+  test: 'Test-Verein',
+  strasse: 'Straße',
+  plz: 'PLZ',
+  ort: 'Ort',
+  homepage: 'Homepage',
+  kontakt_email: 'Kontakt-E-Mail'
+};
 
 export function aenderungText(details: Record<string, unknown>): string {
   const vorher = (details.vorher ?? {}) as Record<string, unknown>;
   const nachher = (details.nachher ?? {}) as Record<string, unknown>;
   const wert = (x: unknown) => (typeof x === 'boolean' ? (x ? 'ja' : 'nein') : String(x ?? '–'));
   return Object.keys(FELD_TEXT)
-    .filter((k) => k in nachher && vorher[k] !== nachher[k])
+    .filter((k) => k in nachher && (vorher[k] ?? null) !== (nachher[k] ?? null))
     .map((k) => `${FELD_TEXT[k]}: ${wert(vorher[k])} → ${wert(nachher[k])}`)
     .join(' · ');
 }

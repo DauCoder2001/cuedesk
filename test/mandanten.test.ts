@@ -1,5 +1,26 @@
 import { describe, expect, test } from 'vitest';
-import { adresseAusName, aenderungText, groesseText, ratingWarnung, sicherungsWarnung } from '../src/mandanten';
+import {
+  adresseAusName,
+  aenderungText,
+  groesseText,
+  homepageLink,
+  ratingWarnung,
+  sicherungsWarnung,
+  webAdresseEingabe
+} from '../src/mandanten';
+
+describe('Web-Adresse und Homepage', () => {
+  test('beim Tippen umgeschrieben, Bindestrich am Ende bleibt', () => {
+    expect(webAdresseEingabe('Am Schützenplatz')).toBe('am-schuetzenplatz');
+    expect(webAdresseEingabe('pbc ')).toBe('pbc-');
+    expect(webAdresseEingabe('  Bassum')).toBe('bassum');
+  });
+  test('Homepage bekommt https://', () => {
+    expect(homepageLink('www.pbc-bassum.de')).toBe('https://www.pbc-bassum.de');
+    expect(homepageLink('http://alt.de')).toBe('http://alt.de');
+    expect(homepageLink('  ')).toBe('');
+  });
+});
 
 describe('Protokoll: Verein geändert', () => {
   test('nennt nur geänderte Felder', () => {
@@ -13,6 +34,11 @@ describe('Protokoll: Verein geändert', () => {
   test('ohne Änderung leer', () => {
     const gleich = { name: 'A', kurzname: 'A', slug: 'a', test: false };
     expect(aenderungText({ vorher: gleich, nachher: gleich })).toBe('');
+  });
+  test('neue Felder: leer gegen fehlend zählt nicht als Änderung', () => {
+    expect(
+      aenderungText({ vorher: { ort: null, plz: null }, nachher: { ort: 'Bassum', plz: null, strasse: null } })
+    ).toBe('Ort: – → Bassum');
   });
 });
 

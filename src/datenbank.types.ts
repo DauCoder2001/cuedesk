@@ -21,6 +21,12 @@ export type Verein = {
   sperrgrund: string | null;
   export_am: string | null; // letzter Export (Phase 3)
   loeschen_ab: string | null; // vorgemerkt zum Loeschen ab diesem Tag
+  // Spiellokal und Kontakt (Stufe 14)
+  strasse: string | null;
+  plz: string | null;
+  ort: string | null;
+  homepage: string | null;
+  kontakt_email: string | null;
 };
 
 // Ein eigener Verein aus meine_vereine(), auch wenn er gesperrt ist
@@ -423,7 +429,18 @@ export type Database = {
       aufraeumen: { Args: { p_arten: string[] }; Returns: Record<string, number> };
       demo_zuruecksetzen: { Args: { p_verein: string }; Returns: undefined };
       verein_aendern: {
-        Args: { p_verein: string; p_name: string; p_kurzname: string; p_slug: string; p_test: boolean };
+        Args: {
+          p_verein: string;
+          p_name: string;
+          p_kurzname: string;
+          p_slug: string;
+          p_test: boolean;
+          p_strasse: string;
+          p_plz: string;
+          p_ort: string;
+          p_homepage: string;
+          p_kontakt_email: string;
+        };
         Returns: undefined;
       };
       geraet_koppeln: {

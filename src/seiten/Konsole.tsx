@@ -7,6 +7,7 @@ import {
   DATENBANK_GRENZE_BYTES,
   adresseAusName,
   aenderungText,
+  homepageLink,
   groesseText,
   ratingWarnung,
   sicherungsWarnung
@@ -15,6 +16,8 @@ import { AUFRAEUMEN_ARTEN, datumText, loeschStand } from '../datenpflege';
 import type { AufraeumenArt, AufraeumenZahlen } from '../datenpflege';
 import { exportHerunterladen } from '../vereinExport';
 import { Pflichthinweis, usePflicht } from '../pflicht';
+import { AngabenFelder, WEB_PRAEFIX, WebAdresseFeld, angabenAus } from '../vereinsangaben';
+import type { Vereinsangaben } from '../vereinsangaben';
 import type {
   Benutzer,
   BenutzerRolle,
@@ -91,6 +94,7 @@ export default function Konsole() {
     kurzname: string;
     slug: string;
     test: boolean;
+    angaben: Vereinsangaben;
   } | null>(null);
   const bearbeitenPflicht = usePflicht<HTMLTableRowElement>();
 
@@ -152,7 +156,10 @@ export default function Konsole() {
     const b = bearbeiten;
     if (b.name.trim().length < 2) return bearbeitenPflicht.melden('Der Name braucht mindestens zwei Zeichen.');
     if (!/^[a-z0-9-]{2,30}$/.test(b.slug)) {
-      return bearbeitenPflicht.melden('Die Adresse besteht aus 2 bis 30 Kleinbuchstaben, Ziffern und Bindestrichen.');
+      return bearbeitenPflicht.melden('Die Web-Adresse besteht aus 2 bis 30 Kleinbuchstaben, Ziffern und Bindestrichen.');
+    }
+    if (b.angaben.kontakt_email.trim() && !b.angaben.kontakt_email.includes('@')) {
+      return bearbeitenPflicht.melden('Die Kontakt-E-Mail stimmt nicht.');
     }
     setArbeitet(true);
     const { error } = await supabase.rpc('verein_aendern', {
@@ -160,11 +167,16 @@ export default function Konsole() {
       p_name: b.name.trim(),
       p_kurzname: b.kurzname.trim(),
       p_slug: b.slug,
-      p_test: b.test
+      p_test: b.test,
+      p_strasse: b.angaben.strasse,
+      p_plz: b.angaben.plz,
+      p_ort: b.angaben.ort,
+      p_homepage: homepageLink(b.angaben.homepage),
+      p_kontakt_email: b.angaben.kontakt_email
     });
     setArbeitet(false);
     if (error) {
-      return bearbeitenPflicht.melden(error.message.includes('vereine_slug_key') ? 'Diese Adresse ist schon vergeben.' : error.message);
+      return bearbeitenPflicht.melden(error.message.includes('vereine_slug_key') ? 'Diese Web-Adresse ist schon vergeben.' : error.message);
     }
     bearbeitenPflicht.zuruecksetzen();
     setBearbeiten(null);
@@ -175,7 +187,7 @@ export default function Konsole() {
   async function vereinAnlegen() {
     if (!neuPflicht.pruefen()) return;
     if (name.trim().length < 2) return neuPflicht.melden('Der Name braucht mindestens zwei Zeichen.');
-    if (!/^[a-z0-9-]{2,30}$/.test(adresse)) return neuPflicht.melden('Die Adresse besteht aus 2 bis 30 Kleinbuchstaben, Ziffern und Bindestrichen.');
+    if (!/^[a-z0-9-]{2,30}$/.test(adresse)) return neuPflicht.melden('Die Web-Adresse besteht aus 2 bis 30 Kleinbuchstaben, Ziffern und Bindestrichen.');
     if (adminMail.trim() && !adminMail.includes('@')) return neuPflicht.melden('Die E-Mail-Adresse des Vereins-Administrators stimmt nicht.');
     setArbeitet(true);
     const { data: id, error } = await supabase.rpc('verein_anlegen', {
@@ -186,7 +198,7 @@ export default function Konsole() {
     });
     if (error || !id) {
       setArbeitet(false);
-      return neuPflicht.melden(error?.message.includes('vereine_slug_key') ? 'Diese Adresse ist schon vergeben.' : error?.message ?? 'Nicht angelegt.');
+      return neuPflicht.melden(error?.message.includes('vereine_slug_key') ? 'Diese Web-Adresse ist schon vergeben.' : error?.message ?? 'Nicht angelegt.');
     }
     let text = `Verein „${name.trim()}“ angelegt.`;
     if (adminMail.trim()) {
@@ -329,7 +341,7 @@ export default function Konsole() {
           <thead>
             <tr>
               <th>Verein</th>
-              <th>Adresse</th>
+              <th>Web-Adresse</th>
               <th>Vereins-Administrator</th>
               <th>Status</th>
               <th></th>
@@ -346,7 +358,10 @@ export default function Konsole() {
                     {v.name}
                     {v.ist_test && <span className="marke">Test</span>}
                   </td>
-                  <td>{v.slug}</td>
+                  <td>
+                    <small className="hinweis">{WEB_PRAEFIX}</small>
+                    {v.slug}
+                  </td>
                   <td>
                     {admins.join(', ') || '–'}
                     {offen.length > 0 && <small className="hinweis"> · eingeladen: {offen.join(', ')}</small>}
@@ -451,10 +466,17 @@ export default function Konsole() {
                     <div className="knopfpaar rechts">
                       <button
                         type="button"
-                        title="Name, Kurzname, Adresse und Test-Kennzeichen ändern"
+                        title="Name, Kurzname, Web-Adresse, Test-Kennzeichen, Spiellokal und Kontakt ändern"
                         onClick={() => {
                           bearbeitenPflicht.zuruecksetzen();
-                          setBearbeiten({ id: v.id, name: v.name, kurzname: v.kurzname, slug: v.slug, test: v.ist_test });
+                          setBearbeiten({
+                            id: v.id,
+                            name: v.name,
+                            kurzname: v.kurzname,
+                            slug: v.slug,
+                            test: v.ist_test,
+                            angaben: angabenAus(v)
+                          });
                         }}
                       >
                         Bearbeiten
@@ -501,16 +523,20 @@ export default function Konsole() {
                               onChange={(e) => setBearbeiten({ ...bearbeiten, kurzname: e.target.value })}
                             />
                           </label>
-                          <label className="feld">
-                            <span>Adresse</span>
-                            <input
-                              required
-                              value={bearbeiten.slug}
-                              onChange={(e) => setBearbeiten({ ...bearbeiten, slug: e.target.value.toLowerCase() })}
-                            />
-                            {bearbeiten.slug !== v.slug && <small className="warnung">Ändern macht alte Links ungültig.</small>}
-                          </label>
+                          <WebAdresseFeld
+                            wert={bearbeiten.slug}
+                            aendern={(slug) => setBearbeiten({ ...bearbeiten, slug })}
+                            hinweis={
+                              bearbeiten.slug !== v.slug
+                                ? 'Ändern macht alte Links ungültig.'
+                                : 'Nur Kleinbuchstaben, Ziffern und Bindestrich.'
+                            }
+                          />
                         </div>
+                        <AngabenFelder
+                          werte={bearbeiten.angaben}
+                          aendern={(angaben) => setBearbeiten({ ...bearbeiten, angaben })}
+                        />
                         <label className="ankreuz">
                           <input
                             type="checkbox"
@@ -717,18 +743,14 @@ export default function Konsole() {
             <span>Kurzname</span>
             <input value={kurzname} placeholder="leer = wie der Name" onChange={(e) => setKurzname(e.target.value)} />
           </label>
-          <label className="feld">
-            <span>Adresse (für spätere Vereinsseiten)</span>
-            <input
-              required
-              value={adresse}
-              placeholder="wird aus dem Namen erzeugt"
-              onChange={(e) => {
-                setAdresse(e.target.value.toLowerCase());
-                setAdresseVonHand(true);
-              }}
-            />
-          </label>
+          <WebAdresseFeld
+            wert={adresse}
+            aendern={(neu) => {
+              setAdresse(neu);
+              setAdresseVonHand(true);
+            }}
+            hinweis="Wird aus dem Namen erzeugt. Nur Kleinbuchstaben, Ziffern und Bindestrich."
+          />
           <label className="feld">
             <span>E-Mail des Vereins-Administrators</span>
             <input type="email" value={adminMail} placeholder="optional, z. B. name@verein.de" onChange={(e) => setAdminMail(e.target.value)} />
