@@ -582,7 +582,7 @@ export default function LigaAnsicht({
           </div>
         </div>
         <div className="kennzahlen">
-          <div>
+          <div title="Gewonnene Partien je Mannschaft, Heim zuerst">
             <span>Partiepunkte</span>
             <strong>
               {punkte.partiepunkte[0]} : {punkte.partiepunkte[1]}
@@ -591,24 +591,30 @@ export default function LigaAnsicht({
               {heimMannschaft} gegen {gastMannschaft}
             </small>
           </div>
-          <div>
+          <div title="Wertung der Begegnung für die Ligatabelle, Heim zuerst: Sieg 3 : 0, Unentschieden 1 : 1, Niederlage 0 : 3. Entscheidend sind die Partiepunkte.">
             <span>Matchpunkte</span>
             <strong>{punkte.entschieden ? `${punkte.matchpunkte[0]} : ${punkte.matchpunkte[1]}` : '–'}</strong>
             <small>
               {punkte.entschieden
-                ? 'endgültig'
+                ? `endgültig · ${
+                    punkte.matchpunkte[0] === punkte.matchpunkte[1]
+                      ? 'Unentschieden'
+                      : `Sieg ${punkte.matchpunkte[0] > punkte.matchpunkte[1] ? heimMannschaft : gastMannschaft}`
+                  }`
                 : punkte.partiepunkte[0] + punkte.partiepunkte[1] === 0
                   ? `noch keine Partie entschieden, ${punkte.offen} offen`
                   : `Zwischenstand ${punkte.matchpunkte[0]} : ${punkte.matchpunkte[1]}, noch ${punkte.offen} Partien offen`}
             </small>
+            <small className="hinweis">Sieg 3 : 0 · Unentschieden 1 : 1 · Niederlage 0 : 3</small>
           </div>
         </div>
-        {fehlerAufstellung.length > 0 && (
+        {/* Hinweise zur Aufstellung nur, solange die Begegnung offen ist */}
+        {turnier.status !== 'beendet' && fehlerAufstellung.length > 0 && (
           <div className="pausehinweis">
             <strong>Aufstellung prüfen:</strong> {fehlerAufstellung.join(' ')}
           </div>
         )}
-        {hinweiseKader.length > 0 && (
+        {turnier.status !== 'beendet' && hinweiseKader.length > 0 && (
           <div className="pausehinweis">
             <strong>Kader:</strong> {hinweiseKader.join(' ')}
           </div>
