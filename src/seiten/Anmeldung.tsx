@@ -3,11 +3,25 @@ import type { FormEvent } from 'react';
 import { supabase } from '../supabase';
 import { ANWENDUNGSADRESSE } from '../adresse';
 
-// Anmeldung per E-Mail. Die Mail enthaelt einen Link und einen Zahlencode
+// Anmeldung per E-Mail oder wahlweise mit Passwort (festgelegt unter "Mein
+// Konto"). Die Mail enthaelt einen Link und einen Zahlencode
 // (Laenge in Supabase einstellbar, 6 bis 10 Ziffern). Der Code ist der sichere Weg, wenn ein Mailprogramm Links vorab
 // aufruft oder jemand zweimal klickt: ein Link gilt nur ein einziges Mal.
 
+// Zuletzt gewaehlte Art der Anmeldung merkt sich der Browser
+const ART_SCHLUESSEL = 'cuedesk.anmeldeart';
+function gemerkteArt(): 'link' | 'passwort' {
+  try {
+    return localStorage.getItem(ART_SCHLUESSEL) === 'passwort' ? 'passwort' : 'link';
+  } catch {
+    return 'link';
+  }
+}
+
 export default function Anmeldung() {
+  const [art, setArtRoh] = useState<'link' | 'passwort'>(gemerkteArt);
+  const [passwort, setPasswort] = useState('');
+  const [meldetAn, setMeldetAn] = useState(false);
   const [email, setEmail] = useState('');
   const [zustand, setZustand] = useState<'ruhe' | 'sendet' | 'gesendet' | 'prueft'>('ruhe');
   const [code, setCode] = useState('');
@@ -25,6 +39,35 @@ export default function Anmeldung() {
     );
     window.history.replaceState(null, '', window.location.pathname);
   }, []);
+
+  function setArt(neu: 'link' | 'passwort') {
+    setArtRoh(neu);
+    setFehler(null);
+    try {
+      localStorage.setItem(ART_SCHLUESSEL, neu);
+    } catch {
+      // ohne Speicher gilt beim naechsten Mal wieder der Anmeldelink
+    }
+  }
+
+  async function mitPasswort(ereignis: FormEvent) {
+    ereignis.preventDefault();
+    const adresse = email.trim().toLowerCase();
+    if (!adresse.includes('@')) return setFehler('Bitte eine gültige E-Mail-Adresse eingeben.');
+    if (!passwort) return setFehler('Bitte das Passwort eingeben.');
+    setFehler(null);
+    setMeldetAn(true);
+    const { error } = await supabase.auth.signInWithPassword({ email: adresse, password: passwort });
+    setMeldetAn(false);
+    if (error) {
+      setFehler(
+        error.message.toLowerCase().includes('invalid login credentials')
+          ? 'E-Mail oder Passwort stimmt nicht. Noch kein Passwort oder vergessen? Melde dich mit dem Anmeldelink an und lege es unter „Mein Konto“ fest.'
+          : error.message
+      );
+    }
+    // Bei Erfolg schaltet die Anwendung von selbst auf die Vereinsansicht um.
+  }
 
   async function linkAnfordern(ereignis: FormEvent) {
     ereignis.preventDefault();
@@ -113,6 +156,43 @@ export default function Anmeldung() {
               Andere Adresse
             </button>
           </form>
+        ) : art === 'passwort' ? (
+          <form onSubmit={mitPasswort}>
+            <label htmlFor="email">E-Mail-Adresse</label>
+            <input
+              id="email"
+              type="email"
+              autoComplete="email"
+              value={email}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                setFehler(null);
+              }}
+              placeholder="z. B. name@beispiel.de"
+            />
+            <label htmlFor="passwort">Passwort</label>
+            <input
+              id="passwort"
+              type="password"
+              autoComplete="current-password"
+              value={passwort}
+              onChange={(e) => {
+                setPasswort(e.target.value);
+                setFehler(null);
+              }}
+            />
+            {fehler && <p className="fehler">{fehler}</p>}
+            <button type="submit" title="Mit E-Mail-Adresse und Passwort anmelden" disabled={meldetAn}>
+              {meldetAn ? 'Wird geprüft' : 'Anmelden'}
+            </button>
+            <button type="button" title="Stattdessen einen Anmeldelink per E-Mail bekommen" onClick={() => setArt('link')}>
+              Mit Anmeldelink anmelden
+            </button>
+            <p className="hinweis">
+              Passwort vergessen oder noch keins? Mit dem Anmeldelink kommst du immer hinein und legst es unter „Mein Konto“
+              fest.
+            </p>
+          </form>
         ) : (
           <form onSubmit={linkAnfordern}>
             <label htmlFor="email">E-Mail-Adresse</label>
@@ -131,8 +211,12 @@ export default function Anmeldung() {
             <button type="submit" title="Schickt einen Anmeldelink an diese Adresse" disabled={zustand === 'sendet'}>
               {zustand === 'sendet' ? 'Wird gesendet' : 'Anmeldelink schicken'}
             </button>
+            <button type="button" title="Mit einem Passwort anmelden, das du unter „Mein Konto“ festgelegt hast" onClick={() => setArt('passwort')}>
+              Mit Passwort anmelden
+            </button>
             <p className="hinweis">
-              Es gibt kein Passwort. Du bekommst einen Link und einen Zahlencode per E-Mail.
+              Du bekommst einen Link und einen Zahlencode per E-Mail. Wer möchte, legt sich zusätzlich unter „Mein Konto“ ein
+              Passwort fest.
             </p>
           </form>
         )}

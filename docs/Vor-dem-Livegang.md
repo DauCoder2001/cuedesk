@@ -57,6 +57,8 @@ Entwürfe kann Claude schreiben. Sie ersetzen keine Rechtsberatung und müssen v
 | Domain www.cuedesk.de auf die Seite | offen | |
 | Eigener E-Mail-Absender für Anmeldelinks | teilweise | IONOS-Postfach der Domain läuft schon in der Test-Datenbank. |
 | Zwei-Faktor-Anmeldung für Super-Admins | offen | |
+| Anmeldung per SMS-Code | zurückgestellt | Verworfen: SMS kosten über einen Anbieter etwa 7–10 Cent je Nachricht. Stattdessen wahlweise ein Passwort (Mein Konto, bestätigt per Mail-Code). |
+| Passwort-Mindestlänge im Produktions-Projekt | offen | Im Supabase-Dashboard unter Authentication → Providers → Email auf 10 setzen, wie im Test-Projekt. „Allow new users to sign up“ bleibt an (Tablets). |
 | Überwachung per E-Mail (Sicherung, Datenbankgröße) | offen | Die Konsole warnt schon; eine Mail fehlt noch. |
 | Test-Verein auf cuedesk.de | offen | Mit „Demo zurücksetzen“. |
 | Einladung eines Vereins-Administrators mit echter Mail prüfen | offen | Am besten mit dem Test-Verein auf cuedesk.de. |

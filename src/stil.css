@@ -91,6 +91,10 @@ ul.schlicht { list-style: none; padding: 0; margin: 0; display: flex; flex-direc
   font-size: 13px; color: var(--text-leise);
 }
 .konto { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 10px; font-size: 13px; color: var(--text-leise); }
+/* Eigener Name in der Kopfzeile fuehrt zu "Mein Konto" */
+.konto .knopfname { border: none; background: none; padding: 3px 6px; color: var(--text-leise); font-size: 13px; }
+.konto .knopfname:hover:not(:disabled) { background: var(--flaeche-2); color: var(--text); }
+.konto .knopfname.aktiv { background: var(--akzent-hell); color: var(--akzent); }
 .konto .rolle { background: var(--akzent-hell); color: var(--akzent); padding: 3px 8px; border-radius: var(--radius); }
 
 .zweispaltig {

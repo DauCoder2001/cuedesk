@@ -17,6 +17,7 @@ import Turniere from './seiten/Turniere';
 import Mannschaften from './seiten/Mannschaften';
 import System from './seiten/System';
 import Konsole from './seiten/Konsole';
+import Konto from './seiten/Konto';
 import { vereinsKuerzel } from './vereinseinstellungen';
 import { useWechsel } from './ungespeichert';
 
@@ -34,7 +35,8 @@ type Bereich =
   | 'tische'
   | 'altdaten'
   | 'system'
-  | 'konsole';
+  | 'konsole'
+  | 'konto'; // "Mein Konto", ueber den eigenen Namen in der Kopfzeile
 
 // Tablets und TV rufen die Adresse mit ?geraet auf und bekommen die
 // Geraeteansicht statt der Anmeldung.
@@ -48,7 +50,8 @@ export default function App() {
   // Ohne nutzbaren Verein gibt es nur die Konsole (Super-Admin). Ist der
   // gewaehlte Verein gesperrt, steht zuerst der Hinweis da.
   const nurKonsole = !verein;
-  const angezeigt: Bereich = nurKonsole && istSuperAdmin && !gesperrt ? 'konsole' : bereich;
+  const angezeigt: Bereich =
+    bereich === 'konto' ? 'konto' : nurKonsole && istSuperAdmin && !gesperrt ? 'konsole' : bereich;
   // Laeuft gerade ein Turnier, faellt der Live-Reiter gruen auf.
   const [turnierLaeuft, setTurnierLaeuft] = useState(false);
 
@@ -249,9 +252,19 @@ export default function App() {
               {hoechsteRolle(rollen)}
             </span>
           )}
-          <span className="name" title={benutzer?.email ?? undefined}>
+          <button
+            type="button"
+            className={angezeigt === 'konto' ? 'name knopfname aktiv' : 'name knopfname'}
+            title={`Mein Konto: ${benutzer?.email ?? ''} – Angaben und wahlweise ein Passwort`}
+            onClick={() => {
+              if (angezeigt === 'konto') return;
+              void (async () => {
+                if (await wechselErlaubt()) setBereich('konto');
+              })();
+            }}
+          >
             {benutzer?.anzeigename ?? benutzer?.email}
-          </span>
+          </button>
           <button
             type="button"
             title="Von CueDesk abmelden"
@@ -280,6 +293,7 @@ export default function App() {
         ) : (
           <>
         {angezeigt === 'konsole' && <Konsole />}
+        {angezeigt === 'konto' && <Konto />}
         {angezeigt === 'live' && <Live />}
         {angezeigt === 'turniere' && <Turniere />}
         {angezeigt === 'mannschaften' && <Mannschaften />}
