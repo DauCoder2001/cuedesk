@@ -190,7 +190,7 @@ export default function App() {
           {vereine.length > 1 ? (
             <select
               className="vereinswahl"
-              title="Zwischen deinen Vereinen wechseln"
+              title={`Zwischen deinen ${vereine.length} Vereinen wechseln`}
               value={verein?.id ?? gesperrt?.id ?? ''}
               onChange={(e) => {
                 const ziel = e.target.value;

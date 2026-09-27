@@ -428,6 +428,7 @@ export type Database = {
       aufraeumen_vorschau: { Args: Record<string, never>; Returns: Record<string, number> };
       aufraeumen: { Args: { p_arten: string[] }; Returns: Record<string, number> };
       demo_zuruecksetzen: { Args: { p_verein: string }; Returns: undefined };
+      vereinsadmin_entziehen: { Args: { p_verein: string; p_benutzer: string }; Returns: undefined };
       verein_aendern: {
         Args: {
           p_verein: string;

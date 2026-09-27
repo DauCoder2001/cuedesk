@@ -96,6 +96,35 @@ export function SitzungsRahmen({ children }: { children: ReactNode }) {
     };
   }, [sitzung, gewaehlt]);
 
+  // Kehrt man zum Fenster zurueck, kommen neue Rollen und Vereine (z. B. nach
+  // einer Einladung) ohne Neuladen an. Nur Liste und Rollen werden ersetzt,
+  // der gewaehlte Verein bleibt dasselbe Objekt - offene Formulare behalten
+  // so ihre Eingaben.
+  const gewaehlteId = verein?.id ?? gesperrt?.id ?? null;
+  useEffect(() => {
+    if (!sitzung) return;
+    let laeuft = false;
+    const pruefen = async () => {
+      if (document.visibilityState !== 'visible' || laeuft) return;
+      laeuft = true;
+      const { data } = await supabase.rpc('meine_vereine');
+      laeuft = false;
+      if (!data) return;
+      const eigene = data as MeinVerein[];
+      setVereine((alt) => (JSON.stringify(alt) === JSON.stringify(eigene) ? alt : eigene));
+      const aktuell = eigene.find((x) => x.id === gewaehlteId);
+      if (aktuell?.aktiv) {
+        setRollen((alt) => (JSON.stringify(alt) === JSON.stringify(aktuell.rollen) ? alt : aktuell.rollen));
+      }
+    };
+    window.addEventListener('focus', pruefen);
+    document.addEventListener('visibilitychange', pruefen);
+    return () => {
+      window.removeEventListener('focus', pruefen);
+      document.removeEventListener('visibilitychange', pruefen);
+    };
+  }, [sitzung, gewaehlteId]);
+
   const wert = useMemo<SitzungsStand>(
     () => ({
       laedt,

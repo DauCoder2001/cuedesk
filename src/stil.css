@@ -78,7 +78,9 @@ button:disabled { cursor: default; color: var(--text-leise); }
 }
 .knopfpaar.rechts { justify-content: flex-end; }
 /* Auswahl in der Kopfzeile, wenn ein Konto zu mehreren Vereinen gehoert */
-.vereinswahl { font-weight: 600; font-size: 15px; border: none; background: transparent; padding: 2px 4px; }
+.vereinswahl { font-weight: 600; font-size: 15px; border: 1px solid var(--rand); background: var(--flaeche); padding: 3px 6px; border-radius: var(--radius); cursor: pointer; }
+.vereinswahl:hover { background: var(--flaeche-2); }
+.adminname button.klein { margin-left: 4px; padding: 0 5px; line-height: 1.3; }
 /* Konsole: Loeschung vorgemerkt */
 .marke.warnmarke { background: #fdf0d5; color: #7a4b00; margin-left: 6px; }
 /* Konsole: Kachel mit Warnung */

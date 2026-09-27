@@ -48,6 +48,7 @@ const AKTION_TEXT: Record<string, string> = {
   loeschung_abgebrochen: 'Löschung abgebrochen',
   verein_geloescht: 'Verein gelöscht',
   verein_geaendert: 'Verein geändert',
+  vereinsadmin_entfernt: 'Vereins-Administrator entfernt',
   demo_zurueckgesetzt: 'Demo zurückgesetzt',
   aufgeraeumt: 'Aufgeräumt'
 };
@@ -324,6 +325,22 @@ export default function Konsole() {
     await laden();
   }
 
+  async function adminEntfernen(v: Verein, benutzerId: string) {
+    const adresse = email(benutzerId);
+    if (
+      !(await fragen(
+        `${adresse} die Rolle Vereins-Administrator in „${v.name}“ entziehen?\nAndere Rollen im Verein bleiben.`,
+        'Entziehen'
+      ))
+    ) {
+      return;
+    }
+    const { error } = await supabase.rpc('vereinsadmin_entziehen', { p_verein: v.id, p_benutzer: benutzerId });
+    if (error) return zeigeFehler(error.message);
+    erfolg(`${adresse} ist in „${v.name}“ kein Vereins-Administrator mehr.`);
+    await laden();
+  }
+
   async function einladenAbschicken() {
     if (!einladen) return;
     if (!einladen.email.includes('@')) return zeigeFehler('Bitte eine E-Mail-Adresse eintragen.');
@@ -378,7 +395,7 @@ export default function Konsole() {
           </thead>
           <tbody>
             {vereine.map((v) => {
-              const admins = rollen.filter((r) => r.verein_id === v.id).map((r) => email(r.benutzer_id));
+              const admins = rollen.filter((r) => r.verein_id === v.id).map((r) => r.benutzer_id);
               const offen = einladungen.filter((e) => e.verein_id === v.id && e.rollen.includes('vereinsadmin')).map((e) => e.email);
               return (
                 <Fragment key={v.id}>
@@ -392,7 +409,24 @@ export default function Konsole() {
                     {v.slug}
                   </td>
                   <td>
-                    {admins.join(', ') || '–'}
+                    {admins.length === 0 && '–'}
+                    {admins.map((id, i) => (
+                      <span key={id} className="adminname">
+                        {i > 0 && ', '}
+                        {email(id)}
+                        {admins.length > 1 && (
+                          <button
+                            type="button"
+                            className="klein"
+                            title="Die Rolle Vereins-Administrator entziehen. Einer muss bleiben."
+                            aria-label={`${email(id)} als Vereins-Administrator entfernen`}
+                            onClick={() => void adminEntfernen(v, id)}
+                          >
+                            ✕
+                          </button>
+                        )}
+                      </span>
+                    ))}
                     {offen.length > 0 && <small className="hinweis"> · eingeladen: {offen.join(', ')}</small>}
                     {einladen?.id === v.id && (
                       <div className="zeile">
@@ -844,6 +878,9 @@ export default function Konsole() {
                   <td>{zeit(p.zeit)}</td>
                   <td>
                     {AKTION_TEXT[p.aktion] ?? p.aktion}
+                    {p.aktion === 'vereinsadmin_entfernt' && typeof p.details.email === 'string' && (
+                      <small className="hinweis"> · {p.details.email}</small>
+                    )}
                     {p.aktion === 'verein_geaendert' && <small className="hinweis"> · {aenderungText(p.details) || 'keine Änderung'}</small>}
                   </td>
                   <td>
