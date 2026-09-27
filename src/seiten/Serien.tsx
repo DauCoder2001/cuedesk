@@ -225,7 +225,14 @@ export default function Serien() {
     <div className="einspaltig">
       <section className="block">
         <div className="bearbeitenkopf">
-          <h2>Serienwertung</h2>
+          <div className="knopfpaar" style={{ alignItems: 'center' }}>
+            <h2>Serienwertung</h2>
+            {darfVerwalten && !(formular && !formular.id) && (
+              <button type="button" title="Eine neue Serienwertung anlegen" onClick={neueSerie}>
+                Neue Serie
+              </button>
+            )}
+          </div>
           <div className="knopfpaar">
             {serie && turniere.length > 0 && (
               <button type="button" title="Die Serienwertung als PDF zum Drucken oder Aushängen" onClick={pdf}>
@@ -235,11 +242,6 @@ export default function Serien() {
             {darfVerwalten && serie && !formular && (
               <button type="button" title="Name, Saison, Disziplin und Wertung dieser Serie ändern" onClick={() => serieAendern(serie)}>
                 Serie ändern
-              </button>
-            )}
-            {darfVerwalten && !formular && (
-              <button type="button" title="Eine neue Serienwertung anlegen" onClick={neueSerie}>
-                Neue Serie
               </button>
             )}
           </div>
