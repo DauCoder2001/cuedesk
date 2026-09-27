@@ -38,6 +38,7 @@ import {
 } from '../ko';
 import type { KoRunde, Leistung } from '../ko';
 import KoBaum from './KoBaum';
+import { vereinsEinstellungen } from '../vereinseinstellungen';
 import { DISZIPLIN_TEXT, MODUS_TEXT, STATUS_TEXT } from './Turniere';
 import type { TurnierEinstellungen } from './Turniere';
 import type { Partie, Person, RatingQuelle, Turnier, TurnierTeilnehmer } from '../datenbank.types';
@@ -180,6 +181,7 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
   );
 
   const einstellungen = (turnier?.einstellungen ?? {}) as TurnierEinstellungen;
+  const turnierarten = vereinsEinstellungen(verein?.einstellungen).turnierarten;
   const raceTo = einstellungen.raceTo ?? 5;
   const va = einstellungen.vorgabe ?? { aktiv: false, staerke: 75, obergrenze: 0 };
 
@@ -1494,6 +1496,24 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
               ← Turniere
             </button>
             <h2>{turnier.name}</h2>
+            {darfLeiten && (turnierarten.length > 0 || einstellungen.art) ? (
+              <label className="artwahl" title="Die Turnierart ändern. Gespielt und gewertet wird wie bisher.">
+                <span className="hinweis">Turnierart</span>
+                <select
+                  value={einstellungen.art ?? ''}
+                  onChange={(e) => void einstellungenSetzen({ art: e.target.value || undefined })}
+                >
+                  <option value="">keine</option>
+                  {[...new Set([...turnierarten, ...(einstellungen.art ? [einstellungen.art] : [])])].map((a) => (
+                    <option key={a} value={a}>
+                      {a}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : (
+              einstellungen.art && <p className="hinweis">Turnierart: {einstellungen.art}</p>
+            )}
             <p className="hinweis">
               {new Date(`${turnier.datum}T12:00:00`).toLocaleDateString('de-DE', {
                 weekday: 'short',

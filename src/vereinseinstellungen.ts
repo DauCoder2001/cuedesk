@@ -16,7 +16,11 @@ export type VereinsEinstellungen = {
     staerke: number | null; // null: Wert aus den Rating-Einstellungen
     obergrenze: number; // 0 = ohne Grenze
     ratingWerten: boolean;
+    art: string | null; // vorgewaehlte Turnierart, null: keine
   };
+  // Turnierarten des Vereins, z. B. "Liga-Spiel", "Vereinsmeisterschaft".
+  // Nur eine Bezeichnung - Spiel, Rating und Scoreboard bleiben unberuehrt.
+  turnierarten: string[];
   liga: {
     liga: LigaKennung;
     mannschaftRang: number | null; // Nummer im Mannschaftspass, null: erste der Saison
@@ -32,8 +36,10 @@ export const STANDARD_EINSTELLUNGEN: VereinsEinstellungen = {
     vorgabe: true,
     staerke: null,
     obergrenze: 0,
-    ratingWerten: true
+    ratingWerten: true,
+    art: null
   },
+  turnierarten: [],
   liga: { liga: 'kreisliga', mannschaftRang: null },
   saisonbeginn: 7
 };
@@ -49,12 +55,38 @@ function auswahl<T>(wert: unknown, erlaubt: T[], standard: T): T {
   return erlaubt.includes(wert as T) ? (wert as T) : standard;
 }
 
+export const TURNIERART_LAENGE = 40;
+const TURNIERARTEN_HOECHSTENS = 30;
+
+// Liste der Turnierarten: nur Text, getrimmt, ohne Leere und Doppelte
+function artenLesen(roh: unknown): string[] {
+  if (!Array.isArray(roh)) return [];
+  const liste: string[] = [];
+  for (const eintrag of roh) {
+    if (typeof eintrag !== 'string') continue;
+    const name = eintrag.trim().slice(0, TURNIERART_LAENGE);
+    if (name && !liste.some((x) => x.toLowerCase() === name.toLowerCase())) liste.push(name);
+  }
+  return liste.slice(0, TURNIERARTEN_HOECHSTENS);
+}
+
+// Neue Turnierart pruefen: Fehlertext oder null
+export function turnierartFehler(liste: string[], name: string): string | null {
+  const n = name.trim();
+  if (!n) return 'Bitte einen Namen für die Turnierart eingeben.';
+  if (n.length > TURNIERART_LAENGE) return `Höchstens ${TURNIERART_LAENGE} Zeichen.`;
+  if (liste.some((x) => x.toLowerCase() === n.toLowerCase())) return `„${n}“ gibt es schon.`;
+  if (liste.length >= TURNIERARTEN_HOECHSTENS) return `Höchstens ${TURNIERARTEN_HOECHSTENS} Turnierarten.`;
+  return null;
+}
+
 // Liest die gespeicherten Einstellungen; alles Fehlende kommt vom Standard
 export function vereinsEinstellungen(roh: unknown): VereinsEinstellungen {
   const e = (roh && typeof roh === 'object' ? roh : {}) as Record<string, Record<string, unknown> | unknown>;
   const t = (e.turnier && typeof e.turnier === 'object' ? e.turnier : {}) as Record<string, unknown>;
   const l = (e.liga && typeof e.liga === 'object' ? e.liga : {}) as Record<string, unknown>;
   const s = STANDARD_EINSTELLUNGEN;
+  const turnierarten = artenLesen(e.turnierarten);
   return {
     turnier: {
       raceTo: ganzeZahl(t.raceTo, 1, 25) ?? s.turnier.raceTo,
@@ -63,8 +95,10 @@ export function vereinsEinstellungen(roh: unknown): VereinsEinstellungen {
       vorgabe: typeof t.vorgabe === 'boolean' ? t.vorgabe : s.turnier.vorgabe,
       staerke: ganzeZahl(t.staerke, 0, 100),
       obergrenze: ganzeZahl(t.obergrenze, 0, 24) ?? s.turnier.obergrenze,
-      ratingWerten: typeof t.ratingWerten === 'boolean' ? t.ratingWerten : s.turnier.ratingWerten
+      ratingWerten: typeof t.ratingWerten === 'boolean' ? t.ratingWerten : s.turnier.ratingWerten,
+      art: typeof t.art === 'string' && turnierarten.includes(t.art) ? t.art : null
     },
+    turnierarten,
     liga: {
       liga: auswahl(l.liga, LIGEN, s.liga.liga),
       mannschaftRang: ganzeZahl(l.mannschaftRang, 1, 20)

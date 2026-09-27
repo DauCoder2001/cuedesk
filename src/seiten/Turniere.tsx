@@ -77,6 +77,7 @@ export type TurnierEinstellungen = {
   vorgabe?: { aktiv: boolean; staerke: number; obergrenze: number };
   handReihenfolge?: Record<string, number[]>;
   pausiert?: boolean; // Tablets starten keine neuen Spiele
+  art?: string; // Turnierart (Bezeichnung aus der Liste des Vereins, beim Anlegen festgehalten)
   tvAnsicht?: 'auslosung' | 'live' | 'results'; // was die Fernseher zeigen
   beginn?: string; // erstes Ergebnis (Zeitprognose)
 };
@@ -116,6 +117,9 @@ export default function Turniere() {
   const [staerke, setStaerke] = useState('75');
   const [obergrenze, setObergrenze] = useState('0');
   const [ratingWerten, setRatingWerten] = useState(true);
+  const [art, setArt] = useState('');
+  // Filter der Turnierliste nach Turnierart ('' = alle)
+  const [artFilter, setArtFilter] = useState('');
   // Ausgleich in Prozent aus den Rating-Einstellungen, falls der Verein keinen eigenen vorgibt
   const [ratingStaerke, setRatingStaerke] = useState(75);
   const vorgaben = vereinsEinstellungen(verein?.einstellungen);
@@ -124,7 +128,7 @@ export default function Turniere() {
   // Aenderungen nachfragt
   const formularStand = formular
     ? { name, datum, disziplin, modus, raceTo, racePhase2, raceKo, liga, spieltag, heim, gegner, eigeneMannschaft,
-        mannschaftId, ziele, serieId, vorgabeAn, staerke, obergrenze, ratingWerten }
+        mannschaftId, ziele, serieId, vorgabeAn, staerke, obergrenze, ratingWerten, art }
     : null;
   const [ursprung, setUrsprung] = useState<unknown>(null);
   useEffect(() => {
@@ -243,7 +247,7 @@ export default function Turniere() {
         serie_id: serieId || null,
         status: 'geplant',
         rating_werten: ratingWerten,
-        einstellungen
+        einstellungen: art ? { ...einstellungen, art } : einstellungen
       })
       .select('id')
       .single();
@@ -256,6 +260,13 @@ export default function Turniere() {
   }
 
   if (!verein) return <p className="hinweis">Kein Verein zugeordnet.</p>;
+
+  // Turnierarten fuer Spalte und Filter: die Liste des Vereins und alles, was
+  // an Turnieren steht (auch Arten, die inzwischen aus der Liste genommen sind)
+  const artVon = (t: Turnier) => ((t.einstellungen ?? {}) as TurnierEinstellungen).art ?? null;
+  const artenInListe = [
+    ...new Set([...vorgaben.turnierarten, ...turniere.map(artVon).filter((a): a is string => !!a)])
+  ];
 
   const offenesTurnier = turniere.find((t) => t.id === offen);
   if (offen && offenesTurnier?.modus === 'liga') {
@@ -308,6 +319,7 @@ export default function Turniere() {
                 setStaerke(String(t.staerke ?? ratingStaerke));
                 setObergrenze(String(t.obergrenze));
                 setRatingWerten(t.ratingWerten);
+                setArt(t.art ?? '');
                 setLiga(vorgaben.liga.liga);
                 // Standard-Mannschaft nach Nummer im Mannschaftspass, sonst die erste der Saison
                 const rang = vorgaben.liga.mannschaftRang;
@@ -335,6 +347,19 @@ export default function Turniere() {
                 <span>Datum</span>
                 <input type="date" required value={datum} onChange={(e) => setDatum(e.target.value)} />
               </label>
+              {vorgaben.turnierarten.length > 0 && (
+                <label className="feld">
+                  <span>Turnierart</span>
+                  <select value={art} onChange={(e) => setArt(e.target.value)}>
+                    <option value="">keine</option>
+                    {vorgaben.turnierarten.map((a) => (
+                      <option key={a} value={a}>
+                        {a}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
               {modus !== 'liga' && (
               <label className="feld">
                 <span>Disziplin</span>
@@ -514,18 +539,34 @@ export default function Turniere() {
 
         {fehler && <p className="fehler">{fehler}</p>}
 
+        {artenInListe.length > 0 && (
+          <div className="filterzeile">
+            {['', ...artenInListe].map((a) => (
+              <button
+                key={a || 'alle'}
+                type="button"
+                className={artFilter === a ? 'chip aktiv' : 'chip'}
+                title={a ? `Nur Turniere der Art „${a}“ zeigen` : 'Alle Turniere zeigen'}
+                onClick={() => setArtFilter(a)}
+              >
+                {a || 'Alle'}
+              </button>
+            ))}
+          </div>
+        )}
         <table className="tabelle">
           <thead>
             <tr>
               <th style={{ width: '100px' }}>Datum</th>
               <th>Name</th>
+              {artenInListe.length > 0 && <th>Art</th>}
               <th>Disziplin</th>
               <th>Modus</th>
               <th>Stand</th>
             </tr>
           </thead>
           <tbody>
-            {turniere.map((t) => (
+            {turniere.filter((t) => !artFilter || artVon(t) === artFilter).map((t) => (
               <tr
                 key={t.id}
                 className="klickbar"
@@ -540,6 +581,7 @@ export default function Turniere() {
                   {t.name}
                   {t.quelle === 'import' && <span className="marke">aus Turnier light</span>}
                 </td>
+                {artenInListe.length > 0 && <td>{artVon(t) ?? '–'}</td>}
                 <td>{DISZIPLIN_TEXT[t.disziplin]}</td>
                 <td>{MODUS_TEXT[t.modus]}</td>
                 <td className={t.status === 'laeuft' ? 'livelaeuft' : ''}>{STATUS_TEXT[t.status]}</td>
@@ -547,7 +589,7 @@ export default function Turniere() {
             ))}
             {turniere.length === 0 && (
               <tr>
-                <td colSpan={5} className="hinweis">
+                <td colSpan={artenInListe.length > 0 ? 6 : 5} className="hinweis">
                   Noch kein Turnier.
                 </td>
               </tr>

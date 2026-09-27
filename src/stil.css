@@ -140,6 +140,9 @@ ul.schlicht { list-style: none; padding: 0; margin: 0; display: flex; flex-direc
 .felder > .feld > span:first-child { align-self: end; margin-bottom: 4px; }
 .felder > .feld > small { margin-top: 4px; }
 .formzeile { align-items: flex-end; }
+/* Turnierart im Kopf der Turnieransicht */
+.artwahl { display: flex; align-items: center; gap: 6px; margin: 4px 0; }
+.artwahl select { font-size: 13px; padding: 3px 8px; }
 /* Pflichtfelder (src/pflicht.tsx): Sternchen an der Beschriftung, nach
    einem Fehlversuch leere Felder rot, Hinweis neben dem Knopf */
 .feld:has(:is(input, select, textarea):required) > span:first-child::after { content: ' *'; color: var(--fehler); }

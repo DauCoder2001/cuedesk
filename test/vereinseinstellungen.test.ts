@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { STANDARD_EINSTELLUNGEN, vereinsEinstellungen, vereinsKuerzel } from '../src/vereinseinstellungen';
+import { STANDARD_EINSTELLUNGEN, turnierartFehler, vereinsEinstellungen, vereinsKuerzel } from '../src/vereinseinstellungen';
 import { saisonAus, saisonListe } from '../src/mannschaften';
 
 describe('Vereinseinstellungen', () => {
@@ -21,7 +21,8 @@ describe('Vereinseinstellungen', () => {
       vorgabe: false,
       staerke: 60,
       obergrenze: 3,
-      ratingWerten: false
+      ratingWerten: false,
+      art: null
     });
     expect(e.liga).toEqual({ liga: 'bezirksliga', mannschaftRang: 2 });
     expect(e.saisonbeginn).toBe(8);
@@ -34,6 +35,22 @@ describe('Vereinseinstellungen', () => {
       saisonbeginn: 13
     });
     expect(e).toEqual(STANDARD_EINSTELLUNGEN);
+  });
+
+  test('Turnierarten: bereinigt, Vorgabe nur aus der Liste', () => {
+    const e = vereinsEinstellungen({
+      turnierarten: [' Liga-Spiel ', '', 'liga-spiel', 'Vereinsmeisterschaft', 7],
+      turnier: { art: 'Vereinsmeisterschaft' }
+    });
+    expect(e.turnierarten).toEqual(['Liga-Spiel', 'Vereinsmeisterschaft']);
+    expect(e.turnier.art).toBe('Vereinsmeisterschaft');
+    expect(vereinsEinstellungen({ turnierarten: ['Pokal'], turnier: { art: 'Gibt es nicht' } }).turnier.art).toBeNull();
+  });
+
+  test('neue Turnierart pruefen', () => {
+    expect(turnierartFehler(['Liga-Spiel'], ' Pokal ')).toBeNull();
+    expect(turnierartFehler(['Liga-Spiel'], 'LIGA-SPIEL')).toBe('„LIGA-SPIEL“ gibt es schon.');
+    expect(turnierartFehler([], '  ')).toBe('Bitte einen Namen für die Turnierart eingeben.');
   });
 
   test('Kuerzel aus Kurzname, sonst aus dem Namen', () => {

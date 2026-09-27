@@ -4,7 +4,7 @@ import { useSitzung } from '../sitzung';
 import { LIGEN } from '../liga';
 import type { LigaKennung } from '../liga';
 import { saisonAus } from '../mannschaften';
-import { vereinsEinstellungen, vereinsKuerzel } from '../vereinseinstellungen';
+import { turnierartFehler, vereinsEinstellungen, vereinsKuerzel } from '../vereinseinstellungen';
 import type { VereinsEinstellungen } from '../vereinseinstellungen';
 import type { Disziplin, Mannschaft, SupportFreigabe, TurnierModus } from '../datenbank.types';
 import { exportHerunterladen } from '../vereinExport';
@@ -46,6 +46,8 @@ type Formular = {
   staerke: string; // leer: Wert aus den Rating-Einstellungen
   obergrenze: string;
   ratingWerten: boolean;
+  art: string; // vorgewaehlte Turnierart, leer: keine
+  turnierarten: string[];
   liga: LigaKennung;
   mannschaftRang: string; // leer: erste der Saison
   saisonbeginn: number;
@@ -97,6 +99,8 @@ function ausEinstellungen(
     staerke: e.turnier.staerke === null ? '' : String(e.turnier.staerke),
     obergrenze: String(e.turnier.obergrenze),
     ratingWerten: e.turnier.ratingWerten,
+    art: e.turnier.art ?? '',
+    turnierarten: e.turnierarten,
     liga: e.liga.liga,
     mannschaftRang: e.liga.mannschaftRang === null ? '' : String(e.liga.mannschaftRang),
     saisonbeginn: e.saisonbeginn
@@ -119,6 +123,8 @@ export default function System() {
   // Laufende Support-Freigabe (null: keine)
   const [freigabe, setFreigabe] = useState<SupportFreigabe | null>(null);
   const [tage, setTage] = useState(3);
+  const [neueArt, setNeueArt] = useState('');
+  const [artFehler, setArtFehler] = useState<string | null>(null);
   const vereinPflicht = usePflicht();
   const schutzPflicht = usePflicht<HTMLElement>();
 
@@ -211,8 +217,10 @@ export default function System() {
         vorgabe: f.vorgabe,
         staerke,
         obergrenze: grenze,
-        ratingWerten: f.ratingWerten
+        ratingWerten: f.ratingWerten,
+        art: f.art || null
       },
+      turnierarten: f.turnierarten,
       liga: { liga: f.liga, mannschaftRang: zahl(f.mannschaftRang) },
       saisonbeginn: f.saisonbeginn
     };
@@ -381,6 +389,17 @@ export default function System() {
             <span>Höchstens Sätze Vorgabe (0 = ohne Grenze)</span>
             <input inputMode="numeric" value={f.obergrenze} onChange={(e) => setze({ obergrenze: e.target.value })} />
           </label>
+          <label className="feld">
+            <span>Turnierart</span>
+            <select value={f.art} onChange={(e) => setze({ art: e.target.value })}>
+              <option value="">keine</option>
+              {f.turnierarten.map((a) => (
+                <option key={a} value={a}>
+                  {a}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
         <label className="ankreuz">
           <input type="checkbox" checked={f.vorgabe} onChange={(e) => setze({ vorgabe: e.target.checked })} />
@@ -390,6 +409,53 @@ export default function System() {
           <input type="checkbox" checked={f.ratingWerten} onChange={(e) => setze({ ratingWerten: e.target.checked })} />
           <span>Zählt für das Vereins-Rating</span>
         </label>
+
+        <div className="feldkopf">Turnierarten</div>
+        <p className="hinweis">
+          Eine Bezeichnung für die Art der Veranstaltung, z. B. „Liga-Spiel“ oder „Vereinsmeisterschaft“. Sie steht am
+          Turnier und in der Turnierliste; gespielt und gewertet wird wie bisher. Übernommen wird mit „Speichern“.
+        </p>
+        <div className="filterzeile">
+          {f.turnierarten.map((a) => (
+            <span key={a} className="chip">
+              {a}{' '}
+              <button
+                type="button"
+                className="klein"
+                title={`„${a}“ aus der Liste nehmen. Turniere mit dieser Art behalten ihre Bezeichnung.`}
+                aria-label={`„${a}“ entfernen`}
+                onClick={() => setze({ turnierarten: f.turnierarten.filter((x) => x !== a), art: f.art === a ? '' : f.art })}
+              >
+                ✕
+              </button>
+            </span>
+          ))}
+          {f.turnierarten.length === 0 && <span className="hinweis">Noch keine Turnierart angelegt.</span>}
+        </div>
+        <div className="zeile">
+          <input
+            aria-label="Neue Turnierart"
+            placeholder="Neue Turnierart, z. B. Pokal"
+            value={neueArt}
+            onChange={(e) => {
+              setNeueArt(e.target.value);
+              setArtFehler(null);
+            }}
+          />
+          <button
+            type="button"
+            title="Die Turnierart in die Liste aufnehmen"
+            onClick={() => {
+              const fehlerText = turnierartFehler(f.turnierarten, neueArt);
+              if (fehlerText) return setArtFehler(fehlerText);
+              setze({ turnierarten: [...f.turnierarten, neueArt.trim()] });
+              setNeueArt('');
+            }}
+          >
+            Turnierart anlegen
+          </button>
+          {artFehler && <small className="pflichthinweis fehlt">{artFehler}</small>}
+        </div>
       </section>
 
       <section className="block">
