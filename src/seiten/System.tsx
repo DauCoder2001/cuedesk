@@ -282,10 +282,27 @@ export default function System() {
     return true;
   }
 
+
+  // Speichern und Verwerfen oben neben "System" und unten nach den Vorgaben
+  const speicherLeiste = (
+        <div className="knopfpaar rechts">
+          <Pflichthinweis hinweis={vereinPflicht.hinweis} />
+          <button type="button" title="Die Eingaben dieser Seite verwerfen." onClick={() => { zuruecksetzen(); vereinPflicht.zuruecksetzen(); setFehler(null); setMeldung(null); }}>
+            Verwerfen
+          </button>
+          <button type="button" title="Verein, Vorgaben und Saisonbeginn speichern." onClick={() => void speichern()} disabled={arbeitet}>
+            {arbeitet ? 'Wird gespeichert …' : 'Speichern'}
+          </button>
+        </div>
+  );
+
   return (
     <div className="einspaltig">
       <section className="block">
-        <h2>System</h2>
+        <div className="bearbeitenkopf">
+          <h2>System</h2>
+          {speicherLeiste}
+        </div>
         <p className="hinweis">Einstellungen für den ganzen Verein. Ändern darf sie nur der Vereins-Administrator.</p>
         {fehler && <p className="fehler">{fehler}</p>}
         {meldung && <p className="meldung">{meldung}</p>}
@@ -419,15 +436,7 @@ export default function System() {
         </p>
       </section>
 
-      <div className="knopfpaar rechts">
-        <Pflichthinweis hinweis={vereinPflicht.hinweis} />
-        <button type="button" title="Die Eingaben dieser Seite verwerfen." onClick={() => { zuruecksetzen(); vereinPflicht.zuruecksetzen(); setFehler(null); setMeldung(null); }}>
-          Verwerfen
-        </button>
-        <button type="button" title="Verein, Vorgaben und Saisonbeginn speichern." onClick={() => void speichern()} disabled={arbeitet}>
-          {arbeitet ? 'Wird gespeichert …' : 'Speichern'}
-        </button>
-      </div>
+      {speicherLeiste}
       </div>
 
       <section className="block" ref={schutzPflicht.bereich}>
