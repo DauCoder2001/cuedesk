@@ -685,10 +685,13 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
           }.`
       );
 
+    // Turnierart vorn in der Kopfzeile, z. B. "Liga-Spiel · 9-Ball · ..."
+    const artVorsatz = einstellungen.art ? `${einstellungen.art} · ` : '';
+
     if (!mehrgruppig) {
       const bytes = berichtPdf({
         titel: turnier.name,
-        kopf: `${DISZIPLIN_TEXT[turnier.disziplin]} · Race to ${raceTo} · ${aufstellung.length} Spieler · ${datumText}${zeit}${handicap}`,
+        kopf: `${artVorsatz}${DISZIPLIN_TEXT[turnier.disziplin]} · Race to ${raceTo} · ${aufstellung.length} Spieler · ${datumText}${zeit}${handicap}`,
         vorlaeufig: turnier.status !== 'beendet',
         zeilen: tabelle.zeilen.map((zeile, i) => berichtZeile(zeile, i + 1)),
         stichkampf: alleFertig ? stichkampfVermerke(tabelle.gleichstaende) : [],
@@ -877,7 +880,7 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
       hinweise.push(`${uhr(Date.parse(x.zeit))} Uhr: ${anzeige(x.person)} nachgetragen${x.gruppe ? ` in Gruppe ${x.gruppe}` : ''}.`)
     );
 
-    const bytes = gruppenBerichtPdf({ titel: turnier.name, kopf, vorlaeufig: turnier.status !== 'beendet', bloecke, hinweise });
+    const bytes = gruppenBerichtPdf({ titel: turnier.name, kopf: artVorsatz + kopf, vorlaeufig: turnier.status !== 'beendet', bloecke, hinweise });
     herunterladen(bytes, berichtDateiname(turnier.name, turnier.datum));
   }
 
