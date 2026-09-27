@@ -133,6 +133,13 @@ ul.schlicht { list-style: none; padding: 0; margin: 0; display: flex; flex-direc
 .felder { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
 .feld { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--text-leise); }
 .feld input, .feld select { width: 100%; font-size: 14px; color: var(--text); }
+/* Nebeneinander stehende Felder auf einer Linie: Beschriftung, Eingabe und
+   Hinweis teilen sich je Zeile eine Spur (subgrid). Eine lange, umbrechende
+   Beschriftung waechst nach oben, statt ihr Feld nach unten zu schieben. */
+.felder > .feld { display: grid; grid-row: span 3; grid-template-rows: subgrid; row-gap: 0; }
+.felder > .feld > span:first-child { align-self: end; margin-bottom: 4px; }
+.felder > .feld > small { margin-top: 4px; }
+.formzeile { align-items: flex-end; }
 /* Pflichtfelder (src/pflicht.tsx): Sternchen an der Beschriftung, nach
    einem Fehlversuch leere Felder rot, Hinweis neben dem Knopf */
 .feld:has(:is(input, select, textarea):required) > span:first-child::after { content: ' *'; color: var(--fehler); }
