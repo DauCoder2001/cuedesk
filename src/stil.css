@@ -338,6 +338,7 @@ ul.schlicht { list-style: none; padding: 0; margin: 0; display: flex; flex-direc
 tr.klickbar { cursor: pointer; }
 tr.klickbar:hover td { background: var(--flaeche-2); }
 .tabelle .marke, .bearbeitenkopf .marke { margin-left: 6px; }
+.tabelle .marke.vorne { margin-left: 0; margin-right: 6px; }
 .zurueck { border: none; background: transparent; color: var(--akzent); padding: 0 0 6px; font-size: 14px; }
 .turnierzweier { display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); gap: 20px; }
 @media (max-width: 900px) { .turnierzweier { grid-template-columns: 1fr; } }
