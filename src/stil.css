@@ -289,6 +289,9 @@ ul.schlicht { list-style: none; padding: 0; margin: 0; display: flex; flex-direc
 
 .tabelle .gestrichen { color: var(--text-leise); text-decoration: line-through; }
 .tabelle th small { display: block; font-weight: 400; font-size: 12px; }
+/* Lange Tabelle mit fester Hoehe: Kopf bleibt beim Scrollen stehen */
+.rollbereich { overflow-y: auto; }
+.rollbereich thead th { position: sticky; top: 0; background: var(--flaeche); z-index: 1; }
 
 .spielwahl { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin-top: 8px; }
 .spielknopf {

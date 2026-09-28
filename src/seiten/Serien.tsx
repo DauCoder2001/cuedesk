@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from '../supabase';
 import { useSitzung } from '../sitzung';
 import { personName } from '../namen';
@@ -11,6 +11,8 @@ import { Pflichthinweis, usePflicht } from '../pflicht';
 import { useUngespeichert, weichtAb } from '../ungespeichert';
 import type { SerienTurnier } from '../serien';
 import type { Disziplin, Person, Serie, Turnier } from '../datenbank.types';
+
+const SICHTBARE_ZEILEN = 15;
 
 // Serienwertung: Punkte aus den Platzierungen der Turniere einer Serie.
 // Gerechnet wird beim Anzeigen, gespeichert wird nichts. Sportwart und
@@ -116,6 +118,19 @@ export default function Serien() {
     }));
     return serienwertung(eingabe, { streicher: serie.streicher, bonus: serie.bonus }, (id) => namen.get(id) ?? '');
   }, [serie, turniere, teilnahmen, namen]);
+
+  // Die Wertung zeigt 15 Spieler, der Rest wird durch Scrollen sichtbar. Der
+  // Tabellenkopf bleibt dabei stehen. Die Hoehe wird gemessen, weil Zeilen je
+  // nach Schrift und Umbruch unterschiedlich hoch sein koennen.
+  const rollbereich = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const bereich = rollbereich.current;
+    if (!bereich) return;
+    const zeilen = bereich.querySelectorAll('tbody tr');
+    const letzte = zeilen[SICHTBARE_ZEILEN - 1] as HTMLElement | undefined;
+    bereich.style.maxHeight =
+      zeilen.length > SICHTBARE_ZEILEN && letzte ? `${letzte.offsetTop + letzte.offsetHeight + 1}px` : '';
+  }, [wertung, turniere]);
 
   if (!verein) return <p className="hinweis">Kein Verein zugeordnet.</p>;
 
@@ -347,49 +362,56 @@ export default function Serien() {
       </section>
 
       <section className="block">
-        <table className="tabelle">
-          <thead>
-            <tr>
-              <th style={{ width: '50px' }}>Platz</th>
-              <th>Name</th>
-              {turniere.map((turnier) => (
-                <th key={turnier.id} style={{ width: '90px' }}>
-                  {new Date(`${turnier.datum}T12:00:00`).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })}
-                  <small title={turnier.name}>{turnier.name.length > 12 ? `${turnier.name.slice(0, 12)}…` : turnier.name}</small>
-                </th>
-              ))}
-              <th style={{ width: '80px' }}>Punkte</th>
-            </tr>
-          </thead>
-          <tbody>
-            {wertung.map((spieler) => (
-              <tr key={spieler.spieler}>
-                <td>{spieler.zeigePlatz ? spieler.platz : ''}</td>
-                <td>{namen.get(spieler.spieler) ?? 'unbekannt'}</td>
-                {turniere.map((turnier) => {
-                  const ergebnis = spieler.ergebnisse[turnier.id];
-                  if (!ergebnis) return <td key={turnier.id}>—</td>;
-                  return (
-                    <td key={turnier.id} className={ergebnis.gestrichen ? 'gestrichen' : ''}>
-                      {ergebnis.punkte}
-                      <small> ({ergebnis.platz}.)</small>
-                    </td>
-                  );
-                })}
-                <td>
-                  <strong>{spieler.summe}</strong>
-                </td>
-              </tr>
-            ))}
-            {wertung.length === 0 && (
+        <div className="rollbereich" ref={rollbereich}>
+          <table className="tabelle">
+            <thead>
               <tr>
-                <td colSpan={turniere.length + 3} className="hinweis">
-                  Für diese Serie liegen noch keine Platzierungen vor.
-                </td>
+                <th style={{ width: '50px' }}>Platz</th>
+                <th>Name</th>
+                {turniere.map((turnier) => (
+                  <th key={turnier.id} style={{ width: '90px' }}>
+                    {new Date(`${turnier.datum}T12:00:00`).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })}
+                    <small title={turnier.name}>{turnier.name.length > 12 ? `${turnier.name.slice(0, 12)}…` : turnier.name}</small>
+                  </th>
+                ))}
+                <th style={{ width: '80px' }}>Punkte</th>
               </tr>
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {wertung.map((spieler) => (
+                <tr key={spieler.spieler}>
+                  <td>{spieler.zeigePlatz ? spieler.platz : ''}</td>
+                  <td>{namen.get(spieler.spieler) ?? 'unbekannt'}</td>
+                  {turniere.map((turnier) => {
+                    const ergebnis = spieler.ergebnisse[turnier.id];
+                    if (!ergebnis) return <td key={turnier.id}>—</td>;
+                    return (
+                      <td key={turnier.id} className={ergebnis.gestrichen ? 'gestrichen' : ''}>
+                        {ergebnis.punkte}
+                        <small> ({ergebnis.platz}.)</small>
+                      </td>
+                    );
+                  })}
+                  <td>
+                    <strong>{spieler.summe}</strong>
+                  </td>
+                </tr>
+              ))}
+              {wertung.length === 0 && (
+                <tr>
+                  <td colSpan={turniere.length + 3} className="hinweis">
+                    Für diese Serie liegen noch keine Platzierungen vor.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+        {wertung.length > SICHTBARE_ZEILEN && (
+          <p className="hinweis">
+            {wertung.length} Spieler in der Wertung; weitere durch Scrollen in der Tabelle.
+          </p>
+        )}
         {serie && serie.streicher > 0 && <p className="hinweis">Durchgestrichene Werte zählen nicht für die Summe.</p>}
         {offeneTurniere.length > 0 && (
           <p className="hinweis">
