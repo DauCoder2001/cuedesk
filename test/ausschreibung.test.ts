@@ -1,6 +1,9 @@
 import { describe, expect, test } from 'vitest';
 import {
   alsEingabe,
+  anmeldeLink,
+  anmeldestand,
+  anmeldungOffen,
   ausEingabe,
   aushangDateiname,
   aushangPdf,
@@ -80,6 +83,33 @@ describe('Text zum Teilen', () => {
       'Anmelden: https://x.de/?anmeldung=1',
       'Gut Stoß!'
     ]);
+  });
+});
+
+describe('Anmeldung', () => {
+  const jetzt = new Date('2026-10-09T12:00:00Z');
+  test('offen nur mit Schalter, in Vorbereitung und vor dem Meldeschluss', () => {
+    expect(anmeldungOffen({ offen: true }, 'geplant', jetzt)).toBe(true);
+    expect(anmeldungOffen({ offen: false }, 'geplant', jetzt)).toBe(false);
+    expect(anmeldungOffen({ offen: true }, 'laeuft', jetzt)).toBe(false);
+    expect(anmeldungOffen({ offen: true, meldeschluss: '2026-10-09T13:00:00Z' }, 'geplant', jetzt)).toBe(true);
+    expect(anmeldungOffen({ offen: true, meldeschluss: '2026-10-09T11:00:00Z' }, 'geplant', jetzt)).toBe(false);
+    expect(anmeldungOffen(undefined, 'geplant', jetzt)).toBe(false);
+  });
+  test('Link ersetzt vorhandene Parameter', () => {
+    expect(anmeldeLink('https://x.github.io/cuedesk/?geraet=1#oben', 'abc')).toBe('https://x.github.io/cuedesk/?anmeldung=abc');
+  });
+  test('Reihenfolge, Nachrücker ab der Höchstzahl, Abgemeldete am Ende', () => {
+    const stand = anmeldestand(
+      [
+        { person_id: 'c', angemeldet_am: '2026-10-03T10:00:00Z', abgemeldet_am: null },
+        { person_id: 'a', angemeldet_am: '2026-10-01T10:00:00Z', abgemeldet_am: null },
+        { person_id: 'x', angemeldet_am: '2026-10-01T09:00:00Z', abgemeldet_am: '2026-10-02T09:00:00Z' },
+        { person_id: 'b', angemeldet_am: '2026-10-02T10:00:00Z', abgemeldet_am: null }
+      ],
+      2
+    );
+    expect(stand.map((s) => `${s.person_id}:${s.art}`)).toEqual(['a:dabei', 'b:dabei', 'c:nachruecker', 'x:abgemeldet']);
   });
 });
 

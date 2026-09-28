@@ -154,6 +154,49 @@ export function aushangPdf(d: AusschreibungDaten): Uint8Array {
   return bauen(dok, `Ausschreibung ${d.name}`);
 }
 
+// ---------- Anmeldung (Stufe 16) ----------
+
+// Gleiche Regel wie turnier_anmelden() in der Datenbank
+export function anmeldungOffen(a: Ausschreibung | undefined, status: string, jetzt = new Date()): boolean {
+  if (!a?.offen || status !== 'geplant') return false;
+  return !a.meldeschluss || jetzt.getTime() <= new Date(a.meldeschluss).getTime();
+}
+
+// Link aus der Ausschreibung: fuehrt nach der Anmeldung zur Seite Turniere
+export function anmeldeLink(adresse: string, turnierId: string): string {
+  const url = new URL(adresse);
+  url.search = '';
+  url.hash = '';
+  url.searchParams.set('anmeldung', turnierId);
+  return url.toString();
+}
+
+export type Anmeldestand = {
+  person_id: string;
+  angemeldet_am: string;
+  art: 'dabei' | 'nachruecker' | 'abgemeldet';
+};
+
+// Reihenfolge der Anmeldung; ab der Hoechstzahl rueckt nach, wer spaeter kam.
+// Abgemeldete stehen am Ende.
+export function anmeldestand(
+  anmeldungen: { person_id: string; angemeldet_am: string; abgemeldet_am: string | null }[],
+  hoechstens?: number
+): Anmeldestand[] {
+  const aktiv = anmeldungen
+    .filter((x) => !x.abgemeldet_am)
+    .sort((a, b) => a.angemeldet_am.localeCompare(b.angemeldet_am));
+  const weg = anmeldungen.filter((x) => x.abgemeldet_am);
+  return [
+    ...aktiv.map((x, i) => ({
+      person_id: x.person_id,
+      angemeldet_am: x.angemeldet_am,
+      art: (hoechstens && i >= hoechstens ? 'nachruecker' : 'dabei') as Anmeldestand['art']
+    })),
+    ...weg.map((x) => ({ person_id: x.person_id, angemeldet_am: x.angemeldet_am, art: 'abgemeldet' as const }))
+  ];
+}
+
 export function aushangDateiname(name: string, datum: string): string {
   const sauber = name
     .replace(/[äÄ]/g, 'ae')

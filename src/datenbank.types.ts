@@ -265,6 +265,16 @@ export type TurnierTeilnehmer = {
   rating_quelle: RatingQuelle | null;
 };
 
+// Anmeldung zu einem ausgeschriebenen Turnier (Stufe 16); Abmelden setzt abgemeldet_am
+export type TurnierAnmeldung = {
+  turnier_id: string;
+  person_id: string;
+  verein_id: string;
+  angemeldet_am: string;
+  abgemeldet_am: string | null;
+  angemeldet_von: string | null;
+};
+
 export type Partie = {
   id: string;
   verein_id: string;
@@ -384,6 +394,7 @@ export type Database = {
       serien: Tabelle<Serie, Partial<Serie> & Pick<Serie, 'verein_id' | 'name'>>;
       turniere: Tabelle<Turnier, Partial<Turnier> & Pick<Turnier, 'verein_id' | 'name' | 'datum'>>;
       turnier_teilnehmer: Tabelle<TurnierTeilnehmer, Partial<TurnierTeilnehmer> & Pick<TurnierTeilnehmer, 'turnier_id' | 'person_id' | 'verein_id'>>;
+      turnier_anmeldungen: Tabelle<TurnierAnmeldung, Partial<TurnierAnmeldung> & Pick<TurnierAnmeldung, 'turnier_id' | 'person_id' | 'verein_id'>>;
       partien: Tabelle<Partie, Partial<Partie> & Pick<Partie, 'verein_id' | 'datum' | 'spieler_a' | 'spieler_b'>>;
       live_stand: Tabelle<LiveStand, Partial<LiveStand> & Pick<LiveStand, 'tisch_id' | 'verein_id'>>;
       partien_141: Tabelle<Partie141, Partial<Partie141> & Pick<Partie141, 'partie_id' | 'verein_id'>>;
@@ -429,6 +440,7 @@ export type Database = {
       aufraeumen: { Args: { p_arten: string[] }; Returns: Record<string, number> };
       demo_zuruecksetzen: { Args: { p_verein: string }; Returns: undefined };
       vereinsadmin_entziehen: { Args: { p_verein: string; p_benutzer: string }; Returns: undefined };
+      turnier_anmelden: { Args: { p_turnier: string; p_an: boolean }; Returns: undefined };
       verein_aendern: {
         Args: {
           p_verein: string;

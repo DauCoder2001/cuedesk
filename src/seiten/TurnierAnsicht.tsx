@@ -43,7 +43,8 @@ import KoBaum from './KoBaum';
 import { vereinsEinstellungen } from '../vereinseinstellungen';
 import { DISZIPLIN_TEXT, MODUS_TEXT, STATUS_TEXT } from './Turniere';
 import type { TurnierEinstellungen } from './Turniere';
-import type { Partie, Person, RatingQuelle, Turnier, TurnierTeilnehmer } from '../datenbank.types';
+import type { Partie, Person, RatingQuelle, Turnier, TurnierAnmeldung, TurnierTeilnehmer } from '../datenbank.types';
+import { anmeldeLink, anmeldestand } from '../ausschreibung';
 
 // Ein Turnier im Modus Einzelgruppe, Zwei Gruppen oder Gruppen mit KO:
 // Teilnehmer, Auslosung, Spielplan, Tabellen, bei zwei Gruppen die
@@ -91,6 +92,7 @@ export default function TurnierAnsicht({
 
   const [turnier, setTurnier] = useState<Turnier | null>(null);
   const [teilnehmer, setTeilnehmer] = useState<TurnierTeilnehmer[]>([]);
+  const [anmeldungen, setAnmeldungen] = useState<TurnierAnmeldung[]>([]);
   const [partien, setPartien] = useState<Partie[]>([]);
   const [personen, setPersonen] = useState<Person[]>([]);
   const [ratings, setRatings] = useState<Map<string, { wert: number; quelle: RatingQuelle }>>(new Map());
@@ -118,16 +120,18 @@ export default function TurnierAnsicht({
 
   const laden = useCallback(async () => {
     if (!verein) return;
-    const [t, tn, p, pe, ti] = await Promise.all([
+    const [t, tn, p, pe, ti, an] = await Promise.all([
       supabase.from('turniere').select('*').eq('id', turnierId).maybeSingle(),
       supabase.from('turnier_teilnehmer').select('*').eq('turnier_id', turnierId),
       supabase.from('partien').select('*').eq('turnier_id', turnierId).order('runde').order('paarung'),
       supabase.from('personen').select('*').eq('verein_id', verein.id),
-      supabase.from('tische').select('id, nummer').eq('verein_id', verein.id)
+      supabase.from('tische').select('id, nummer').eq('verein_id', verein.id),
+      supabase.from('turnier_anmeldungen').select('*').eq('turnier_id', turnierId)
     ]);
     if (t.error) setFehler(t.error.message);
     setTurnier(t.data ?? null);
     setTeilnehmer(tn.data ?? []);
+    setAnmeldungen(an.data ?? []);
     setPartien(p.data ?? []);
     setPersonen(pe.data ?? []);
     setTische(new Map((ti.data ?? []).map((x) => [x.id, x.nummer])));
@@ -417,6 +421,21 @@ export default function TurnierAnsicht({
       .insert({ turnier_id: turnier.id, person_id: personId, verein_id: turnier.verein_id });
     if (error) setFehler(error.message);
     setSuche('');
+    await laden();
+  }
+
+  // Angemeldete Mitglieder als Teilnehmer uebernehmen
+  async function anmeldungenUebernehmen(ids: string[]) {
+    if (!turnier || ids.length === 0) return;
+    setFehler(null);
+    const { error } = await supabase
+      .from('turnier_teilnehmer')
+      .upsert(
+        ids.map((id) => ({ turnier_id: turnier.id, person_id: id, verein_id: turnier.verein_id })),
+        { onConflict: 'turnier_id,person_id', ignoreDuplicates: true }
+      );
+    if (error) return setFehler(error.message);
+    setMeldung(ids.length === 1 ? `${anzeige(ids[0])} ist jetzt Teilnehmer.` : `${ids.length} Angemeldete sind jetzt Teilnehmer.`);
     await laden();
   }
 
@@ -1656,6 +1675,7 @@ export default function TurnierAnsicht({
             ].join(' · '),
             eingetragen: teilnehmer.map((t) => anzeige(t.person_id)).sort((a, b) => a.localeCompare(b, 'de'))
           }}
+          link={anmeldeLink(window.location.href, turnier.id)}
           gespeichert={einstellungen.ausschreibung ?? {}}
           speichern={async (a) => {
             const { error } = await supabase
@@ -1730,6 +1750,60 @@ export default function TurnierAnsicht({
               )}
             </tbody>
           </table>
+
+          {darfLeiten && anmeldungen.length > 0 && (() => {
+            const stand = anmeldestand(anmeldungen, einstellungen.ausschreibung?.hoechstens);
+            const istTeilnehmer = (id: string) => teilnehmer.some((t) => t.person_id === id);
+            const neu = stand.filter((s) => s.art === 'dabei' && !istTeilnehmer(s.person_id)).map((s) => s.person_id);
+            return (
+              <div className="anmeldeliste">
+                <h3>Anmeldungen ({stand.filter((s) => s.art !== 'abgemeldet').length})</h3>
+                <table className="tabelle">
+                  <tbody>
+                    {stand.map((s) => (
+                      <tr key={s.person_id}>
+                        <td>
+                          {anzeige(s.person_id)}
+                          {s.art === 'nachruecker' && <span className="marke warnmarke">Nachrücker</span>}
+                          {s.art === 'abgemeldet' && <span className="marke warnmarke">abgemeldet</span>}
+                        </td>
+                        <td className="hinweis">
+                          {new Date(s.angemeldet_am).toLocaleString('de-DE', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </td>
+                        <td className="rechts">
+                          {istTeilnehmer(s.person_id) ? (
+                            <span className={s.art === 'abgemeldet' ? 'marke warnmarke' : 'marke gutmarke'}>
+                              {s.art === 'abgemeldet' ? 'noch Teilnehmer' : 'Teilnehmer'}
+                            </span>
+                          ) : s.art === 'abgemeldet' ? (
+                            '–'
+                          ) : (
+                            bearbeitbar && (
+                              <button type="button" className="klein" title="Diesen Spieler als Teilnehmer aufnehmen" onClick={() => void anmeldungenUebernehmen([s.person_id])}>
+                                Übernehmen
+                              </button>
+                            )
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {bearbeitbar && neu.length > 0 && (
+                  <div className="knopfpaar">
+                    <button type="button" title="Alle Angemeldeten bis zur Höchstzahl als Teilnehmer aufnehmen; Nachrücker einzeln" onClick={() => void anmeldungenUebernehmen(neu)}>
+                      Alle als Teilnehmer übernehmen ({neu.length})
+                    </button>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           {bearbeitbar && (
             <>

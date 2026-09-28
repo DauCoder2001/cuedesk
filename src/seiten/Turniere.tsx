@@ -3,6 +3,7 @@ import { supabase } from '../supabase';
 import { useSitzung } from '../sitzung';
 import LigaAnsicht from './LigaAnsicht';
 import TurnierAnsicht from './TurnierAnsicht';
+import Ausschreibungen from './Ausschreibungen';
 import { LIGEN } from '../liga';
 import type { Ausspielziele, LigaKennung } from '../liga';
 import type { Ausschreibung } from '../ausschreibung';
@@ -87,7 +88,7 @@ export type TurnierEinstellungen = {
 
 const heute = () => new Date().toISOString().slice(0, 10);
 
-export default function Turniere() {
+export default function Turniere({ hervorheben }: { hervorheben?: string | null }) {
   const { verein, darf } = useSitzung();
   const darfLeiten = darf('vereinsadmin', 'sportwart', 'turnierleiter');
 
@@ -410,6 +411,7 @@ export default function Turniere() {
 
   return (
     <div className="einspaltig">
+      {!formular && <Ausschreibungen turniere={turniere} hervorheben={hervorheben} />}
       <section className="block">
         <div className="bearbeitenkopf">
           <h2>Turniere</h2>

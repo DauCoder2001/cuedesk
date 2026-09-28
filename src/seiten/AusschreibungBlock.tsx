@@ -16,10 +16,12 @@ import type { Ausschreibung, AusschreibungDaten } from '../ausschreibung';
 
 export default function AusschreibungBlock({
   daten,
+  link,
   gespeichert,
   speichern
 }: {
-  daten: Omit<AusschreibungDaten, 'ausschreibung'>;
+  daten: Omit<AusschreibungDaten, 'ausschreibung' | 'link'>;
+  link: string; // Anmeldelink zu diesem Turnier
   gespeichert: Ausschreibung;
   speichern: (a: Ausschreibung) => Promise<boolean>;
 }) {
@@ -42,7 +44,8 @@ export default function AusschreibungBlock({
   }
   useUngespeichert('ausschreibung', geaendert, 'Die Ausschreibung', () => sichern());
 
-  const volle: AusschreibungDaten = { ...daten, ausschreibung: entwurf };
+  // Der Anmeldelink steht nur im Text, solange die Anmeldung offen ist
+  const volle: AusschreibungDaten = { ...daten, ausschreibung: entwurf, link: entwurf.offen ? link : undefined };
   const text = ausschreibungText(volle);
 
   // Neue Uhrzeit: Meldeschluss mitziehen, solange er dem Vorschlag folgt
@@ -126,6 +129,21 @@ export default function AusschreibungBlock({
           />
         </label>
       </div>
+
+      <label className="ankreuz">
+        <input
+          type="checkbox"
+          checked={Boolean(entwurf.offen)}
+          onChange={(e) => setEntwurf({ ...entwurf, offen: e.target.checked || undefined })}
+        />
+        <span>
+          Anmeldung für Mitglieder offen
+          <small>
+            Mitglieder mit Konto melden sich bis zum Meldeschluss auf der Seite Turniere selbst an und ab. Der Text zum
+            Teilen bekommt dann den Link zur Anmeldung.
+          </small>
+        </span>
+      </label>
 
       <pre className="teiltext" title="So sieht der Text zum Teilen aus">{text}</pre>
       <div className="knopfpaar">

@@ -41,11 +41,14 @@ type Bereich =
 // Tablets und TV rufen die Adresse mit ?geraet auf und bekommen die
 // Geraeteansicht statt der Anmeldung.
 const istGeraet = new URLSearchParams(window.location.search).has('geraet');
+// Link aus einer Ausschreibung (?anmeldung=<Turnier>): startet auf der Seite
+// Turniere und hebt dieses Turnier hervor
+const startAnmeldung = new URLSearchParams(window.location.search).get('anmeldung');
 
 export default function App() {
   const { laedt, sitzung, benutzer, verein, rollen, abmelden, darf, vereine, gesperrt, istSuperAdmin, vereinWaehlen } =
     useSitzung();
-  const [bereich, setBereich] = useState<Bereich>('live');
+  const [bereich, setBereich] = useState<Bereich>(startAnmeldung ? 'turniere' : 'live');
   const wechselErlaubt = useWechsel();
   // Ohne nutzbaren Verein gibt es nur die Konsole (Super-Admin). Ist der
   // gewaehlte Verein gesperrt, steht zuerst der Hinweis da.
@@ -295,7 +298,7 @@ export default function App() {
         {angezeigt === 'konsole' && <Konsole />}
         {angezeigt === 'konto' && <Konto />}
         {angezeigt === 'live' && <Live />}
-        {angezeigt === 'turniere' && <Turniere />}
+        {angezeigt === 'turniere' && <Turniere hervorheben={startAnmeldung} />}
         {angezeigt === 'mannschaften' && <Mannschaften />}
         {angezeigt === 'personen' && <Personen />}
         {angezeigt === 'rating' && <Rating />}
