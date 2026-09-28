@@ -174,6 +174,7 @@ ul.schlicht { list-style: none; padding: 0; margin: 0; display: flex; flex-direc
 .ankreuz { display: flex; align-items: flex-start; gap: 8px; font-size: 15px; }
 .ankreuz input { width: auto; margin-top: 3px; }
 .ankreuz small { display: block; font-size: 13px; color: var(--text-leise); }
+.ankreuz.gesperrt { color: var(--text-leise); cursor: default; }
 
 .geschuetzt { border: 1px solid var(--rand); border-radius: var(--radius); padding: 12px; display: flex; flex-direction: column; gap: 10px; margin: 0; }
 .geschuetzt legend { font-size: 14px; color: var(--text-leise); padding: 0 6px; }

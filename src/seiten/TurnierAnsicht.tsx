@@ -1534,7 +1534,9 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
               {va.aktiv && ` · Vorgabe ${va.staerke} %${va.obergrenze > 0 ? `, höchstens ${va.obergrenze}` : ''}`}
             </p>
             {!turnier.rating_werten && (
-              <p className="hinweis">Keine Partie dieses Turniers zählt fürs Rating.</p>
+              <p className="hinweis">
+                Keine Partie dieses Turniers zählt fürs Rating. So wurde es beim Anlegen des Turniers festgelegt.
+              </p>
             )}
             {va.aktiv && turnier.quelle !== 'import' && hinweisKurzesRace && (
               <p className="hinweis">{hinweisKurzesRace}</p>

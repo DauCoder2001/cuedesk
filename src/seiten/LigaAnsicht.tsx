@@ -544,7 +544,10 @@ export default function LigaAnsicht({
               9-Ball {liga.ziele['9-ball']} · 10-Ball {liga.ziele['10-ball']} Gewinnsätze
             </p>
             {!turnier.rating_werten && (
-              <p className="hinweis">Keine Partie dieses Spieltags zählt fürs Rating.</p>
+              <p className="hinweis">
+                Keine Partie dieses Spieltags zählt fürs Rating. Mit „Fürs Rating werten“ zählen die Partien, die rechts
+                angehakt sind.
+              </p>
             )}
           </div>
           <div className="knopfpaar kopfaktionen">
@@ -665,6 +668,7 @@ export default function LigaAnsicht({
                       spielerSetzen={(seite, id) => void spielerSetzen(s, seite, id)}
                       ergebnisSetzen={(a, b) => void ergebnisSetzen(s, a, b)}
                       wertungSetzen={(werten) => void partieWertung(s, werten)}
+                      spieltagWertet={turnier.rating_werten}
                     />
                   );
                 })}
@@ -783,6 +787,7 @@ function Spielzeile(props: {
   spielerSetzen: (seite: 'heim' | 'gast', id: string | null) => void;
   ergebnisSetzen: (heim: number | null, gast: number | null) => void;
   wertungSetzen: (werten: boolean) => void;
+  spieltagWertet: boolean; // Schalter "Fürs Rating werten" des Spieltags
 }) {
   const { spiel, partie } = props;
   const wert = (w: number | null | undefined) => (w === null || w === undefined ? '' : String(w));
@@ -882,9 +887,23 @@ function Spielzeile(props: {
         ) : (
           partie &&
           props.bearbeitbar && (
-          <label className="ankreuz" title="Diese Partie fürs Rating werten">
-            <input type="checkbox" checked={partie.rating_werten} onChange={(e) => props.wertungSetzen(e.target.checked)} />
-            Rating
+          // Zaehlen muessen Spieltag und Partie. Ist der Spieltag aus, bleibt
+          // der Haken gespeichert, wirkt aber erst nach dem Einschalten.
+          <label
+            className={props.spieltagWertet ? 'ankreuz' : 'ankreuz gesperrt'}
+            title={
+              props.spieltagWertet
+                ? 'Diese Partie fürs Rating werten'
+                : 'Zählt erst, wenn oben „Fürs Rating werten“ eingeschaltet ist.'
+            }
+          >
+            <input
+              type="checkbox"
+              checked={partie.rating_werten}
+              disabled={!props.spieltagWertet}
+              onChange={(e) => props.wertungSetzen(e.target.checked)}
+            />
+            {props.spieltagWertet ? 'Rating' : 'Rating (Spieltag aus)'}
           </label>
           )
         )}
