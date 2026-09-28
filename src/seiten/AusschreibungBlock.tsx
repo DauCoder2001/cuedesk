@@ -85,7 +85,7 @@ export default function AusschreibungBlock({
           </div>
         )}
       </div>
-      <div className="felder">
+      <div className="felder breitefelder">
         <label className="feld">
           <span>Beginn</span>
           <input type="time" value={entwurf.uhrzeit ?? ''} onChange={(e) => uhrzeitSetzen(e.target.value)} />
