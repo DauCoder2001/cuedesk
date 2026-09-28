@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from '../supabase';
 import { useSitzung } from '../sitzung';
 import { personName } from '../namen';
@@ -8,6 +8,9 @@ import { einsaetze, saisonAus, saisonBilanz, saisonListe, stammspielerHinweis } 
 import { vereinsEinstellungen } from '../vereinseinstellungen';
 import { Pflichthinweis, usePflicht } from '../pflicht';
 import { useUngespeichert, weichtAb } from '../ungespeichert';
+import { KEIN_PASS, mannschaftspassLesen, pdfTexte } from '../mannschaftspass';
+import KaderImport from './KaderImport';
+import type { Mannschaftspass } from '../mannschaftspass';
 import type { LigaKennung } from '../liga';
 import type { Mannschaft, MannschaftSpieler, Partie, Person, Turnier } from '../datenbank.types';
 import type { TurnierEinstellungen } from './Turniere';
@@ -56,6 +59,10 @@ export default function Mannschaften() {
   );
   const [meldung, setMeldung] = useState<string | null>(null);
   const [rueckfrage, fragen] = useRueckfrage();
+  // Eingelesener Mannschaftspass (PDF), bis er uebernommen oder verworfen ist
+  const [pass, setPass] = useState<Mannschaftspass | null>(null);
+  const [liest, setLiest] = useState(false);
+  const dateiwahl = useRef<HTMLInputElement>(null);
 
   const laden = useCallback(async () => {
     if (!verein) return;
@@ -280,6 +287,21 @@ export default function Mannschaften() {
     setKader((liste) => liste.map((k) => (k.id === eintrag.id ? { ...k, berechtigt_ab: wert || null } : k)));
   }
 
+  async function passEinlesen(datei: File) {
+    setFehler(null);
+    setMeldung(null);
+    setLiest(true);
+    try {
+      const gelesen = mannschaftspassLesen(await pdfTexte(new Uint8Array(await datei.arrayBuffer())));
+      if (!gelesen) return setFehler(KEIN_PASS);
+      setPass(gelesen);
+    } catch {
+      setFehler(KEIN_PASS);
+    } finally {
+      setLiest(false);
+    }
+  }
+
   // ---------- Anzeige ----------
 
   const leeresFormular = (): Formular => ({
@@ -315,11 +337,32 @@ export default function Mannschaften() {
                 ))}
               </select>
             </label>
-            {darfVerwalten && !formular && (
+            {darfVerwalten && !formular && !pass && (
               <button type="button" title="Eine Mannschaft für diese Saison anlegen" onClick={() => void oeffnen(leeresFormular())}>
                 Mannschaft melden
               </button>
             )}
+            {darfVerwalten && !formular && !pass && (
+              <button
+                type="button"
+                title="Den PDF-Mannschaftspass des Landesverbands (Club-Cloud) einlesen: Mannschaften und Kader anlegen, neue Spieler als Mitglieder"
+                onClick={() => dateiwahl.current?.click()}
+                disabled={liest}
+              >
+                {liest ? 'Wird gelesen …' : 'PDF einlesen'}
+              </button>
+            )}
+            <input
+              ref={dateiwahl}
+              type="file"
+              accept="application/pdf,.pdf"
+              hidden
+              onChange={(e) => {
+                const datei = e.target.files?.[0];
+                e.target.value = '';
+                if (datei) void passEinlesen(datei);
+              }}
+            />
           </div>
         </div>
         {fehler && <p className="fehler">{fehler}</p>}
@@ -406,10 +449,27 @@ export default function Mannschaften() {
           </div>
         )}
 
-        {derSaison.length === 0 && !formular && (
+        {derSaison.length === 0 && !formular && !pass && (
           <p className="hinweis">Für die Saison {saison} ist noch keine Mannschaft gemeldet.</p>
         )}
       </section>
+
+      {pass && (
+        <KaderImport
+          verein={verein}
+          pass={pass}
+          personen={personen}
+          mannschaften={mannschaften}
+          kader={kader}
+          abbrechen={() => setPass(null)}
+          fertig={(text, neueSaison) => {
+            setPass(null);
+            setSaison(neueSaison);
+            setMeldung(text);
+            void laden();
+          }}
+        />
+      )}
 
       {derSaison.map((m) => {
         const eigeneSpieltage = spieltageVon(m);

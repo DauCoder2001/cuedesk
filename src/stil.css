@@ -85,6 +85,11 @@ button:disabled { cursor: default; color: var(--text-leise); }
 .adminname button.klein { margin-left: 4px; padding: 0 5px; line-height: 1.3; }
 /* Konsole: Loeschung vorgemerkt */
 .marke.warnmarke { background: #fdf0d5; color: #7a4b00; margin-left: 6px; }
+.marke.gutmarke { background: var(--gut-hell); color: var(--gut); border-color: transparent; margin-left: 6px; }
+/* Mannschaftspass einlesen */
+.kaderimport .importmannschaft h3 { display: flex; align-items: center; gap: 6px; margin: 4px 0 0; }
+.kaderimport .tabelle td:first-child .marke { margin-left: 0; }
+.kaderimport select.klein { font-size: 13px; padding: 1px 4px; margin-left: 6px; width: auto; }
 /* Konsole: Kachel mit Warnung */
 .kennzahlen .warnkachel { background: #fbeaea; }
 .kennzahlen .warnkachel small { color: var(--fehler); }
