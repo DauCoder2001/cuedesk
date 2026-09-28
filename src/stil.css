@@ -21,11 +21,11 @@ body {
   background: var(--grund);
   color: var(--text);
   font-family: system-ui, "Segoe UI", Arial, sans-serif;
-  font-size: 15px;
+  font-size: 16px;
 }
 
-h1 { font-size: 22px; font-weight: 500; margin: 0 0 16px; }
-h2 { font-size: 18px; font-weight: 500; margin: 0; }
+h1 { font-size: 23px; font-weight: 500; margin: 0 0 16px; }
+h2 { font-size: 19px; font-weight: 500; margin: 0; }
 
 input, select, button {
   font: inherit;
@@ -47,13 +47,14 @@ button:disabled { cursor: default; color: var(--text-leise); }
   border: 1px solid var(--rand); border-radius: 12px; padding: 24px;
 }
 .karte form { display: flex; flex-direction: column; gap: 8px; }
-.karte label { font-size: 13px; color: var(--text-leise); }
+.karte label { font-size: 14px; color: var(--text-leise); }
 
-.hinweis { color: var(--text-leise); font-size: 13px; }
-.fehler { color: var(--fehler); font-size: 13px; }
-.meldung { color: var(--gut); font-size: 13px; }
+.hinweis { color: var(--text-leise); font-size: 14px; }
+.fehler { color: var(--fehler); font-size: 14px; }
+.meldung { color: var(--gut); font-size: 14px; }
 
-.rahmen { max-width: 1100px; margin: 0 auto; padding: 16px; }
+/* Alle Seiten nutzen die ganze Bildschirmbreite, 16 px Rand */
+.rahmen { padding: 16px; }
 
 .kopfzeile {
   display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center;
@@ -67,18 +68,18 @@ button:disabled { cursor: default; color: var(--text-leise); }
 .vereinsmarke { display: flex; align-items: center; gap: 10px; }
 .vereinsmarke .zeichen {
   width: 28px; height: 28px; border-radius: 6px; display: grid; place-items: center; overflow: hidden;
-  background: var(--akzent-hell); color: var(--akzent); font-size: 12px;
+  background: var(--akzent-hell); color: var(--akzent); font-size: 13px;
 }
 .vereinsmarke .zeichen img, .zeichen.gross img { width: 100%; height: 100%; object-fit: contain; border-radius: inherit; }
 /* Seite "System": Logo-Vorschau */
 .logozeile { display: flex; align-items: center; gap: 10px; }
 .zeichen.gross {
   width: 56px; height: 56px; border-radius: 10px; display: grid; place-items: center; overflow: hidden;
-  background: var(--akzent-hell); color: var(--akzent); font-size: 18px;
+  background: var(--akzent-hell); color: var(--akzent); font-size: 19px;
 }
 .knopfpaar.rechts { justify-content: flex-end; }
 /* Auswahl in der Kopfzeile, wenn ein Konto zu mehreren Vereinen gehoert */
-.vereinswahl { font-weight: 600; font-size: 15px; border: 1px solid var(--rand); background: var(--flaeche); padding: 3px 6px; border-radius: var(--radius); cursor: pointer; }
+.vereinswahl { font-weight: 600; font-size: 16px; border: 1px solid var(--rand); background: var(--flaeche); padding: 3px 6px; border-radius: var(--radius); cursor: pointer; }
 .vereinswahl:hover { background: var(--flaeche-2); }
 .adminname button.klein { margin-left: 4px; padding: 0 5px; line-height: 1.3; }
 /* Konsole: Loeschung vorgemerkt */
@@ -90,11 +91,11 @@ button:disabled { cursor: default; color: var(--text-leise); }
 ul.schlicht { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px; }
 .vereinsmarke .trenner {
   border-left: 1px solid var(--rand); padding-left: 10px;
-  font-size: 13px; color: var(--text-leise);
+  font-size: 14px; color: var(--text-leise);
 }
-.konto { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 10px; font-size: 13px; color: var(--text-leise); }
+.konto { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 10px; font-size: 14px; color: var(--text-leise); }
 /* Eigener Name in der Kopfzeile fuehrt zu "Mein Konto" */
-.konto .knopfname { border: none; background: none; padding: 3px 6px; color: var(--text-leise); font-size: 13px; }
+.konto .knopfname { border: none; background: none; padding: 3px 6px; color: var(--text-leise); font-size: 14px; }
 .konto .knopfname:hover:not(:disabled) { background: var(--flaeche-2); color: var(--text); }
 .konto .knopfname.aktiv { background: var(--akzent-hell); color: var(--akzent); }
 .konto .rolle { background: var(--akzent-hell); color: var(--akzent); padding: 3px 8px; border-radius: var(--radius); }
@@ -109,7 +110,7 @@ ul.schlicht { list-style: none; padding: 0; margin: 0; display: flex; flex-direc
 .listenkopf { padding: 10px; display: flex; flex-direction: column; gap: 8px; border-bottom: 1px solid var(--rand); }
 .listenkopf input { width: 100%; }
 .filterzeile { display: flex; flex-wrap: wrap; gap: 6px; }
-.chip { font-size: 12px; padding: 3px 9px; color: var(--text-leise); }
+.chip { font-size: 13px; padding: 3px 9px; color: var(--text-leise); }
 .chip.aktiv { background: var(--akzent-hell); color: var(--akzent); border-color: var(--akzent-hell); }
 
 /* Die Namensliste scrollt in sich, damit das Formular rechts im Bild bleibt */
@@ -124,11 +125,11 @@ ul.schlicht { list-style: none; padding: 0; margin: 0; display: flex; flex-direc
 .eintrag.aktiv { background: var(--flaeche-2); }
 .eintrag .kuerzel {
   width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center;
-  background: var(--flaeche-2); color: var(--text-leise); font-size: 11px; flex: none;
+  background: var(--flaeche-2); color: var(--text-leise); font-size: 12px; flex: none;
 }
 .eintrag.aktiv .kuerzel { background: var(--akzent-hell); color: var(--akzent); }
-.eintrag .name { flex: 1; font-size: 14px; }
-.eintrag .marke { font-size: 11px; color: var(--text-leise); border: 1px solid var(--rand); border-radius: var(--radius); padding: 1px 6px; }
+.eintrag .name { flex: 1; font-size: 15px; }
+.eintrag .marke { font-size: 12px; color: var(--text-leise); border: 1px solid var(--rand); border-radius: var(--radius); padding: 1px 6px; }
 
 .listenfuss { padding: 10px; border-top: 1px solid var(--rand); }
 .listenfuss button { width: 100%; }
@@ -137,8 +138,8 @@ ul.schlicht { list-style: none; padding: 0; margin: 0; display: flex; flex-direc
 .bearbeitenkopf { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 
 .felder { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
-.feld { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--text-leise); }
-.feld input, .feld select { width: 100%; font-size: 14px; color: var(--text); }
+.feld { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--text-leise); }
+.feld input, .feld select { width: 100%; font-size: 15px; color: var(--text); }
 /* Nebeneinander stehende Felder auf einer Linie: Beschriftung, Eingabe und
    Hinweis teilen sich je Zeile eine Spur (subgrid). Eine lange, umbrechende
    Beschriftung waechst nach oben, statt ihr Feld nach unten zu schieben. */
@@ -148,28 +149,28 @@ ul.schlicht { list-style: none; padding: 0; margin: 0; display: flex; flex-direc
 .formzeile { align-items: flex-end; }
 /* Turnierart im Kopf der Turnieransicht */
 .artwahl { display: flex; align-items: center; gap: 6px; margin: 4px 0; }
-.artwahl select { font-size: 13px; padding: 3px 8px; }
+.artwahl select { font-size: 14px; padding: 3px 8px; }
 /* Pflichtfelder (src/pflicht.tsx): Sternchen an der Beschriftung, nach
    einem Fehlversuch leere Felder rot, Hinweis neben dem Knopf */
 .feld:has(:is(input, select, textarea):required) > span:first-child::after { content: ' *'; color: var(--fehler); }
 /* Eingabe mit festem Text davor, z. B. "cuedesk.de/" vor der Web-Adresse */
 .mitpraefix { display: flex; align-items: stretch; }
-.mitpraefix .praefix { display: flex; align-items: center; padding: 0 8px; font-size: 14px; color: var(--text-leise); background: var(--flaeche-2); border: 1px solid var(--rand); border-right: 0; border-radius: var(--radius) 0 0 var(--radius); }
+.mitpraefix .praefix { display: flex; align-items: center; padding: 0 8px; font-size: 15px; color: var(--text-leise); background: var(--flaeche-2); border: 1px solid var(--rand); border-right: 0; border-radius: var(--radius) 0 0 var(--radius); }
 .mitpraefix input { border-radius: 0 var(--radius) var(--radius) 0; min-width: 0; }
 /* Spiellokal: Strasse breit, PLZ schmal, Ort mittel */
 .felder.anschrift { grid-template-columns: minmax(180px, 2fr) minmax(80px, 0.7fr) minmax(140px, 1.5fr); }
 @media (max-width: 560px) { .felder.anschrift { grid-template-columns: 1fr; } }
 .versucht :is(input, select, textarea):required:invalid { border-color: var(--fehler); box-shadow: 0 0 0 1px var(--fehler); }
-.pflichthinweis { align-self: center; font-size: 12px; color: var(--text-leise); }
+.pflichthinweis { align-self: center; font-size: 13px; color: var(--text-leise); }
 .pflichthinweis.fehlt { color: var(--fehler); }
 .feld small.warnung { color: #7a4b00; }
 
-.ankreuz { display: flex; align-items: flex-start; gap: 8px; font-size: 14px; }
+.ankreuz { display: flex; align-items: flex-start; gap: 8px; font-size: 15px; }
 .ankreuz input { width: auto; margin-top: 3px; }
-.ankreuz small { display: block; font-size: 12px; color: var(--text-leise); }
+.ankreuz small { display: block; font-size: 13px; color: var(--text-leise); }
 
 .geschuetzt { border: 1px solid var(--rand); border-radius: var(--radius); padding: 12px; display: flex; flex-direction: column; gap: 10px; margin: 0; }
-.geschuetzt legend { font-size: 13px; color: var(--text-leise); padding: 0 6px; }
+.geschuetzt legend { font-size: 14px; color: var(--text-leise); padding: 0 6px; }
 
 @media (max-width: 760px) {
   .zweispaltig { grid-template-columns: minmax(0, 1fr); }
@@ -185,31 +186,31 @@ ul.schlicht { list-style: none; padding: 0; margin: 0; display: flex; flex-direc
 }
 
 .reiter { display: flex; flex-wrap: wrap; gap: 4px; flex: 1 1 auto; min-width: 0; }
-.reiter-knopf { border: none; background: transparent; font-size: 13px; color: var(--text-leise); padding: 5px 10px; white-space: nowrap; }
+.reiter-knopf { border: none; background: transparent; font-size: 14px; color: var(--text-leise); padding: 5px 10px; white-space: nowrap; }
 .reiter-knopf.aktiv { background: var(--akzent-hell); color: var(--akzent); }
 /* Live-Reiter, solange ein Turnier laeuft */
 .reiter-knopf.laeuft { background: var(--gut-hell); color: var(--gut); }
 .reiter-knopf.laeuft.aktiv { box-shadow: inset 0 0 0 1px var(--gut); }
 
-.feldkopf { font-size: 12px; color: var(--text-leise); margin-bottom: 6px; }
+.feldkopf { font-size: 13px; color: var(--text-leise); margin-bottom: 6px; }
 
 .rollenraster { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 8px; }
 .rolle {
-  display: flex; align-items: flex-start; gap: 8px; font-size: 13px;
+  display: flex; align-items: flex-start; gap: 8px; font-size: 14px;
   border: 1px solid var(--rand); border-radius: var(--radius); padding: 8px 10px;
 }
 .rolle.an { background: var(--akzent-hell); border-color: var(--akzent-hell); }
 .rolle input { width: auto; margin-top: 3px; }
-.rolle small, .ankreuz small { display: block; font-size: 11px; color: var(--text-leise); }
+.rolle small, .ankreuz small { display: block; font-size: 12px; color: var(--text-leise); }
 .rolle.an small { color: var(--akzent); }
 
-.eintrag .name small { display: block; font-size: 11px; color: var(--text-leise); font-weight: 400; }
+.eintrag .name small { display: block; font-size: 12px; color: var(--text-leise); font-weight: 400; }
 
 .gefahr {
   display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px;
-  border: 1px solid #e7bcbc; border-radius: var(--radius); padding: 10px 12px; font-size: 13px;
+  border: 1px solid #e7bcbc; border-radius: var(--radius); padding: 10px 12px; font-size: 14px;
 }
-.gefahr small { display: block; font-size: 11px; color: var(--text-leise); }
+.gefahr small { display: block; font-size: 12px; color: var(--text-leise); }
 .gefahr button { color: var(--fehler); border-color: #e7bcbc; }
 .knopfpaar { display: flex; gap: 6px; }
 /* Auswahlfeld neben Knoepfen, z.B. die Saison: nicht zusammenschrumpfen */
@@ -219,8 +220,8 @@ ul.schlicht { list-style: none; padding: 0; margin: 0; display: flex; flex-direc
 .bearbeitenkopf.kopf-umbruch { flex-wrap: wrap; align-items: flex-start; }
 .bearbeitenkopf.kopf-umbruch > div:first-child { flex: 1 1 320px; min-width: 0; }
 .knopfpaar.kopfaktionen { display: grid; grid-template-columns: repeat(3, auto); align-items: center; flex-shrink: 0; }
-.kopfaktionen button { font-size: 13px; padding: 5px 10px; white-space: nowrap; }
-.bearbeitenkopf .kopfaktionen .marke { margin-left: 0; font-size: 12px; white-space: nowrap; justify-self: center; }
+.kopfaktionen button { font-size: 14px; padding: 5px 10px; white-space: nowrap; }
+.bearbeitenkopf .kopfaktionen .marke { margin-left: 0; font-size: 13px; white-space: nowrap; justify-self: center; }
 
 .einspaltig {
   background: var(--flaeche); border: 1px solid var(--rand); border-radius: 0 0 12px 12px;
@@ -228,12 +229,12 @@ ul.schlicht { list-style: none; padding: 0; margin: 0; display: flex; flex-direc
 }
 .block { display: flex; flex-direction: column; gap: 10px; }
 
-.tabelle { width: 100%; border-collapse: collapse; font-size: 14px; }
-.tabelle th { text-align: left; font-weight: 400; font-size: 12px; color: var(--text-leise); padding: 4px 6px 4px 0; }
+.tabelle { width: 100%; border-collapse: collapse; font-size: 15px; }
+.tabelle th { text-align: left; font-weight: 400; font-size: 13px; color: var(--text-leise); padding: 4px 6px 4px 0; }
 .tabelle td { border-top: 1px solid var(--rand); padding: 6px 6px 6px 0; }
 .tabelle td input[type="text"], .tabelle td input:not([type]) { width: 100%; }
 .tabelle .rechts { text-align: right; }
-.tabelle .rechts button { font-size: 12px; padding: 3px 8px; }
+.tabelle .rechts button { font-size: 13px; padding: 3px 8px; }
 
 .zeile { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .zeile input { flex: 1; min-width: 120px; }
@@ -241,9 +242,9 @@ ul.schlicht { list-style: none; padding: 0; margin: 0; display: flex; flex-direc
 .kasten { background: var(--flaeche-2); border-radius: var(--radius); padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
 .kasten code { background: var(--flaeche); border: 1px solid var(--rand); border-radius: 4px; padding: 1px 5px; }
 
-.geraetezeile { display: flex; align-items: center; gap: 10px; border-top: 1px solid var(--rand); padding: 8px 0; font-size: 14px; }
+.geraetezeile { display: flex; align-items: center; gap: 10px; border-top: 1px solid var(--rand); padding: 8px 0; font-size: 15px; }
 .geraetename { flex: 1; min-width: 0; }
-.geraetename small { display: block; font-size: 11px; color: var(--text-leise); }
+.geraetename small { display: block; font-size: 12px; color: var(--text-leise); }
 
 .geraet { min-height: 100vh; display: grid; place-items: center; padding: 20px; }
 .geraetkarte {
@@ -251,17 +252,17 @@ ul.schlicht { list-style: none; padding: 0; margin: 0; display: flex; flex-direc
   border-radius: 16px; padding: 28px 22px; text-align: center;
   display: flex; flex-direction: column; gap: 10px; align-items: center;
 }
-.geraetkarte .klein { font-size: 13px; color: var(--text-leise); }
+.geraetkarte .klein { font-size: 14px; color: var(--text-leise); }
 .geraetkarte .abstand { margin-top: 10px; }
-.geraetkarte .gross { font-size: 30px; font-weight: 500; }
-.geraetkarte .code { font-size: 40px; font-weight: 500; letter-spacing: 8px; }
+.geraetkarte .gross { font-size: 31px; font-weight: 500; }
+.geraetkarte .code { font-size: 41px; font-weight: 500; letter-spacing: 8px; }
 .geraetkarte .feld.mittig { width: 100%; max-width: 260px; text-align: left; }
 
 .kennzahlen { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
 .kennzahlen > div { background: var(--flaeche-2); border-radius: var(--radius); padding: 10px 12px; }
-.kennzahlen span { display: block; font-size: 12px; color: var(--text-leise); }
-.kennzahlen strong { display: block; font-size: 22px; font-weight: 500; }
-.kennzahlen small { display: block; font-size: 11px; color: var(--text-leise); }
+.kennzahlen span { display: block; font-size: 13px; color: var(--text-leise); }
+.kennzahlen strong { display: block; font-size: 23px; font-weight: 500; }
+.kennzahlen small { display: block; font-size: 12px; color: var(--text-leise); }
 
 .verdeckt { filter: blur(5px); user-select: none; color: var(--text-leise); }
 .dialog.breit { max-width: 820px; width: 92vw; max-height: 86vh; overflow-y: auto; }
@@ -271,28 +272,28 @@ ul.schlicht { list-style: none; padding: 0; margin: 0; display: flex; flex-direc
 .tabelle tfoot td { border-top: none; padding-top: 10px; }
 
 .formzeile { display: flex; flex-wrap: wrap; gap: 4px; margin: 0 0 6px; }
-.formmarke { width: 22px; height: 22px; border-radius: 6px; font-size: 12px; line-height: 22px; text-align: center; background: var(--flaeche-2); }
+.formmarke { width: 22px; height: 22px; border-radius: 6px; font-size: 13px; line-height: 22px; text-align: center; background: var(--flaeche-2); }
 .formmarke.sieg { background: #d9f2e5; color: #146b45; }
 .formmarke.niederlage { background: #fbe0e0; color: #8f2a2a; }
 
-.protokoll { margin: 0; padding-left: 18px; font-size: 13px; color: var(--text-leise); }
+.protokoll { margin: 0; padding-left: 18px; font-size: 14px; color: var(--text-leise); }
 .protokoll li { margin: 2px 0; }
 
 .marke.quelle-eigene-daten { color: var(--gut); border-color: #bcd9cd; }
 .marke.quelle-vorlaeufig { color: #854f0b; border-color: #e8cfa3; }
 .marke.quelle-andere-disziplin { color: var(--akzent); border-color: #b9d4ee; }
 .tabelle td .marke { display: inline-block; }
-.tabelle.innen { margin: 6px 0; font-size: 13px; background: var(--flaeche-2); }
+.tabelle.innen { margin: 6px 0; font-size: 14px; background: var(--flaeche-2); }
 .tabelle.innen td, .tabelle.innen th { padding: 4px 8px; }
 .tabelle small { color: var(--text-leise); }
 
 .tabelle .gestrichen { color: var(--text-leise); text-decoration: line-through; }
-.tabelle th small { display: block; font-weight: 400; font-size: 11px; }
+.tabelle th small { display: block; font-weight: 400; font-size: 12px; }
 
 .spielwahl { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin-top: 8px; }
 .spielknopf {
   display: inline-block; padding: 16px 26px; border-radius: 12px; color: #fff;
-  font-size: 20px; font-weight: 500; text-decoration: none;
+  font-size: 21px; font-weight: 500; text-decoration: none;
 }
 .spielknopf.vierzehn { background: #27ae60; }
 .spielknopf.pool { background: #e67e22; }
@@ -302,7 +303,7 @@ ul.schlicht { list-style: none; padding: 0; margin: 0; display: flex; flex-direc
 .statkopf .ankreuz { align-items: center; }
 .statkopf .ankreuz input { margin-top: 0; }
 .statzweier { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
-.verteilung { display: flex; flex-direction: column; gap: 5px; font-size: 13px; }
+.verteilung { display: flex; flex-direction: column; gap: 5px; font-size: 14px; }
 .verteilungszeile { display: grid; grid-template-columns: 46px 1fr 34px; gap: 8px; align-items: center; }
 .verteilungszeile span:first-child { color: var(--text-leise); }
 .verteilungszeile .rechts { text-align: right; }
@@ -310,10 +311,10 @@ ul.schlicht { list-style: none; padding: 0; margin: 0; display: flex; flex-direc
 .balken { background: var(--akzent); border-radius: 4px; height: 12px; min-width: 2px; }
 .verlauf { width: 100%; height: auto; display: block; }
 .verlauf .gitter { stroke: var(--rand); stroke-width: 1; }
-.verlauf .achse { font-size: 11px; fill: var(--text-leise); }
+.verlauf .achse { font-size: 12px; fill: var(--text-leise); }
 .verlauf .punkt { fill: #85b7eb; }
 .verlauf .linie { fill: none; stroke: var(--akzent); stroke-width: 2; }
-.tabelle .marke { font-size: 11px; border: 1px solid var(--rand); border-radius: var(--radius); padding: 1px 6px; color: var(--text-leise); }
+.tabelle .marke { font-size: 12px; border: 1px solid var(--rand); border-radius: var(--radius); padding: 1px 6px; color: var(--text-leise); }
 .marke.ausgang-sieg { color: var(--gut); border-color: #bcd9cd; }
 .marke.ausgang-niederlage { color: var(--fehler); border-color: #e7bcbc; }
 .spielknopf.tv { background: #1f3b73; }
@@ -321,27 +322,29 @@ ul.schlicht { list-style: none; padding: 0; margin: 0; display: flex; flex-direc
 /* Live-Tische */
 .livetische { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; }
 .livekachel { border: 1px solid var(--rand); border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; justify-content: space-between; gap: 14px; min-height: 190px; }
-.livekopf { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; color: var(--text-leise); }
-.livekopf .marke { font-size: 11px; border: 1px solid var(--rand); border-radius: var(--radius); padding: 1px 6px; margin-left: 6px; }
+.livekopf { display: flex; justify-content: space-between; gap: 8px; font-size: 14px; color: var(--text-leise); }
+.livekopf .marke { font-size: 12px; border: 1px solid var(--rand); border-radius: var(--radius); padding: 1px 6px; margin-left: 6px; }
 .livelaeuft { color: var(--gut); }
-.livestand { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px; font-size: 17px; font-weight: 500; padding: 16px 0; }
+.livestand { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px; font-size: 18px; font-weight: 500; padding: 16px 0; }
 .livestand .rechts { text-align: right; }
-.livestand .zahl { font-size: 34px; }
+.livestand .zahl { font-size: 35px; }
 .livestand .rot { color: #cc0000; }
 .livestand .blau { color: #1133cc; }
-.livefuss { font-size: 12px; color: var(--text-leise); }
+.livefuss { font-size: 13px; color: var(--text-leise); }
 .livefuss.rechts { text-align: right; }
-.livefrei { text-align: center; color: var(--text-leise); font-size: 13px; padding: 14px 0; flex: 1; display: grid; place-items: center; }
+.livefrei { text-align: center; color: var(--text-leise); font-size: 14px; padding: 14px 0; flex: 1; display: grid; place-items: center; }
 
 /* Turniere */
 tr.klickbar { cursor: pointer; }
 tr.klickbar:hover td { background: var(--flaeche-2); }
 .tabelle .marke, .bearbeitenkopf .marke { margin-left: 6px; }
-.zurueck { border: none; background: transparent; color: var(--akzent); padding: 0 0 6px; font-size: 13px; }
+.zurueck { border: none; background: transparent; color: var(--akzent); padding: 0 0 6px; font-size: 14px; }
 .turnierzweier { display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); gap: 20px; }
 @media (max-width: 900px) { .turnierzweier { grid-template-columns: 1fr; } }
+/* Gruppentabellen: so viele nebeneinander, wie mit mindestens 300 px passen */
+.gruppenraster { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
 .zahlfeld, .tabelle td input.zahlfeld { width: 48px; text-align: center; padding: 4px; }
-button.klein { font-size: 12px; padding: 2px 7px; margin-left: 4px; }
+button.klein { font-size: 13px; padding: 2px 7px; margin-left: 4px; }
 tr.gespielt td { color: var(--text-leise); }
 tr.gespielt .zahlfeld { color: var(--text); }
 .marke.stichkampf { color: #854f0b; border-color: #e8cfa3; }
@@ -349,7 +352,7 @@ tr.gespielt .zahlfeld { color: var(--text); }
 .dialoghintergrund { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.35); display: grid; place-items: center; padding: 16px; z-index: 50; }
 .dialog { background: var(--flaeche); border-radius: 12px; padding: 18px; width: 100%; max-width: 520px; max-height: 80vh; overflow: auto; display: flex; flex-direction: column; gap: 12px; }
 .umschalter { display: inline-flex; border: 1px solid var(--rand); border-radius: var(--radius); overflow: hidden; }
-.umschalter button { border: none; border-right: 1px solid var(--rand); border-radius: 0; font-size: 12px; padding: 5px 10px; }
+.umschalter button { border: none; border-right: 1px solid var(--rand); border-radius: 0; font-size: 13px; padding: 5px 10px; }
 .umschalter button:last-child { border-right: none; }
 .umschalter button.aktiv { background: var(--akzent-hell); color: var(--akzent); }
-.pausehinweis { background: #faeeda; border: 1px solid #e8cfa3; color: #633806; border-radius: var(--radius); padding: 8px 12px; font-size: 13px; }
+.pausehinweis { background: #faeeda; border: 1px solid #e8cfa3; color: #633806; border-radius: var(--radius); padding: 8px 12px; font-size: 14px; }

@@ -1901,7 +1901,7 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
                   Die Gruppenspiele sind gesperrt, weil {zwei ? 'die Platzierungsduelle schon laufen' : 'die KO-Runde schon läuft'}.
                 </p>
               )}
-              <div className="turnierzweier">
+              <div className="gruppenraster">
                 {gruppenNamen.map((g) => (
                   <section key={g} className="block">
                     <h2>
