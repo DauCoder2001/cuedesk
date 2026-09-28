@@ -7,6 +7,7 @@ import {
   ausEingabe,
   aushangDateiname,
   aushangPdf,
+  auslosungText,
   ausschreibungText,
   meldeschlussText,
   meldeschlussVorschlag,
@@ -83,6 +84,65 @@ describe('Text zum Teilen', () => {
       'Anmelden: https://x.de/?anmeldung=1',
       'Gut Stoß!'
     ]);
+  });
+});
+
+describe('Auslosung teilen', () => {
+  const auslosung = {
+    name: 'Herbstturnier',
+    datum: '2026-10-09',
+    uhrzeit: '19:00',
+    spielweise: '9-Ball · Gruppen mit KO · Race to 3 · Vorgabe 75 %',
+    gruppen: [
+      {
+        name: 'A',
+        spieler: [
+          { nr: 1, name: 'Max Muster', rating: 520 },
+          { nr: 2, name: 'Erika Beispiel', rating: null }
+        ],
+        ersteRunde: [{ a: 'Max Muster', b: 'Erika Beispiel', vorgabeA: 0, vorgabeB: 1 }]
+      },
+      {
+        name: 'B',
+        spieler: [
+          { nr: 3, name: 'Jan Test', rating: 480 },
+          { nr: 4, name: 'Uwe Probe', rating: 500 }
+        ],
+        ersteRunde: [{ a: 'Jan Test', b: 'Uwe Probe', vorgabeA: 0, vorgabeB: 0 }]
+      }
+    ]
+  };
+
+  test('Gruppen in Startnummer-Reihenfolge, ohne Zusätze', () => {
+    expect(auslosungText(auslosung, { rating: false, ersteRunde: false })).toBe(
+      [
+        '*Herbstturnier · Auslosung*',
+        'Fr., 09.10.2026, Beginn 19:00 Uhr',
+        '9-Ball · Gruppen mit KO · Race to 3 · Vorgabe 75 %',
+        '4 Spieler',
+        '',
+        '*Gruppe A*',
+        '1. Max Muster',
+        '2. Erika Beispiel',
+        '',
+        '*Gruppe B*',
+        '3. Jan Test',
+        '4. Uwe Probe',
+        '',
+        'Gut Stoß!'
+      ].join('\n')
+    );
+  });
+
+  test('mit Rating und erster Runde; Vorgabe nur, wenn es eine gibt', () => {
+    const text = auslosungText(auslosung, { rating: true, ersteRunde: true });
+    expect(text).toContain('1. Max Muster · 520\n2. Erika Beispiel\n1. Runde:\nMax Muster – Erika Beispiel (0:1)');
+    expect(text).toContain('Jan Test – Uwe Probe\n');
+  });
+
+  test('Einzelgruppe heißt Spieler', () => {
+    const text = auslosungText({ ...auslosung, uhrzeit: undefined, gruppen: [{ ...auslosung.gruppen[0], name: null }] }, { rating: false, ersteRunde: false });
+    expect(text.split('\n').slice(1, 6)).toEqual(['Fr., 09.10.2026', '9-Ball · Gruppen mit KO · Race to 3 · Vorgabe 75 %', '2 Spieler', '', '*Spieler*']);
   });
 });
 

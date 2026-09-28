@@ -9,6 +9,7 @@ import { berichtDateiname, berichtPdf, gruppenBerichtPdf } from '../turnierberic
 import type { BerichtBlock } from '../turnierbericht';
 import { herunterladen } from '../pdf';
 import AusschreibungBlock from './AusschreibungBlock';
+import AuslosungTeilen from './AuslosungTeilen';
 import { useWechsel } from '../ungespeichert';
 import { angefangen, auslosen, bergerRunden, hoechstwert, rangliste, spielBeendet } from '../turnier';
 import type { Gleichstand, RanglistenPartie, Zeile } from '../turnier';
@@ -1688,6 +1689,36 @@ export default function TurnierAnsicht({
             }
             setTurnier({ ...turnier, einstellungen: { ...einstellungen, ausschreibung: a } });
             return true;
+          }}
+        />
+      )}
+
+      {darfLeiten && turnier.status !== 'geplant' && turnier.quelle !== 'import' && aufstellung.length > 0 && (
+        <AuslosungTeilen
+          daten={{
+            name: turnier.name,
+            datum: turnier.datum,
+            uhrzeit: einstellungen.ausschreibung?.uhrzeit,
+            spielweise: [
+              DISZIPLIN_TEXT[turnier.disziplin],
+              MODUS_TEXT[turnier.modus],
+              zwei
+                ? `Race to ${raceTo}, Duelle Race to ${race2}`
+                : mitKo
+                  ? `Race to ${raceTo}, KO ${raceFuer('QF')}/${raceFuer('SF')}/${raceFuer('FIN')}`
+                  : `Race to ${raceTo}`,
+              ...(va.aktiv ? [`Vorgabe ${va.staerke} %`] : [])
+            ].join(' · '),
+            gruppen: (mehrgruppig ? gruppenNamen : [null]).map((g) => ({
+              name: g,
+              spieler: aufstellung
+                .filter((t) => g === null || t.gruppe === g)
+                .map((t) => ({ nr: t.startnummer ?? 0, name: anzeige(t.person_id), rating: t.rating_eingefroren })),
+              ersteRunde: gruppenPartien
+                .filter((p) => p.runde === 1 && (g === null || p.gruppe === g))
+                .sort(nachPaarung)
+                .map((p) => ({ a: anzeige(p.spieler_a), b: anzeige(p.spieler_b), vorgabeA: p.vorgabe_a, vorgabeB: p.vorgabe_b }))
+            }))
           }}
         />
       )}

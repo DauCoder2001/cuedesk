@@ -154,6 +154,49 @@ export function aushangPdf(d: AusschreibungDaten): Uint8Array {
   return bauen(dok, `Ausschreibung ${d.name}`);
 }
 
+// ---------- Auslosung teilen ----------
+
+export type AuslosungGruppe = {
+  name: string | null; // null: Einzelgruppe
+  spieler: { nr: number; name: string; rating: number | null }[]; // in Startnummer-Reihenfolge
+  ersteRunde: { a: string; b: string; vorgabeA: number; vorgabeB: number }[];
+};
+
+export type AuslosungDaten = {
+  name: string;
+  datum: string;
+  uhrzeit?: string;
+  spielweise: string; // z. B. "9-Ball · Gruppen mit KO · Race to 3, KO 3/3/5 · Vorgabe 75 %"
+  gruppen: AuslosungGruppe[];
+};
+
+// Text wie die WhatsApp-Auslosung in Pool-TS, aus den echten Turnierdaten
+export function auslosungText(d: AuslosungDaten, mit: { rating: boolean; ersteRunde: boolean }): string {
+  const anzahl = d.gruppen.reduce((n, g) => n + g.spieler.length, 0);
+  const teile = [
+    `*${d.name} · Auslosung*`,
+    `${tagLang(d.datum)}${d.uhrzeit ? `, Beginn ${d.uhrzeit} Uhr` : ''}`,
+    d.spielweise,
+    `${anzahl} Spieler`
+  ];
+  for (const g of d.gruppen) {
+    teile.push('', g.name ? `*Gruppe ${g.name}*` : '*Spieler*');
+    for (const s of g.spieler) {
+      // Mittelpunkt statt Klammer: Gastnamen tragen schon "(Verein)"
+      teile.push(`${s.nr}. ${s.name}${mit.rating && s.rating !== null ? ` · ${s.rating}` : ''}`);
+    }
+    if (mit.ersteRunde && g.ersteRunde.length > 0) {
+      teile.push('1. Runde:');
+      for (const p of g.ersteRunde) {
+        const vorgabe = p.vorgabeA > 0 || p.vorgabeB > 0 ? ` (${p.vorgabeA}:${p.vorgabeB})` : '';
+        teile.push(`${p.a} – ${p.b}${vorgabe}`);
+      }
+    }
+  }
+  teile.push('', 'Gut Stoß!');
+  return teile.join('\n');
+}
+
 // ---------- Anmeldung (Stufe 16) ----------
 
 // Gleiche Regel wie turnier_anmelden() in der Datenbank

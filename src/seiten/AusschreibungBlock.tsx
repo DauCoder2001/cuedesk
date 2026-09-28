@@ -9,6 +9,7 @@ import {
   meldeschlussVorschlag
 } from '../ausschreibung';
 import { useUngespeichert, weichtAb } from '../ungespeichert';
+import TeilenKnoepfe from './TeilenKnoepfe';
 import type { Ausschreibung, AusschreibungDaten } from '../ausschreibung';
 
 // Ausschreibung in der Turnieransicht, solange das Turnier in Vorbereitung ist:
@@ -57,15 +58,6 @@ export default function AusschreibungBlock({
       uhrzeit: uhrzeit || undefined,
       meldeschluss: folgt ? (meldeschlussVorschlag(daten.datum, uhrzeit) ?? undefined) : entwurf.meldeschluss
     });
-  }
-
-  async function kopieren() {
-    try {
-      await navigator.clipboard.writeText(text);
-      setMeldung('Text kopiert. In WhatsApp oder einer Mail einfügen.');
-    } catch {
-      setMeldung('Kopieren ging nicht. Bitte den Text markieren und kopieren.');
-    }
   }
 
   return (
@@ -146,27 +138,9 @@ export default function AusschreibungBlock({
         </span>
       </label>
 
+      {meldung && <p className="meldung">{meldung}</p>}
       <pre className="teiltext" title="So sieht der Text zum Teilen aus">{text}</pre>
-      <div className="knopfpaar">
-        <button type="button" title="Den Text in die Zwischenablage kopieren" onClick={() => void kopieren()}>
-          Text kopieren
-        </button>
-        <button
-          type="button"
-          title="WhatsApp mit diesem Text öffnen; am Handy die App, am PC WhatsApp Web"
-          onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener')}
-        >
-          Per WhatsApp teilen
-        </button>
-        <button
-          type="button"
-          title="Das eigene Mailprogramm mit Betreff und Text öffnen; die Empfänger wählst du dort"
-          onClick={() => {
-            window.location.href = `mailto:?subject=${encodeURIComponent(`Ausschreibung: ${daten.name}`)}&body=${encodeURIComponent(text.replace(/\*/g, ''))}`;
-          }}
-        >
-          Per E-Mail
-        </button>
+      <TeilenKnoepfe text={text} betreff={`Ausschreibung: ${daten.name}`}>
         <button
           type="button"
           title="Eine DIN-A4-Seite mit den Angaben und Zeilen zum Eintragen, zum Aushängen im Vereinsheim"
@@ -174,8 +148,7 @@ export default function AusschreibungBlock({
         >
           Aushang (PDF)
         </button>
-        {meldung && <span className="meldung zaehlstand">{meldung}</span>}
-      </div>
+      </TeilenKnoepfe>
     </section>
   );
 }

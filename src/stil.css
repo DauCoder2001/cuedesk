@@ -84,6 +84,10 @@ button:disabled { cursor: default; color: var(--text-leise); }
 .zaehlstand { align-self: center; margin-left: 6px; }
 /* Ausschreibung: Feld ueber die ganze Breite, Text zum Teilen */
 .felder > .feld.ganzebreite { grid-column: 1 / -1; }
+/* Aufklappbarer Abschnitt, z. B. "Auslosung teilen" */
+.aufklapp > summary { cursor: pointer; font-size: 19px; font-weight: 500; }
+.aufklapp[open] > summary { margin-bottom: 10px; }
+.aufklapp .knopfpaar .ankreuz { margin-right: 16px; }
 /* Anmeldung: Liste in der Turnieransicht, hervorgehobene Ausschreibung */
 .anmeldeliste { margin-top: 16px; }
 .anmeldeliste h3 { margin: 0 0 4px; }
