@@ -1752,9 +1752,11 @@ export default function TurnierAnsicht({
           </table>
 
           {darfLeiten && anmeldungen.length > 0 && (() => {
-            const stand = anmeldestand(anmeldungen, einstellungen.ausschreibung?.hoechstens);
+            const stand = anmeldestand(
+              anmeldungen,
+              teilnehmer.map((t) => t.person_id)
+            );
             const istTeilnehmer = (id: string) => teilnehmer.some((t) => t.person_id === id);
-            const neu = stand.filter((s) => s.art === 'dabei' && !istTeilnehmer(s.person_id)).map((s) => s.person_id);
             return (
               <div className="anmeldeliste">
                 <h3>Anmeldungen ({stand.filter((s) => s.art !== 'abgemeldet').length})</h3>
@@ -1784,7 +1786,7 @@ export default function TurnierAnsicht({
                             '–'
                           ) : (
                             bearbeitbar && (
-                              <button type="button" className="klein" title="Diesen Spieler als Teilnehmer aufnehmen" onClick={() => void anmeldungenUebernehmen([s.person_id])}>
+                              <button type="button" className="klein" title="Den Nachrücker trotz Höchstzahl als Teilnehmer aufnehmen" onClick={() => void anmeldungenUebernehmen([s.person_id])}>
                                 Übernehmen
                               </button>
                             )
@@ -1794,13 +1796,10 @@ export default function TurnierAnsicht({
                     ))}
                   </tbody>
                 </table>
-                {bearbeitbar && neu.length > 0 && (
-                  <div className="knopfpaar">
-                    <button type="button" title="Alle Angemeldeten bis zur Höchstzahl als Teilnehmer aufnehmen; Nachrücker einzeln" onClick={() => void anmeldungenUebernehmen(neu)}>
-                      Alle als Teilnehmer übernehmen ({neu.length})
-                    </button>
-                  </div>
-                )}
+                <p className="hinweis">
+                  Wer sich anmeldet, steht bis zur Auslosung direkt in der Teilnehmerliste. Ist die Höchstzahl erreicht,
+                  rückt bei einer Abmeldung der nächste Nachrücker nach.
+                </p>
               </div>
             );
           })()}

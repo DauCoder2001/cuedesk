@@ -99,7 +99,7 @@ describe('Anmeldung', () => {
   test('Link ersetzt vorhandene Parameter', () => {
     expect(anmeldeLink('https://x.github.io/cuedesk/?geraet=1#oben', 'abc')).toBe('https://x.github.io/cuedesk/?anmeldung=abc');
   });
-  test('Reihenfolge, Nachrücker ab der Höchstzahl, Abgemeldete am Ende', () => {
+  test('Reihenfolge; wer nicht Teilnehmer ist, rückt nach; Abgemeldete am Ende', () => {
     const stand = anmeldestand(
       [
         { person_id: 'c', angemeldet_am: '2026-10-03T10:00:00Z', abgemeldet_am: null },
@@ -107,7 +107,7 @@ describe('Anmeldung', () => {
         { person_id: 'x', angemeldet_am: '2026-10-01T09:00:00Z', abgemeldet_am: '2026-10-02T09:00:00Z' },
         { person_id: 'b', angemeldet_am: '2026-10-02T10:00:00Z', abgemeldet_am: null }
       ],
-      2
+      ['a', 'b', 'gast']
     );
     expect(stand.map((s) => `${s.person_id}:${s.art}`)).toEqual(['a:dabei', 'b:dabei', 'c:nachruecker', 'x:abgemeldet']);
   });

@@ -139,8 +139,9 @@ export default function AusschreibungBlock({
         <span>
           Anmeldung für Mitglieder offen
           <small>
-            Mitglieder mit Konto melden sich bis zum Meldeschluss auf der Seite Turniere selbst an und ab. Der Text zum
-            Teilen bekommt dann den Link zur Anmeldung.
+            Mitglieder mit Konto melden sich bis zum Meldeschluss auf der Seite Turniere selbst an und ab. Wer sich
+            anmeldet, steht bis zur Auslosung direkt in der Teilnehmerliste. Der Text zum Teilen bekommt den Link zur
+            Anmeldung.
           </small>
         </span>
       </label>

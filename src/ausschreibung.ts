@@ -177,21 +177,23 @@ export type Anmeldestand = {
   art: 'dabei' | 'nachruecker' | 'abgemeldet';
 };
 
-// Reihenfolge der Anmeldung; ab der Hoechstzahl rueckt nach, wer spaeter kam.
-// Abgemeldete stehen am Ende.
+// Stand jeder Anmeldung. Die Anmeldung macht direkt zum Teilnehmer (Stufe
+// 16b); wer angemeldet ist, aber nicht in der Teilnehmerliste steht, wartet
+// als Nachruecker. Reihenfolge der Anmeldung, Abgemeldete am Ende.
 export function anmeldestand(
   anmeldungen: { person_id: string; angemeldet_am: string; abgemeldet_am: string | null }[],
-  hoechstens?: number
+  teilnehmer: Iterable<string>
 ): Anmeldestand[] {
+  const dabei = new Set(teilnehmer);
   const aktiv = anmeldungen
     .filter((x) => !x.abgemeldet_am)
     .sort((a, b) => a.angemeldet_am.localeCompare(b.angemeldet_am));
   const weg = anmeldungen.filter((x) => x.abgemeldet_am);
   return [
-    ...aktiv.map((x, i) => ({
+    ...aktiv.map((x) => ({
       person_id: x.person_id,
       angemeldet_am: x.angemeldet_am,
-      art: (hoechstens && i >= hoechstens ? 'nachruecker' : 'dabei') as Anmeldestand['art']
+      art: (dabei.has(x.person_id) ? 'dabei' : 'nachruecker') as Anmeldestand['art']
     })),
     ...weg.map((x) => ({ person_id: x.person_id, angemeldet_am: x.angemeldet_am, art: 'abgemeldet' as const }))
   ];

@@ -22,6 +22,7 @@ export default function Ausschreibungen({
 }) {
   const { verein, sitzung } = useSitzung();
   const [anmeldungen, setAnmeldungen] = useState<TurnierAnmeldung[]>([]);
+  const [teilnehmer, setTeilnehmer] = useState<{ turnier_id: string; person_id: string }[]>([]);
   const [personen, setPersonen] = useState<Person[]>([]);
   const [eigene, setEigene] = useState<string | null | undefined>(undefined); // undefined: noch nicht geladen
   const [arbeitet, setArbeitet] = useState<string | null>(null);
@@ -38,13 +39,15 @@ export default function Ausschreibungen({
 
   const laden = useCallback(async () => {
     if (!verein || !sitzung || !ids) return;
-    const [a, p, e] = await Promise.all([
+    const [a, p, e, tn] = await Promise.all([
       supabase.from('turnier_anmeldungen').select('*').in('turnier_id', ids.split(',')),
       supabase.from('personen').select('*').eq('verein_id', verein.id),
-      supabase.from('benutzer_personen').select('person_id').eq('benutzer_id', sitzung.user.id).eq('verein_id', verein.id)
+      supabase.from('benutzer_personen').select('person_id').eq('benutzer_id', sitzung.user.id).eq('verein_id', verein.id),
+      supabase.from('turnier_teilnehmer').select('turnier_id, person_id').in('turnier_id', ids.split(','))
     ]);
     if (a.error) setFehler(a.error.message);
     setAnmeldungen(a.data ?? []);
+    setTeilnehmer(tn.data ?? []);
     setPersonen(p.data ?? []);
     setEigene(e.data?.[0]?.person_id ?? null);
   }, [verein, sitzung, ids]);
@@ -96,7 +99,7 @@ export default function Ausschreibungen({
             const a = (t.einstellungen as TurnierEinstellungen).ausschreibung;
             const stand = anmeldestand(
               anmeldungen.filter((x) => x.turnier_id === t.id),
-              a?.hoechstens
+              teilnehmer.filter((x) => x.turnier_id === t.id).map((x) => x.person_id)
             );
             const aktiv = stand.filter((s) => s.art !== 'abgemeldet');
             const ich = eigene ? stand.find((s) => s.person_id === eigene && s.art !== 'abgemeldet') : undefined;
@@ -127,7 +130,9 @@ export default function Ausschreibungen({
                 </td>
                 <td className="rechts">
                   {ich && (
-                    <span className="marke gutmarke">{ich.art === 'nachruecker' ? 'du bist Nachrücker' : 'du bist angemeldet'}</span>
+                    <span className={ich.art === 'nachruecker' ? 'marke warnmarke' : 'marke gutmarke'}>
+                      {ich.art === 'nachruecker' ? 'du bist Nachrücker' : 'du bist Teilnehmer'}
+                    </span>
                   )}
                   {!offen ? (
                     <div className="hinweis">Meldeschluss vorbei</div>
