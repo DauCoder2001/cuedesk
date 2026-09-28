@@ -9,6 +9,7 @@ import { berichtDateiname, berichtPdf, gruppenBerichtPdf } from '../turnierberic
 import type { BerichtBlock } from '../turnierbericht';
 import { herunterladen } from '../pdf';
 import AusschreibungBlock from './AusschreibungBlock';
+import { useWechsel } from '../ungespeichert';
 import { angefangen, auslosen, bergerRunden, hoechstwert, rangliste, spielBeendet } from '../turnier';
 import type { Gleichstand, RanglistenPartie, Zeile } from '../turnier';
 import {
@@ -74,8 +75,17 @@ const QUELLE_KURZ: Partial<Record<RatingQuelle, string>> = {
 const zeitText = (iso: string) =>
   new Date(iso).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' });
 
-export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: string; zurueck: () => void }) {
+export default function TurnierAnsicht({
+  turnierId,
+  zurueck,
+  aendern
+}: {
+  turnierId: string;
+  zurueck: () => void;
+  aendern?: () => void; // Formular "Turnier ändern" öffnen (nur in Vorbereitung)
+}) {
   const { verein, darf } = useSitzung();
+  const wechsel = useWechsel();
   const darfLeiten = darf('vereinsadmin', 'sportwart', 'turnierleiter');
   const istAdmin = darf('vereinsadmin');
 
@@ -1548,6 +1558,19 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
           </div>
           <div className="knopfpaar">
             <span className={`marke ${turnier.status === 'laeuft' ? 'livelaeuft' : ''}`}>{STATUS_TEXT[turnier.status]}</span>
+            {aendern && bearbeitbar && turnier.status === 'geplant' && (
+              <button
+                type="button"
+                title="Name, Datum, Disziplin, Modus, Race to, Vorgabe, Serie und Rating ändern. Geht bis zur Auslosung."
+                onClick={() => {
+                  void (async () => {
+                    if (await wechsel()) aendern();
+                  })();
+                }}
+              >
+                Ändern
+              </button>
+            )}
             {bearbeitbar && turnier.status === 'laeuft' && (
               <button type="button" title={einstellungen.pausiert ? 'An den Tablets lassen sich wieder neue Spiele starten.' : 'An den Tablets lässt sich kein neues Spiel starten, laufende Spiele gehen weiter.'} onClick={() => void einstellungenSetzen({ pausiert: !einstellungen.pausiert })}>
                 {einstellungen.pausiert ? 'Fortsetzen' : 'Pausieren'}
@@ -1630,7 +1653,8 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
                   ? `Race to ${raceTo}, KO ${raceFuer('QF')}/${raceFuer('SF')}/${raceFuer('FIN')}`
                   : `Race to ${raceTo}`,
               ...(va.aktiv ? ['mit Vorgabe'] : [])
-            ].join(' · ')
+            ].join(' · '),
+            eingetragen: teilnehmer.map((t) => anzeige(t.person_id)).sort((a, b) => a.localeCompare(b, 'de'))
           }}
           gespeichert={einstellungen.ausschreibung ?? {}}
           speichern={async (a) => {

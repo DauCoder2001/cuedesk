@@ -89,6 +89,16 @@ describe('Aushang', () => {
     expect(zeilen.length).toBeGreaterThan(1);
     expect(zeilen.join(' ')).toBe('eins zwei drei vier fünf sechs sieben acht');
   });
+  test('Eingetragene stehen im Aushang; viele gehen auf eine zweite Seite', () => {
+    const lesen = (pdf: Uint8Array) => new TextDecoder('latin1').decode(pdf);
+    const kurz = lesen(aushangPdf({ ...daten({ hoechstens: 8 }), eingetragen: ['Erika Beispiel', 'Max Muster'] }));
+    expect(kurz).toContain('(Erika Beispiel)');
+    expect(kurz).toContain('/Count 1');
+    const viele = Array.from({ length: 30 }, (_, i) => `Spieler ${i + 1}`);
+    const lang = lesen(aushangPdf({ ...daten(), eingetragen: viele }));
+    expect(lang).toContain('(Spieler 30)');
+    expect(lang).toContain('/Count 2');
+  });
   test('PDF entsteht; Dateiname ohne Sonderzeichen', () => {
     const pdf = aushangPdf(daten({ uhrzeit: '19:00', hoechstens: 8 }));
     expect(new TextDecoder('latin1').decode(pdf.subarray(0, 8))).toBe('%PDF-1.4');

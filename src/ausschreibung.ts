@@ -3,7 +3,7 @@
 // Zeiten gelten in der Zeitzone des Browsers; der Meldeschluss wird mit
 // Zeitzone gespeichert (ISO), damit die Datenbank ihn pruefen kann.
 
-import { bauen, linie, neuesDokument, PDF_BREITE, PDF_RAND, text, textbreite } from './pdf';
+import { bauen, linie, neueSeite, neuesDokument, PDF_BREITE, PDF_RAND, text, textbreite } from './pdf';
 
 export type Ausschreibung = {
   uhrzeit?: string; // Beginn, "19:00"
@@ -22,6 +22,7 @@ export type AusschreibungDaten = {
   spielweise: string; // z. B. "9-Ball · Gruppen mit KO · Race to 5 · mit Vorgabe"
   ausschreibung: Ausschreibung;
   link?: string; // Anmeldelink (Teil 2)
+  eingetragen?: string[]; // schon eingetragene Teilnehmer, nur fuer den Aushang
 };
 
 export const UHRZEIT = /^([01]?\d|2[0-3]):[0-5]\d$/;
@@ -133,13 +134,21 @@ export function aushangPdf(d: AusschreibungDaten): Uint8Array {
   dok.y -= 18;
   text(dok, 'Eintragen', PDF_RAND, breite, 14, true);
   dok.y -= 10;
-  // So viele Zeilen, wie auf die Seite passen, hoechstens die Hoechstzahl
+  // Erst die schon Eingetragenen, dann leere Zeilen: mit Hoechstzahl genau so
+  // viele, sonst so viele, wie auf die Seite passen. Wer nicht mehr passt,
+  // steht auf einer weiteren Seite.
   const zeilenhoehe = 26;
+  const namen = d.eingetragen ?? [];
   const passen = Math.floor((dok.y - PDF_RAND - 20) / zeilenhoehe);
-  const anzahl = Math.max(1, Math.min(passen, d.ausschreibung.hoechstens || passen));
+  const anzahl = Math.max(1, namen.length, d.ausschreibung.hoechstens || passen);
   for (let i = 1; i <= anzahl; i++) {
+    if (dok.y - zeilenhoehe < PDF_RAND + 20) {
+      neueSeite(dok);
+      dok.y += zeilenhoehe - 10;
+    }
     dok.y -= zeilenhoehe;
     text(dok, `${i}.`, PDF_RAND, 24, 11, false, 'rechts', 0.35);
+    if (namen[i - 1]) text(dok, namen[i - 1], PDF_RAND + 36, breite - 36, 13, false);
     linie(dok, PDF_RAND + 32, dok.y - 3, PDF_BREITE - PDF_RAND, dok.y - 3, 0.5, 0.6);
   }
   return bauen(dok, `Ausschreibung ${d.name}`);

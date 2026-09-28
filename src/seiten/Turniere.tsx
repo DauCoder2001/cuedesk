@@ -4,13 +4,14 @@ import { useSitzung } from '../sitzung';
 import LigaAnsicht from './LigaAnsicht';
 import TurnierAnsicht from './TurnierAnsicht';
 import { LIGEN } from '../liga';
-import type { Ausschreibung } from '../ausschreibung';
 import type { Ausspielziele, LigaKennung } from '../liga';
+import type { Ausschreibung } from '../ausschreibung';
 import { saisonAus } from '../mannschaften';
 import { vereinsEinstellungen } from '../vereinseinstellungen';
 import { kurzesRaceHinweis } from '../vorgabe';
 import { Pflichthinweis, usePflicht } from '../pflicht';
 import { useUngespeichert, weichtAb } from '../ungespeichert';
+import { useRueckfrage } from '../rueckfrage';
 import type { Disziplin, Mannschaft, Serie, Turnier, TurnierModus, TurnierStatus } from '../datenbank.types';
 
 // Turnierliste. Turnierleiter, Sportwart und Vereins-Admin legen Turniere an
@@ -94,6 +95,9 @@ export default function Turniere() {
   const [serien, setSerien] = useState<Serie[]>([]);
   const [offen, setOffen] = useState<string | null>(null);
   const [formular, setFormular] = useState(false);
+  // Turnier, das im Formular geaendert wird (null: neues Turnier)
+  const [bearbeitet, setBearbeitet] = useState<Turnier | null>(null);
+  const [rueckfrage, fragen] = useRueckfrage();
   const [fehler, setFehler] = useState<string | null>(null);
   const pflicht = usePflicht();
 
@@ -142,7 +146,11 @@ export default function Turniere() {
   const wechselErlaubt = useUngespeichert(
     'turnier',
     weichtAb(formularStand, ursprung),
-    name.trim() ? `Das neue Turnier „${name.trim()}“` : 'Das neue Turnier',
+    bearbeitet
+      ? `Die Änderungen an „${bearbeitet.name}“`
+      : name.trim()
+        ? `Das neue Turnier „${name.trim()}“`
+        : 'Das neue Turnier',
     () => anlegen()
   );
 
@@ -238,6 +246,7 @@ export default function Turniere() {
         obergrenze: Math.max(0, Number(obergrenze) || 0)
       }
     };
+    if (bearbeitet) return aenderungSpeichern(bearbeitet, einstellungen);
     const { data, error } = await supabase
       .from('turniere')
       .insert({
@@ -258,6 +267,98 @@ export default function Turniere() {
     setName('');
     await laden();
     setOffen(data.id);
+    return true;
+  }
+
+  // Formular mit den Werten eines Turniers fuellen (Aendern bis zur Auslosung)
+  function formularAus(t: Turnier) {
+    const e = (t.einstellungen ?? {}) as TurnierEinstellungen;
+    const race = String(e.raceTo ?? vorgaben.turnier.raceTo);
+    setName(t.name);
+    setDatum(t.datum);
+    setDisziplin(t.disziplin);
+    setModus(t.modus);
+    setRaceTo(race);
+    setRacePhase2(String(e.racePhase2 ?? race));
+    setRaceKo({
+      R16: String(e.raceKo?.R16 ?? race),
+      QF: String(e.raceKo?.QF ?? race),
+      SF: String(e.raceKo?.SF ?? race),
+      FIN: String(e.raceKo?.FIN ?? race),
+      P3: String(e.racePhase3 ?? race)
+    });
+    setSerieId(t.serie_id ?? '');
+    setVorgabeAn(e.vorgabe?.aktiv ?? false);
+    setStaerke(String(e.vorgabe?.staerke ?? ratingStaerke));
+    setObergrenze(String(e.vorgabe?.obergrenze ?? 0));
+    setRatingWerten(t.rating_werten);
+    setArt(e.art ?? '');
+    pflicht.zuruecksetzen();
+    setBearbeitet(t);
+    setFormular(true);
+  }
+
+  // Zurueck in die Turnieransicht, Formular leeren
+  function aendernBeenden(t: Turnier) {
+    setFormular(false);
+    setBearbeitet(null);
+    setName('');
+    setDatum(heute());
+    setSerieId('');
+    setOffen(t.id);
+  }
+
+  async function aenderungSpeichern(t: Turnier, formEinstellungen: TurnierEinstellungen) {
+    // Frisch lesen: Ausschreibung und Turnierart koennen sich in der Ansicht geaendert haben
+    const { data: aktuell, error: lesefehler } = await supabase
+      .from('turniere')
+      .select('status, einstellungen')
+      .eq('id', t.id)
+      .single();
+    if (lesefehler || !aktuell) return setFehler(lesefehler?.message ?? 'Turnier nicht gefunden.');
+    if (aktuell.status !== 'geplant') {
+      return setFehler('Das Turnier ist schon ausgelost; ändern lässt es sich nicht mehr.');
+    }
+    const modusNeu = modus !== t.modus;
+    if (
+      modusNeu &&
+      !(await fragen(
+        `Modus von „${MODUS_TEXT[t.modus]}“ auf „${MODUS_TEXT[modus]}“ ändern?\nFeste Gruppen-Setzungen der Teilnehmer werden dabei gelöscht.`,
+        'Ändern'
+      ))
+    ) {
+      return;
+    }
+    // Was das Formular festlegt, kommt neu; alles andere (Ausschreibung,
+    // TV-Ansicht ...) bleibt. Bei neuem Modus fallen dessen Vorbereitungen weg.
+    const behalten = { ...((aktuell.einstellungen ?? {}) as TurnierEinstellungen) };
+    const vomFormular: (keyof TurnierEinstellungen)[] = ['raceTo', 'racePhase2', 'raceKo', 'racePhase3', 'vorgabe', 'art'];
+    const modusAbhaengig: (keyof TurnierEinstellungen)[] = [
+      'gruppenzahl', 'weiter', 'paarung', 'ko', 'phase2', 'phase3', 'handReihenfolge', 'tausch', 'nachgetragen'
+    ];
+    for (const k of [...vomFormular, ...(modusNeu ? modusAbhaengig : [])]) delete behalten[k];
+    const { error } = await supabase
+      .from('turniere')
+      .update({
+        name: name.trim(),
+        datum,
+        disziplin,
+        modus,
+        serie_id: serieId || null,
+        rating_werten: ratingWerten,
+        einstellungen: { ...behalten, ...formEinstellungen, ...(art ? { art } : {}) }
+      })
+      .eq('id', t.id);
+    if (error) return setFehler(error.message);
+    if (modusNeu) {
+      const { error: e2 } = await supabase
+        .from('turnier_teilnehmer')
+        .update({ gruppe: null, gesetzt: false })
+        .eq('turnier_id', t.id);
+      if (e2) return setFehler(e2.message);
+    }
+    await laden();
+    aendernBeenden(t);
     return true;
   }
 
@@ -295,6 +396,14 @@ export default function Turniere() {
           setOffen(null);
           void laden();
         }}
+        aendern={() => {
+          void (async () => {
+            const { data, error } = await supabase.from('turniere').select('*').eq('id', offen).single();
+            if (error || !data) return setFehler(error?.message ?? 'Turnier nicht gefunden.');
+            formularAus(data);
+            setOffen(null);
+          })();
+        }}
       />
     );
   }
@@ -309,6 +418,7 @@ export default function Turniere() {
               type="button"
               title="Ein neues Turnier oder einen Liga-Spieltag anlegen"
               onClick={() => {
+                setBearbeitet(null);
                 // Vorgaben aus der Seite "System"
                 const t = vorgaben.turnier;
                 const race = String(t.raceTo);
@@ -339,7 +449,7 @@ export default function Turniere() {
 
         {formular && (
           <div className="kasten" ref={pflicht.bereich}>
-            <div className="feldkopf">Neues Turnier</div>
+            <div className="feldkopf">{bearbeitet ? `Turnier ändern: ${bearbeitet.name}` : 'Neues Turnier'}</div>
             <div className="felder">
               <label className="feld">
                 <span>Name</span>
@@ -378,7 +488,7 @@ export default function Turniere() {
                   <option value="einzelgruppe">Einzelgruppe (jeder gegen jeden)</option>
                   <option value="zwei-gruppen">Zwei Gruppen mit Platzierungsduellen</option>
                   <option value="gruppen-ko">Gruppen mit KO-Runde</option>
-                  <option value="liga">Liga-Spieltag (Begegnung)</option>
+                  {!bearbeitet && <option value="liga">Liga-Spieltag (Begegnung)</option>}
                 </select>
               </label>
               {modus === 'liga' && (
@@ -521,15 +631,20 @@ export default function Turniere() {
               </span>
             </label>
             <div className="knopfpaar">
-              <button type="button" title="Legt das Turnier mit diesen Angaben an." onClick={() => void anlegen()}>
-                Anlegen
+              <button
+                type="button"
+                title={bearbeitet ? 'Die Änderungen speichern und zurück zum Turnier' : 'Legt das Turnier mit diesen Angaben an.'}
+                onClick={() => void anlegen()}
+              >
+                {bearbeitet ? 'Speichern' : 'Anlegen'}
               </button>
               <button
                 type="button"
-                title="Ohne Anlegen schließen"
+                title={bearbeitet ? 'Ohne Speichern zurück zum Turnier' : 'Ohne Anlegen schließen'}
                 onClick={() => {
                   pflicht.zuruecksetzen();
-                  setFormular(false);
+                  if (bearbeitet) aendernBeenden(bearbeitet);
+                  else setFormular(false);
                 }}
               >
                 Abbrechen
@@ -540,6 +655,7 @@ export default function Turniere() {
         )}
 
         {fehler && <p className="fehler">{fehler}</p>}
+        {rueckfrage}
 
         {artenInListe.length > 0 && (
           <div className="filterzeile">
