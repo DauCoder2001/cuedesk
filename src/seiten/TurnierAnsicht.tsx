@@ -8,6 +8,7 @@ import { prognose, prognoseText } from '../zeitprognose';
 import { berichtDateiname, berichtPdf, gruppenBerichtPdf } from '../turnierbericht';
 import type { BerichtBlock } from '../turnierbericht';
 import { herunterladen } from '../pdf';
+import AusschreibungBlock from './AusschreibungBlock';
 import { angefangen, auslosen, bergerRunden, hoechstwert, rangliste, spielBeendet } from '../turnier';
 import type { Gleichstand, RanglistenPartie, Zeile } from '../turnier';
 import {
@@ -1612,6 +1613,40 @@ export default function TurnierAnsicht({ turnierId, zurueck }: { turnierId: stri
         {fehler && <p className="fehler">{fehler}</p>}
         {meldung && <p className="meldung">{meldung}</p>}
       </section>
+
+      {darfLeiten && turnier.status === 'geplant' && turnier.quelle !== 'import' && (
+        <AusschreibungBlock
+          daten={{
+            verein: verein?.name ?? '',
+            name: turnier.name,
+            datum: turnier.datum,
+            art: einstellungen.art,
+            spielweise: [
+              DISZIPLIN_TEXT[turnier.disziplin],
+              MODUS_TEXT[turnier.modus],
+              zwei
+                ? `Race to ${raceTo}, Duelle Race to ${race2}`
+                : mitKo
+                  ? `Race to ${raceTo}, KO ${raceFuer('QF')}/${raceFuer('SF')}/${raceFuer('FIN')}`
+                  : `Race to ${raceTo}`,
+              ...(va.aktiv ? ['mit Vorgabe'] : [])
+            ].join(' · ')
+          }}
+          gespeichert={einstellungen.ausschreibung ?? {}}
+          speichern={async (a) => {
+            const { error } = await supabase
+              .from('turniere')
+              .update({ einstellungen: { ...einstellungen, ausschreibung: a } })
+              .eq('id', turnier.id);
+            if (error) {
+              setFehler(error.message);
+              return false;
+            }
+            setTurnier({ ...turnier, einstellungen: { ...einstellungen, ausschreibung: a } });
+            return true;
+          }}
+        />
+      )}
 
       {turnier.quelle === 'import' ? (
         <Altturnier teilnehmer={teilnehmer} partien={partien} anzeige={anzeige} />

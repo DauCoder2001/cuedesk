@@ -82,6 +82,9 @@ button:disabled { cursor: default; color: var(--text-leise); }
 .vereinswahl { font-weight: 600; font-size: 16px; border: 1px solid var(--rand); background: var(--flaeche); padding: 3px 6px; border-radius: var(--radius); cursor: pointer; }
 .vereinswahl:hover { background: var(--flaeche-2); }
 .zaehlstand { align-self: center; margin-left: 6px; }
+/* Ausschreibung: Feld ueber die ganze Breite, Text zum Teilen */
+.felder > .feld.ganzebreite { grid-column: 1 / -1; }
+.teiltext { background: var(--flaeche-2); border-radius: var(--radius); padding: 10px 12px; margin: 12px 0 8px; font-family: ui-monospace, Consolas, monospace; font-size: 14px; line-height: 1.5; white-space: pre-wrap; max-width: 720px; }
 .adminname button.klein { margin-left: 4px; padding: 0 5px; line-height: 1.3; }
 /* Konsole: Loeschung vorgemerkt */
 .marke.warnmarke { background: #fdf0d5; color: #7a4b00; margin-left: 6px; }

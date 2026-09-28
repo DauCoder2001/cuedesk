@@ -4,6 +4,7 @@ import { useSitzung } from '../sitzung';
 import LigaAnsicht from './LigaAnsicht';
 import TurnierAnsicht from './TurnierAnsicht';
 import { LIGEN } from '../liga';
+import type { Ausschreibung } from '../ausschreibung';
 import type { Ausspielziele, LigaKennung } from '../liga';
 import { saisonAus } from '../mannschaften';
 import { vereinsEinstellungen } from '../vereinseinstellungen';
@@ -80,6 +81,7 @@ export type TurnierEinstellungen = {
   art?: string; // Turnierart (Bezeichnung aus der Liste des Vereins, beim Anlegen festgehalten)
   tvAnsicht?: 'auslosung' | 'live' | 'results'; // was die Fernseher zeigen
   beginn?: string; // erstes Ergebnis (Zeitprognose)
+  ausschreibung?: Ausschreibung; // Einladung zum Turnier (src/ausschreibung.ts)
 };
 
 const heute = () => new Date().toISOString().slice(0, 10);
