@@ -78,6 +78,8 @@ export default function Konsole() {
   const [datenbank, setDatenbank] = useState<KonsoleDatenbank | null>(null);
   const [sicherung, setSicherung] = useState<SystemEreignis | null>(null);
   const [aufraeumen, setAufraeumen] = useState<AufraeumenZahlen | null>(null);
+  // Rueckmeldung direkt neben "Neu zaehlen": wird gezaehlt / Ergebnis mit Uhrzeit
+  const [zaehlStand, setZaehlStand] = useState<'ruhe' | 'zaehlt' | Date>('ruhe');
   const [auswahl, setAuswahl] = useState<Set<AufraeumenArt>>(
     () => new Set(AUFRAEUMEN_ARTEN.filter((a) => a.vorgewaehlt).map((a) => a.art))
   );
@@ -312,6 +314,12 @@ export default function Konsole() {
     await laden();
   }
 
+  async function neuZaehlen() {
+    setZaehlStand('zaehlt');
+    await laden();
+    setZaehlStand(new Date());
+  }
+
   async function aufraeumenAusfuehren() {
     const arten = AUFRAEUMEN_ARTEN.filter((a) => auswahl.has(a.art) && (aufraeumen?.[a.art] ?? 0) > 0);
     if (arten.length === 0) return zeigeFehler('Bei den angehakten Punkten ist nichts aufzuräumen.');
@@ -322,7 +330,7 @@ export default function Konsole() {
     setArbeitet(false);
     if (error) return zeigeFehler(error.message);
     erfolg('Aufgeräumt.');
-    await laden();
+    await neuZaehlen();
   }
 
   async function adminEntfernen(v: Verein, benutzerId: string) {
@@ -775,12 +783,23 @@ export default function Konsole() {
           </tbody>
         </table>
         <div className="knopfpaar">
-          <button type="button" title="Die Zahlen neu ermitteln" onClick={() => void laden()}>
-            Neu zählen
+          <button type="button" title="Die Zahlen neu ermitteln" onClick={() => void neuZaehlen()} disabled={zaehlStand === 'zaehlt'}>
+            {zaehlStand === 'zaehlt' ? 'Wird gezählt …' : 'Neu zählen'}
           </button>
           <button type="button" title="Die angehakten Punkte endgültig löschen; vorher kommt eine Rückfrage" onClick={() => void aufraeumenAusfuehren()} disabled={arbeitet}>
             Ausgewählte aufräumen ({AUFRAEUMEN_ARTEN.filter((a) => auswahl.has(a.art)).reduce((n, a) => n + (aufraeumen?.[a.art] ?? 0), 0)})
           </button>
+          {zaehlStand instanceof Date && (
+            <span className="hinweis zaehlstand">
+              {(() => {
+                const gesamt = AUFRAEUMEN_ARTEN.reduce((n, a) => n + (aufraeumen?.[a.art] ?? 0), 0);
+                const um = zaehlStand.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                return gesamt === 0
+                  ? `Gezählt um ${um}: Zurzeit ist nichts aufzuräumen.`
+                  : `Gezählt um ${um}: ${gesamt} ${gesamt === 1 ? 'Eintrag' : 'Einträge'} aufzuräumen.`;
+              })()}
+            </span>
+          )}
         </div>
       </section>
 
