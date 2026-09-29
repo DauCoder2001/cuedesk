@@ -155,6 +155,12 @@ export default function Konto() {
           </>
         )}
       </section>
+
+      <p className="rechtslinks">
+        <a href={`${import.meta.env.BASE_URL}impressum.html`} target="_blank" rel="noreferrer">
+          Impressum
+        </a>
+      </p>
     </div>
   );
 }

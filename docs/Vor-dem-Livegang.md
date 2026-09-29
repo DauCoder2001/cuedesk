@@ -25,7 +25,7 @@ Entwürfe kann Claude schreiben. Sie ersetzen keine Rechtsberatung und müssen v
 
 | Punkt | Status | Stand und Vorschlag |
 |---|---|---|
-| Impressum für cuedesk.de | offen | Pflicht nach § 5 Digitale-Dienste-Gesetz. Nötig sind Name, eine Anschrift, unter der Post zugestellt werden kann, E-Mail und ein schneller Kontaktweg. Claude baut die Seite ein, die Angaben kommen von Matthias. |
+| Impressum für cuedesk.de | in Arbeit | Eigene Seite `impressum.html` (ohne Anmeldung und Datenbank), verlinkt unter der Anmeldekarte und in „Mein Konto“. E-Mail: kontakt.cuedesk@gmail.com. Offen: Name, Anschrift über impressum-ohne-adresse.de (Basic-Tarif), Kontaktformular als zweiter Kontaktweg, Datum „Stand“, fachliche Prüfung. Gmail als Postfach in der Datenschutzerklärung nennen. |
 | Datenschutzerklärung | offen | Muss nennen: Supabase (Datenbank, Frankfurt), IONOS (Mailversand), GitHub (Seite auf GitHub Pages und wöchentliche Sicherung, beides USA), welche Daten zu welchem Zweck und wie lange, Rechte der Betroffenen. |
 | Nutzungsbedingungen für Vereine | offen | Was CueDesk leistet, Verfügbarkeit ohne Zusage, Sperren und Löschen, Kündigung. AGB erst nötig, wenn CueDesk etwas kostet. |
 | Vertrag zur Auftragsverarbeitung (Art. 28 DSGVO) mit jedem Verein | offen | Jeder Verein ist verantwortlich für seine Daten, der Betreiber verarbeitet sie in seinem Auftrag. |

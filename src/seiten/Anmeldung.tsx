@@ -118,6 +118,7 @@ export default function Anmeldung() {
 
   return (
     <div className="mitte">
+      <div className="anmeldespalte">
       <div className="karte">
         <h1>CueDesk</h1>
 
@@ -220,6 +221,10 @@ export default function Anmeldung() {
             </p>
           </form>
         )}
+      </div>
+      <p className="rechtslinks">
+        <a href={`${import.meta.env.BASE_URL}impressum.html`}>Impressum</a>
+      </p>
       </div>
     </div>
   );

@@ -48,6 +48,15 @@ button:disabled { cursor: default; color: var(--text-leise); }
 }
 .karte form { display: flex; flex-direction: column; gap: 8px; }
 .karte label { font-size: 14px; color: var(--text-leise); }
+/* Rechtliche Seiten (impressum.html) und Links dorthin */
+.rechtsseite { max-width: 680px; margin: 32px auto; padding: 24px 28px; background: var(--flaeche); border: 1px solid var(--rand); border-radius: 12px; line-height: 1.6; }
+.rechtsseite h2 { font-size: 17px; margin: 20px 0 4px; }
+.rechtsseite p { margin: 0 0 8px; }
+.rechtsseite a, .rechtslinks a { color: var(--akzent); text-decoration: none; }
+.rechtskopf { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.rechtsfuss { border-top: 1px solid var(--rand); padding-top: 8px; margin-top: 20px; }
+.anmeldespalte { width: 100%; max-width: 380px; }
+.rechtslinks { font-size: 14px; color: var(--text-leise); text-align: center; margin-top: 10px; }
 
 .hinweis { color: var(--text-leise); font-size: 14px; }
 .fehler { color: var(--fehler); font-size: 14px; }

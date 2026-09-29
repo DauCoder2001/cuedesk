@@ -8,6 +8,8 @@ import { resolve } from 'node:path';
 //
 // Neben der Anwendung (index.html) werden die Scoreboards als eigene Seiten
 // gebaut. Sie stammen aus Pool-TS und bleiben weitgehend unveraendert.
+// Das Impressum ist ebenfalls eine eigene Seite: ohne Anmeldung und ohne
+// Datenbank erreichbar.
 export default defineConfig(() => ({
   base: process.env.VITE_BASIS ?? '/',
   plugins: [react()],
@@ -18,6 +20,7 @@ export default defineConfig(() => ({
     rollupOptions: {
       input: {
         anwendung: resolve(__dirname, 'index.html'),
+        impressum: resolve(__dirname, 'impressum.html'),
         scoreboards: resolve(__dirname, 'scoreboards/index.html'),
         vierzehnEins: resolve(__dirname, 'scoreboards/14.1_Scoreboard.html'),
         vierzehnEinsProtokoll: resolve(__dirname, 'scoreboards/14.1_Log.html'),
