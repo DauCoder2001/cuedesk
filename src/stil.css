@@ -56,6 +56,9 @@ button:disabled { cursor: default; color: var(--text-leise); }
 .rechtskopf { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
 .rechtsfuss { border-top: 1px solid var(--rand); padding-top: 8px; margin-top: 20px; }
 .anmeldespalte { width: 100%; max-width: 380px; }
+/* Auskunft (Art. 15/20): Beschriftung und Knoepfe PDF/JSON in einer Zeile */
+.auskunft { margin-top: 10px; }
+.auskunft .knopfpaar { align-items: center; flex-wrap: wrap; }
 .rechtsseite form { margin-top: 12px; }
 .rechtsseite form > .hinweis { margin-top: 10px; }
 .felder.paarfelder { grid-template-columns: repeat(2, minmax(0, 1fr)); }

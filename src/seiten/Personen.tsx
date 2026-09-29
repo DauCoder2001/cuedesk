@@ -6,6 +6,7 @@ import { personName, kuerzelAus } from '../namen';
 import { useRueckfrage } from '../rueckfrage';
 import { Pflichthinweis, usePflicht } from '../pflicht';
 import { useUngespeichert, weichtAb } from '../ungespeichert';
+import AuskunftKnoepfe from './AuskunftKnoepfe';
 
 type Entwurf = Omit<Person, 'id' | 'erstellt_am' | 'geaendert_am'> & { id: string | null };
 type EntwurfIntern = Omit<PersonIntern, 'person_id' | 'verein_id'>;
@@ -525,6 +526,10 @@ export default function Personen() {
                     : 'Möglich, solange keine Partien, Turnierteilnahmen oder 14.1-Aufnahmen vorliegen. Sonst bleibt der Spieler erhalten und wird auf „Ausgetreten“ gesetzt, damit Ergebnisse und Rating stimmig bleiben.'}
                 </span>
               </div>
+            )}
+
+            {darfAendern && entwurf.id && !entwurf.anonymisiert_am && (
+              <AuskunftKnoepfe personId={entwurf.id} beschriftung="Auskunft über alle gespeicherten Daten (Art. 15/20 DSGVO):" />
             )}
 
             {fehler && <p className="fehler">{fehler}</p>}

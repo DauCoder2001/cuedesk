@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from '../supabase';
 import { useSitzung } from '../sitzung';
 import { Pflichthinweis, usePflicht } from '../pflicht';
 import { useUngespeichert } from '../ungespeichert';
 import { PASSWORT_MINDESTLAENGE, passwortFehler } from '../passwort';
+import AuskunftKnoepfe from './AuskunftKnoepfe';
 
 // "Mein Konto": eigene Angaben und wahlweise ein Passwort. Die Anmeldung per
 // Mail-Link bleibt immer moeglich. Wer ein Passwort setzt, bestaetigt vorher mit
@@ -11,7 +12,9 @@ import { PASSWORT_MINDESTLAENGE, passwortFehler } from '../passwort';
 // geteilt, eine offene Sitzung allein reicht deshalb nicht.
 
 export default function Konto() {
-  const { benutzer } = useSitzung();
+  const { benutzer, vereine } = useSitzung();
+  // Mit dem Konto verknuepfte Spieler, je Verein einer: fuer "Meine Daten"
+  const [eigeneSpieler, setEigeneSpieler] = useState<{ person_id: string; verein_id: string }[]>([]);
   const [codeGeschickt, setCodeGeschickt] = useState(false);
   const [code, setCode] = useState('');
   const [neu, setNeu] = useState('');
@@ -21,6 +24,21 @@ export default function Konto() {
   const [meldung, setMeldung] = useState<string | null>(null);
   const pflicht = usePflicht<HTMLElement>();
   useUngespeichert('konto-passwort', `${code}${neu}${wiederholt}` !== '', 'Das neue Passwort', () => speichern());
+
+  useEffect(() => {
+    if (!benutzer) return;
+    let vorbei = false;
+    void supabase
+      .from('benutzer_personen')
+      .select('person_id, verein_id')
+      .eq('benutzer_id', benutzer.id)
+      .then(({ data }) => {
+        if (!vorbei) setEigeneSpieler(data ?? []);
+      });
+    return () => {
+      vorbei = true;
+    };
+  }, [benutzer]);
 
   async function codeAnfordern() {
     setFehler(null);
@@ -153,6 +171,28 @@ export default function Konto() {
               <Pflichthinweis hinweis={pflicht.hinweis} />
             </div>
           </>
+        )}
+      </section>
+
+      <section className="block">
+        <h2>Meine Daten</h2>
+        <p className="hinweis">
+          Lade herunter, was CueDesk über dich speichert: Konto, Angaben zur Person, Partien, Turniere und Rating. Das PDF
+          ist zum Lesen, die JSON-Datei enthält dieselben Daten vollständig und maschinenlesbar.
+        </p>
+        {eigeneSpieler.length === 0 ? (
+          <p className="hinweis">
+            Mit deinem Konto ist kein Spieler verknüpft. Der Vereins-Administrator kann das unter „Benutzer und Rollen“
+            nachholen.
+          </p>
+        ) : (
+          eigeneSpieler.map((s) => (
+            <AuskunftKnoepfe
+              key={s.person_id}
+              personId={s.person_id}
+              beschriftung={`${vereine.find((v) => v.id === s.verein_id)?.name ?? 'Verein'}:`}
+            />
+          ))
         )}
       </section>
 

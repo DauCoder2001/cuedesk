@@ -443,6 +443,7 @@ export type Database = {
       vereinsadmin_entziehen: { Args: { p_verein: string; p_benutzer: string }; Returns: undefined };
       turnier_anmelden: { Args: { p_turnier: string; p_an: boolean }; Returns: undefined };
       person_anonymisieren: { Args: { p_person: string }; Returns: string };
+      person_auskunft: { Args: { p_person: string }; Returns: unknown }; // Aufbau siehe src/auskunft.ts
       verein_aendern: {
         Args: {
           p_verein: string;
