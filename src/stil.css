@@ -63,6 +63,10 @@ button:disabled { cursor: default; color: var(--text-leise); }
 .feld textarea { width: 100%; font: inherit; font-size: 15px; color: var(--text); border: 1px solid var(--rand); border-radius: var(--radius); padding: 7px 10px; resize: vertical; }
 /* Kontaktformular: Feld fuer Programme, fuer Menschen unsichtbar */
 .spamfalle { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
+.rechtskurz { background: var(--flaeche-2); border-radius: var(--radius); padding: 10px 14px; }
+.rechtsliste { margin: 0 0 8px; padding-left: 20px; }
+.rechtsliste li { margin-bottom: 6px; }
+.rechtstabelle td:first-child { width: 34%; color: var(--text-leise); vertical-align: top; }
 .rechtslinks { font-size: 14px; color: var(--text-leise); text-align: center; margin-top: 10px; }
 
 .hinweis { color: var(--text-leise); font-size: 14px; }

@@ -1,17 +1,23 @@
 name: Sicherung
 
 # Zieht woechentlich einen vollstaendigen Auszug der Datenbank und legt ihn
-# im privaten Repository cuedesk-sicherung ab. Die Gratisstufe von Supabase
-# sichert nichts von sich aus.
+# verschluesselt im privaten Repository cuedesk-sicherung ab. Die Gratisstufe
+# von Supabase sichert nichts von sich aus.
 #
 # Noetige Geheimnisse in diesem Repository
 # (Settings -> Secrets and variables -> Actions -> Secrets):
-#   SUPABASE_DB_URL   Verbindungszeichenfolge aus dem Supabase-Dashboard
-#                     (Connect -> Session pooler), mit eingesetztem Passwort
-#   SICHERUNG_TOKEN   Zugriffsschluessel mit Schreibrecht auf cuedesk-sicherung
+#   SUPABASE_DB_URL       Verbindungszeichenfolge aus dem Supabase-Dashboard
+#                         (Connect -> Session pooler), mit eingesetztem Passwort
+#   SICHERUNG_TOKEN       Zugriffsschluessel mit Schreibrecht auf cuedesk-sicherung
+#   SICHERUNG_SCHLUESSEL  langes Kennwort fuer die Verschluesselung; zusaetzlich
+#                         ausserhalb von GitHub aufbewahren, sonst ist keine
+#                         Sicherung mehr lesbar
 #
-# Der Auszug enthaelt Mitgliederdaten. Das Sicherungs-Repository muss
-# privat bleiben.
+# Der Auszug enthaelt Mitgliederdaten. GitHub bekommt ihn nur verschluesselt
+# (gpg, AES256). Jeder Lauf legt die Historie des Sicherungs-Repositorys neu
+# an, damit es wirklich nur die letzten zwoelf Wochen gibt
+# (Datenschutzerklaerung). Wiederherstellen:
+#   gpg --decrypt sicherung-JJJJ-MM-TT.tar.gz.gpg | tar xz
 
 on:
   schedule:
@@ -23,48 +29,58 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Sicherungs-Repository holen
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: DauCoder2001/cuedesk-sicherung
           token: ${{ secrets.SICHERUNG_TOKEN }}
           path: sicherung
 
-      - uses: supabase/setup-cli@v1
+      - uses: supabase/setup-cli@v3
         with:
           version: latest
 
-      - name: Auszug erstellen
+      - name: Auszug erstellen und verschluesseln
         env:
           DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          SCHLUESSEL: ${{ secrets.SICHERUNG_SCHLUESSEL }}
         run: |
           set -e
+          if [ -z "$SCHLUESSEL" ]; then
+            echo "SICHERUNG_SCHLUESSEL fehlt - ohne Verschluesselung wird nichts abgelegt."
+            exit 1
+          fi
           datum=$(date +%Y-%m-%d)
-          ordner="sicherung/$datum"
-          mkdir -p "$ordner"
-          supabase db dump --db-url "$DB_URL" -f "$ordner/schema.sql"
-          supabase db dump --db-url "$DB_URL" --data-only -f "$ordner/daten.sql"
-          supabase db dump --db-url "$DB_URL" --data-only --schema auth -f "$ordner/konten.sql"
-          ls -lh "$ordner"
+          # Klartext nur im Arbeitsordner des Laufs, nie im Repository
+          mkdir -p "auszug/$datum"
+          supabase db dump --db-url "$DB_URL" -f "auszug/$datum/schema.sql"
+          supabase db dump --db-url "$DB_URL" --data-only -f "auszug/$datum/daten.sql"
+          supabase db dump --db-url "$DB_URL" --data-only --schema auth -f "auszug/$datum/konten.sql"
+          tar czf - -C auszug "$datum" | gpg --batch --yes --symmetric --cipher-algo AES256 \
+            --passphrase-fd 3 -o "sicherung/sicherung-$datum.tar.gz.gpg" 3<<<"$SCHLUESSEL"
+          rm -rf auszug
+          ls -lh "sicherung/sicherung-$datum.tar.gz.gpg"
 
-      - name: Alte Auszuege ausduennen
+      - name: Alte Auszuege entfernen
         run: |
           cd sicherung
-          # Die letzten zwoelf Wochen bleiben vollstaendig erhalten.
-          ls -1d 20* 2>/dev/null | sort | head -n -12 | xargs -r rm -rf
-          ls -1d 20* 2>/dev/null | tail -n 3
+          # Unverschluesselte Ordner aus der Zeit vor der Verschluesselung
+          ls -1d 20*/ 2>/dev/null | xargs -r rm -rf
+          # Die letzten zwoelf Wochen bleiben erhalten.
+          ls -1 sicherung-*.tar.gz.gpg 2>/dev/null | sort | head -n -12 | xargs -r rm -f
+          ls -1 sicherung-*.tar.gz.gpg | tail -n 3
 
-      - name: Ablegen
+      - name: Ablegen mit neuer Historie
         run: |
           cd sicherung
+          zweig=$(git rev-parse --abbrev-ref HEAD)
           git config user.name "CueDesk Sicherung"
           git config user.email "noreply@github.com"
+          # Neue Historie aus einem einzigen Stand: geloeschte Auszuege sind
+          # danach auch in der Historie nicht mehr vorhanden.
+          git checkout --orphan neu
           git add -A
-          if git diff --cached --quiet; then
-            echo "Keine Aenderung."
-          else
-            git commit -m "Sicherung vom $(date +%d.%m.%Y)"
-            git push
-          fi
+          git commit -m "Sicherung vom $(date +%d.%m.%Y)"
+          git push --force origin "HEAD:$zweig"
 
       # Rueckmeldung fuer die Konsole in CueDesk - auch wenn ein Schritt davor
       # gescheitert ist. Scheitert die Rueckmeldung selbst, bleibt der Lauf gruen:
@@ -76,7 +92,7 @@ jobs:
           DB_URL: ${{ secrets.SUPABASE_DB_URL }}
           ERFOLG: ${{ job.status == 'success' }}
         run: |
-          groesse=$(du -sb "sicherung/$(date +%Y-%m-%d)" 2>/dev/null | cut -f1)
+          groesse=$(du -sb "sicherung/sicherung-$(date +%Y-%m-%d).tar.gz.gpg" 2>/dev/null | cut -f1)
           psql "$DB_URL" -v ON_ERROR_STOP=1 -c \
             "insert into public.system_ereignisse (art, erfolg, groesse_bytes, text)
              values ('sicherung', $ERFOLG, ${groesse:-null}, 'GitHub-Lauf ${{ github.run_id }}')"
