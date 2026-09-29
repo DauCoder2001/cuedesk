@@ -9,6 +9,7 @@ import { useUngespeichert, weichtAb } from '../ungespeichert';
 
 type Entwurf = Omit<Person, 'id' | 'erstellt_am' | 'geaendert_am'> & { id: string | null };
 type EntwurfIntern = Omit<PersonIntern, 'person_id' | 'verein_id'>;
+type Bindung = { partien: number; teilnahmen: number; aufnahmen: number; konten: string[] };
 
 const LEER_INTERN: EntwurfIntern = {
   eintritt: null,
@@ -31,12 +32,18 @@ export default function Personen() {
   const [rueckfrage, fragen] = useRueckfrage();
   const darfSehen = darf('vereinsadmin', 'sportwart', 'turnierleiter');
   const darfAendern = darf('vereinsadmin', 'sportwart');
+  // Anonymisieren ist nicht umkehrbar, deshalb nur der Vereins-Administrator
+  const darfAnonymisieren = darf('vereinsadmin');
 
   const [personen, setPersonen] = useState<Person[]>([]);
   const [suche, setSuche] = useState('');
   const [filter, setFilter] = useState<PersonenStatus | 'alle'>('alle');
   const [entwurf, setEntwurf] = useState<Entwurf | null>(null);
   const [intern, setIntern] = useState<EntwurfIntern>(LEER_INTERN);
+  // Was am offenen Spieler haengt: entscheidet zwischen Loeschen und Anonymisieren
+  const [bindung, setBindung] = useState<Bindung | null>(null);
+  // Anonymisierte Spieler tragen einen Platzhalter und bleiben unveraenderlich
+  const bearbeitbar = darfAendern && !entwurf?.anonymisiert_am;
   const [meldung, setMeldung] = useState<string | null>(null);
   const [fehler, setFehler] = useState<string | null>(null);
   const pflicht = usePflicht<HTMLElement>();
@@ -78,7 +85,9 @@ export default function Personen() {
     setFehler(null);
     setEntwurf({ ...person });
     setIntern(LEER_INTERN);
+    setBindung(null);
     setUrsprung({ entwurf: { ...person }, intern: LEER_INTERN });
+    if (darfAendern && !person.anonymisiert_am) void bindungLaden(person.id).then((b) => setBindung(b));
     if (!darfSehen) return;
     const { data } = await supabase
       .from('personen_intern')
@@ -108,7 +117,8 @@ export default function Personen() {
       kuerzel: null,
       status: 'mitglied',
       name_oeffentlich: false,
-      rating_ausgeblendet: false
+      rating_ausgeblendet: false,
+      anonymisiert_am: null
     };
     setEntwurf(leer);
     setUrsprung({ entwurf: leer, intern: LEER_INTERN });
@@ -172,8 +182,32 @@ export default function Personen() {
     return zaehler;
   }, [personen]);
 
+  // Partien, Turnierteilnahmen, 14.1-Aufnahmen und verknuepfte Konten eines Spielers
+  async function bindungLaden(id: string): Promise<Bindung> {
+    const [partienAntwort, teilnahmeAntwort, aufnahmeAntwort, kontoAntwort] = await Promise.all([
+      supabase.from('partien').select('id', { count: 'exact', head: true }).or(`spieler_a.eq.${id},spieler_b.eq.${id}`),
+      supabase.from('turnier_teilnehmer').select('person_id', { count: 'exact', head: true }).eq('person_id', id),
+      supabase.from('aufnahmen_141').select('partie_id', { count: 'exact', head: true }).eq('spieler', id),
+      supabase.from('benutzer_personen').select('benutzer_id').eq('person_id', id)
+    ]);
+    const kontoIds = (kontoAntwort.data ?? []).map((z) => z.benutzer_id);
+    let konten: string[] = [];
+    if (kontoIds.length > 0) {
+      const { data } = await supabase.from('benutzer').select('email').in('id', kontoIds);
+      konten = (data ?? []).map((b) => b.email ?? 'ohne E-Mail');
+    }
+    return {
+      partien: partienAntwort.count ?? 0,
+      teilnahmen: teilnahmeAntwort.count ?? 0,
+      aufnahmen: aufnahmeAntwort.count ?? 0,
+      konten
+    };
+  }
+  const hatErgebnisse = (b: Bindung | null) => !!b && b.partien + b.teilnahmen + b.aufnahmen > 0;
+
   // Eine Person wird nur geloescht, wenn nichts an ihr haengt. Ergebnisse
-  // duerfen nicht verschwinden, deshalb gibt es sonst nur "Ausgetreten".
+  // duerfen nicht verschwinden, deshalb gibt es sonst "Ausgetreten" oder,
+  // fuer den Vereins-Administrator, "Anonymisieren".
   async function personLoeschen() {
     if (!verein || !entwurf?.id) return;
     const id = entwurf.id;
@@ -181,14 +215,7 @@ export default function Personen() {
     setFehler(null);
     setMeldung(null);
 
-    const [partienAntwort, teilnahmeAntwort, aufnahmeAntwort] = await Promise.all([
-      supabase.from('partien').select('id', { count: 'exact', head: true }).or(`spieler_a.eq.${id},spieler_b.eq.${id}`),
-      supabase.from('turnier_teilnehmer').select('person_id', { count: 'exact', head: true }).eq('person_id', id),
-      supabase.from('aufnahmen_141').select('partie_id', { count: 'exact', head: true }).eq('spieler', id)
-    ]);
-    const partien = partienAntwort.count ?? 0;
-    const teilnahmen = teilnahmeAntwort.count ?? 0;
-    const aufnahmen = aufnahmeAntwort.count ?? 0;
+    const { partien, teilnahmen, aufnahmen } = await bindungLaden(id);
 
     if (partien + teilnahmen + aufnahmen > 0) {
       const teile = [
@@ -213,6 +240,43 @@ export default function Personen() {
     if (error) return setFehler(error.message);
     setEntwurf(null);
     setMeldung(`${name} wurde gelöscht.`);
+    await laden(verein.id);
+  }
+
+  // Name und vertrauliche Angaben entfernen, Ergebnisse behalten (Stufe 20,
+  // Funktion person_anonymisieren). Nicht umkehrbar.
+  async function anonymisieren() {
+    if (!verein || !entwurf?.id) return;
+    const id = entwurf.id;
+    const name = personName(entwurf as unknown as Person);
+    setFehler(null);
+    setMeldung(null);
+    const b = await bindungLaden(id);
+    const bleibt = [
+      b.partien > 0 ? `${b.partien} ${b.partien === 1 ? 'Partie' : 'Partien'}` : null,
+      b.teilnahmen > 0 ? `${b.teilnahmen} ${b.teilnahmen === 1 ? 'Turnierteilnahme' : 'Turnierteilnahmen'}` : null,
+      b.aufnahmen > 0 ? 'das 14.1-Protokoll (ohne Namen)' : null
+    ].filter(Boolean);
+    const frage =
+      `${name} anonymisieren? Das lässt sich nicht rückgängig machen.\n\n` +
+      '• Der Name wird zu „Ehemaliger Spieler …“.\n' +
+      '• Gelöscht werden Kürzel, Anzeigename, Ein- und Austritt, Pass- und DBU-Nummer, Notiz, Turnier-Anmeldungen und Einladungen, dazu die Einträge im Änderungsprotokoll, die den Namen enthalten.\n' +
+      (b.konten.length > 0
+        ? `• Die Verknüpfung mit dem Konto ${b.konten.join(', ')} wird gelöst, seine Rollen in diesem Verein enden. Hat es in keinem anderen Verein eine Rolle, wird es gelöscht.\n`
+        : '') +
+      `• Erhalten bleiben: ${bleibt.join(', ')}.\n\n` +
+      'Schon erzeugte PDFs, Aushänge und geteilte Texte kann CueDesk nicht ändern. In den Sicherungen verschwindet der Name nach spätestens 12 Wochen.';
+    if (!(await fragen(frage, 'Anonymisieren'))) return;
+    const { data: platzhalter, error } = await supabase.rpc('person_anonymisieren', { p_person: id });
+    if (error) return setFehler(error.message);
+    const { data } = await supabase.from('personen').select('*').eq('id', id).single();
+    if (data) {
+      setEntwurf({ ...data });
+      setUrsprung({ entwurf: { ...data }, intern: LEER_INTERN });
+    }
+    setIntern(LEER_INTERN);
+    setBindung(null);
+    setMeldung(`${name} ist jetzt „${platzhalter}“. Die Ergebnisse bleiben erhalten.`);
     await laden(verein.id);
   }
 
@@ -258,7 +322,7 @@ export default function Personen() {
                   {personName(person)}
                 </span>
                 {person.status !== 'mitglied' && (
-                  <span className="marke">{STATUS_TEXT[person.status]}</span>
+                  <span className="marke">{person.anonymisiert_am ? 'anonymisiert' : STATUS_TEXT[person.status]}</span>
                 )}
               </button>
             </li>
@@ -290,7 +354,7 @@ export default function Personen() {
                   ? `${entwurf.vorname} ${entwurf.nachname}`.trim()
                   : 'Neuer Spieler'}
               </h2>
-              {darfAendern && (
+              {bearbeitbar && (
                 <div className="knopfpaar">
                   <Pflichthinweis hinweis={pflicht.hinweis} />
                   <button type="button" title="Änderungen an diesem Spieler speichern" onClick={() => void speichern()}>
@@ -303,24 +367,24 @@ export default function Personen() {
             <div className="felder">
               <Feld beschriftung="Vorname">
                 <input
-                  required={darfAendern}
+                  required={bearbeitbar}
                   value={entwurf.vorname}
-                  disabled={!darfAendern}
+                  disabled={!bearbeitbar}
                   onChange={(e) => setEntwurf({ ...entwurf, vorname: e.target.value })}
                 />
               </Feld>
               <Feld beschriftung="Nachname">
                 <input
-                  required={darfAendern}
+                  required={bearbeitbar}
                   value={entwurf.nachname}
-                  disabled={!darfAendern}
+                  disabled={!bearbeitbar}
                   onChange={(e) => setEntwurf({ ...entwurf, nachname: e.target.value })}
                 />
               </Feld>
               <Feld beschriftung="Anzeigename">
                 <input
                   value={entwurf.anzeigename ?? ''}
-                  disabled={!darfAendern}
+                  disabled={!bearbeitbar}
                   onChange={(e) => setEntwurf({ ...entwurf, anzeigename: e.target.value })}
                 />
               </Feld>
@@ -328,14 +392,14 @@ export default function Personen() {
                 <input
                   value={entwurf.kuerzel ?? ''}
                   maxLength={4}
-                  disabled={!darfAendern}
+                  disabled={!bearbeitbar}
                   onChange={(e) => setEntwurf({ ...entwurf, kuerzel: e.target.value })}
                 />
               </Feld>
               <Feld beschriftung="Status">
                 <select
                   value={entwurf.status}
-                  disabled={!darfAendern}
+                  disabled={!bearbeitbar}
                   onChange={(e) =>
                     setEntwurf({ ...entwurf, status: e.target.value as PersonenStatus })
                   }
@@ -351,7 +415,7 @@ export default function Personen() {
               <input
                 type="checkbox"
                 checked={entwurf.name_oeffentlich}
-                disabled={!darfAendern}
+                disabled={!bearbeitbar}
                 onChange={(e) => setEntwurf({ ...entwurf, name_oeffentlich: e.target.checked })}
               />
               <span>
@@ -368,7 +432,7 @@ export default function Personen() {
                     <input
                       type="date"
                       value={intern.eintritt ?? ''}
-                      disabled={!darfAendern}
+                      disabled={!bearbeitbar}
                       onChange={(e) => setIntern({ ...intern, eintritt: e.target.value || null })}
                     />
                   </Feld>
@@ -376,7 +440,7 @@ export default function Personen() {
                     <input
                       type="date"
                       value={intern.austritt ?? ''}
-                      disabled={!darfAendern}
+                      disabled={!bearbeitbar}
                       onChange={(e) => setIntern({ ...intern, austritt: e.target.value || null })}
                     />
                   </Feld>
@@ -387,7 +451,7 @@ export default function Personen() {
                       max={1000}
                       placeholder="500"
                       value={intern.rating_startwert ?? ''}
-                      disabled={!darfAendern}
+                      disabled={!bearbeitbar}
                       onChange={(e) =>
                         setIntern({
                           ...intern,
@@ -399,14 +463,14 @@ export default function Personen() {
                   <Feld beschriftung="Pass-Nr. (BLVN)">
                     <input
                       value={intern.passnummer ?? ''}
-                      disabled={!darfAendern}
+                      disabled={!bearbeitbar}
                       onChange={(e) => setIntern({ ...intern, passnummer: e.target.value || null })}
                     />
                   </Feld>
                   <Feld beschriftung="DBU-Nr.">
                     <input
                       value={intern.dbu_nummer ?? ''}
-                      disabled={!darfAendern}
+                      disabled={!bearbeitbar}
                       onChange={(e) => setIntern({ ...intern, dbu_nummer: e.target.value || null })}
                     />
                   </Feld>
@@ -415,7 +479,7 @@ export default function Personen() {
                   <input
                     type="checkbox"
                     checked={intern.minderjaehrig}
-                    disabled={!darfAendern}
+                    disabled={!bearbeitbar}
                     onChange={(e) => setIntern({ ...intern, minderjaehrig: e.target.checked })}
                   />
                   <span>Minderjährig</span>
@@ -423,21 +487,42 @@ export default function Personen() {
                 <Feld beschriftung="Notiz">
                   <input
                     value={intern.notiz ?? ''}
-                    disabled={!darfAendern}
+                    disabled={!bearbeitbar}
                     onChange={(e) => setIntern({ ...intern, notiz: e.target.value || null })}
                   />
                 </Feld>
               </fieldset>
             )}
 
-            {darfAendern && entwurf.id && (
+            {entwurf.anonymisiert_am && (
+              <p className="hinweis">
+                Anonymisiert am {new Date(entwurf.anonymisiert_am).toLocaleDateString('de-DE')}: Name, Kürzel und
+                vertrauliche Angaben wurden entfernt, die Ergebnisse bleiben erhalten. Der Eintrag lässt sich nicht
+                mehr bearbeiten.
+              </p>
+            )}
+
+            {bearbeitbar && entwurf.id && (
               <div className="knopfpaar">
                 <button type="button" title="Löscht den Spieler. Hat er schon Partien, bleibt er erhalten und wird auf „Ausgetreten“ gesetzt." className="gefahrknopf" onClick={() => void personLoeschen()}>
                   Spieler löschen
                 </button>
+                {darfAnonymisieren && hatErgebnisse(bindung) && (
+                  <button
+                    type="button"
+                    title="Entfernt Name, Kürzel und vertrauliche Angaben; Ergebnisse, Platzierungen und Rating der Gegner bleiben erhalten. Nicht umkehrbar."
+                    className="gefahrknopf"
+                    onClick={() => void anonymisieren()}
+                  >
+                    Anonymisieren
+                  </button>
+                )}
                 <span className="hinweis">
-                  Möglich, solange keine Partien, Turnierteilnahmen oder 14.1-Aufnahmen vorliegen. Sonst bleibt der
-                  Spieler erhalten und wird auf „Ausgetreten“ gesetzt, damit Ergebnisse und Rating stimmig bleiben.
+                  {hatErgebnisse(bindung)
+                    ? darfAnonymisieren
+                      ? 'An diesem Spieler hängen Ergebnisse. „Spieler löschen“ setzt ihn auf „Ausgetreten“; „Anonymisieren“ entfernt zusätzlich Name und vertrauliche Angaben, die Ergebnisse bleiben.'
+                      : 'An diesem Spieler hängen Ergebnisse. „Spieler löschen“ setzt ihn auf „Ausgetreten“; anonymisieren kann nur der Vereins-Administrator.'
+                    : 'Möglich, solange keine Partien, Turnierteilnahmen oder 14.1-Aufnahmen vorliegen. Sonst bleibt der Spieler erhalten und wird auf „Ausgetreten“ gesetzt, damit Ergebnisse und Rating stimmig bleiben.'}
                 </span>
               </div>
             )}

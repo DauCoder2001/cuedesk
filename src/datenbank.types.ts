@@ -121,6 +121,7 @@ export type Person = {
   status: PersonenStatus;
   name_oeffentlich: boolean;
   rating_ausgeblendet: boolean;
+  anonymisiert_am: string | null; // Stufe 20: Name ist ein Platzhalter, nicht mehr bearbeitbar
   erstellt_am: string;
   geaendert_am: string;
 };
@@ -441,6 +442,7 @@ export type Database = {
       demo_zuruecksetzen: { Args: { p_verein: string }; Returns: undefined };
       vereinsadmin_entziehen: { Args: { p_verein: string; p_benutzer: string }; Returns: undefined };
       turnier_anmelden: { Args: { p_turnier: string; p_an: boolean }; Returns: undefined };
+      person_anonymisieren: { Args: { p_person: string }; Returns: string };
       verein_aendern: {
         Args: {
           p_verein: string;
