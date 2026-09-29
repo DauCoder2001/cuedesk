@@ -21,6 +21,7 @@ export default defineConfig(() => ({
       input: {
         anwendung: resolve(__dirname, 'index.html'),
         impressum: resolve(__dirname, 'impressum.html'),
+        kontakt: resolve(__dirname, 'kontakt.html'),
         scoreboards: resolve(__dirname, 'scoreboards/index.html'),
         vierzehnEins: resolve(__dirname, 'scoreboards/14.1_Scoreboard.html'),
         vierzehnEinsProtokoll: resolve(__dirname, 'scoreboards/14.1_Log.html'),

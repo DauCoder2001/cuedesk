@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Kontakt · CueDesk</title>
+    <!-- Kontaktformular ohne Anmeldung; verschickt ueber die Serverfunktion
+         "kontakt" (supabase/functions/kontakt), Ablauf in src/kontakt.ts -->
+    <link rel="stylesheet" href="/src/stil.css" />
+  </head>
+  <body>
+    <main class="rechtsseite">
+      <div class="rechtskopf">
+        <h1>Kontakt</h1>
+        <a href="./impressum.html">← Impressum</a>
+      </div>
+      <p class="hinweis">
+        Fragen, Hinweise oder Probleme mit CueDesk? Schreib uns. Die Nachricht geht an kontakt.cuedesk@gmail.com, die
+        Antwort kommt an deine E-Mail-Adresse.
+      </p>
+
+      <form id="kontakt" novalidate>
+        <div class="felder paarfelder">
+          <label class="feld">
+            <span>Name</span>
+            <input name="name" required maxlength="100" autocomplete="name" />
+          </label>
+          <label class="feld">
+            <span>E-Mail-Adresse</span>
+            <input name="email" type="email" required maxlength="200" autocomplete="email" />
+          </label>
+          <label class="feld ganzebreite">
+            <span>Verein (wenn es um einen Verein geht)</span>
+            <input name="verein" maxlength="100" autocomplete="organization" />
+          </label>
+          <label class="feld ganzebreite">
+            <span>Nachricht</span>
+            <textarea name="nachricht" required maxlength="5000" rows="7"></textarea>
+          </label>
+        </div>
+        <!-- Spamfalle: fuer Menschen unsichtbar, Programme fuellen es aus -->
+        <label class="spamfalle" aria-hidden="true">
+          Webseite <input name="webseite" tabindex="-1" autocomplete="off" />
+        </label>
+        <p class="hinweis">
+          Mit dem Absenden werden Name, E-Mail-Adresse, Verein und Nachricht gespeichert und per E-Mail an uns
+          weitergeleitet, um deine Anfrage zu beantworten. Nach 90 Tagen wird die gespeicherte Nachricht gelöscht.
+        </p>
+        <div class="knopfpaar">
+          <button type="submit">Nachricht senden</button>
+          <span class="pflichthinweis">* Pflichtfeld</span>
+        </div>
+        <p id="rueckmeldung" role="status"></p>
+      </form>
+    </main>
+    <script type="module" src="/src/kontakt.ts"></script>
+  </body>
+</html>
