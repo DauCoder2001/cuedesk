@@ -520,15 +520,9 @@ export default function LigaAnsicht({
       'Die Begegnung bleibt bestehen und lässt sich danach neu ausfüllen.';
     if (!(await fragen(frage, 'Inhalt löschen'))) return;
     setArbeitet(true);
-    const ids = partien.map((p) => p.id);
-    const schritte = [
-      () => supabase.from('aufnahmen_141').delete().in('partie_id', ids),
-      () => supabase.from('partien_141').delete().in('partie_id', ids),
-      () => supabase.from('partien').delete().eq('turnier_id', turnier.id),
-      () => supabase.from('turnier_teilnehmer').delete().eq('turnier_id', turnier.id)
-    ];
-    for (const schritt of ids.length > 0 ? schritte : schritte.slice(3)) {
-      const { error } = await schritt();
+    // 14.1-Kennzahlen und Aufnahme-Protokoll loescht die Datenbank mit den Partien
+    for (const tabelle of ['partien', 'turnier_teilnehmer'] as const) {
+      const { error } = await supabase.from(tabelle).delete().eq('turnier_id', turnier.id);
       if (error) {
         setArbeitet(false);
         return setFehler(error.message);
@@ -543,6 +537,42 @@ export default function LigaAnsicht({
     if (error) return setFehler(error.message);
     setMeldung(`Inhalt der ${liga.begegnung}. Begegnung gelöscht. Sie lässt sich jetzt neu ausfüllen.`);
     await laden();
+  }
+
+  // Den ganzen Spieltag entfernen: beide Begegnungen mit allen Partien
+  // (nur Vereins-Administrator). Partien, 14.1-Protokoll, Teilnehmer und
+  // Anmeldungen loescht die Datenbank mit.
+  async function spieltagLoeschen() {
+    if (!turnier || !liga) return;
+    const andere = liga.partner
+      ? (await supabase.from('turniere').select('id, name').eq('id', liga.partner).maybeSingle()).data
+      : null;
+    const anderePartien = andere
+      ? (await supabase.from('partien').select('status, ergebnis_a, ergebnis_b').eq('turnier_id', andere.id)).data ?? []
+      : [];
+    if ([...partien, ...anderePartien].some((p) => p.status === 'laeuft')) {
+      return setFehler('An den Tablets laufen noch Spiele dieses Spieltags. Erst beenden oder abbrechen, dann löschen.');
+    }
+    const zeile = (name: string, liste: { ergebnis_a: number | null; ergebnis_b: number | null }[]) => {
+      const mit = liste.filter((p) => p.ergebnis_a !== null || p.ergebnis_b !== null).length;
+      return `• ${name}: ${liste.length} ${liste.length === 1 ? 'Partie' : 'Partien'}${mit > 0 ? `, davon ${mit} mit Ergebnis` : ''}`;
+    };
+    const eigeneNr = liga.begegnung;
+    const zeilen = [zeile(`${eigeneNr}. Begegnung`, partien), andere ? zeile(`${eigeneNr === 1 ? 2 : 1}. Begegnung`, anderePartien) : null]
+      .filter(Boolean)
+      .join('\n');
+    const frage =
+      `Den ganzen Spieltag „${turnier.name.replace(/ · [12]\. Begegnung$/, '')}“ löschen? Das lässt sich nicht rückgängig machen.\n\n${zeilen}` +
+      (turnier.rating_werten ? '\n\nDas Vereins-Rating wird heute Nacht ohne diese Partien neu berechnet.' : '');
+    if (!(await fragen(frage, 'Spieltag löschen'))) return;
+    setArbeitet(true);
+    const { error } = await supabase
+      .from('turniere')
+      .delete()
+      .in('id', andere ? [turnier.id, andere.id] : [turnier.id]);
+    setArbeitet(false);
+    if (error) return setFehler(error.message);
+    zurueck();
   }
 
   // ---------- Anzeige ----------
@@ -638,6 +668,17 @@ export default function LigaAnsicht({
                 disabled={arbeitet}
               >
                 Inhalt löschen
+              </button>
+            )}
+            {istAdmin && (
+              <button
+                type="button"
+                title="Löscht den ganzen Spieltag: beide Begegnungen mit allen Partien und Ergebnissen. Vorher nennt eine Rückfrage, was verloren geht."
+                className="gefahrknopf"
+                onClick={() => void spieltagLoeschen()}
+                disabled={arbeitet}
+              >
+                Spieltag löschen
               </button>
             )}
           </div>
