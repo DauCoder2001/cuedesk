@@ -1625,9 +1625,10 @@ export default function TurnierAnsicht({
                 Wieder öffnen
               </button>
             )}
-            {istAdmin && turnier.status !== 'geplant' && (
+            {/* In Vorbereitung darf die Turnierleitung loeschen, danach nur der Vereins-Admin */}
+            {(turnier.status === 'geplant' ? bearbeitbar : istAdmin) && (
               <button type="button" title="Löscht das Turnier mit allen Partien. Vorher kommt eine Rückfrage." className="gefahrknopf" onClick={() => void loeschen()}>
-                Löschen
+                Turnier löschen
               </button>
             )}
           </div>
@@ -1873,9 +1874,6 @@ export default function TurnierAnsicht({
               <div className="knopfpaar">
                 <button type="button" title="Lost Gruppen und Spielplan aus und startet das Turnier. Danach stehen die Spiele an den Tablets zur Auswahl." onClick={() => void auslosenUndStarten()} disabled={arbeitet || !teilnehmerOk}>
                   Auslosen und starten
-                </button>
-                <button type="button" title="Löscht das Turnier mit allen Partien. Vorher kommt eine Rückfrage." className="gefahrknopf" onClick={() => void loeschen()}>
-                  Turnier löschen
                 </button>
               </div>
               {mitKo && (
