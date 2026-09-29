@@ -15,6 +15,11 @@ export type ArchivTurnier = {
   status: TurnierStatus;
   teilnehmerzahl: number | null;
   art: string | null; // Turnierart aus den Einstellungen
+  // Liga-Spieltag: Nummer dieser Begegnung und die andere Begegnung
+  begegnung?: 1 | 2 | null;
+  partner?: string | null;
+  // Alle Begegnungen dieser Zeile (Liga-Spieltag: beide); fehlt, dann nur id
+  teile?: string[];
 };
 
 export type ArchivPartie = {
@@ -57,6 +62,35 @@ export type ArchivFilter = {
 };
 
 const ARCHIV_STATUS: TurnierStatus[] = ['beendet', 'abgebrochen'];
+
+export const teileVon = (t: ArchivTurnier): string[] => t.teile ?? [t.id];
+
+// Ein Liga-Spieltag besteht aus zwei Begegnungen (zwei Turniere, die sich
+// ueber partner gegenseitig kennen). Im Archiv wird daraus eine Zeile unter
+// der 1. Begegnung; archiviert ist sie erst, wenn beide fertig sind.
+export function spieltageZusammenfassen(turniere: ArchivTurnier[]): ArchivTurnier[] {
+  const nachId = new Map(turniere.map((t) => [t.id, t]));
+  const partnerVon = (t: ArchivTurnier) => {
+    const andere = t.modus === 'liga' && t.partner ? nachId.get(t.partner) : undefined;
+    return andere && andere.partner === t.id ? andere : null;
+  };
+  return turniere
+    .filter((t) => !(t.begegnung === 2 && partnerVon(t)))
+    .map((t) => {
+      const andere = partnerVon(t);
+      if (!andere) return t;
+      const fertig = (s: TurnierStatus) => ARCHIV_STATUS.includes(s);
+      const status: TurnierStatus =
+        fertig(t.status) && fertig(andere.status)
+          ? t.status === 'beendet' || andere.status === 'beendet'
+            ? 'beendet'
+            : 'abgebrochen'
+          : fertig(t.status)
+            ? andere.status
+            : t.status;
+      return { ...t, status, teile: [t.id, andere.id] };
+    });
+}
 
 export function artText(t: ArchivTurnier): string | null {
   return t.modus === 'liga' ? 'Liga' : t.art;
@@ -119,23 +153,26 @@ export function archivFiltern(
     partienJeTurnier.set(p.turnier_id, liste);
   });
   const teilnehmer = new Set(teilnahmen.map((t) => `${t.turnier_id}|${t.person_id}`));
+  // Partien einer Zeile, beim Liga-Spieltag aus beiden Begegnungen
+  const partienVon = (t: ArchivTurnier) => teileVon(t).flatMap((id) => partienJeTurnier.get(id) ?? []);
 
   const turnierListe = turniere
     .filter((t) => ARCHIV_STATUS.includes(t.status) && inSaison(t.datum) && artPasst(t) && f.art !== 'einzel')
     .filter((t) => {
       if (f.disziplin === 'alle' || t.disziplin === f.disziplin) return true;
       // Liga-Spieltage mischen die Disziplinen
-      return (partienJeTurnier.get(t.id) ?? []).some((p) => p.disziplin === f.disziplin);
+      return partienVon(t).some((p) => p.disziplin === f.disziplin);
     })
     .filter((t) =>
       personen.every(
-        (person) => teilnehmer.has(`${t.id}|${person}`) || (partienJeTurnier.get(t.id) ?? []).some((p) => spielt(p, person))
+        (person) =>
+          teileVon(t).some((id) => teilnehmer.has(`${id}|${person}`)) || partienVon(t).some((p) => spielt(p, person))
       )
     )
     .sort((a, b) => b.datum.localeCompare(a.datum) || a.name.localeCompare(b.name, 'de'));
 
   const turnierIds = new Set(
-    turniere.filter((t) => ARCHIV_STATUS.includes(t.status) && artPasst(t) && f.art !== 'einzel').map((t) => t.id)
+    turniere.filter((t) => ARCHIV_STATUS.includes(t.status) && artPasst(t) && f.art !== 'einzel').flatMap(teileVon)
   );
   const partienListe = partien
     .filter((p) => (p.turnier_id ? turnierIds.has(p.turnier_id) : f.art === '' || f.art === 'einzel'))
@@ -184,7 +221,8 @@ export function platzText(
   partien: ArchivPartie[]
 ): string {
   if (t.modus === 'liga') {
-    const eigene = partien.filter((p) => p.turnier_id === t.id && spielt(p, person));
+    const teile = teileVon(t);
+    const eigene = partien.filter((p) => p.turnier_id !== null && teile.includes(p.turnier_id) && spielt(p, person));
     if (eigene.length === 0) return '';
     const siege = eigene.filter((p) => siegerVon(p) === (p.spieler_a === person ? 'a' : 'b')).length;
     return `${siege}:${eigene.length - siege}`;

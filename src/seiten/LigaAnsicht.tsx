@@ -26,6 +26,49 @@ const DISZIPLIN_KURZ: Record<string, string> = {
 const datumLang = (iso: string) =>
   new Date(`${iso}T12:00:00`).toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' });
 
+// Die andere Begegnung eines Spieltags anlegen: gleicher Tag, gleicher
+// Gegner, getauschtes Heimrecht, leere Aufstellung. Danach verweisen beide
+// ueber liga.partner aufeinander.
+export async function andereBegegnungAnlegen(
+  turnier: Turnier
+): Promise<{ id: string; fehler: null } | { id: null; fehler: string }> {
+  const einstellungen = (turnier.einstellungen ?? {}) as TurnierEinstellungen;
+  if (!einstellungen.liga) return { id: null, fehler: 'Kein Liga-Spieltag.' };
+  const liga = { ...einstellungen.liga, begegnung: einstellungen.liga.begegnung ?? 1 };
+  const nummer = liga.begegnung === 1 ? 2 : 1;
+  const andere = {
+    ...liga,
+    aufstellung: undefined,
+    verdeckt: undefined,
+    quelle: undefined,
+    heim: !liga.heim,
+    begegnung: nummer,
+    partner: turnier.id
+  };
+  const { data, error } = await supabase
+    .from('turniere')
+    .insert({
+      verein_id: turnier.verein_id,
+      name: `${turnier.name.replace(/ · [12]\. Begegnung$/, '')} · ${nummer}. Begegnung`,
+      datum: turnier.datum,
+      disziplin: 'multi-ball',
+      modus: 'liga',
+      status: 'geplant',
+      rating_werten: turnier.rating_werten,
+      einstellungen: { ...einstellungen, liga: andere }
+    })
+    .select('id')
+    .single();
+  if (error || !data) return { id: null, fehler: error?.message ?? `${nummer}. Begegnung nicht angelegt.` };
+  // Rueckverweis in dieser Begegnung merken
+  const { error: verweisFehler } = await supabase
+    .from('turniere')
+    .update({ einstellungen: { ...einstellungen, liga: { ...liga, partner: data.id } } })
+    .eq('id', turnier.id);
+  if (verweisFehler) return { id: null, fehler: verweisFehler.message };
+  return { id: data.id, fehler: null };
+}
+
 export default function LigaAnsicht({
   turnierId,
   zurueck,
@@ -354,8 +397,9 @@ export default function LigaAnsicht({
     await laden();
   }
 
-  // Die zweite Begegnung eines Spieltags: gleicher Tag, gleicher Gegner,
-  // getauschtes Heimrecht. Sie entsteht beim ersten Aufruf.
+  // Zur anderen Begegnung des Spieltags wechseln. Sie entsteht schon beim
+  // Anlegen des Spieltags; fehlt sie bei aelteren Spieltagen, wird sie hier
+  // nachgeholt.
   async function begegnungOeffnen(nummer: 1 | 2) {
     if (!turnier || !liga || nummer === liga.begegnung) return;
     // Nur einem Verweis folgen, dessen Turnier es noch gibt; sonst neu anlegen
@@ -365,38 +409,10 @@ export default function LigaAnsicht({
     }
     if (!darfLeiten) return setFehler('Die andere Begegnung legt die Turnierleitung an.');
     setArbeitet(true);
-    const andere = {
-      ...liga,
-      aufstellung: undefined,
-      heim: !liga.heim,
-      begegnung: nummer,
-      partner: turnier.id
-    };
-    const { data, error } = await supabase
-      .from('turniere')
-      .insert({
-        verein_id: turnier.verein_id,
-        name: `${turnier.name.replace(/ · [12]\. Begegnung$/, '')} · ${nummer}. Begegnung`,
-        datum: turnier.datum,
-        disziplin: 'multi-ball',
-        modus: 'liga',
-        status: 'geplant',
-        rating_werten: turnier.rating_werten,
-        einstellungen: { ...einstellungen, liga: andere }
-      })
-      .select('id')
-      .single();
-    if (error || !data) {
-      setArbeitet(false);
-      return setFehler(error?.message ?? 'Zweite Begegnung nicht angelegt.');
-    }
-    // Rueckverweis in der ersten Begegnung merken
-    await supabase
-      .from('turniere')
-      .update({ einstellungen: { ...einstellungen, liga: { ...liga, partner: data.id } } })
-      .eq('id', turnier.id);
+    const neu = await andereBegegnungAnlegen(turnier);
     setArbeitet(false);
-    oeffnen(data.id);
+    if (neu.fehler !== null) return setFehler(neu.fehler);
+    oeffnen(neu.id);
   }
 
   // Aufstellung einer Mannschaft verbergen oder wieder zeigen. Verbergen geht
@@ -606,7 +622,7 @@ export default function LigaAnsicht({
                     type="button"
                     className={liga.begegnung === n ? 'aktiv' : ''}
                     disabled={arbeitet}
-                    title={n === liga.begegnung ? `Die ${n}. Begegnung wird gerade angezeigt.` : partnerStatus !== null ? `Die ${n}. Begegnung anzeigen.` : `Die ${n}. Begegnung anlegen und anzeigen: gleicher Tag, gleicher Gegner, getauschtes Heimrecht.`}
+                    title={n === liga.begegnung ? `Die ${n}. Begegnung wird gerade angezeigt.` : `Die ${n}. Begegnung anzeigen.`}
                     onClick={() => void begegnungOeffnen(n)}
                   >
                     {n}. Begegnung

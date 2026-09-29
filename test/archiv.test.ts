@@ -6,7 +6,8 @@ import {
   platzText,
   rundeText,
   saisonOptionen,
-  saisonZeitraum
+  saisonZeitraum,
+  spieltageZusammenfassen
 } from '../src/archiv';
 import type { ArchivFilter, ArchivPartie, ArchivTeilnahme, ArchivTurnier } from '../src/archiv';
 
@@ -105,6 +106,41 @@ describe('Filter', () => {
     expect(platzText(turniere[0], 'jan', teilnahmen, partien)).toBe('1.');
     expect(platzText(turniere[2], 'jan', teilnahmen, partien)).toBe('1:0');
     expect(platzText(turniere[2], 'max', teilnahmen, partien)).toBe('');
+  });
+});
+
+describe('Liga-Spieltag aus zwei Begegnungen', () => {
+  const liga = { modus: 'liga' as const, disziplin: 'multi-ball' as const };
+  const erste = turnier('b1', '2026-10-11', { ...liga, name: 'Verden vs. Bassum', begegnung: 1, partner: 'b2' });
+  const zweite = turnier('b2', '2026-10-11', { ...liga, name: 'Verden vs. Bassum · 2. Begegnung', begegnung: 2, partner: 'b1' });
+  const partien = [
+    partie('b1', 'jan', 'gast1', 4, 2, { disziplin: '8-ball', datum: '2026-10-11' }),
+    partie('b2', 'uwe', 'gast2', 1, 4, { disziplin: '10-ball', datum: '2026-10-11' })
+  ];
+  const ids = (x: { id: string }[]) => x.map((t) => t.id);
+
+  test('eine Zeile unter der 1. Begegnung, mit den Partien beider', () => {
+    const zeilen = spieltageZusammenfassen([erste, zweite]);
+    expect(zeilen).toHaveLength(1);
+    expect(zeilen[0]).toMatchObject({ id: 'b1', name: 'Verden vs. Bassum', status: 'beendet', teile: ['b1', 'b2'] });
+    const e = archivFiltern(zeilen, partien, [], filter());
+    expect(ids(e.turniere)).toEqual(['b1']);
+    expect(e.partien.map((p) => p.turnier_id).sort()).toEqual(['b1', 'b2']);
+    // Disziplin und Spieler aus der 2. Begegnung finden den Spieltag
+    expect(ids(archivFiltern(zeilen, partien, [], filter({ disziplin: '10-ball' })).turniere)).toEqual(['b1']);
+    expect(ids(archivFiltern(zeilen, partien, [], filter({ spieler: 'uwe' })).turniere)).toEqual(['b1']);
+    expect(platzText(zeilen[0], 'uwe', [], partien)).toBe('0:1');
+  });
+  test('erst im Archiv, wenn beide Begegnungen fertig sind', () => {
+    const zeilen = spieltageZusammenfassen([erste, { ...zweite, status: 'geplant' }]);
+    expect(zeilen[0].status).toBe('geplant');
+    const e = archivFiltern(zeilen, partien, [], filter());
+    expect(e.turniere).toEqual([]);
+    expect(e.partien).toEqual([]);
+  });
+  test('ohne gegenseitigen Verweis bleiben beide Zeilen', () => {
+    const zeilen = spieltageZusammenfassen([{ ...erste, partner: null }, zweite]);
+    expect(ids(zeilen)).toEqual(['b1', 'b2']);
   });
 });
 

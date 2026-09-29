@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../supabase';
 import { useSitzung } from '../sitzung';
-import LigaAnsicht from './LigaAnsicht';
+import LigaAnsicht, { andereBegegnungAnlegen } from './LigaAnsicht';
 import TurnierAnsicht from './TurnierAnsicht';
 import Ausschreibungen from './Ausschreibungen';
-import { LIGEN } from '../liga';
+import { LIGEN, partnerVon, spieltagStand, zweiteBegegnungIds } from '../liga';
 import type { Ausspielziele, LigaKennung } from '../liga';
 import type { Ausschreibung } from '../ausschreibung';
 import { saisonAus } from '../mannschaften';
@@ -261,9 +261,15 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
         rating_werten: ratingWerten,
         einstellungen: art ? { ...einstellungen, art } : einstellungen
       })
-      .select('id')
+      .select('*')
       .single();
     if (error || !data) return setFehler(error?.message ?? 'Turnier nicht angelegt.');
+    // Ein Liga-Spieltag hat immer zwei Begegnungen; die zweite gleich mit anlegen.
+    // Klappt das nicht, holt der Umschalter in der Liga-Ansicht sie nach.
+    if (modus === 'liga') {
+      const zweite = await andereBegegnungAnlegen(data);
+      if (zweite.fehler !== null) setFehler(`Die 2. Begegnung wurde nicht angelegt: ${zweite.fehler}`);
+    }
     setFormular(false);
     setName('');
     await laden();
@@ -371,6 +377,11 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
   const artenInListe = [
     ...new Set([...vorgaben.turnierarten, ...turniere.map(artVon).filter((a): a is string => !!a)])
   ];
+
+  // Die 2. Begegnung eines Spieltags bekommt keine eigene Zeile; in turniere
+  // bleibt sie, damit der Umschalter der Liga-Ansicht sie findet.
+  const zweite = zweiteBegegnungIds(turniere);
+  const zeilen = turniere.filter((t) => !zweite.has(t.id) && (!artFilter || artVon(t) === artFilter));
 
   const offenesTurnier = turniere.find((t) => t.id === offen);
   if (offen && offenesTurnier?.modus === 'liga') {
@@ -686,27 +697,34 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
             </tr>
           </thead>
           <tbody>
-            {turniere.filter((t) => !artFilter || artVon(t) === artFilter).map((t) => (
-              <tr
-                key={t.id}
-                className="klickbar"
-                onClick={() => {
-                  void (async () => {
-                    if (await wechselErlaubt()) setOffen(t.id);
-                  })();
-                }}
-              >
-                <td>{new Date(`${t.datum}T12:00:00`).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}</td>
-                <td>
-                  {t.name}
-                  {t.quelle === 'import' && <span className="marke">aus Turnier light</span>}
-                </td>
-                {artenInListe.length > 0 && <td>{artVon(t) ?? '–'}</td>}
-                <td>{DISZIPLIN_TEXT[t.disziplin]}</td>
-                <td>{MODUS_TEXT[t.modus]}</td>
-                <td className={t.status === 'laeuft' ? 'livelaeuft' : ''}>{STATUS_TEXT[t.status]}</td>
-              </tr>
-            ))}
+            {zeilen.map((t) => {
+              // Liga-Spieltag: eine Zeile fuer beide Begegnungen
+              const partner = t.modus === 'liga' ? partnerVon(t, turniere) : null;
+              const stand = spieltagStand(t.status, partner?.status ?? null);
+              return (
+                <tr
+                  key={t.id}
+                  className="klickbar"
+                  onClick={() => {
+                    void (async () => {
+                      if (await wechselErlaubt()) setOffen(t.id);
+                    })();
+                  }}
+                >
+                  <td>{new Date(`${t.datum}T12:00:00`).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}</td>
+                  <td>
+                    {t.name}
+                    {t.quelle === 'import' && <span className="marke">aus Turnier light</span>}
+                  </td>
+                  {artenInListe.length > 0 && <td>{artVon(t) ?? '–'}</td>}
+                  <td>{DISZIPLIN_TEXT[t.disziplin]}</td>
+                  <td>{MODUS_TEXT[t.modus]}</td>
+                  <td className={stand.status === 'laeuft' ? 'livelaeuft' : ''}>
+                    {stand.teilBeendet ? `${stand.teilBeendet}. Begegnung beendet` : STATUS_TEXT[stand.status]}
+                  </td>
+                </tr>
+              );
+            })}
             {turniere.length === 0 && (
               <tr>
                 <td colSpan={artenInListe.length > 0 ? 6 : 5} className="hinweis">

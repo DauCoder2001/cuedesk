@@ -1,5 +1,16 @@
 import { describe, expect, test } from 'vitest';
-import { LIGEN, aufstellungPruefen, entfaelltBeiDritt, gesperrteSpieler, spielplan, wertung } from '../src/liga';
+import {
+  LIGEN,
+  aufstellungPruefen,
+  entfaelltBeiDritt,
+  gesperrteSpieler,
+  partnerVon,
+  spielplan,
+  spieltagStand,
+  wertung,
+  zweiteBegegnungIds
+} from '../src/liga';
+import type { SpieltagTeil } from '../src/liga';
 
 describe('Spielplan einer Begegnung', () => {
   test('acht Partien, Reihenfolge und Ausspielziele der Bezirksliga', () => {
@@ -98,5 +109,35 @@ describe('Aufstellung', () => {
   test('zu zweit ist zu wenig', () => {
     const plan = { 1: 'a', 2: 'b', 3: 'a', 4: 'b', 5: 'a', 6: 'b', 7: 'a', 8: 'b' };
     expect(aufstellungPruefen(spiele, plan, name).some((f) => f.includes('mindestens drei'))).toBe(true);
+  });
+});
+
+describe('Spieltag aus zwei Begegnungen', () => {
+  const teil = (id: string, begegnung: 1 | 2, partner: string | null, status: SpieltagTeil['status'] = 'geplant'): SpieltagTeil => ({
+    id,
+    status,
+    einstellungen: { liga: { begegnung, ...(partner ? { partner } : {}) } }
+  });
+  const erste = teil('a1', 1, 'a2');
+  const zweite = teil('a2', 2, 'a1');
+  const turnier: SpieltagTeil = { id: 'vm', status: 'beendet', einstellungen: {} };
+
+  test('die zweite Begegnung bekommt keine eigene Zeile', () => {
+    expect([...zweiteBegegnungIds([turnier, erste, zweite])]).toEqual(['a2']);
+    expect(partnerVon(erste, [erste, zweite])).toBe(zweite);
+    expect(partnerVon(turnier, [turnier, erste])).toBeNull();
+  });
+  test('ohne erste Begegnung oder mit einseitigem Verweis bleibt die zweite sichtbar', () => {
+    expect(zweiteBegegnungIds([zweite]).size).toBe(0);
+    expect(zweiteBegegnungIds([teil('a1', 1, null), zweite]).size).toBe(0);
+  });
+  test('Stand des ganzen Spieltags', () => {
+    expect(spieltagStand('geplant', null)).toEqual({ status: 'geplant', teilBeendet: null });
+    expect(spieltagStand('geplant', 'geplant')).toEqual({ status: 'geplant', teilBeendet: null });
+    expect(spieltagStand('beendet', 'laeuft')).toEqual({ status: 'laeuft', teilBeendet: null });
+    expect(spieltagStand('beendet', 'geplant')).toEqual({ status: 'geplant', teilBeendet: 1 });
+    expect(spieltagStand('geplant', 'beendet')).toEqual({ status: 'geplant', teilBeendet: 2 });
+    expect(spieltagStand('beendet', 'beendet')).toEqual({ status: 'beendet', teilBeendet: null });
+    expect(spieltagStand('abgebrochen', 'abgebrochen')).toEqual({ status: 'abgebrochen', teilBeendet: null });
   });
 });

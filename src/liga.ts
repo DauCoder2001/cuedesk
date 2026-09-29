@@ -9,6 +9,8 @@
 // Ausspielziele stammen aus den Ausschreibungen "OH Ausschreibung V2 ...
 // 2026-27"; 14.1 wird auf Punkte mit Aufnahmenbegrenzung gespielt.
 
+import type { TurnierStatus } from './datenbank.types';
+
 export type LigaKennung = 'kreisklasse' | 'kreisliga' | 'bezirksliga' | 'landesliga' | 'spass';
 
 export type Ausspielziele = {
@@ -184,4 +186,47 @@ export function gesperrteSpieler(
     if (s.runde === spiel.runde || s.disziplin === spiel.disziplin) gesperrt.add(id);
   });
   return gesperrt;
+}
+
+// ---------- Spieltag aus zwei Begegnungen ----------
+// Ein Spieltag steht in der Datenbank als zwei Turniere, die sich ueber
+// einstellungen.liga.partner gegenseitig kennen. In Listen erscheint er als
+// eine Zeile unter der 1. Begegnung.
+
+export type SpieltagTeil = { id: string; status: TurnierStatus; einstellungen: unknown };
+
+function ligaVerweis(t: SpieltagTeil): { begegnung?: 1 | 2; partner?: string } | null {
+  return (t.einstellungen as { liga?: { begegnung?: 1 | 2; partner?: string } } | null)?.liga ?? null;
+}
+
+// Die andere Begegnung, wenn sie in der Liste steht und zurueckverweist
+export function partnerVon<T extends SpieltagTeil>(t: T, turniere: T[]): T | null {
+  const partner = ligaVerweis(t)?.partner;
+  const andere = partner ? turniere.find((x) => x.id === partner) : undefined;
+  return andere && ligaVerweis(andere)?.partner === t.id ? andere : null;
+}
+
+// Zweite Begegnungen, deren erste in der Liste steht; sie bekommen keine
+// eigene Zeile. Fehlt die erste, bleibt die zweite sichtbar.
+export function zweiteBegegnungIds(turniere: SpieltagTeil[]): Set<string> {
+  return new Set(
+    turniere.filter((t) => ligaVerweis(t)?.begegnung === 2 && partnerVon(t, turniere)).map((t) => t.id)
+  );
+}
+
+// Stand des ganzen Spieltags aus dem Stand beider Begegnungen. teilBeendet
+// nennt die Begegnung, die schon fertig ist, solange die andere noch aussteht.
+export function spieltagStand(
+  erste: TurnierStatus,
+  zweite: TurnierStatus | null
+): { status: TurnierStatus; teilBeendet: 1 | 2 | null } {
+  if (zweite === null) return { status: erste, teilBeendet: null };
+  if (erste === 'laeuft' || zweite === 'laeuft') return { status: 'laeuft', teilBeendet: null };
+  const fertig = (s: TurnierStatus) => s === 'beendet' || s === 'abgebrochen';
+  if (fertig(erste) && fertig(zweite)) {
+    return { status: erste === 'beendet' || zweite === 'beendet' ? 'beendet' : 'abgebrochen', teilBeendet: null };
+  }
+  if (fertig(erste)) return { status: 'geplant', teilBeendet: 1 };
+  if (fertig(zweite)) return { status: 'geplant', teilBeendet: 2 };
+  return { status: 'geplant', teilBeendet: null };
 }

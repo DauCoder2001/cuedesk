@@ -14,7 +14,9 @@ import {
   rundeText,
   saisonOptionen,
   saisonZeitraum,
-  siegerVon
+  siegerVon,
+  spieltageZusammenfassen,
+  teileVon
 } from '../archiv';
 import type { ArchivPartie, ArchivTeilnahme, ArchivTurnier, Werte141 } from '../archiv';
 import { DISZIPLIN_TEXT, STATUS_TEXT } from './Turniere';
@@ -112,17 +114,23 @@ export default function Archiv() {
         ]);
         if (vorbei) return;
         setPersonen(personenAntwort.data ?? []);
-        const liste = turnierZeilen.map((t) => ({
-          id: t.id,
-          name: t.name,
-          datum: t.datum,
-          disziplin: t.disziplin,
-          modus: t.modus,
-          status: t.status,
-          teilnehmerzahl: t.teilnehmerzahl,
-          art: ((t.einstellungen ?? {}) as TurnierEinstellungen).art ?? null
-        }));
-        setTurniere(liste);
+        const liste = turnierZeilen.map((t) => {
+          const e = (t.einstellungen ?? {}) as TurnierEinstellungen;
+          return {
+            id: t.id,
+            name: t.name,
+            datum: t.datum,
+            disziplin: t.disziplin,
+            modus: t.modus,
+            status: t.status,
+            teilnehmerzahl: t.teilnehmerzahl,
+            art: e.art ?? null,
+            begegnung: e.liga?.begegnung ?? null,
+            partner: e.liga?.partner ?? null
+          };
+        });
+        // Liga-Spieltag: eine Zeile fuer beide Begegnungen
+        setTurniere(spieltageZusammenfassen(liste));
         setTeilnahmen(teilnahmeZeilen);
         const daten = [erstesAntwort.data?.[0]?.datum, ...liste.map((t) => t.datum)].filter((d): d is string => !!d).sort();
         setFruehestes(daten[0] ?? null);
@@ -246,11 +254,13 @@ export default function Archiv() {
 
   const saisons = saisonOptionen(fruehestes, heute, beginn);
   const arten = artOptionen(turniere, mitEinzelspielen);
-  const turnierNamen = new Map(turniere.map((t) => [t.id, t.name]));
+  const turnierNamen = new Map(turniere.flatMap((t) => teileVon(t).map((id) => [id, t.name] as const)));
   const teilnehmerzahl = (t: ArchivTurnier) =>
     t.teilnehmerzahl ??
     (t.modus === 'liga'
-      ? new Set(partien.filter((p) => p.turnier_id === t.id).flatMap((p) => [p.spieler_a, p.spieler_b])).size
+      ? new Set(
+          partien.filter((p) => p.turnier_id !== null && teileVon(t).includes(p.turnier_id)).flatMap((p) => [p.spieler_a, p.spieler_b])
+        ).size
       : teilnahmen.filter((x) => x.turnier_id === t.id).length);
   const siegerName = (t: ArchivTurnier) => {
     if (t.modus === 'liga') return '–';
@@ -263,13 +273,10 @@ export default function Archiv() {
 
   if (offen) {
     const zurueck = () => setOffen(null);
+    // Umschalter zur anderen Begegnung: sie hat im Archiv keine eigene Zeile
+    const begegnungOeffnen = (id: string) => setOffen({ ...offen, id });
     return offen.modus === 'liga' ? (
-      <LigaAnsicht
-        turnierId={offen.id}
-        zurueck={zurueck}
-        zurueckText="Archiv"
-        oeffnen={(id) => setOffen(turniere.find((t) => t.id === id) ?? null)}
-      />
+      <LigaAnsicht turnierId={offen.id} zurueck={zurueck} zurueckText="Archiv" oeffnen={begegnungOeffnen} />
     ) : (
       <TurnierAnsicht turnierId={offen.id} zurueck={zurueck} zurueckText="Archiv" />
     );
