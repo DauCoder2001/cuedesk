@@ -29,11 +29,13 @@ const datumLang = (iso: string) =>
 export default function LigaAnsicht({
   turnierId,
   zurueck,
-  oeffnen
+  oeffnen,
+  zurueckText = 'Turniere'
 }: {
   turnierId: string;
   zurueck: () => void;
   oeffnen: (id: string) => void;
+  zurueckText?: string; // Beschriftung des Zurueck-Knopfs (Seite, von der der Spieltag geoeffnet wurde)
 }) {
   const { verein, darf } = useSitzung();
   const darfLeiten = darf('vereinsadmin', 'sportwart', 'turnierleiter');
@@ -509,8 +511,8 @@ export default function LigaAnsicht({
       <section className="block">
         <div className="bearbeitenkopf kopf-umbruch">
           <div>
-            <button type="button" title="Zurück zur Turnierliste" className="zurueck" onClick={zurueck}>
-              ← Turniere
+            <button type="button" title={`Zurück zur Seite „${zurueckText}“`} className="zurueck" onClick={zurueck}>
+              ← {zurueckText}
             </button>
             <h2>
               {LIGEN[liga.liga].name} · {liga.spieltag}. Spieltag

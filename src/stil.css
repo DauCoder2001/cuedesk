@@ -296,6 +296,15 @@ ul.schlicht { list-style: none; padding: 0; margin: 0; display: flex; flex-direc
 .formmarke { width: 22px; height: 22px; border-radius: 6px; font-size: 13px; line-height: 22px; text-align: center; background: var(--flaeche-2); }
 .formmarke.sieg { background: #d9f2e5; color: #146b45; }
 .formmarke.niederlage { background: #fbe0e0; color: #8f2a2a; }
+/* Archiv: Filter mit Beschriftung darueber, Verlauf mit Namen statt S/N */
+.archivfilter { align-items: flex-end; }
+.archivfilter label { display: flex; flex-direction: column; gap: 2px; min-width: 150px; }
+.archivfilter label > span { font-size: 13px; color: var(--text-leise); }
+.formmarke.breit { width: auto; min-width: 22px; padding: 0 8px; line-height: 26px; height: 26px; cursor: default; }
+.verlaufzeile { margin-top: 6px; }
+.tabelle td.sieger { font-weight: 600; }
+.tabelle th.mittig { text-align: center; }
+h2 small.hinweis { font-weight: 400; font-size: 14px; margin-left: 6px; }
 
 .protokoll { margin: 0; padding-left: 18px; font-size: 14px; color: var(--text-leise); }
 .protokoll li { margin: 2px 0; }

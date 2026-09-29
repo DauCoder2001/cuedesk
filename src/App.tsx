@@ -10,6 +10,7 @@ import Altdaten from './seiten/Altdaten';
 import Rating from './seiten/Rating';
 import Serien from './seiten/Serien';
 import Ranglisten from './seiten/Ranglisten';
+import Archiv from './seiten/Archiv';
 import StatistikPool from './seiten/StatistikPool';
 import Statistik141 from './seiten/Statistik141';
 import Live from './seiten/Live';
@@ -29,6 +30,7 @@ type Bereich =
   | 'rating'
   | 'serien'
   | 'ranglisten'
+  | 'archiv'
   | 'statistikPool'
   | 'statistik141'
   | 'benutzer'
@@ -134,6 +136,12 @@ export default function App() {
       name: 'Ranglisten',
       sichtbar: true,
       tipp: 'Siegquote, Bestenliste 14.1, Titel aus Turniersiegen und Platzierungen in den Serien.'
+    },
+    {
+      wert: 'archiv',
+      name: 'Archiv',
+      sichtbar: true,
+      tipp: 'Alle beendeten Turniere und Partien nach Saison, Disziplin, Turnierart und Spieler, dazu der direkte Vergleich zweier Spieler.'
     },
     {
       wert: 'statistikPool',
@@ -304,6 +312,7 @@ export default function App() {
         {angezeigt === 'rating' && <Rating />}
         {angezeigt === 'serien' && <Serien />}
         {angezeigt === 'ranglisten' && <Ranglisten />}
+        {angezeigt === 'archiv' && <Archiv />}
         {angezeigt === 'statistikPool' && <StatistikPool />}
         {angezeigt === 'statistik141' && <Statistik141 />}
         {angezeigt === 'benutzer' && <BenutzerRollen />}

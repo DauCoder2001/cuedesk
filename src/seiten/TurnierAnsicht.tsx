@@ -80,11 +80,13 @@ const zeitText = (iso: string) =>
 export default function TurnierAnsicht({
   turnierId,
   zurueck,
-  aendern
+  aendern,
+  zurueckText = 'Turniere'
 }: {
   turnierId: string;
   zurueck: () => void;
   aendern?: () => void; // Formular "Turnier ändern" öffnen (nur in Vorbereitung)
+  zurueckText?: string; // Beschriftung des Zurueck-Knopfs (Seite, von der das Turnier geoeffnet wurde)
 }) {
   const { verein, darf } = useSitzung();
   const wechsel = useWechsel();
@@ -1526,8 +1528,8 @@ export default function TurnierAnsicht({
       <section className="block">
         <div className="bearbeitenkopf">
           <div>
-            <button type="button" title="Zurück zur Turnierliste" className="zurueck" onClick={zurueck}>
-              ← Turniere
+            <button type="button" title={`Zurück zur Seite „${zurueckText}“`} className="zurueck" onClick={zurueck}>
+              ← {zurueckText}
             </button>
             <h2>{turnier.name}</h2>
             {darfLeiten && (turnierarten.length > 0 || einstellungen.art) ? (
