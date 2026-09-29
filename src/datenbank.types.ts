@@ -126,6 +126,21 @@ export type Person = {
   geaendert_am: string;
 };
 
+// Einwilligungen mit Nachweis (Stufe 22); gesetzt nur ueber einwilligung_setzen
+export type EinwilligungArt = 'name_oeffentlich' | 'konto_minderjaehrig';
+export type EinwilligungWeg = 'selbst' | 'schriftlich' | 'erziehungsberechtigte' | 'uebernommen';
+export type Einwilligung = {
+  id: string;
+  verein_id: string;
+  person_id: string;
+  art: EinwilligungArt;
+  vorgang: 'erteilt' | 'widerrufen';
+  weg: EinwilligungWeg;
+  fassung: string | null;
+  am: string;
+  erfasst_von: string | null;
+};
+
 export type PersonIntern = {
   person_id: string;
   verein_id: string;
@@ -388,6 +403,7 @@ export type Database = {
       benutzer_personen: Tabelle<BenutzerPerson, BenutzerPerson>;
       personen: Tabelle<Person, Partial<Person> & Pick<Person, 'verein_id' | 'vorname' | 'nachname'>>;
       personen_intern: Tabelle<PersonIntern, Partial<PersonIntern> & Pick<PersonIntern, 'person_id' | 'verein_id'>>;
+      einwilligungen: Tabelle<Einwilligung>;
       einladungen: Tabelle<Einladung, Omit<Einladung, 'id' | 'erstellt_am' | 'angenommen_am'>>;
       tische: Tabelle<Tisch, Omit<Tisch, 'id'>>;
       geraete: Tabelle<Geraet>;
@@ -444,6 +460,10 @@ export type Database = {
       turnier_anmelden: { Args: { p_turnier: string; p_an: boolean }; Returns: undefined };
       person_anonymisieren: { Args: { p_person: string }; Returns: string };
       person_auskunft: { Args: { p_person: string }; Returns: unknown }; // Aufbau siehe src/auskunft.ts
+      einwilligung_setzen: {
+        Args: { p_person: string; p_art: EinwilligungArt; p_erteilen: boolean; p_weg: EinwilligungWeg; p_fassung?: string | null };
+        Returns: undefined;
+      };
       verein_aendern: {
         Args: {
           p_verein: string;

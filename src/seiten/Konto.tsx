@@ -5,6 +5,8 @@ import { Pflichthinweis, usePflicht } from '../pflicht';
 import { useUngespeichert } from '../ungespeichert';
 import { PASSWORT_MINDESTLAENGE, passwortFehler } from '../passwort';
 import AuskunftKnoepfe from './AuskunftKnoepfe';
+import { EinwilligungSelbst } from './Einwilligungen';
+import { NAMENSANZEIGE_FASSUNG, NAMENSANZEIGE_TEXT } from '../einwilligung';
 
 // "Mein Konto": eigene Angaben und wahlweise ein Passwort. Die Anmeldung per
 // Mail-Link bleibt immer moeglich. Wer ein Passwort setzt, bestaetigt vorher mit
@@ -173,6 +175,24 @@ export default function Konto() {
           </>
         )}
       </section>
+
+      {eigeneSpieler.length > 0 && (
+        <section className="block">
+          <h2>Namensanzeige</h2>
+          <blockquote className="wortlaut">{NAMENSANZEIGE_TEXT}</blockquote>
+          <p className="hinweis">
+            Fassung {NAMENSANZEIGE_FASSUNG}. Für Minderjährige erfasst der Verein die Einwilligung der
+            Erziehungsberechtigten; widerrufen kannst du hier jederzeit selbst.
+          </p>
+          {eigeneSpieler.map((s) => (
+            <EinwilligungSelbst
+              key={s.person_id}
+              personId={s.person_id}
+              verein={vereine.find((v) => v.id === s.verein_id)?.name ?? 'Verein'}
+            />
+          ))}
+        </section>
+      )}
 
       <section className="block">
         <h2>Meine Daten</h2>

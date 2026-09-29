@@ -56,6 +56,14 @@ button:disabled { cursor: default; color: var(--text-leise); }
 .rechtskopf { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
 .rechtsfuss { border-top: 1px solid var(--rand); padding-top: 8px; margin-top: 20px; }
 .anmeldespalte { width: 100%; max-width: 380px; }
+/* Einwilligungen (Seite Spieler und Mein Konto) */
+.einwilligungen { margin: 12px 0; }
+.einwilligungszeile { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 6px 0; }
+.einwilligungszeile .marke { font-size: 13px; border: 1px solid var(--rand); border-radius: var(--radius); padding: 1px 8px; color: var(--text-leise); margin-left: 0; }
+.einwilligungszeile .marke.gutmarke { border-color: transparent; }
+.einwilligungszeile .marke.warnmarke { border-color: transparent; }
+.einwilligungszeile .knopfpaar button { font-size: 14px; padding: 4px 10px; }
+.wortlaut { margin: 6px 0; padding: 8px 12px; border-left: 3px solid var(--rand); background: var(--flaeche-2); font-size: 15px; }
 /* Auskunft (Art. 15/20): Beschriftung und Knoepfe PDF/JSON in einer Zeile */
 .auskunft { margin-top: 10px; }
 .auskunft .knopfpaar { align-items: center; flex-wrap: wrap; }
@@ -405,7 +413,7 @@ button.klein { font-size: 13px; padding: 2px 7px; margin-left: 4px; }
 tr.gespielt td { color: var(--text-leise); }
 tr.gespielt .zahlfeld { color: var(--text); }
 .marke.stichkampf { color: #854f0b; border-color: #e8cfa3; }
-.gefahrknopf { color: var(--fehler); border-color: #e7bcbc; }
+.gefahrknopf { color: var(--fehler); border-color: #e7bcbc; white-space: nowrap; }
 .dialoghintergrund { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.35); display: grid; place-items: center; padding: 16px; z-index: 50; }
 .dialog { background: var(--flaeche); border-radius: 12px; padding: 18px; width: 100%; max-width: 520px; max-height: 80vh; overflow: auto; display: flex; flex-direction: column; gap: 12px; }
 .umschalter { display: inline-flex; border: 1px solid var(--rand); border-radius: var(--radius); overflow: hidden; }

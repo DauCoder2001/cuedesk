@@ -7,6 +7,8 @@ import { absatz, bauen, neuesDokument, neueSeite, PDF_BREITE, PDF_RAND, tabelle,
 import type { PdfDokument } from './pdf';
 import { umbrechen } from './ausschreibung';
 import { rundeText } from './archiv';
+import { ART_TEXT, WEG_TEXT } from './einwilligung';
+import type { Einwilligung } from './datenbank.types';
 
 type Wert = string | number | boolean | null;
 type Satz = Record<string, Wert | undefined>;
@@ -37,6 +39,9 @@ export type Auskunft = {
   rating: { stichtag: string; disziplin: string; wert: number; racks: number; quelle: string }[];
   aenderungen: { zeitpunkt: string; tabelle: string; aktion: string; vorher: Satz | null; nachher: Satz | null }[];
   aenderungen_durch_konto: Record<string, number>;
+  // Verlauf der Einwilligungen (Stufe 22); kommt nicht aus person_auskunft,
+  // sondern wird beim Abruf aus der Tabelle einwilligungen ergaenzt
+  einwilligungen?: Pick<Einwilligung, 'art' | 'vorgang' | 'weg' | 'fassung' | 'am'>[];
 };
 
 const DISZIPLIN: Record<string, string> = {
@@ -199,6 +204,21 @@ export function auskunftPdf(a: Auskunft): Uint8Array {
       ['Notiz', wertText(v.notiz)]
     ]);
   } else leer(dok, 'Keine vertraulichen Angaben gespeichert.');
+
+  ueberschrift(dok, 'Einwilligungen', 11);
+  if (a.einwilligungen && a.einwilligungen.length > 0) {
+    tabelle(
+      dok,
+      [{ text: 'Zeitpunkt' }, { text: 'Art' }, { text: 'Vorgang' }, { text: 'Weg' }, { text: 'Wortlaut' }],
+      a.einwilligungen.map((e) => [
+        datumText(e.am, true),
+        ART_TEXT[e.art],
+        e.vorgang === 'erteilt' ? 'Einwilligung' : 'Widerruf',
+        WEG_TEXT[e.weg],
+        e.fassung ?? '–'
+      ])
+    );
+  } else leer(dok, 'Keine Einwilligungen gespeichert. Öffentlich erscheint nur das Kürzel.');
 
   ueberschrift(dok, 'Konto', 11);
   if (a.konten.length > 0) {

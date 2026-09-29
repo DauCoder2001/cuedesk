@@ -14,10 +14,14 @@ export default function AuskunftKnoepfe({ personId, beschriftung }: { personId: 
   async function holen(art: 'pdf' | 'json') {
     setLaedt(art);
     setFehler(null);
-    const { data, error } = await supabase.rpc('person_auskunft', { p_person: personId });
+    const [antwort, einwilligungen] = await Promise.all([
+      supabase.rpc('person_auskunft', { p_person: personId }),
+      supabase.from('einwilligungen').select('art, vorgang, weg, fassung, am').eq('person_id', personId).order('am', { ascending: false })
+    ]);
     setLaedt(null);
+    const { data, error } = antwort;
     if (error || !data) return setFehler(error?.message ?? 'Keine Auskunft erhalten.');
-    const auskunft = data as Auskunft;
+    const auskunft: Auskunft = { ...(data as Auskunft), einwilligungen: einwilligungen.data ?? [] };
     if (art === 'pdf') return herunterladen(auskunftPdf(auskunft), auskunftDateiname(auskunft, 'pdf'));
     const url = URL.createObjectURL(new Blob([JSON.stringify(auskunft, null, 2)], { type: 'application/json' }));
     const link = document.createElement('a');

@@ -7,6 +7,7 @@ import { useRueckfrage } from '../rueckfrage';
 import { Pflichthinweis, usePflicht } from '../pflicht';
 import { useUngespeichert, weichtAb } from '../ungespeichert';
 import AuskunftKnoepfe from './AuskunftKnoepfe';
+import { EinwilligungLeitung } from './Einwilligungen';
 
 type Entwurf = Omit<Person, 'id' | 'erstellt_am' | 'geaendert_am'> & { id: string | null };
 type EntwurfIntern = Omit<PersonIntern, 'person_id' | 'verein_id'>;
@@ -136,8 +137,8 @@ export default function Personen() {
       nachname: entwurf.nachname.trim(),
       anzeigename: entwurf.anzeigename?.trim() || null,
       kuerzel: entwurf.kuerzel?.trim() || null,
-      status: entwurf.status,
-      name_oeffentlich: entwurf.name_oeffentlich
+      status: entwurf.status
+      // name_oeffentlich setzt nur einwilligung_setzen (Stufe 22)
     };
 
     const { data, error } = entwurf.id
@@ -182,6 +183,20 @@ export default function Personen() {
     });
     return zaehler;
   }, [personen]);
+
+  // Nach einer erfassten Einwilligung: name_oeffentlich neu lesen, ohne die
+  // Eingaben im Formular zu verlieren
+  async function namensanzeigeNeuLaden() {
+    if (!entwurf?.id || !verein) return;
+    const { data } = await supabase.from('personen').select('name_oeffentlich').eq('id', entwurf.id).single();
+    if (!data) return;
+    setEntwurf((e) => (e ? { ...e, name_oeffentlich: data.name_oeffentlich } : e));
+    setUrsprung((u: unknown) => {
+      const alt = u as { entwurf: Entwurf; intern: EntwurfIntern } | null;
+      return alt ? { ...alt, entwurf: { ...alt.entwurf, name_oeffentlich: data.name_oeffentlich } } : alt;
+    });
+    await laden(verein.id);
+  }
 
   // Partien, Turnierteilnahmen, 14.1-Aufnahmen und verknuepfte Konten eines Spielers
   async function bindungLaden(id: string): Promise<Bindung> {
@@ -412,18 +427,16 @@ export default function Personen() {
               </Feld>
             </div>
 
-            <label className="ankreuz">
-              <input
-                type="checkbox"
-                checked={entwurf.name_oeffentlich}
-                disabled={!bearbeitbar}
-                onChange={(e) => setEntwurf({ ...entwurf, name_oeffentlich: e.target.checked })}
+            {darfAendern && entwurf.id && !entwurf.anonymisiert_am && (
+              <EinwilligungLeitung
+                key={entwurf.id}
+                personId={entwurf.id}
+                name={`${entwurf.vorname} ${entwurf.nachname}`.trim()}
+                minderjaehrig={intern.minderjaehrig}
+                darfErfassen={bearbeitbar}
+                geaendert={() => void namensanzeigeNeuLaden()}
               />
-              <span>
-                Name darf öffentlich erscheinen
-                <small>Ohne Haken steht in Live-Anzeige und TV nur das Kürzel.</small>
-              </span>
-            </label>
+            )}
 
             {darfSehen && (
               <fieldset className="geschuetzt">
