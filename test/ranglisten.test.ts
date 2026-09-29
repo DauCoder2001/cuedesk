@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import { bestenliste141, serienUebersicht, siegquoten, titel } from '../src/ranglisten';
 import type { PoolPartie } from '../src/statistik-pool';
-import type { StatAufnahme, StatPartie } from '../src/statistik-141';
+import type { StatPartie } from '../src/statistik-141';
 
 const mitglieder = new Set(['a', 'b', 'c']);
 
@@ -117,29 +117,37 @@ describe('Bestenliste 14.1', () => {
     begonnen: null,
     beendet: null
   });
-  const aufnahme = (partie_id: string, lfd_nr: number, spieler: string, baelle: number): StatAufnahme => ({
+  const kennzahl = (partie_id: string, aufnahmen_a: number, aufnahmen_b: number, hoechstserie_a: number, hoechstserie_b: number) => ({
     partie_id,
-    lfd_nr,
-    spieler,
-    baelle,
-    punkte: baelle,
-    art: 'serie',
-    markierung: '',
-    rack_segmente: [baelle],
-    zeitpunkt: null
+    aufnahmen_a,
+    aufnahmen_b,
+    hoechstserie_a,
+    hoechstserie_b
   });
 
   test('sortiert nach GD, Mindestzahl an Aufnahmen greift', () => {
     const partien = [partie141('p1', 'a', 'b', 60, 30)];
-    const aufnahmen = [
-      ...Array.from({ length: 6 }, (_, i) => aufnahme('p1', i * 2 + 1, 'a', 10)),
-      ...Array.from({ length: 6 }, (_, i) => aufnahme('p1', i * 2 + 2, 'b', 5))
-    ];
-    const liste = bestenliste141(['a', 'b'], partien, aufnahmen, 6);
+    const kennzahlen = [kennzahl('p1', 6, 6, 10, 5)];
+    const liste = bestenliste141(['a', 'b'], partien, kennzahlen, 6);
     expect(liste.map((z) => z.person)).toEqual(['a', 'b']);
-    expect(liste[0]).toMatchObject({ aufnahmen: 6, hs: 10 });
+    expect(liste[0]).toMatchObject({ partien: 1, aufnahmen: 6, hs: 10 });
     expect(liste[0].gd).toBeCloseTo(10);
     // mit hoeherer Mindestzahl bleibt niemand uebrig
-    expect(bestenliste141(['a', 'b'], partien, aufnahmen, 20)).toEqual([]);
+    expect(bestenliste141(['a', 'b'], partien, kennzahlen, 20)).toEqual([]);
+  });
+
+  test('zaehlt je Person nur eigene Partien mit Kennzahlen; Gaeste fehlen', () => {
+    const partien = [
+      partie141('p1', 'a', 'b', 60, 30),
+      partie141('p2', 'b', 'a', 40, 60),
+      partie141('p3', 'a', 'gast', 60, 10),
+      partie141('p4', 'a', 'b', 60, 0) // ohne Kennzahlen
+    ];
+    const kennzahlen = [kennzahl('p1', 10, 10, 20, 8), kennzahl('p2', 12, 12, 9, 25), kennzahl('p3', 8, 8, 30, 3)];
+    const liste = bestenliste141(['a', 'b'], partien, kennzahlen, 1);
+    expect(liste.map((z) => z.person)).toEqual(['a', 'b']);
+    expect(liste[0]).toMatchObject({ partien: 3, aufnahmen: 30, hs: 30 });
+    expect(liste[0].gd).toBeCloseTo(6);
+    expect(liste[1]).toMatchObject({ partien: 2, aufnahmen: 22, hs: 9 });
   });
 });

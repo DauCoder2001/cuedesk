@@ -5,7 +5,8 @@ import { personName } from '../namen';
 import { bestenliste141, serienUebersicht, siegquoten, titel } from '../ranglisten';
 import { DISZIPLIN_TEXT } from './Turniere';
 import type { SerienTurnier } from '../serien';
-import type { StatAufnahme, StatPartie } from '../statistik-141';
+import type { Kennzahl141 } from '../ranglisten';
+import type { StatPartie } from '../statistik-141';
 import type { PoolPartie } from '../statistik-pool';
 import type { Disziplin, Person, Serie } from '../datenbank.types';
 
@@ -35,7 +36,7 @@ export default function Ranglisten() {
   const [personen, setPersonen] = useState<Person[]>([]);
   const [poolPartien, setPoolPartien] = useState<PoolPartie[]>([]);
   const [partien141, setPartien141] = useState<StatPartie[]>([]);
-  const [aufnahmen, setAufnahmen] = useState<StatAufnahme[]>([]);
+  const [kennzahlen, setKennzahlen] = useState<Kennzahl141[]>([]);
   const [turniere, setTurniere] = useState<TurnierZeile[]>([]);
   const [teilnahmen, setTeilnahmen] = useState<Teilnahme[]>([]);
   const [serien, setSerien] = useState<Serie[]>([]);
@@ -88,29 +89,22 @@ export default function Ranglisten() {
         return;
       }
 
-      // Aufnahmen in Paketen, wie in der 14.1-Statistik
-      const zeilen: StatAufnahme[] = [];
+      // Kennzahlen je Partie in Paketen (lange ID-Listen sprengen sonst die Adresse)
+      const zeilen: Kennzahl141[] = [];
       const ids = (a141Antwort.data ?? []).map((p) => p.id);
-      for (let i = 0; i < ids.length; i += 50) {
-        const paket = ids.slice(i, i + 50);
-        for (let von = 0; ; von += 1000) {
-          const { data } = await supabase
-            .from('aufnahmen_141')
-            .select('partie_id, lfd_nr, spieler, baelle, punkte, art, markierung, rack_segmente, zeitpunkt')
-            .in('partie_id', paket)
-            .order('partie_id')
-            .order('lfd_nr')
-            .range(von, von + 999);
-          zeilen.push(...((data ?? []) as StatAufnahme[]));
-          if (!data || data.length < 1000) break;
-        }
+      for (let i = 0; i < ids.length; i += 100) {
+        const { data } = await supabase
+          .from('partien_141')
+          .select('partie_id, aufnahmen_a, aufnahmen_b, hoechstserie_a, hoechstserie_b')
+          .in('partie_id', ids.slice(i, i + 100));
+        zeilen.push(...((data ?? []) as Kennzahl141[]));
       }
       if (vorbei) return;
 
       setPersonen(personenAntwort.data ?? []);
       setPoolPartien((poolAntwort.data ?? []) as PoolPartie[]);
       setPartien141((a141Antwort.data ?? []) as StatPartie[]);
-      setAufnahmen(zeilen);
+      setKennzahlen(zeilen);
       setTurniere((turnierAntwort.data ?? []) as TurnierZeile[]);
       setTeilnahmen((teilnahmeAntwort.data ?? []) as Teilnahme[]);
       setSerien(serienAntwort.data ?? []);
@@ -145,8 +139,8 @@ export default function Ranglisten() {
   );
 
   const beste141 = useMemo(
-    () => bestenliste141([...mitglieder], partien141, aufnahmen, 20),
-    [mitglieder, partien141, aufnahmen]
+    () => bestenliste141([...mitglieder], partien141, kennzahlen, 20),
+    [mitglieder, partien141, kennzahlen]
   );
 
   const titelliste = useMemo(() => {

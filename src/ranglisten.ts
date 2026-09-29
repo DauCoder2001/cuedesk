@@ -7,8 +7,7 @@
 
 import { serienwertung } from './serien';
 import type { SerienEinstellungen, SerienTurnier } from './serien';
-import { statistik141 } from './statistik-141';
-import type { StatAufnahme, StatPartie } from './statistik-141';
+import type { StatPartie } from './statistik-141';
 import type { PoolPartie } from './statistik-pool';
 
 // ---------- Siegquote ----------
@@ -153,20 +152,51 @@ export type Beste141Zeile = {
   hs: number; // hoechste Serie
 };
 
-// Bestenliste aus dem Aufnahme-Protokoll. Gerechnet wird je Person mit
-// derselben Funktion wie in der 14.1-Statistik. Wer zu wenige Aufnahmen hat,
-// steht nicht in der Liste; die hoechste Serie zaehlt trotzdem mit.
+// Kennzahlen einer 14.1-Partie (Tabelle partien_141, fuer alle Mitglieder
+// lesbar; das Aufnahme-Protokoll sieht ein Mitglied nur fuer eigene Partien)
+export type Kennzahl141 = {
+  partie_id: string;
+  aufnahmen_a: number;
+  aufnahmen_b: number;
+  hoechstserie_a: number;
+  hoechstserie_b: number;
+};
+
+// Bestenliste aus Ergebnis und Kennzahlen je Partie: GD = Punkte je Aufnahme.
+// Partien ohne Kennzahlen zaehlen nicht. Wer zu wenige Aufnahmen hat, steht
+// nicht in der Liste.
 export function bestenliste141(
   personen: string[],
-  partien: StatPartie[],
-  aufnahmen: StatAufnahme[],
+  partien: Pick<StatPartie, 'id' | 'spieler_a' | 'spieler_b' | 'ergebnis_a' | 'ergebnis_b'>[],
+  kennzahlen: Kennzahl141[],
   mindestAufnahmen = 20
 ): Beste141Zeile[] {
-  return personen
-    .map((person) => {
-      const w = statistik141(person, partien, aufnahmen, () => '');
-      return { person, partien: w.partien, aufnahmen: w.aufnahmen, gd: w.gd, hs: w.hs.wert };
-    })
+  const jePartie = new Map(kennzahlen.map((k) => [k.partie_id, k]));
+  const summen = new Map(personen.map((p) => [p, { partien: 0, aufnahmen: 0, punkte: 0, hs: 0 }]));
+  partien.forEach((p) => {
+    const k = jePartie.get(p.id);
+    if (!k) return;
+    const seiten = [
+      { person: p.spieler_a, punkte: p.ergebnis_a ?? 0, aufnahmen: k.aufnahmen_a, hs: k.hoechstserie_a },
+      { person: p.spieler_b, punkte: p.ergebnis_b ?? 0, aufnahmen: k.aufnahmen_b, hs: k.hoechstserie_b }
+    ];
+    seiten.forEach((s) => {
+      const z = summen.get(s.person);
+      if (!z) return;
+      z.partien += 1;
+      z.aufnahmen += s.aufnahmen;
+      z.punkte += s.punkte;
+      z.hs = Math.max(z.hs, s.hs);
+    });
+  });
+  return [...summen.entries()]
+    .map(([person, z]) => ({
+      person,
+      partien: z.partien,
+      aufnahmen: z.aufnahmen,
+      gd: z.aufnahmen > 0 ? z.punkte / z.aufnahmen : null,
+      hs: z.hs
+    }))
     .filter((z) => z.aufnahmen >= mindestAufnahmen)
     .sort((a, b) => (b.gd ?? -1) - (a.gd ?? -1) || b.hs - a.hs);
 }
