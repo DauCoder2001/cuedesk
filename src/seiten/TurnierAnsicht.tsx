@@ -94,6 +94,8 @@ export default function TurnierAnsicht({
   const istAdmin = darf('vereinsadmin');
 
   const [turnier, setTurnier] = useState<Turnier | null>(null);
+  // Geladen, aber nicht (mehr) vorhanden - statt endlos "Laedt."
+  const [nichtGefunden, setNichtGefunden] = useState(false);
   const [teilnehmer, setTeilnehmer] = useState<TurnierTeilnehmer[]>([]);
   const [anmeldungen, setAnmeldungen] = useState<TurnierAnmeldung[]>([]);
   const [partien, setPartien] = useState<Partie[]>([]);
@@ -133,6 +135,7 @@ export default function TurnierAnsicht({
     ]);
     if (t.error) setFehler(t.error.message);
     setTurnier(t.data ?? null);
+    setNichtGefunden(!t.error && !t.data);
     setTeilnehmer(tn.data ?? []);
     setAnmeldungen(an.data ?? []);
     setPartien(p.data ?? []);
@@ -398,7 +401,16 @@ export default function TurnierAnsicht({
   if (!turnier) {
     return (
       <div className="einspaltig">
-        <p className="hinweis">Lädt.</p>
+        {nichtGefunden ? (
+          <section className="block">
+            <button type="button" className="zurueck" onClick={zurueck}>
+              ← {zurueckText}
+            </button>
+            <p className="hinweis">Dieses Turnier gibt es nicht mehr.</p>
+          </section>
+        ) : (
+          <p className="hinweis">{fehler ?? 'Lädt.'}</p>
+        )}
       </div>
     );
   }

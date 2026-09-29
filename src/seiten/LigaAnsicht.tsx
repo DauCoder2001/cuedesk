@@ -42,6 +42,8 @@ export default function LigaAnsicht({
   const istAdmin = darf('vereinsadmin');
 
   const [turnier, setTurnier] = useState<Turnier | null>(null);
+  // Geladen, aber nicht (mehr) vorhanden - statt endlos "Laedt."
+  const [nichtGefunden, setNichtGefunden] = useState(false);
   const [teilnehmer, setTeilnehmer] = useState<TurnierTeilnehmer[]>([]);
   const [partien, setPartien] = useState<Partie[]>([]);
   const [personen, setPersonen] = useState<Person[]>([]);
@@ -73,6 +75,7 @@ export default function LigaAnsicht({
     ]);
     if (t.error) setFehler(t.error.message);
     setTurnier(t.data ?? null);
+    setNichtGefunden(!t.error && !t.data);
     setTeilnehmer(tn.data ?? []);
     setPartien(p.data ?? []);
     setPersonen(pe.data ?? []);
@@ -199,7 +202,16 @@ export default function LigaAnsicht({
   if (!turnier || !liga) {
     return (
       <div className="einspaltig">
-        <p className="hinweis">Lädt.</p>
+        {nichtGefunden ? (
+          <section className="block">
+            <button type="button" className="zurueck" onClick={zurueck}>
+              ← {zurueckText}
+            </button>
+            <p className="hinweis">Diese Begegnung gibt es nicht mehr.</p>
+          </section>
+        ) : (
+          <p className="hinweis">{fehler ?? 'Lädt.'}</p>
+        )}
       </div>
     );
   }
@@ -346,8 +358,12 @@ export default function LigaAnsicht({
   // getauschtes Heimrecht. Sie entsteht beim ersten Aufruf.
   async function begegnungOeffnen(nummer: 1 | 2) {
     if (!turnier || !liga || nummer === liga.begegnung) return;
-    if (liga.partner) return oeffnen(liga.partner);
-    if (!darfLeiten) return setFehler('Die zweite Begegnung legt die Turnierleitung an.');
+    // Nur einem Verweis folgen, dessen Turnier es noch gibt; sonst neu anlegen
+    if (liga.partner) {
+      const { data: vorhanden } = await supabase.from('turniere').select('id').eq('id', liga.partner).maybeSingle();
+      if (vorhanden) return oeffnen(liga.partner);
+    }
+    if (!darfLeiten) return setFehler('Die andere Begegnung legt die Turnierleitung an.');
     setArbeitet(true);
     const andere = {
       ...liga,
@@ -483,16 +499,50 @@ export default function LigaAnsicht({
     await laden();
   }
 
-  async function loeschen() {
-    if (!turnier) return;
-    const zusatz =
-      partien.length > 0
-        ? `\n\n${partien.length} Partien gehen mit verloren.${turnier.rating_werten ? ' Danach das Rating neu berechnen.' : ''}`
+  // Inhalt der Begegnung loeschen: Aufstellung, Partien, Ergebnisse und
+  // 14.1-Protokoll. Die Begegnung selbst bleibt bestehen (die andere Begegnung
+  // verweist auf sie) und laesst sich danach neu ausfuellen.
+  async function inhaltLoeschen() {
+    if (!turnier || !liga) return;
+    if (partien.some((p) => p.status === 'laeuft')) {
+      return setFehler('An den Tablets laufen noch Spiele dieser Begegnung. Erst beenden oder abbrechen, dann den Inhalt löschen.');
+    }
+    const mitErgebnis = partien.filter((p) => p.ergebnis_a !== null || p.ergebnis_b !== null).length;
+    const warnung =
+      mitErgebnis > 0
+        ? (mitErgebnis === 1
+            ? 'Achtung: In dieser Begegnung steht schon 1 Ergebnis. Es geht verloren.'
+            : `Achtung: In dieser Begegnung stehen schon ${mitErgebnis} Ergebnisse. Sie gehen verloren.`) +
+          `${turnier.rating_werten ? ' Das Vereins-Rating wird heute Nacht ohne sie neu berechnet.' : ''}\n\n`
         : '';
-    if (!(await fragen(`Spieltag „${turnier.name}“ mit allen Partien löschen?${zusatz}`, 'Löschen'))) return;
-    const { error } = await supabase.from('turniere').delete().eq('id', turnier.id);
+    const frage =
+      `${warnung}Inhalt der ${liga.begegnung}. Begegnung löschen? Aufstellung, Partien und Ergebnisse werden entfernt, bei 14.1 auch das Aufnahme-Protokoll. ` +
+      'Die Begegnung bleibt bestehen und lässt sich danach neu ausfüllen.';
+    if (!(await fragen(frage, 'Inhalt löschen'))) return;
+    setArbeitet(true);
+    const ids = partien.map((p) => p.id);
+    const schritte = [
+      () => supabase.from('aufnahmen_141').delete().in('partie_id', ids),
+      () => supabase.from('partien_141').delete().in('partie_id', ids),
+      () => supabase.from('partien').delete().eq('turnier_id', turnier.id),
+      () => supabase.from('turnier_teilnehmer').delete().eq('turnier_id', turnier.id)
+    ];
+    for (const schritt of ids.length > 0 ? schritte : schritte.slice(3)) {
+      const { error } = await schritt();
+      if (error) {
+        setArbeitet(false);
+        return setFehler(error.message);
+      }
+    }
+    const { aufstellung: _a, verdeckt: _v, quelle: _q, ...ligaLeer } = liga;
+    const { error } = await supabase
+      .from('turniere')
+      .update({ status: 'geplant', einstellungen: { ...einstellungen, liga: ligaLeer } })
+      .eq('id', turnier.id);
+    setArbeitet(false);
     if (error) return setFehler(error.message);
-    zurueck();
+    setMeldung(`Inhalt der ${liga.begegnung}. Begegnung gelöscht. Sie lässt sich jetzt neu ausfüllen.`);
+    await laden();
   }
 
   // ---------- Anzeige ----------
@@ -526,7 +576,7 @@ export default function LigaAnsicht({
                     type="button"
                     className={liga.begegnung === n ? 'aktiv' : ''}
                     disabled={arbeitet}
-                    title={n === liga.begegnung ? `Die ${n}. Begegnung wird gerade angezeigt.` : liga.partner ? `Die ${n}. Begegnung anzeigen.` : `Die ${n}. Begegnung anlegen und anzeigen: gleicher Tag, gleicher Gegner, getauschtes Heimrecht.`}
+                    title={n === liga.begegnung ? `Die ${n}. Begegnung wird gerade angezeigt.` : partnerStatus !== null ? `Die ${n}. Begegnung anzeigen.` : `Die ${n}. Begegnung anlegen und anzeigen: gleicher Tag, gleicher Gegner, getauschtes Heimrecht.`}
                     onClick={() => void begegnungOeffnen(n)}
                   >
                     {n}. Begegnung
@@ -580,8 +630,14 @@ export default function LigaAnsicht({
               </button>
             )}
             {istAdmin && (
-              <button type="button" title="Löscht diese Begegnung mit allen Partien. Vorher kommt eine Rückfrage." className="gefahrknopf" onClick={() => void loeschen()}>
-                Löschen
+              <button
+                type="button"
+                title="Löscht Aufstellung, Partien und Ergebnisse dieser Begegnung; die Begegnung bleibt bestehen und lässt sich neu ausfüllen. Stehen schon Ergebnisse drin, kommt vorher eine Warnung."
+                className="gefahrknopf"
+                onClick={() => void inhaltLoeschen()}
+                disabled={arbeitet}
+              >
+                Inhalt löschen
               </button>
             )}
           </div>
