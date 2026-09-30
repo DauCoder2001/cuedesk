@@ -6,6 +6,10 @@
 // Gilt auch fuer die TV-Ansicht (scoreboards/js/anbindung.ts).
 export const VERALTET_NACH_MS = 3 * 60 * 60 * 1000;
 
+// Ein gekoppeltes Geraet ohne Tisch ist ein Fernseher: es zeigt die
+// TV-Ansicht (Geraet.tsx oeffnet sie von selbst). Beschriftung der Auswahl.
+export const OHNE_TISCH_TEXT = 'Fernseher (TV-Ansicht)';
+
 export type Kachel =
   // "bereit": am Tisch steht ein Tablet, gespielt wird aber noch nicht
   | { art: 'frei'; bereit: boolean }

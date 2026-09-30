@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '../supabase';
+import { OHNE_TISCH_TEXT } from '../live';
 import type { Geraet as GeraetZeile, Tisch, Verein } from '../datenbank.types';
+
+const TV_VORLAUF = 5; // Sekunden bis zur TV-Ansicht
 
 // Ansicht auf dem Tablet. Das Geraet meldet sich anonym an, zeigt einen
 // Kopplungscode und wechselt von selbst auf die Tischansicht, sobald es
@@ -84,6 +87,24 @@ export default function Geraet() {
     else setCode(data as string);
   }
 
+  // Ohne Tisch ist das Geraet ein Fernseher: nach kurzem Vorlauf von selbst
+  // in die TV-Ansicht, damit nach Neustart oder Stromausfall niemand klicken
+  // muss. "Hier bleiben" haelt an, etwa um einen Tisch zu waehlen.
+  const fernseher = Boolean(geraet) && !tische.some((t) => t.id === geraet?.tisch_id);
+  const [sekunden, setSekunden] = useState<number | null>(null);
+  useEffect(() => {
+    if (!bereit || !fernseher) {
+      setSekunden(null);
+      return;
+    }
+    setSekunden(TV_VORLAUF);
+    const uhr = window.setInterval(() => setSekunden((s) => (s === null ? null : s - 1)), 1000);
+    return () => window.clearInterval(uhr);
+  }, [bereit, fernseher]);
+  useEffect(() => {
+    if (sekunden === 0) window.location.replace(`${import.meta.env.BASE_URL}scoreboards/tv.html`);
+  }, [sekunden]);
+
   async function tischWechseln(tischId: string) {
     const { error } = await supabase.rpc('geraet_tisch_setzen', { p_tisch: tischId || null });
     if (error) {
@@ -103,7 +124,7 @@ export default function Geraet() {
         {geraet ? (
           <>
             <div className="klein">{verein?.name ?? 'CueDesk'}</div>
-            <div className="gross">{tisch ? `Tisch ${tisch.nummer}` : 'Kein Tisch'}</div>
+            <div className="gross">{tisch ? `Tisch ${tisch.nummer}` : 'Fernseher'}</div>
             <div className="klein">
               {tisch?.bezeichnung ? `${tisch.bezeichnung} · ` : ''}
               {geraet.name}
@@ -111,7 +132,7 @@ export default function Geraet() {
             <label className="feld mittig">
               <span>Tisch wechseln</span>
               <select value={geraet.tisch_id ?? ''} onChange={(e) => void tischWechseln(e.target.value)}>
-                <option value="">kein Tisch</option>
+                <option value="">{OHNE_TISCH_TEXT}</option>
                 {tische.map((eintrag) => (
                   <option key={eintrag.id} value={eintrag.id}>
                     Tisch {eintrag.nummer}
@@ -137,11 +158,20 @@ export default function Geraet() {
               </div>
             ) : (
               <>
-                <p className="hinweis">Zum Spielen einen Tisch wählen. Ohne Tisch dient das Gerät als Anzeige:</p>
+                <p className="hinweis">
+                  Dieses Gerät zeigt die TV-Ansicht
+                  {sekunden !== null && sekunden > 0 ? ` – sie startet in ${sekunden} s` : ''}. Zum Spielen oben einen Tisch
+                  wählen.
+                </p>
                 <div className="spielwahl">
                   <a className="spielknopf tv" href={`${import.meta.env.BASE_URL}scoreboards/tv.html`}>
                     TV-Ansicht
                   </a>
+                  {sekunden !== null && sekunden > 0 && (
+                    <button type="button" title="Die TV-Ansicht nicht von selbst öffnen" onClick={() => setSekunden(null)}>
+                      Hier bleiben
+                    </button>
+                  )}
                 </div>
               </>
             )}

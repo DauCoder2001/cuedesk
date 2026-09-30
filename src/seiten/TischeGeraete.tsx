@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../supabase';
 import { useSitzung } from '../sitzung';
 import { Pflichthinweis, usePflicht } from '../pflicht';
+import { OHNE_TISCH_TEXT } from '../live';
 import type { Geraet, Tisch } from '../datenbank.types';
 
 export default function TischeGeraete() {
@@ -223,7 +224,7 @@ export default function TischeGeraete() {
               value={geraet.tisch_id ?? ''}
               onChange={(e) => void geraetTischSetzen(geraet, e.target.value)}
             >
-              <option value="">kein Tisch</option>
+              <option value="">{OHNE_TISCH_TEXT}</option>
               {tische.map((tisch) => (
                 <option key={tisch.id} value={tisch.id}>
                   Tisch {tisch.nummer}
@@ -264,14 +265,14 @@ export default function TischeGeraete() {
               onChange={(e) => setGeraetName(e.target.value)}
             />
             <select value={geraetTisch} onChange={(e) => setGeraetTisch(e.target.value)}>
-              <option value="">kein Tisch</option>
+              <option value="">{OHNE_TISCH_TEXT}</option>
               {tische.map((tisch) => (
                 <option key={tisch.id} value={tisch.id}>
                   Tisch {tisch.nummer}
                 </option>
               ))}
             </select>
-            <button type="button" title="Koppelt das Tablet mit dem angezeigten Code an den gewählten Tisch." onClick={() => void koppeln()}>
+            <button type="button" title="Koppelt das Gerät mit dem angezeigten Code: an einen Tisch zum Spielen oder als Fernseher für die TV-Ansicht." onClick={() => void koppeln()}>
               Koppeln
             </button>
             <Pflichthinweis hinweis={koppelPflicht.hinweis} />
