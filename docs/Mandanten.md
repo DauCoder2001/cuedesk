@@ -12,6 +12,25 @@ Ziel: CueDesk betreut mehrere Vereine in einer Datenbank. Ein Super-Admin legt V
 | Gesperrter Verein | **Kein Zugang.** Nach der Anmeldung erscheint nur „Dieser Verein ist gesperrt“. Tablets laufen nur noch offline. |
 | Verein löschen | **Zweistufig.** Erst sperren und Export ziehen, nach 30 Tagen endgültig löschen. Bis dahin lässt sich die Sperre aufheben. |
 | Umgebung | **Erst Test-Datenbank**, das Produktions-Projekt für cuedesk.de kommt in Phase 4. |
+| Vereinswechsel | **Kein Datenübertrag** (30.09.2026). Im neuen Verein entsteht ein neuer Spieler, einen Rating-Startwert trägt der Verein von Hand ein. |
+
+## Vereinswechsel und Zeit ohne Verein
+
+Jeder Verein führt seine eigenen Spieler und ist für deren Daten verantwortlich. Zwischen Vereinen wandern keine Daten, auch nicht Rating oder Historie.
+
+**Wechsel von Verein A zu Verein B**
+
+1. **A** setzt den Spieler auf der Seite „Spieler“ auf „Ausgetreten“ und trägt den Austritt ein. Er erscheint nicht mehr in neuen Turnieren; Partien, Platzierungen und Rating bleiben in A, damit Tabellen und das Rating der Gegner stimmen.
+2. **B** legt ihn als neuen Spieler mit Status „Mitglied“ an. Damit er nicht beim Vereinsschnitt anfängt, trägt B bei Bedarf einen „Rating-Startwert“ ein.
+3. **Das Konto bleibt dasselbe** (gleiche E-Mail-Adresse): B lädt ihn unter „Benutzer und Rollen“ ein und setzt den „Verknüpften Spieler“. A entfernt dort seine Rolle, sobald er in A nichts mehr sehen soll.
+4. **Seine alten Ergebnisse** lädt der Spieler in A unter „Mein Konto → Meine Daten“ herunter (PDF oder JSON), solange er dort noch ein Konto hat; sonst gibt A sie ihm über die Auskunft auf der Seite „Spieler“.
+
+**Zeitweise ohne Verein**
+
+- Im bisherigen Verein steht er auf „Ausgetreten“; alles bleibt erhalten.
+- Spielt er trotzdem einmal mit, nimmt ihn der Verein als Gast ins Turnier. Partien mit Gästen zählen nicht für das Rating.
+- Kommt er zurück, setzt derselbe Verein ihn wieder auf „Mitglied“ und trägt den neuen Eintritt ein; Historie und Rating sind sofort wieder da.
+- Will er gelöscht werden, wird er anonymisiert: Der Name wird durch einen Platzhalter ersetzt, die Ergebnisse bleiben.
 
 ## Ausgangslage
 
