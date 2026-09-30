@@ -137,6 +137,50 @@ export function ueberschrift(dok: PdfDokument, inhalt: string, groesse: number, 
   dok.y -= groesse * 0.4 + 6;
 }
 
+// Text auf Zeilen verteilen, die hoechstens maxBreite breit sind. Umbruch an
+// Leerzeichen; ein Wort, das allein zu breit ist, wird hart getrennt.
+export function umbrechen(inhalt: string, maxBreite: number, groesse: number, fett: boolean): string[] {
+  const zeilen: string[] = [];
+  let zeile = '';
+  for (const wort of inhalt.split(/\s+/).filter(Boolean)) {
+    const probe = zeile ? `${zeile} ${wort}` : wort;
+    if (textbreite(probe, groesse, fett) <= maxBreite) {
+      zeile = probe;
+      continue;
+    }
+    if (zeile) zeilen.push(zeile);
+    let rest = wort;
+    while (textbreite(rest, groesse, fett) > maxBreite && rest.length > 1) {
+      let n = rest.length - 1;
+      while (n > 1 && textbreite(rest.slice(0, n), groesse, fett) > maxBreite) n -= 1;
+      zeilen.push(rest.slice(0, n));
+      rest = rest.slice(n);
+    }
+    zeile = rest;
+  }
+  if (zeile) zeilen.push(zeile);
+  return zeilen;
+}
+
+// Fliesstext mit Zeilenumbruch, fuer Hilfe-Handouts. Mit marke (z. B. "•"
+// oder "1.") steht die erste Zeile als Listenpunkt, die weiteren eingerueckt.
+export function fliesstext(
+  dok: PdfDokument,
+  inhalt: string,
+  groesse: number,
+  { einzug = 0, marke = '', fett = false }: { einzug?: number; marke?: string; fett?: boolean } = {}
+): void {
+  const zeilenhoehe = groesse * 1.4;
+  const x = PDF_RAND + einzug + (marke ? 14 : 0);
+  const breite = PDF_BREITE - PDF_RAND - x;
+  umbrechen(inhalt, breite, groesse, fett).forEach((zeile, i) => {
+    platz(dok, zeilenhoehe);
+    if (i === 0 && marke) text(dok, marke, PDF_RAND + einzug, 14, groesse, fett);
+    text(dok, zeile, x, breite, groesse, fett);
+    dok.y -= zeilenhoehe;
+  });
+}
+
 // Absatz in kleiner grauer Schrift
 export function absatz(dok: PdfDokument, inhalt: string): void {
   platz(dok, 14);

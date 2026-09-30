@@ -2,6 +2,9 @@
 // Nachricht an die Serverfunktion "kontakt". Ohne Anmeldung, ohne supabase-js;
 // der oeffentliche Schluessel reicht, die Funktion prueft selbst.
 
+import { kontaktSenden } from './kontakt-senden';
+import type { KontaktDaten } from './kontakt-senden';
+
 const formular = document.querySelector<HTMLFormElement>('#kontakt');
 const rueckmeldung = document.querySelector<HTMLParagraphElement>('#rueckmeldung');
 
@@ -27,24 +30,10 @@ formular?.addEventListener('submit', async (ereignis) => {
   if (knopf) knopf.disabled = true;
   melden('Wird gesendet …', 'hinweis');
 
-  try {
-    const antwort = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/kontakt`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', apikey: import.meta.env.VITE_SUPABASE_KEY },
-      body: JSON.stringify(daten)
-    });
-    const inhalt = (await antwort.json().catch(() => ({}))) as { fehler?: string };
-    if (!antwort.ok) {
-      melden(inhalt.fehler ?? 'Die Nachricht konnte nicht gesendet werden. Bitte schreib direkt eine E-Mail.', 'fehler');
-      if (knopf) knopf.disabled = false;
-      return;
-    }
-    formular.reset();
-    formular.classList.remove('versucht');
-    melden('Danke, deine Nachricht ist angekommen. Wir melden uns so schnell wie möglich.', 'meldung');
-    if (knopf) knopf.disabled = false;
-  } catch {
-    melden('Keine Verbindung. Bitte später noch einmal versuchen oder direkt eine E-Mail schreiben.', 'fehler');
-    if (knopf) knopf.disabled = false;
-  }
+  const fehler = await kontaktSenden(daten as KontaktDaten);
+  if (knopf) knopf.disabled = false;
+  if (fehler) return melden(fehler, 'fehler');
+  formular.reset();
+  formular.classList.remove('versucht');
+  melden('Danke, deine Nachricht ist angekommen. Wir melden uns so schnell wie möglich.', 'meldung');
 });

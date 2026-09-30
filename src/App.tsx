@@ -24,6 +24,9 @@ import { useWechsel } from './ungespeichert';
 import { VERTRAG_FASSUNG } from './vertraege';
 import Vertragszustimmung from './seiten/Vertragszustimmung';
 import Zuschauen from './seiten/Zuschauen';
+import Hilfe from './seiten/Hilfe';
+import { themaZurSeite, themenFuer } from './hilfe';
+import { THEMEN } from './hilfe-texte';
 
 type Bereich =
   | 'live'
@@ -42,7 +45,8 @@ type Bereich =
   | 'system'
   | 'konsole'
   | 'konto' // "Mein Konto", ueber den eigenen Namen in der Kopfzeile
-  | 'zuschauen'; // Handy-Seite fuer Mitglieder, ohne Kopfzeile
+  | 'zuschauen' // Handy-Seite fuer Mitglieder, ohne Kopfzeile
+  | 'hilfe'; // ueber den Knopf "?" in der Kopfzeile
 
 // Tablets und TV rufen die Adresse mit ?geraet auf und bekommen die
 // Geraeteansicht statt der Anmeldung.
@@ -112,6 +116,18 @@ export default function App() {
     };
   }, [vereinId]);
 
+  // Hilfe: Thema zur Seite, von der aus "?" gedrueckt wurde (Kontexthilfe)
+  const [hilfeThema, setHilfeThema] = useState<string | null>(null);
+  const hilfeOeffnen = (von: Bereich) => {
+    if (von === 'hilfe') return;
+    void (async () => {
+      if (!(await wechselErlaubt())) return;
+      const eigene = themenFuer(THEMEN, rollen, istSuperAdmin).eigene;
+      setHilfeThema(themaZurSeite(THEMEN, von, eigene)?.id ?? null);
+      setBereich('hilfe');
+    })();
+  };
+
   // Wer im Verein nur Mitglied ist, startet auf der Zuschauerseite (einmal
   // je Sitzung, danach bleibt die Wahl frei)
   const nurMitglied = rollen.length > 0 && rollen.every((r) => r === 'mitglied');
@@ -140,6 +156,7 @@ export default function App() {
       <Zuschauen
         verlassen={() => setBereich('live')}
         verlassenText={nurMitglied ? 'Weitere Seiten' : 'Verwaltung'}
+        hilfe={() => hilfeOeffnen('zuschauen')}
       />
     );
   }
@@ -336,6 +353,15 @@ export default function App() {
           </button>
           <button
             type="button"
+            className={angezeigt === 'hilfe' ? 'hilfeknopf aktiv' : 'hilfeknopf'}
+            title="Hilfe zu dieser Seite, Handbuch und Fragen"
+            aria-label="Hilfe"
+            onClick={() => hilfeOeffnen(angezeigt)}
+          >
+            ?
+          </button>
+          <button
+            type="button"
             title="Von CueDesk abmelden"
             onClick={() => {
               void (async () => {
@@ -359,7 +385,7 @@ export default function App() {
               {gesperrt.sperrgrund && <p className="hinweis">Grund: {gesperrt.sperrgrund}</p>}
             </section>
           </div>
-        ) : ohneZustimmung && verein && angezeigt !== 'konsole' && angezeigt !== 'konto' ? (
+        ) : ohneZustimmung && verein && angezeigt !== 'konsole' && angezeigt !== 'konto' && angezeigt !== 'hilfe' ? (
           <Vertragszustimmung
             vereinId={verein.id}
             vereinName={verein.name}
@@ -371,6 +397,7 @@ export default function App() {
           <>
         {angezeigt === 'konsole' && <Konsole />}
         {angezeigt === 'konto' && <Konto />}
+        {angezeigt === 'hilfe' && <Hilfe key={hilfeThema ?? 'start'} startThema={hilfeThema} />}
         {angezeigt === 'live' && <Live />}
         {angezeigt === 'turniere' && <Turniere hervorheben={startAnmeldung} />}
         {angezeigt === 'mannschaften' && <Mannschaften />}

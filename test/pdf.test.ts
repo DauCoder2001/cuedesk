@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, test } from 'vitest';
-import { bauen, neuesDokument, pdfEscape, tabelle, textbreite, ueberschrift } from '../src/pdf';
+import { bauen, fliesstext, neuesDokument, pdfEscape, tabelle, textbreite, ueberschrift, umbrechen } from '../src/pdf';
 import { berichtPdf } from '../src/turnierbericht';
 import { prognose, prognoseText, saetzeRest } from '../src/zeitprognose';
 
@@ -111,5 +111,27 @@ describe('Zeitprognose', () => {
     expect(prognoseText(s, beginn + 40 * 60000)).toBe('ca. Turnierende: 19:00 Uhr · Beginn 18:00 Uhr');
     const e = prognose([p(5, 3)], beginn, beginn + 95 * 60000);
     expect(prognoseText(e)).toBe('Turnier beendet: 19:35 Uhr · Dauer 1:35 h (Beginn 18:00 Uhr)');
+  });
+});
+
+describe('Fliesstext', () => {
+  test('Umbruch an Leerzeichen, keine Zeile zu breit', () => {
+    const text = 'Das Turnier wird unter Turniere angelegt und nach der Auslosung an den Tablets gespielt.';
+    const zeilen = umbrechen(text, 150, 10, false);
+    expect(zeilen.length).toBeGreaterThan(1);
+    expect(zeilen.join(' ')).toBe(text);
+    zeilen.forEach((z) => expect(textbreite(z, 10, false)).toBeLessThanOrEqual(150));
+  });
+  test('ueberlanges Wort wird hart getrennt', () => {
+    const zeilen = umbrechen('Donaudampfschifffahrtsgesellschaftskapitaen', 60, 10, false);
+    expect(zeilen.join('')).toBe('Donaudampfschifffahrtsgesellschaftskapitaen');
+    zeilen.forEach((z) => expect(textbreite(z, 10, false)).toBeLessThanOrEqual(60));
+  });
+  test('Listenpunkt: Marke vor der ersten Zeile, Text auf mehreren Zeilen', () => {
+    const dok = neuesDokument();
+    const vorher = dok.y;
+    fliesstext(dok, 'Erst die Teilnehmer eintragen, dann auslosen und das Turnier starten.', 10, { marke: '1.' });
+    expect(dok.strom.some((s) => s.includes('(1.) Tj'))).toBe(true);
+    expect(dok.y).toBeLessThan(vorher);
   });
 });

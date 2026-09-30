@@ -18,7 +18,15 @@ type Stand = { zustand: unknown; aktualisiert: string };
 const CHAT_LAENGE = 300;
 const uhrzeit = (iso: string) => new Date(iso).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
 
-export default function Zuschauen({ verlassen, verlassenText }: { verlassen: () => void; verlassenText: string }) {
+export default function Zuschauen({
+  verlassen,
+  verlassenText,
+  hilfe
+}: {
+  verlassen: () => void;
+  verlassenText: string;
+  hilfe: () => void;
+}) {
   const { verein, sitzung, darf } = useSitzung();
   const leitung = darf('vereinsadmin', 'sportwart', 'turnierleiter');
   const [ansicht, setAnsicht] = useState<Ansicht>('tische');
@@ -231,9 +239,14 @@ export default function Zuschauen({ verlassen, verlassenText }: { verlassen: () 
     <div className="zuschauen">
       <div className="zuschauenkopf">
         <strong>{verein.name}</strong>
-        <button type="button" className="klein" title="Zu den übrigen Seiten von CueDesk" onClick={verlassen}>
-          {verlassenText}
-        </button>
+        <span className="knopfpaar">
+          <button type="button" className="klein" title="Zu den übrigen Seiten von CueDesk" onClick={verlassen}>
+            {verlassenText}
+          </button>
+          <button type="button" className="hilfeknopf" title="Hilfe zur Zuschauerseite" aria-label="Hilfe" onClick={hilfe}>
+            ?
+          </button>
+        </span>
       </div>
       <span className="umschalter zuschauenwahl">
         <button type="button" className={ansicht === 'tische' ? 'aktiv' : ''} onClick={() => setAnsicht('tische')}>
