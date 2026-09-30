@@ -4,6 +4,7 @@ import { useRueckfrage } from '../rueckfrage';
 import {
   ART_TEXT,
   einwilligungStand,
+  NAMENSANZEIGE_AKTIV,
   NAMENSANZEIGE_FASSUNG,
   standText,
   WEG_TEXT
@@ -89,9 +90,14 @@ export function EinwilligungLeitung({
     if ((await setzen(art, erteilen, weg)) && art === 'name_oeffentlich') geaendert();
   }
 
+  // Ohne oeffentliche Seite nur das Konto Minderjaehriger (NAMENSANZEIGE_AKTIV)
+  const verlauf = NAMENSANZEIGE_AKTIV ? liste : liste.filter((e) => e.art === 'konto_minderjaehrig');
+  if (!NAMENSANZEIGE_AKTIV && !minderjaehrig && verlauf.length === 0) return null;
+
   return (
     <fieldset className="einwilligungen">
       <legend>Einwilligungen</legend>
+      {NAMENSANZEIGE_AKTIV && (
       <div className="einwilligungszeile">
         <strong>Namensanzeige</strong>
         <StandMarke liste={liste} art="name_oeffentlich" />
@@ -110,7 +116,8 @@ export function EinwilligungLeitung({
           </span>
         )}
       </div>
-      {nameStand.ohneNachweis && (
+      )}
+      {NAMENSANZEIGE_AKTIV && nameStand.ohneNachweis && (
         <p className="hinweis">
           Der Haken stammt aus der Zeit vor den Einwilligungen und hat keinen Nachweis. Liegt eine schriftliche Einwilligung
           vor, erfasse sie; sonst erfasse den Widerruf.
@@ -135,7 +142,7 @@ export function EinwilligungLeitung({
           )}
         </div>
       )}
-      {liste.length > 0 && (
+      {verlauf.length > 0 && (
         <table className="tabelle">
           <thead>
             <tr>
@@ -146,7 +153,7 @@ export function EinwilligungLeitung({
             </tr>
           </thead>
           <tbody>
-            {liste.map((e) => (
+            {verlauf.map((e) => (
               <tr key={e.id}>
                 <td>{datumZeit(e.am)}</td>
                 <td>{ART_TEXT[e.art]}</td>

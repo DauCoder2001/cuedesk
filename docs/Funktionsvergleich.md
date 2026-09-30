@@ -80,9 +80,9 @@ Die Liste stammt aus Dokumentation, Überschriften und Knöpfen der Seiten, nich
 | TV-Ansicht aller Tische | ja | – | vorhanden | | |
 | TV: Auslosung, Turnierergebnis, automatische Umschaltung | ja | – | vorhanden | | |
 | Live-Übersicht für die Leitung | ja | – | vorhanden | Reiter „Live“. | |
-| Öffentliche Zuschauerseite ohne Anmeldung (Gruppen, KO, Rangliste) | `public/index.html` | – | **fehlt** | Bewusst zurückgestellt, bis Impressum und Datenschutz stehen. | |
-| Live für angemeldete Mitglieder | – | – | vorhanden | | |
-| Chat für Zuschauer | – | – | **fehlt** | Neue Idee, siehe Vor-dem-Livegang.md. | |
+| Öffentliche Zuschauerseite ohne Anmeldung (Gruppen, KO, Rangliste) | `public/index.html` | – | entfällt | Ersetzt durch die Zuschauerseite für Mitglieder. | entfällt (30.09.2026) |
+| Live für angemeldete Mitglieder | – | – | vorhanden | Reiter „Live“ und Handy-Seite „Zuschauen“. | |
+| Chat für Zuschauer | – | – | vorhanden | Nur Mitglieder mit Konto, je Turnier, Stufe 24. | |
 | Streaming-Overlay | Idee | – | **fehlt** | | |
 | Nachricht „du bist dran“ (SMS/Push) | Idee | – | **fehlt** | | |
 
