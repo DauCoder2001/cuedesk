@@ -23,6 +23,8 @@ export default defineConfig(() => ({
         impressum: resolve(__dirname, 'impressum.html'),
         kontakt: resolve(__dirname, 'kontakt.html'),
         datenschutz: resolve(__dirname, 'datenschutz.html'),
+        nutzungsbedingungen: resolve(__dirname, 'nutzungsbedingungen.html'),
+        auftragsverarbeitung: resolve(__dirname, 'auftragsverarbeitung.html'),
         scoreboards: resolve(__dirname, 'scoreboards/index.html'),
         vierzehnEins: resolve(__dirname, 'scoreboards/14.1_Scoreboard.html'),
         vierzehnEinsProtokoll: resolve(__dirname, 'scoreboards/14.1_Log.html'),

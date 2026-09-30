@@ -21,6 +21,8 @@ import Konsole from './seiten/Konsole';
 import Konto from './seiten/Konto';
 import { vereinsKuerzel } from './vereinseinstellungen';
 import { useWechsel } from './ungespeichert';
+import { VERTRAG_FASSUNG } from './vertraege';
+import Vertragszustimmung from './seiten/Vertragszustimmung';
 
 type Bereich =
   | 'live'
@@ -86,6 +88,28 @@ export default function App() {
     };
   }, [verein]);
 
+  // Hat der Verein der aktuellen Fassung von Nutzungsbedingungen und AVV
+  // zugestimmt? null = wird noch geladen (dann nicht sperren)
+  const [zugestimmt, setZugestimmt] = useState<boolean | null>(null);
+  const vereinId = verein?.id;
+  useEffect(() => {
+    setZugestimmt(null);
+    if (!vereinId) return;
+    let vorbei = false;
+    void (async () => {
+      const { data, error } = await supabase
+        .from('vertragszustimmungen')
+        .select('id')
+        .eq('verein_id', vereinId)
+        .eq('fassung', VERTRAG_FASSUNG)
+        .maybeSingle();
+      if (!vorbei && !error) setZugestimmt(Boolean(data));
+    })();
+    return () => {
+      vorbei = true;
+    };
+  }, [vereinId]);
+
   // Anonyme Anmeldungen gehoeren immer zu einem Geraet, auch ohne ?geraet in
   // der Adresse. Sonst landet ein Tablet in der Mitgliederansicht.
   const istAnonymesGeraet = Boolean(sitzung?.user?.is_anonymous);
@@ -93,6 +117,10 @@ export default function App() {
   if (istGeraet || istAnonymesGeraet) return <Geraet />;
   if (laedt) return <p className="hinweis">Lädt.</p>;
   if (!sitzung) return <Anmeldung />;
+
+  // Ohne Zustimmung zur aktuellen Fassung der Vertraege bleibt die
+  // Verwaltung zu; Mein Konto und (fuer Super-Admins) die Konsole gehen.
+  const ohneZustimmung = Boolean(verein) && !gesperrt && zugestimmt === false;
 
   const bereiche: { wert: Bereich; name: string; sichtbar: boolean; tipp?: string }[] = [
     {
@@ -225,7 +253,9 @@ export default function App() {
         </div>
         <nav className="reiter">
           {bereiche
-            .filter((eintrag) => eintrag.sichtbar && (!nurKonsole || eintrag.wert === 'konsole'))
+            .filter(
+              (eintrag) => eintrag.sichtbar && ((!nurKonsole && !ohneZustimmung) || eintrag.wert === 'konsole')
+            )
             .map((eintrag) => (
               <button
                 key={eintrag.wert}
@@ -301,6 +331,14 @@ export default function App() {
               {gesperrt.sperrgrund && <p className="hinweis">Grund: {gesperrt.sperrgrund}</p>}
             </section>
           </div>
+        ) : ohneZustimmung && verein && angezeigt !== 'konsole' && angezeigt !== 'konto' ? (
+          <Vertragszustimmung
+            vereinId={verein.id}
+            vereinName={verein.name}
+            darfZustimmen={darf('vereinsadmin')}
+            abmelden={() => void abmelden()}
+            zugestimmt={() => setZugestimmt(true)}
+          />
         ) : (
           <>
         {angezeigt === 'konsole' && <Konsole />}

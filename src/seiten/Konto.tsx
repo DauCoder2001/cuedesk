@@ -223,6 +223,14 @@ export default function Konto() {
         ·{' '}
         <a href={`${import.meta.env.BASE_URL}datenschutz.html`} target="_blank" rel="noreferrer">
           Datenschutz
+        </a>{' '}
+        ·{' '}
+        <a href={`${import.meta.env.BASE_URL}nutzungsbedingungen.html`} target="_blank" rel="noreferrer">
+          Nutzungsbedingungen
+        </a>{' '}
+        ·{' '}
+        <a href={`${import.meta.env.BASE_URL}auftragsverarbeitung.html`} target="_blank" rel="noreferrer">
+          Auftragsverarbeitung
         </a>
       </p>
     </div>

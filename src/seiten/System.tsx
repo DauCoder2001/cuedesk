@@ -6,7 +6,8 @@ import type { LigaKennung } from '../liga';
 import { saisonAus } from '../mannschaften';
 import { turnierartFehler, vereinsEinstellungen, vereinsKuerzel } from '../vereinseinstellungen';
 import type { VereinsEinstellungen } from '../vereinseinstellungen';
-import type { Disziplin, Mannschaft, SupportFreigabe, TurnierModus } from '../datenbank.types';
+import type { Disziplin, Mannschaft, SupportFreigabe, TurnierModus, Vertragszustimmung } from '../datenbank.types';
+import { VERTRAEGE, VERTRAG_FASSUNG, fassungText } from '../vertraege';
 import { exportHerunterladen } from '../vereinExport';
 import { Pflichthinweis, usePflicht } from '../pflicht';
 import { AngabenFelder, WebAdresseFeld, angabenAus } from '../vereinsangaben';
@@ -122,6 +123,7 @@ export default function System() {
   const dateiFeld = useRef<HTMLInputElement>(null);
   // Laufende Support-Freigabe (null: keine)
   const [freigabe, setFreigabe] = useState<SupportFreigabe | null>(null);
+  const [zustimmungen, setZustimmungen] = useState<(Vertragszustimmung & { email: string | null })[]>([]);
   const [tage, setTage] = useState(3);
   const [neueArt, setNeueArt] = useState('');
   const [artFehler, setArtFehler] = useState<string | null>(null);
@@ -166,6 +168,16 @@ export default function System() {
       setRating((r.data as RatingWerte | null) ?? null);
       setMannschaften(m.data ?? []);
       setFreigabe(f.data?.[0] ?? null);
+      // Zustimmungen zu Nutzungsbedingungen und AVV, neueste zuerst
+      const z = await supabase
+        .from('vertragszustimmungen')
+        .select('*')
+        .eq('verein_id', verein.id)
+        .order('zugestimmt_am', { ascending: false });
+      const ids = [...new Set((z.data ?? []).map((x) => x.benutzer_id).filter((x): x is string => !!x))];
+      const b = ids.length ? await supabase.from('benutzer').select('id, email').in('id', ids) : { data: [] };
+      const mails = new Map((b.data ?? []).map((x) => [x.id, x.email]));
+      setZustimmungen((z.data ?? []).map((x) => ({ ...x, email: (x.benutzer_id && mails.get(x.benutzer_id)) || null })));
     })();
   }, [verein]);
 
@@ -570,6 +582,34 @@ export default function System() {
             <small className="hinweis">zuletzt am {new Date(verein.export_am).toLocaleString('de-DE')}</small>
           )}
         </div>
+      </section>
+
+      <section className="block">
+        <h2>Verträge</h2>
+        {zustimmungen.length === 0 ? (
+          <p className="hinweis">Noch keine Zustimmung gespeichert.</p>
+        ) : (
+          <ul className="rechtsliste">
+            {zustimmungen.map((z) => (
+              <li key={z.id}>
+                {fassungText(z.fassung)}: zugestimmt am {new Date(z.zugestimmt_am).toLocaleString('de-DE')}
+                {z.email ? ` von ${z.email}` : ''}
+                {z.fassung === VERTRAG_FASSUNG ? '' : ' (ältere Fassung)'}
+              </li>
+            ))}
+          </ul>
+        )}
+        <p className="hinweis">
+          Texte ansehen:{' '}
+          {VERTRAEGE.map((v, i) => (
+            <span key={v.datei}>
+              {i > 0 && ' · '}
+              <a href={`${import.meta.env.BASE_URL}${v.datei}`} target="_blank" rel="noreferrer">
+                {v.name}
+              </a>
+            </span>
+          ))}
+        </p>
       </section>
 
       <section className="block">

@@ -15,6 +15,7 @@ import {
 import { AUFRAEUMEN_ARTEN, datumText, loeschStand } from '../datenpflege';
 import type { AufraeumenArt, AufraeumenZahlen } from '../datenpflege';
 import { exportHerunterladen } from '../vereinExport';
+import { VERTRAG_FASSUNG, VERTRAG_KURZ, fassungText } from '../vertraege';
 import { Pflichthinweis, usePflicht } from '../pflicht';
 import { useUngespeichert, weichtAb } from '../ungespeichert';
 import { AngabenFelder, WEB_PRAEFIX, WebAdresseFeld, angabenAus } from '../vereinsangaben';
@@ -27,7 +28,8 @@ import type {
   KonsoleVerein,
   SystemEreignis,
   SystemProtokoll,
-  Verein
+  Verein,
+  Vertragszustimmung
 } from '../datenbank.types';
 
 // Konsole des Super-Admins (docs/Mandanten.md, Phasen 1 bis 3): Vereine anlegen,
@@ -74,6 +76,7 @@ export default function Konsole() {
   const [konten, setKonten] = useState<Benutzer[]>([]);
   const [einladungen, setEinladungen] = useState<Einladung[]>([]);
   const [protokoll, setProtokoll] = useState<SystemProtokoll[]>([]);
+  const [zustimmungen, setZustimmungen] = useState<Vertragszustimmung[]>([]);
   const [zahlen, setZahlen] = useState<KonsoleVerein[]>([]);
   const [datenbank, setDatenbank] = useState<KonsoleDatenbank | null>(null);
   const [sicherung, setSicherung] = useState<SystemEreignis | null>(null);
@@ -151,6 +154,8 @@ export default function Konsole() {
     setKonten(k.data ?? []);
     setEinladungen(e.data ?? []);
     setProtokoll(p.data ?? []);
+    const vz = await supabase.from('vertragszustimmungen').select('*');
+    setZustimmungen(vz.data ?? []);
   }, []);
 
   useEffect(() => {
@@ -397,6 +402,7 @@ export default function Konsole() {
               <th>Verein</th>
               <th>Web-Adresse</th>
               <th>Vereins-Administrator</th>
+              <th title="Zustimmung zu Nutzungsbedingungen und Vertrag zur Auftragsverarbeitung">Verträge</th>
               <th>Status</th>
               <th></th>
             </tr>
@@ -453,6 +459,20 @@ export default function Konsole() {
                         </button>
                       </div>
                     )}
+                  </td>
+                  <td>
+                    {(() => {
+                      const z = zustimmungen.find((x) => x.verein_id === v.id && x.fassung === VERTRAG_FASSUNG);
+                      return z ? (
+                        <span className="marke ausgang-sieg" title={`${fassungText(z.fassung)}, zugestimmt am ${zeit(z.zugestimmt_am)}`}>
+                          ✓ {VERTRAG_KURZ}
+                        </span>
+                      ) : (
+                        <span className="marke warnmarke" title="Der Verein hat der aktuellen Fassung noch nicht zugestimmt; die Verwaltung ist bis dahin gesperrt.">
+                          offen
+                        </span>
+                      );
+                    })()}
                   </td>
                   <td>
                     {v.aktiv ? (
@@ -571,7 +591,7 @@ export default function Konsole() {
                 </tr>
                 {bearbeiten?.id === v.id && (
                   <tr ref={bearbeitenPflicht.bereich}>
-                    <td colSpan={5}>
+                    <td colSpan={6}>
                       <div className="kasten">
                         <div className="felder">
                           <label className="feld">

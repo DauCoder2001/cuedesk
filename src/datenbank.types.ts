@@ -141,6 +141,16 @@ export type Einwilligung = {
   erfasst_von: string | null;
 };
 
+// Zustimmung eines Vereins zu Nutzungsbedingungen und AVV (Stufe 23);
+// gesetzt nur ueber vertrag_zustimmen, Fassung siehe src/vertraege.ts
+export type Vertragszustimmung = {
+  id: string;
+  verein_id: string;
+  fassung: string;
+  zugestimmt_am: string;
+  benutzer_id: string | null;
+};
+
 export type PersonIntern = {
   person_id: string;
   verein_id: string;
@@ -404,6 +414,7 @@ export type Database = {
       personen: Tabelle<Person, Partial<Person> & Pick<Person, 'verein_id' | 'vorname' | 'nachname'>>;
       personen_intern: Tabelle<PersonIntern, Partial<PersonIntern> & Pick<PersonIntern, 'person_id' | 'verein_id'>>;
       einwilligungen: Tabelle<Einwilligung>;
+      vertragszustimmungen: Tabelle<Vertragszustimmung>;
       einladungen: Tabelle<Einladung, Omit<Einladung, 'id' | 'erstellt_am' | 'angenommen_am'>>;
       tische: Tabelle<Tisch, Omit<Tisch, 'id'>>;
       geraete: Tabelle<Geraet>;
@@ -464,6 +475,7 @@ export type Database = {
         Args: { p_person: string; p_art: EinwilligungArt; p_erteilen: boolean; p_weg: EinwilligungWeg; p_fassung?: string | null };
         Returns: undefined;
       };
+      vertrag_zustimmen: { Args: { p_verein: string; p_fassung: string }; Returns: undefined };
       verein_aendern: {
         Args: {
           p_verein: string;

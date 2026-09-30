@@ -224,7 +224,9 @@ export default function Anmeldung() {
       </div>
       <p className="rechtslinks">
         <a href={`${import.meta.env.BASE_URL}impressum.html`}>Impressum</a> ·{' '}
-        <a href={`${import.meta.env.BASE_URL}datenschutz.html`}>Datenschutz</a>
+        <a href={`${import.meta.env.BASE_URL}datenschutz.html`}>Datenschutz</a> ·{' '}
+        <a href={`${import.meta.env.BASE_URL}nutzungsbedingungen.html`}>Nutzungsbedingungen</a> ·{' '}
+        <a href={`${import.meta.env.BASE_URL}auftragsverarbeitung.html`}>Auftragsverarbeitung</a>
       </p>
       </div>
     </div>
