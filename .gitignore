@@ -5,3 +5,5 @@ dist/
 *.local
 .DS_Store
 tsconfig.tsbuildinfo
+offline/
+offline-bau/

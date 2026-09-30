@@ -8,7 +8,8 @@
     "build": "tsc -b && vite build",
     "vorschau": "vite preview",
     "pruefen": "tsc -b --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "offline": "node skripte/offline-bauen.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.58.0",
@@ -23,6 +24,7 @@
     "jsdom": "^30.1.0",
     "typescript": "^5.9.2",
     "vite": "^7.1.5",
+    "vite-plugin-singlefile": "^2.3.3",
     "vitest": "^3.2.4"
   }
 }

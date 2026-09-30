@@ -1,0 +1,75 @@
+name: Scoreboards offline
+
+# Baut die Offline-Fassung der Scoreboards (npm run offline, je Board eine
+# HTML-Datei) und legt sie in das Repository aus der Variable
+# SCOREBOARDS_ZIEL (zuerst DauCoder2001/Test-Boards, spaeter
+# DauCoder2001/scoreboards). Laeuft, wenn sich die Scoreboards aendern, und
+# auf Knopfdruck.
+#
+# Einmalig in GitHub (Settings -> Secrets and variables -> Actions):
+#   Variable SCOREBOARDS_ZIEL  z. B. DauCoder2001/Test-Boards
+#   Secret   SCOREBOARDS_TOKEN Fine-grained Token, nur Contents: Read and
+#                              write auf das Ziel-Repository
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scoreboards/**'
+      - 'skripte/offline-bauen.mjs'
+      - '.github/workflows/scoreboards-offline.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: scoreboards-offline
+  cancel-in-progress: true
+
+jobs:
+  offline:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ziel pruefen
+        env:
+          ZIEL: ${{ vars.SCOREBOARDS_ZIEL }}
+          TOKEN_DA: ${{ secrets.SCOREBOARDS_TOKEN != '' }}
+        run: |
+          if [ -z "$ZIEL" ]; then echo "::error::Variable SCOREBOARDS_ZIEL fehlt."; exit 1; fi
+          if [ "$TOKEN_DA" != "true" ]; then echo "::error::Secret SCOREBOARDS_TOKEN fehlt."; exit 1; fi
+          echo "Ziel: $ZIEL"
+
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Offline-Fassung bauen
+        run: npm run offline
+
+      - name: Ziel-Repository holen
+        uses: actions/checkout@v7
+        with:
+          repository: ${{ vars.SCOREBOARDS_ZIEL }}
+          token: ${{ secrets.SCOREBOARDS_TOKEN }}
+          path: ziel
+
+      - name: Dateien ersetzen und pushen
+        run: |
+          cd ziel
+          find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+          cp -a ../offline/. .
+          git add -A
+          if git diff --cached --quiet; then
+            echo "Keine Aenderung an der Offline-Fassung."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Offline-Fassung aus CueDesk ${GITHUB_SHA::7}"
+          git push

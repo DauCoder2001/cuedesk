@@ -120,4 +120,4 @@ Die Liste stammt aus Dokumentation, Überschriften und Knöpfen der Seiten, nich
 | Raspberry Pi | ja | – | entfällt | Ersatz: Cloud. | |
 | Speicherdatei, Sicherungskopie | – | ja | entfällt | Ersatz: wöchentliche Sicherung und Export je Verein. | |
 | Datenbank leeren | Passwort | – | entfällt | Ersatz: Aufräumen in der Konsole. | |
-| Offline-Betrieb | Pi im WLAN | Einzeldatei | teilweise | Die Scoreboards gibt es offline, CueDesk selbst braucht Internet. | |
+| Offline-Betrieb | Pi im WLAN | Einzeldatei | teilweise | Die Scoreboards gibt es offline, CueDesk selbst braucht Internet. Die Offline-Fassung (je Board eine Datei, alte Namen) baut `npm run offline`; der Workflow „Scoreboards offline“ legt sie automatisch ins Repository aus `SCOREBOARDS_ZIEL` (erst Test-Boards, dann scoreboards). | |

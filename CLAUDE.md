@@ -40,6 +40,12 @@ Firebase-Projekt "Pool-TS" ab. Mandantenfaehig, ein Verein je `verein_id`.
   angebunden **und** offline funktionieren.
 - Klassische Skripte als `type="module"` einbinden, sonst fehlen sie nach dem
   Bau.
+- Die Offline-Fassung entsteht automatisch: `npm run offline`
+  (`skripte/offline-bauen.mjs`, je Board eine HTML-Datei mit den alten Namen
+  `index_pool.html`, `index141.html`) und der Workflow
+  `scoreboards-offline.yml`, der sie ins Repository aus der Variable
+  `SCOREBOARDS_ZIEL` legt. Neue Seiten, die offline gebraucht werden, dort in
+  `SEITEN` eintragen. Nie von Hand ins Ziel-Repository kopieren.
 
 ## Datenbank
 
