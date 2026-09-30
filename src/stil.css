@@ -421,3 +421,24 @@ tr.gespielt .zahlfeld { color: var(--text); }
 .umschalter button:last-child { border-right: none; }
 .umschalter button.aktiv { background: var(--akzent-hell); color: var(--akzent); }
 .pausehinweis { background: #faeeda; border: 1px solid #e8cfa3; color: #633806; border-radius: var(--radius); padding: 8px 12px; font-size: 14px; }
+
+/* Zuschauerseite fuers Handy (Zuschauen.tsx): eine Spalte, grosse Schrift */
+.zuschauen { max-width: 560px; margin: 0 auto; padding: 12px 16px 32px; font-size: 17px; }
+.zuschauenkopf { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; }
+.zuschauenwahl { display: flex; margin-bottom: 14px; }
+.zuschauenwahl button { flex: 1; font-size: 16px; padding: 9px 6px; }
+.zuschauentische { display: flex; flex-direction: column; gap: 10px; }
+.zuschauentische .livekachel { min-height: 0; gap: 8px; }
+.zuschauen h2 { font-size: 19px; margin: 4px 0 10px; }
+.zuschauen h3 { font-size: 16px; margin: 0 0 6px; }
+.zuschauenblock { border-top: 1px solid var(--rand); padding: 10px 0; }
+.zuschauenblock .tabelle { font-size: 16px; }
+.zuschauenspiel { display: flex; justify-content: space-between; gap: 10px; padding: 4px 0; }
+.zuschauenliga { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.zuschauenliga strong { font-size: 24px; white-space: nowrap; }
+.zuschauenchat .chatbeitrag { border: 1px solid var(--rand); border-radius: var(--radius); padding: 6px 10px; margin-bottom: 8px; }
+.zuschauenchat .chatbeitrag.eigener { background: var(--akzent-hell); }
+.chatkopf { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 14px; color: var(--text-leise); }
+.chattext { white-space: pre-wrap; overflow-wrap: anywhere; }
+.chateingabe { display: flex; gap: 8px; margin: 10px 0 6px; }
+.chateingabe input { flex: 1; min-width: 0; font-size: 16px; }

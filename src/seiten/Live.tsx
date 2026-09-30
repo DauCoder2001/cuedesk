@@ -196,7 +196,8 @@ export default function Live() {
   }
 }
 
-function Tischkachel({
+// Auch auf der Zuschauerseite (Zuschauen.tsx), dort ohne Knoepfe
+export function Tischkachel({
   tisch,
   k,
   neuLaden,

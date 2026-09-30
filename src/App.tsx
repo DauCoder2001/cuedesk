@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { supabase } from './supabase';
 import { useSitzung } from './sitzung';
 import Anmeldung from './seiten/Anmeldung';
@@ -23,6 +23,7 @@ import { vereinsKuerzel } from './vereinseinstellungen';
 import { useWechsel } from './ungespeichert';
 import { VERTRAG_FASSUNG } from './vertraege';
 import Vertragszustimmung from './seiten/Vertragszustimmung';
+import Zuschauen from './seiten/Zuschauen';
 
 type Bereich =
   | 'live'
@@ -40,7 +41,8 @@ type Bereich =
   | 'altdaten'
   | 'system'
   | 'konsole'
-  | 'konto'; // "Mein Konto", ueber den eigenen Namen in der Kopfzeile
+  | 'konto' // "Mein Konto", ueber den eigenen Namen in der Kopfzeile
+  | 'zuschauen'; // Handy-Seite fuer Mitglieder, ohne Kopfzeile
 
 // Tablets und TV rufen die Adresse mit ?geraet auf und bekommen die
 // Geraeteansicht statt der Anmeldung.
@@ -110,6 +112,16 @@ export default function App() {
     };
   }, [vereinId]);
 
+  // Wer im Verein nur Mitglied ist, startet auf der Zuschauerseite (einmal
+  // je Sitzung, danach bleibt die Wahl frei)
+  const nurMitglied = rollen.length > 0 && rollen.every((r) => r === 'mitglied');
+  const startGesetzt = useRef(false);
+  useEffect(() => {
+    if (startGesetzt.current || rollen.length === 0) return;
+    startGesetzt.current = true;
+    if (nurMitglied && !startAnmeldung) setBereich('zuschauen');
+  }, [rollen, nurMitglied]);
+
   // Anonyme Anmeldungen gehoeren immer zu einem Geraet, auch ohne ?geraet in
   // der Adresse. Sonst landet ein Tablet in der Mitgliederansicht.
   const istAnonymesGeraet = Boolean(sitzung?.user?.is_anonymous);
@@ -122,12 +134,28 @@ export default function App() {
   // Verwaltung zu; Mein Konto und (fuer Super-Admins) die Konsole gehen.
   const ohneZustimmung = Boolean(verein) && !gesperrt && zugestimmt === false;
 
+  // Zuschauerseite: eigene Handy-Ansicht ohne Kopfzeile und Reiter
+  if (angezeigt === 'zuschauen' && verein && !gesperrt && !ohneZustimmung) {
+    return (
+      <Zuschauen
+        verlassen={() => setBereich('live')}
+        verlassenText={nurMitglied ? 'Weitere Seiten' : 'Verwaltung'}
+      />
+    );
+  }
+
   const bereiche: { wert: Bereich; name: string; sichtbar: boolean; tipp?: string }[] = [
     {
       wert: 'live',
       name: 'Live',
       sichtbar: true,
       tipp: 'Alle Tische auf einen Blick: laufende Spiele mit Spielstand, freie Tische und ob das Tablet an ist.'
+    },
+    {
+      wert: 'zuschauen',
+      name: 'Zuschauen',
+      sichtbar: true,
+      tipp: 'Fürs Handy: Tische live, das laufende Turnier und der Chat dazu.'
     },
     {
       wert: 'turniere',

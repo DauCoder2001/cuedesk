@@ -26,6 +26,8 @@ export type VereinsEinstellungen = {
     mannschaftRang: number | null; // Nummer im Mannschaftspass, null: erste der Saison
   };
   saisonbeginn: number; // Monat 1 bis 12
+  // Chat fuer Zuschauer (Stufe 24); der Verein schaltet ihn bewusst ein
+  chat: boolean;
 };
 
 export const STANDARD_EINSTELLUNGEN: VereinsEinstellungen = {
@@ -41,7 +43,8 @@ export const STANDARD_EINSTELLUNGEN: VereinsEinstellungen = {
   },
   turnierarten: [],
   liga: { liga: 'kreisliga', mannschaftRang: null },
-  saisonbeginn: 7
+  saisonbeginn: 7,
+  chat: false
 };
 
 const DISZIPLINEN: Disziplin[] = ['8-ball', '9-ball', '10-ball'];
@@ -103,7 +106,8 @@ export function vereinsEinstellungen(roh: unknown): VereinsEinstellungen {
       liga: auswahl(l.liga, LIGEN, s.liga.liga),
       mannschaftRang: ganzeZahl(l.mannschaftRang, 1, 20)
     },
-    saisonbeginn: ganzeZahl(e.saisonbeginn, 1, 12) ?? s.saisonbeginn
+    saisonbeginn: ganzeZahl(e.saisonbeginn, 1, 12) ?? s.saisonbeginn,
+    chat: e.chat === true
   };
 }
 

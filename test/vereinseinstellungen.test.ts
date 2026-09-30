@@ -28,6 +28,12 @@ describe('Vereinseinstellungen', () => {
     expect(e.saisonbeginn).toBe(8);
   });
 
+  test('Chat nur, wenn ausdruecklich eingeschaltet', () => {
+    expect(STANDARD_EINSTELLUNGEN.chat).toBe(false);
+    expect(vereinsEinstellungen({ chat: true }).chat).toBe(true);
+    expect(vereinsEinstellungen({ chat: 'ja' }).chat).toBe(false);
+  });
+
   test('unbrauchbare Werte fallen auf den Standard zurueck', () => {
     const e = vereinsEinstellungen({
       turnier: { raceTo: 0, disziplin: 'snooker', modus: 'einzelspiel', staerke: 150, obergrenze: -1 },

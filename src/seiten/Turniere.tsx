@@ -81,6 +81,7 @@ export type TurnierEinstellungen = {
   handReihenfolge?: Record<string, number[]>;
   pausiert?: boolean; // Tablets starten keine neuen Spiele
   art?: string; // Turnierart (Bezeichnung aus der Liste des Vereins, beim Anlegen festgehalten)
+  chat?: boolean; // Chat fuer Zuschauer (nur wenn der Verein ihn eingeschaltet hat)
   tvAnsicht?: 'auslosung' | 'live' | 'results'; // was die Fernseher zeigen
   beginn?: string; // erstes Ergebnis (Zeitprognose)
   ausschreibung?: Ausschreibung; // Einladung zum Turnier (src/ausschreibung.ts)
@@ -125,6 +126,7 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
   const [obergrenze, setObergrenze] = useState('0');
   const [ratingWerten, setRatingWerten] = useState(true);
   const [art, setArt] = useState('');
+  const [chat, setChat] = useState(true);
   // Filter der Turnierliste nach Turnierart ('' = alle)
   const [artFilter, setArtFilter] = useState('');
   // Ausgleich in Prozent aus den Rating-Einstellungen, falls der Verein keinen eigenen vorgibt
@@ -135,7 +137,7 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
   // Aenderungen nachfragt
   const formularStand = formular
     ? { name, datum, disziplin, modus, raceTo, racePhase2, raceKo, liga, spieltag, heim, gegner, eigeneMannschaft,
-        mannschaftId, ziele, serieId, vorgabeAn, staerke, obergrenze, ratingWerten, art }
+        mannschaftId, ziele, serieId, vorgabeAn, staerke, obergrenze, ratingWerten, art, chat }
     : null;
   const [ursprung, setUrsprung] = useState<unknown>(null);
   useEffect(() => {
@@ -245,7 +247,8 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
         aktiv: modus === 'liga' ? false : vorgabeAn,
         staerke: Math.min(100, Math.max(0, Number(staerke) || 0)),
         obergrenze: Math.max(0, Number(obergrenze) || 0)
-      }
+      },
+      chat: vorgaben.chat && chat
     };
     if (bearbeitet) return aenderungSpeichern(bearbeitet, einstellungen);
     const { data, error } = await supabase
@@ -298,6 +301,7 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
     setVorgabeAn(e.vorgabe?.aktiv ?? false);
     setStaerke(String(e.vorgabe?.staerke ?? ratingStaerke));
     setObergrenze(String(e.vorgabe?.obergrenze ?? 0));
+    setChat(e.chat ?? false);
     setRatingWerten(t.rating_werten);
     setArt(e.art ?? '');
     pflicht.zuruecksetzen();
@@ -339,7 +343,7 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
     // Was das Formular festlegt, kommt neu; alles andere (Ausschreibung,
     // TV-Ansicht ...) bleibt. Bei neuem Modus fallen dessen Vorbereitungen weg.
     const behalten = { ...((aktuell.einstellungen ?? {}) as TurnierEinstellungen) };
-    const vomFormular: (keyof TurnierEinstellungen)[] = ['raceTo', 'racePhase2', 'raceKo', 'racePhase3', 'vorgabe', 'art'];
+    const vomFormular: (keyof TurnierEinstellungen)[] = ['raceTo', 'racePhase2', 'raceKo', 'racePhase3', 'vorgabe', 'art', 'chat'];
     const modusAbhaengig: (keyof TurnierEinstellungen)[] = [
       'gruppenzahl', 'weiter', 'paarung', 'ko', 'phase2', 'phase3', 'handReihenfolge', 'tausch', 'nachgetragen'
     ];
@@ -445,6 +449,7 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
                 setObergrenze(String(t.obergrenze));
                 setRatingWerten(t.ratingWerten);
                 setArt(t.art ?? '');
+                setChat(true);
                 setLiga(vorgaben.liga.liga);
                 // Standard-Mannschaft nach Nummer im Mannschaftspass, sonst die erste der Saison
                 const rang = vorgaben.liga.mannschaftRang;
@@ -643,6 +648,15 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
                 </small>
               </span>
             </label>
+            {vorgaben.chat && (
+              <label className="ankreuz">
+                <input type="checkbox" checked={chat} onChange={(e) => setChat(e.target.checked)} />
+                <span>
+                  Mit Chat für Zuschauer
+                  <small>Mitglieder können auf der Seite „Zuschauen“ schreiben, solange das Turnier läuft.</small>
+                </span>
+              </label>
+            )}
             <div className="knopfpaar">
               <button
                 type="button"

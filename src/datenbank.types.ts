@@ -151,6 +151,17 @@ export type Vertragszustimmung = {
   benutzer_id: string | null;
 };
 
+// Chat je Turnier (Stufe 24); geschrieben nur ueber chat_schreiben
+export type ChatBeitrag = {
+  id: string;
+  verein_id: string;
+  turnier_id: string;
+  benutzer_id: string | null;
+  name: string;
+  text: string;
+  erstellt_am: string;
+};
+
 export type PersonIntern = {
   person_id: string;
   verein_id: string;
@@ -272,6 +283,7 @@ export type Turnier = {
   status: TurnierStatus;
   rating_werten: boolean;
   eingefroren_am: string | null;
+  beendet_am?: string | null; // Stufe 24: gesetzt beim Wechsel auf beendet/abgebrochen
   einstellungen: Record<string, unknown>;
   quelle: string;
   alt_id: string | null;
@@ -415,6 +427,7 @@ export type Database = {
       personen_intern: Tabelle<PersonIntern, Partial<PersonIntern> & Pick<PersonIntern, 'person_id' | 'verein_id'>>;
       einwilligungen: Tabelle<Einwilligung>;
       vertragszustimmungen: Tabelle<Vertragszustimmung>;
+      chat_beitraege: Tabelle<ChatBeitrag>;
       einladungen: Tabelle<Einladung, Omit<Einladung, 'id' | 'erstellt_am' | 'angenommen_am'>>;
       tische: Tabelle<Tisch, Omit<Tisch, 'id'>>;
       geraete: Tabelle<Geraet>;
@@ -476,6 +489,7 @@ export type Database = {
         Returns: undefined;
       };
       vertrag_zustimmen: { Args: { p_verein: string; p_fassung: string }; Returns: undefined };
+      chat_schreiben: { Args: { p_turnier: string; p_text: string }; Returns: undefined };
       verein_aendern: {
         Args: {
           p_verein: string;

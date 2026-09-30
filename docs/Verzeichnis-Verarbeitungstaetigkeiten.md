@@ -88,6 +88,7 @@ Die Ausnahme für Betriebe unter 250 Beschäftigten (Art. 30 Abs. 5) greift nich
 | Kategorien der Verarbeitung | Speichern, Anzeigen, Auswerten (Rating, Ranglisten, Statistik), Sichern, Exportieren, Anonymisieren, Löschen |
 | Betroffene | Mitglieder, Gastspieler, Benutzer mit Konto im Verein |
 | Daten | Name, Anzeigename, Kürzel, Status, Ein- und Austritt, Merker minderjährig, Pass- und DBU-Nummer, Notiz, Einwilligungen mit Verlauf; Turniere, Partien, 14.1-Protokoll, Mannschaften, Rating; Änderungsprotokoll |
+| Chat | nur wenn der Verein ihn einschaltet (Seite „System“) und das Turnier ihn vorsieht: Name, Text (höchstens 300 Zeichen), Turnier, Zeitpunkt; lesen nur Mitglieder mit Konto; löschen Verfasser und Turnierleitung; gelöscht 1 Tag nach Turnierende (Cron-Job `fristen-loeschen`) |
 | Nicht erfasst | Anschrift, Geburtsdatum, Bankdaten, besondere Kategorien (Art. 9) |
 | Unterauftragsverarbeiter | Supabase, Inc. (Datenbank, Frankfurt); IONOS SE (Hosting, Mail) |
 | Drittland | Supabase, Inc.: USA, Daten in Frankfurt; DPA und Standardvertragsklauseln [prüfen] |

@@ -52,6 +52,7 @@ type Formular = {
   liga: LigaKennung;
   mannschaftRang: string; // leer: erste der Saison
   saisonbeginn: number;
+  chat: boolean;
 };
 
 // Bild auf 128 x 128 Pixel verkleinern (Seitenverhaeltnis bleibt, Rand durchsichtig)
@@ -104,7 +105,8 @@ function ausEinstellungen(
     turnierarten: e.turnierarten,
     liga: e.liga.liga,
     mannschaftRang: e.liga.mannschaftRang === null ? '' : String(e.liga.mannschaftRang),
-    saisonbeginn: e.saisonbeginn
+    saisonbeginn: e.saisonbeginn,
+    chat: e.chat
   };
 }
 
@@ -234,7 +236,8 @@ export default function System() {
       },
       turnierarten: f.turnierarten,
       liga: { liga: f.liga, mannschaftRang: zahl(f.mannschaftRang) },
-      saisonbeginn: f.saisonbeginn
+      saisonbeginn: f.saisonbeginn,
+      chat: f.chat
     };
     setArbeitet(true);
     const { error } = await supabase
@@ -512,6 +515,20 @@ export default function System() {
           Die Mannschaft wird über ihre Nummer im Mannschaftspass gewählt, damit die Vorgabe auch in der nächsten Saison
           stimmt. Hat die Mannschaft eine Liga eingetragen, gilt deren Liga.
         </p>
+      </section>
+
+      <section className="block">
+        <h2>Chat</h2>
+        <label className="ankreuz">
+          <input type="checkbox" checked={f.chat} onChange={(e) => setze({ chat: e.target.checked })} />
+          <span>
+            Chat für Zuschauer einschalten
+            <small>
+              Mitglieder können während eines Turniers auf der Seite „Zuschauen“ schreiben. Beiträge werden 1 Tag nach
+              Turnierende gelöscht. Beim Anlegen eines Turniers lässt sich der Chat abwählen.
+            </small>
+          </span>
+        </label>
       </section>
 
       {speicherLeiste}
