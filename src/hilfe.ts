@@ -152,6 +152,8 @@ export function pdfTauglich(text: string): string {
   return text
     .replace(/→/g, '->')
     .replace(/←/g, '<-')
+    .replace(/✕/g, 'x')
+    .replace(/✓/g, 'OK')
     .replace(/[←-⯿\u{1f000}-\u{1faff}️]/gu, '')
     .replace(/\s{2,}/g, ' ')
     .trim();

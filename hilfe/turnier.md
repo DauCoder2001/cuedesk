@@ -44,7 +44,7 @@ Bei **Zwei Gruppen** startest du nach den Gruppenspielen die **Duelle**, bei **G
 
 ## 5. Abschließen
 
-1. Sind alle Spiele gespielt, **Abschließen** klicken. Die Ergebnisse werden gesperrt; zählt das Turnier fürs Rating, wird es in der Nacht neu berechnet.
+1. Sind alle Spiele gespielt, **Abschließen** klicken. Die Ergebnisse werden gesperrt; zählt das Turnier fürs Rating, wird es gleich neu berechnet.
 2. **Bericht (PDF)** erzeugt Tabellen und Platzierungen zum Drucken oder Weitergeben.
 3. Muss noch etwas korrigiert werden, öffnet **Wieder öffnen** das Turnier erneut.
 

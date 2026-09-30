@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { bloecke, dateiName, handoutPdf, pdfTauglich, suchen, teile, themaLesen, themaZurSeite, themenFuer } from '../src/hilfe';
+import { bloecke, dateiName, handbuchPdf, handoutPdf, pdfTauglich, suchen, teile, themaLesen, themaZurSeite, themenFuer } from '../src/hilfe';
 
 const TURNIER = `---
 titel: Turnier anlegen und durchführen
@@ -75,7 +75,8 @@ describe('Auswahl', () => {
 
 describe('PDF', () => {
   test('nicht darstellbare Zeichen werden ersetzt', () => {
-    expect(pdfTauglich('Mein Konto → Meine Daten ✓')).toBe('Mein Konto -> Meine Daten');
+    expect(pdfTauglich('Mein Konto → Meine Daten ✓')).toBe('Mein Konto -> Meine Daten OK');
+    expect(pdfTauglich('mit dem ✕ löschen ↗')).toBe('mit dem x löschen');
   });
   test('Handout enthaelt Titel und Listenpunkte', () => {
     const pdf = new TextDecoder('latin1').decode(handoutPdf(themaLesen('turnier.md', TURNIER), 'B&W Verden'));
@@ -86,5 +87,29 @@ describe('PDF', () => {
   });
   test('Dateiname', () => {
     expect(dateiName('Turnier anlegen & durchführen')).toBe('CueDesk-Hilfe_Turnier-anlegen-durchführen.pdf');
+  });
+});
+
+describe('Die echten Hilfetexte', () => {
+  test('alle Themen haben Titel, Rollen und Seiten; jede Rolle hat eigene Themen', async () => {
+    const { THEMEN } = await import('../src/hilfe-texte');
+    expect(THEMEN.length).toBeGreaterThanOrEqual(8);
+    THEMEN.forEach((t) => {
+      expect(t.titel).not.toBe(t.id);
+      expect(t.seiten.length).toBeGreaterThan(0);
+      expect(t.bloecke.length).toBeGreaterThan(2);
+    });
+    for (const rolle of ['mitglied', 'turnierleiter', 'sportwart', 'vereinsadmin']) {
+      expect(themenFuer(THEMEN, [rolle], false).eigene.length).toBeGreaterThan(1);
+    }
+    expect(themenFuer(THEMEN, [], true).eigene.map((t) => t.id)).toContain('konsole');
+    expect(themaZurSeite(THEMEN, 'turniere')?.id).toBe('turnier');
+    expect(themaZurSeite(THEMEN, 'personen')?.id).toBe('spieler-datenschutz');
+  });
+  test('Handbuch: jede Seite beginnt, keine unlesbaren Zeichen', async () => {
+    const { THEMEN } = await import('../src/hilfe-texte');
+    const pdf = new TextDecoder('latin1').decode(handbuchPdf(THEMEN, 'Testverein'));
+    expect(pdf).not.toContain(String.raw`\077`); // Fragezeichen fuer nicht darstellbare Zeichen
+    expect(pdf).toContain('Benutzerhandbuch');
   });
 });

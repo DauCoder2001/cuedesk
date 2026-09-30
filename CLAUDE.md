@@ -47,6 +47,13 @@ Firebase-Projekt "Pool-TS" ab. Mandantenfaehig, ein Verein je `verein_id`.
   `SCOREBOARDS_ZIEL` legt. Neue Seiten, die offline gebraucht werden, dort in
   `SEITEN` eintragen. Nie von Hand ins Ziel-Repository kopieren.
 
+## Hilfe
+
+- Die Hilfetexte stehen als Markdown in `hilfe/*.md` (Kopf: titel, rollen,
+  seiten, reihenfolge), Rechnung in `src/hilfe.ts`, Seite `src/seiten/Hilfe.tsx`.
+- Wer eine Funktion oder Beschriftung aendert, zieht das passende Hilfethema
+  mit. Knopfnamen in den Texten genau so schreiben wie in der Oberflaeche.
+
 ## Datenbank
 
 - **Nur die Testdatenbank anfassen**: Projekt `ejcskkawxbbvltvoxdnw`

@@ -1,0 +1,42 @@
+---
+titel: Für Mitglieder: Zuschauen, Chat und Mein Konto
+rollen: alle
+seiten: zuschauen, konto, live, archiv, hilfe
+reihenfolge: 5
+---
+Mit deinem Konto verfolgst du die Spiele deines Vereins, auch auf dem Handy, siehst Ranglisten und deine eigene Statistik.
+
+## Anmelden
+
+- Auf der Anmeldeseite deine E-Mail-Adresse eintragen und **Anmeldelink schicken**. Du bekommst einen Link und einen Zahlencode per E-Mail.
+- Wer möchte, legt sich unter **Mein Konto** ein Passwort fest und meldet sich künftig mit **Mit Passwort anmelden** an.
+- Ein Konto gibt es nur auf Einladung deines Vereins.
+
+## Zuschauen
+
+Die Seite **Zuschauen** ist fürs Handy gebaut. Oben wählst du:
+
+- **Tische**: alle Tische mit Spielstand, live bei jedem Stoß.
+- **Turnier**: das laufende Turnier mit Gruppentabellen, KO-Runde, den nächsten Spielen und den heute beendeten Partien. Beim Liga-Spieltag stehen dort Partie- und Matchpunkte.
+- **Chat**: nur, wenn dein Verein ihn eingeschaltet hat und das Turnier läuft.
+
+Wer nur Mitglied ist, landet nach der Anmeldung direkt hier. **Weitere Seiten** führt zu Ranglisten, Archiv und Statistik.
+
+## Chat
+
+- Schreiben kannst du, solange das Turnier läuft, bis zu 300 Zeichen je Beitrag.
+- Deine eigenen Beiträge löschst du mit dem ✕. Die Turnierleitung kann jeden Beitrag löschen.
+- Einen Tag nach Turnierende werden alle Beiträge automatisch gelöscht.
+- Lesen können nur die Mitglieder deines Vereins mit Konto.
+
+## Mein Konto
+
+Ein Klick auf deinen Namen oben rechts öffnet **Mein Konto**:
+
+- **Passwort festlegen oder ändern**: Code an deine E-Mail schicken lassen, **Code aus der Mail** und **Neues Passwort** eintragen.
+- **Meine Daten**: alles, was CueDesk über dich speichert, als PDF oder JSON herunterladen.
+- Unten stehen Impressum, Datenschutz, Nutzungsbedingungen und der Vertrag zur Auftragsverarbeitung.
+
+## Hilfe
+
+Das **?** oben rechts öffnet die Hilfe zur Seite, auf der du gerade bist. Jedes Thema gibt es als **Handout (PDF)**, alles zusammen als **Handbuch (PDF)**.
