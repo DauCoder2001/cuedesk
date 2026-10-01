@@ -7,7 +7,9 @@ import {
   freiesSpielLaeuft,
   freilosAbschliessen,
   freilosWertung,
+  fremdesTurnierspiel,
   gehoertZumTisch,
+  haengendeSpiele,
   koFortschreibung,
   ohneSpielParameter,
   offeneSpiele,
@@ -44,6 +46,38 @@ const spieltag = (): BoardTurnier => ({
     p4: spiel({ discipline: '10-Ball', player1: 'Sven', player2: 'Waldemar', status: 'completed' }),
     p5: spiel({ discipline: '14.1', player1: 'Sven', player2: '', raceTo: 60 }) // Gegner noch offen
   }
+});
+
+describe('Haengende Spiele', () => {
+  const mitLaufendem141 = (): BoardTurnier => {
+    const t = spieltag()!;
+    t.schedule!.p1 = spiel({ discipline: '14.1', player1: 'Frank', player2: 'Marcel', status: 'running', table: '1' });
+    return t;
+  };
+
+  test('laeuft hier, aber der Tisch haelt es nicht mehr', () => {
+    const frei = { gameType: 'pool', player1: 'Spieler 1', player2: 'Spieler 2' };
+    expect(haengendeSpiele(mitLaufendem141(), '14.1', 1, frei).map((m) => m.id)).toEqual(['p1']);
+    expect(haengendeSpiele(mitLaufendem141(), '14.1', '1', null).map((m) => m.id)).toEqual(['p1']);
+  });
+
+  test('nicht, solange der Tisch das Spiel haelt', () => {
+    expect(haengendeSpiele(mitLaufendem141(), '14.1', 1, { gameType: '14.1', tournamentMatchId: 'p1' })).toEqual([]);
+  });
+
+  test('nur am eigenen Tisch und am passenden Board', () => {
+    expect(haengendeSpiele(mitLaufendem141(), '14.1', 2, null)).toEqual([]);
+    expect(haengendeSpiele(mitLaufendem141(), 'pool', 1, null)).toEqual([]);
+    expect(haengendeSpiele(spieltag(), 'pool', 2, null).map((m) => m.id)).toEqual(['p3']);
+  });
+
+  test('Turnierpartie der anderen Spielart am Tisch', () => {
+    expect(fremdesTurnierspiel({ gameType: '14.1', tournamentMatchId: 'p1' }, 'pool')).toBe(true);
+    expect(fremdesTurnierspiel({ gameType: 'pool', tournamentMatchId: 'p2' }, '14.1')).toBe(true);
+    expect(fremdesTurnierspiel({ gameType: 'pool', tournamentMatchId: 'p2' }, 'pool')).toBe(false);
+    expect(fremdesTurnierspiel({ gameType: '14.1', s1: 5 }, 'pool')).toBe(false);
+    expect(fremdesTurnierspiel(null, 'pool')).toBe(false);
+  });
 });
 
 describe('Freies Spiel', () => {

@@ -172,6 +172,16 @@ export function archivDatum(): string | null {
   return archiv ? new Date(`${archiv.datum}T12:00:00`).toLocaleDateString('de-DE') : null;
 }
 
+// Knoepfe der Live-Protokollseite: "Zum Board" nur am gekoppelten Tablet
+// (sonst nimmt die Leitung am PC dem Tablet den Tisch weg) und offline;
+// Drucken und Senden nicht fuer Mitglieder.
+export function protokollKnoepfe(): { zumBoard: boolean; ausgeben: boolean } {
+  if (betriebsart === 'offline') return { zumBoard: true, ausgeben: true };
+  if (betriebsart === 'zuschauer') return { zumBoard: false, ausgeben: false };
+  if (betriebsart === 'archiv') return { zumBoard: false, ausgeben: true };
+  return { zumBoard: geraetKonto !== null, ausgeben: true };
+}
+
 // ---------- Kopplung waehrend des Spiels beobachten ----------
 //
 // Wird das Tablet entkoppelt oder einem anderen Tisch zugeordnet, waehrend

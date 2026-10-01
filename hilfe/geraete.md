@@ -27,8 +27,10 @@ Was der Fernseher während eines Turniers zeigt (**Auslosung**, **Live-Tische**,
 
 - Die Seite **Live** zeigt alle Tische mit Spielstand und ob das Tablet an ist.
 - Mitglieder und der Fernseher sehen Spielstände nur, solange ein Turnier oder Liga-Spieltag mit **Live an** läuft – dann an allen Tischen, auch freie Spiele. Sonst sieht sie nur die Turnierleitung; der Fernseher zeigt „Tisch nicht besetzt“.
+- **Protokoll live** (bei 14.1) zeigt die Aufnahmen der laufenden Partie. **Zum Board** gibt es dort nur am Tablet des Tisches, damit niemand am PC dem Tablet den Tisch wegnimmt. **Drucken** und **Senden** sieht nur die Turnierleitung.
 - Hängt ein Tablet, schickt **Neu laden** auf der Seite Live ihm den Befehl zum Neuladen. Dafür braucht es das Schutzwort.
 - Ein Tablet an einen anderen Tisch umziehen: in der Geräteliste den Tisch ändern, oder direkt am Tablet unter **Tisch wechseln**.
+- Läuft an einem Tisch eine 14.1-Turnierpartie, lässt sich der Tisch nicht im 8/9/10-Ball-Board öffnen; es bietet **Zum 14.1-Board** an. Ist der Spielstand einer Partie am Tisch verloren gegangen, steht sie in der Spielauswahl oben unter „Läuft an diesem Tisch, der Spielstand fehlt“ und kann mit **neu beginnen** wieder bei 0:0 starten.
 - **Trennen** löst die Kopplung; das Gerät zeigt danach wieder einen Code.
 
 ## Ohne Internet

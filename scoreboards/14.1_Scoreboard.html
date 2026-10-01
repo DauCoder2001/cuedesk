@@ -448,6 +448,8 @@
   .pick-wechsel { width: 100%; margin-top: 2vmin; background: #fff; color: #1f3b73;
     border: 0.3vmin solid #1f3b73; font-size: 3vmin; padding: 1.8vmin; border-radius: 1.2vmin; }
   .pick-notiz { display: block; text-align: center; font-size: 2.4vmin; color: #666; margin-top: 2.5vmin; }
+  /* Partie, die hier laeuft, deren Stand am Tisch aber fehlt */
+  .pick141.pick-haengt { background: #fff4e0; border: 0.3vmin solid #b8860b; margin-bottom: 2vmin; }
 
   /* Nachgeben-Overlay: ein anderes Geraet steuert diesen Tisch (verhindert Schreib-Krieg) */
   #yield-overlay {
@@ -873,7 +875,7 @@
   // Die Regeln des Boards (getestet in test/board-regeln.test.ts)
   import {
     freiesSpielLaeuft, offeneSpiele, wartetText, zeige141Auswahl, spielBeanspruchen, spielZuruecklegen,
-    ergebnisSchonEingetragen, ohneSpielParameter, siegerText
+    ergebnisSchonEingetragen, ohneSpielParameter, siegerText, haengendeSpiele
   } from "./js/board-regeln.ts";
   import { startIdleRedirect } from "./js/idle-timeout.js";
   import { keepScreenAwake } from "./js/wake-lock.js";
@@ -971,6 +973,7 @@
     if (offen.length === 0) {
       liste.innerHTML = '<p style="text-align:center; color:#888;">Alle 14.1-Spiele sind vergeben.</p>';
       zeigeWechselZumPool();
+      zeigeHaengende();
       return;
     }
     liste.innerHTML = offen.map(m => {
@@ -984,6 +987,35 @@
       btn.addEventListener('click', () => startMatch141(btn.getAttribute('data-id')));
     });
     zeigeWechselZumPool();
+    zeigeHaengende();
+  }
+
+  // Partien, die laut Spielplan an diesem Tisch laufen, deren Stand aber fehlt
+  // (Tisch ueberschrieben oder Absturz): oben anbieten, neu zu beginnen.
+  function haengende141() { return haengendeSpiele(tournament, '14.1', tableId, tableData); }
+  function zeigeHaengende() {
+    const haengend = haengende141();
+    if (haengend.length === 0) return;
+    const block = document.createElement('div');
+    block.innerHTML = '<span class="pick-notiz">Läuft an diesem Tisch, der Spielstand fehlt:</span>'
+      + haengend.map(m => '<button class="pick141 pick-haengt" type="button" data-id="' + m.id + '">'
+          + '<span>' + m.player1 + '</span><span class="vs">vs</span><span>' + m.player2 + '</span>'
+          + ' <span class="note" style="color:#b8860b;">neu beginnen</span></button>').join('');
+    block.querySelectorAll('.pick141').forEach(btn => {
+      btn.addEventListener('click', () => void haengendesNeuBeginnen(btn.getAttribute('data-id')));
+    });
+    document.getElementById('picker141-list').prepend(block);
+  }
+  async function haengendesNeuBeginnen(matchId) {
+    const m = tournament && tournament.schedule ? tournament.schedule[matchId] : null;
+    if (!m) return;
+    if (!await confirmModal(m.player1 + " – " + m.player2 + " neu beginnen?\n\nDer bisherige Spielstand ist nicht mehr vorhanden, die Partie startet bei 0:0.")) return;
+    let res;
+    try {
+      res = await runTransaction(ref(db, 'tournament/active/schedule/' + matchId), (cur) => spielZuruecklegen(cur, tableId));
+    } catch (e) { alert("Fehler: " + e.message); return; }
+    if (!res.committed) { alert("Diese Partie gehört nicht mehr zu diesem Tisch."); return; }
+    await startMatch141(matchId);
   }
 
   // 8-, 9- und 10-Ball laufen am Pool-Board
@@ -1805,7 +1837,7 @@
       set(dbRef, null).catch(() => {});
       return;
     }
-    const zeigePicker = zeige141Auswahl(tournamentActive(), imTurnier, frei141, offene141().length);
+    const zeigePicker = zeige141Auswahl(tournamentActive(), imTurnier, frei141, offene141().length + haengende141().length);
     const overlay = document.getElementById('picker141');
     if (overlay) {
       overlay.style.display = zeigePicker ? 'flex' : 'none';
@@ -1959,7 +1991,10 @@
 
   // Zur Tablet-Startseite zurueck (rein navigierend, kein DB-Schreibzugriff –
   // der Tischstand bleibt in der Cloud und wird beim erneuten Oeffnen wiederhergestellt).
-  document.getElementById('home-btn').addEventListener('click', () => {
+  // Im laufenden Turnierspiel kurz rueckfragen (wie am Pool-Board).
+  document.getElementById('home-btn').addEventListener('click', async () => {
+    if (state.tournamentMatchId && !state.locked &&
+        !await confirmModal("Zurück zur Startseite? Das laufende Match bleibt am Tisch gespeichert und wird am 14.1-Board weitergespielt.")) return;
     window.location.href = startseite();
   });
 

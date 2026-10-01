@@ -94,7 +94,7 @@
     <div class="title" id="tbtitle">📋 14.1 Protokoll</div>
     <div class="actions">
       <a id="boardlink" href="#">↩ Zum Board</a>
-      <button type="button" onclick="window.print()">🖨 Drucken</button>
+      <button id="druck" type="button" onclick="window.print()">🖨 Drucken</button>
       <button id="log-share" type="button">📤 Senden</button>
     </div>
   </div>
@@ -119,7 +119,7 @@
 <script type="module">
   // Read-only-Ansicht des 14.1-Protokolls. Schreibt NICHTS in die Datenbank.
   // CueDesk: Anbindung mit denselben Funktionen wie frueher Firebase.
-  import { db, auth, ref, onValue, signInAnonymously, starten, archivDatum } from "./js/anbindung.ts";
+  import { db, auth, ref, onValue, signInAnonymously, starten, archivDatum, protokollKnoepfe } from "./js/anbindung.ts";
   import { keepScreenAwake } from "./js/wake-lock.js";
   import { setupProtocolShare } from "./js/share-protocol.js";
 
@@ -132,6 +132,14 @@
 
   document.getElementById("tbtitle").textContent = "📋 14.1 Protokoll — Tisch " + tableId;
   document.getElementById("boardlink").href = "14.1_Scoreboard.html?table=" + encodeURIComponent(tableId);
+
+  // CueDesk: "Zum Board" nur am gekoppelten Tablet, Drucken/Senden nicht fuer Mitglieder.
+  const knoepfe = protokollKnoepfe();
+  if (!knoepfe.zumBoard) document.getElementById("boardlink").style.display = "none";
+  if (!knoepfe.ausgeben) {
+    document.getElementById("druck").style.display = "none";
+    document.getElementById("log-share").style.display = "none";
+  }
 
   // CueDesk: gespeicherte Partie aus der 14.1-Statistik (?partie=). Kein Live-Stand,
   // kein Weg zum Board.

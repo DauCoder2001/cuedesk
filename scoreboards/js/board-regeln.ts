@@ -84,6 +84,32 @@ export function offeneSpiele(turnier: BoardTurnier, art: BoardArt): (BoardSpiel 
     .map(([id, m]) => ({ id, ...m }));
 }
 
+// Spiele, die laut Spielplan an diesem Tisch laufen, deren Stand am Tisch aber
+// fehlt (etwa weil ein anderes Board den Tisch ueberschrieben hat). Ohne diese
+// Liste haengen sie fest: nicht offen, also in keiner Auswahl, und kein Board
+// haelt sie mehr.
+export function haengendeSpiele(
+  turnier: BoardTurnier,
+  art: BoardArt,
+  tisch: string | number,
+  amTisch: TischStand
+): (BoardSpiel & { id: string })[] {
+  if (!turnier || !turnier.schedule) return [];
+  return Object.entries(turnier.schedule)
+    .filter(([id, m]) => {
+      if (!gehoertZumTisch(m, tisch) || id === amTisch?.tournamentMatchId) return false;
+      return art === '14.1' ? m.discipline === '14.1' : m.discipline !== '14.1';
+    })
+    .map(([id, m]) => ({ id, ...m }));
+}
+
+// Laeuft am Tisch eine Turnierpartie der anderen Spielart? Dann darf dieses
+// Board den Tisch nicht stillschweigend uebernehmen.
+export function fremdesTurnierspiel(amTisch: TischStand, art: BoardArt): boolean {
+  if (!amTisch || !amTisch.tournamentMatchId) return false;
+  return art === 'pool' ? amTisch.gameType !== 'pool' : amTisch.gameType === 'pool';
+}
+
 // Ueberschrift fuer die Paarungen, die am jeweils anderen Board warten.
 // "art" ist das Board, an dem sie gespielt werden.
 export function wartetText(anzahl: number, art: BoardArt): string {
