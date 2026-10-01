@@ -128,14 +128,16 @@ export default function App() {
     })();
   };
 
-  // Wer im Verein nur Mitglied ist, startet auf der Zuschauerseite (einmal
-  // je Sitzung, danach bleibt die Wahl frei)
+  // Wer im Verein nur Mitglied ist, startet am Handy auf der Zuschauerseite,
+  // die dafuer gebaut ist; am PC und Tablet auf Live. Einmal je Sitzung,
+  // danach bleibt die Wahl frei.
   const nurMitglied = rollen.length > 0 && rollen.every((r) => r === 'mitglied');
   const startGesetzt = useRef(false);
   useEffect(() => {
     if (startGesetzt.current || rollen.length === 0) return;
     startGesetzt.current = true;
-    if (nurMitglied && !startAnmeldung) setBereich('zuschauen');
+    const handy = window.matchMedia('(max-width: 700px)').matches;
+    if (nurMitglied && handy && !startAnmeldung) setBereich('zuschauen');
   }, [rollen, nurMitglied]);
 
   // Anonyme Anmeldungen gehoeren immer zu einem Geraet, auch ohne ?geraet in
