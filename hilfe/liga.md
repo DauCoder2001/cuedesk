@@ -37,5 +37,6 @@ Ein Liga-Spieltag besteht immer aus zwei Begegnungen gegen dieselbe Mannschaft, 
 
 ## Korrigieren und löschen
 
+- **Zurücksetzen** am Ende einer Partiezeile stellt die Partie wieder auf offen: Der Tisch wird frei, das Ergebnis und bei 14.1 das Aufnahme-Protokoll gelöscht, und das Tablet zeigt sie wieder in der Spielauswahl. Dafür braucht es das Schutzwort des Vereins.
 - **Inhalt löschen** leert die angezeigte Begegnung: Aufstellung, Partien und Ergebnisse sind weg, die Begegnung bleibt und lässt sich neu ausfüllen. Stehen schon Ergebnisse drin, fragt CueDesk vorher.
 - **Spieltag löschen** entfernt beide Begegnungen komplett (nur Vereins-Administrator).

@@ -9,6 +9,8 @@ import { schutzwortPruefen } from '../schutzwort';
 import { STATUS_TEXT } from './Turniere';
 import SpielberichtImport from './SpielberichtImport';
 import LiveSchalter from './LiveSchalter';
+import ZuruecksetzenDialog from './ZuruecksetzenDialog';
+import { zuruecksetzbar } from '../partie-zuruecksetzen';
 import type { LigaSpiel } from '../liga';
 import type { TurnierEinstellungen } from './Turniere';
 import type { Mannschaft, MannschaftSpieler, Partie, Person, Turnier, TurnierTeilnehmer } from '../datenbank.types';
@@ -98,6 +100,7 @@ export default function LigaAnsicht({
   const [gastName, setGastName] = useState('');
   const [passwortFrage, setPasswortFrage] = useState<{ runde: 'hin' | 'rueck'; seite: 'heim' | 'gast' } | null>(null);
   const [passwort, setPasswort] = useState('');
+  const [ruecksetzPartie, setRuecksetzPartie] = useState<Partie | null>(null); // Partie zuruecksetzen (Dialog)
   const [importOffen, setImportOffen] = useState(false);
   // Halbe Aufstellung: solange nur eine Seite gewaehlt ist, gibt es noch keine
   // Partie in der Datenbank. Die Wahl haelt deshalb die Ansicht fest.
@@ -803,6 +806,7 @@ export default function LigaAnsicht({
                       spielerSetzen={(seite, id) => void spielerSetzen(s, seite, id)}
                       ergebnisSetzen={(a, b) => void ergebnisSetzen(s, a, b)}
                       wertungSetzen={(werten) => void partieWertung(s, werten)}
+                      zuruecksetzen={p ? () => setRuecksetzPartie(p) : undefined}
                       spieltagWertet={turnier.rating_werten}
                     />
                   );
@@ -869,6 +873,18 @@ export default function LigaAnsicht({
           }}
         />
       )}
+      {ruecksetzPartie && verein && (
+        <ZuruecksetzenDialog
+          partie={ruecksetzPartie}
+          vereinId={verein.id}
+          paarung={`${anzeige(ruecksetzPartie.spieler_a)} – ${anzeige(ruecksetzPartie.spieler_b)}`}
+          abbrechen={() => setRuecksetzPartie(null)}
+          fertig={() => {
+            setRuecksetzPartie(null);
+            void laden();
+          }}
+        />
+      )}
       {passwortFrage && (
         <div className="dialoghintergrund" onClick={() => setPasswortFrage(null)}>
           <div className="dialog" onClick={(e) => e.stopPropagation()}>
@@ -922,6 +938,7 @@ function Spielzeile(props: {
   spielerSetzen: (seite: 'heim' | 'gast', id: string | null) => void;
   ergebnisSetzen: (heim: number | null, gast: number | null) => void;
   wertungSetzen: (werten: boolean) => void;
+  zuruecksetzen?: () => void;
   spieltagWertet: boolean; // Schalter "Fürs Rating werten" des Spieltags
 }) {
   const { spiel, partie } = props;
@@ -1041,6 +1058,19 @@ function Spielzeile(props: {
             {props.spieltagWertet ? 'Rating' : 'Rating (Spieltag aus)'}
           </label>
           )
+        )}
+        {props.bearbeitbar && props.zuruecksetzen && zuruecksetzbar(partie) && (
+          <>
+            {' '}
+            <button
+              type="button"
+              className="klein"
+              title="Stellt die Partie zurück auf offen: Tisch frei, Ergebnis gelöscht, am Tablet wieder in der Spielauswahl. Braucht das Schutzwort."
+              onClick={props.zuruecksetzen}
+            >
+              Zurücksetzen
+            </button>
+          </>
         )}
       </td>
     </tr>

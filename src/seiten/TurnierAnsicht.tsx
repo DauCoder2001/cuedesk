@@ -11,6 +11,8 @@ import { herunterladen } from '../pdf';
 import AusschreibungBlock from './AusschreibungBlock';
 import AuslosungTeilen from './AuslosungTeilen';
 import LiveSchalter from './LiveSchalter';
+import ZuruecksetzenDialog from './ZuruecksetzenDialog';
+import { zuruecksetzbar } from '../partie-zuruecksetzen';
 import { useWechsel } from '../ungespeichert';
 import { angefangen, auslosen, bergerRunden, hoechstwert, rangliste, spielBeendet } from '../turnier';
 import type { Gleichstand, RanglistenPartie, Zeile } from '../turnier';
@@ -112,6 +114,7 @@ export default function TurnierAnsicht({
   const [nachtrag, setNachtrag] = useState<{ ziel: string; suche: string; gast: string } | null>(null);
   const [verlauf, setVerlauf] = useState<{ partie: Partie; zeilen: Aenderungszeile[] } | null>(null);
   const [stapel, setStapel] = useState<Rueckgaengig[]>([]);
+  const [ruecksetzPartie, setRuecksetzPartie] = useState<Partie | null>(null); // Partie zuruecksetzen (Dialog)
   const [rueckfrage, fragen] = useRueckfrage();
   const [, setTakt] = useState(0);
   // KO-Abgleich fuer den Echtzeit-Kanal; wird bei jedem Zeichnen neu gesetzt
@@ -669,6 +672,17 @@ export default function TurnierAnsicht({
     setPartien(liste);
     if (!leer) await turnierBegonnen();
     await koAbgleichen(liste);
+  }
+
+  // Nach "Zuruecksetzen": KO-Folgespiele abgleichen (der Sieger faellt dort
+  // wieder heraus), danach frisch laden.
+  async function zurueckgesetzt(p: Partie) {
+    setRuecksetzPartie(null);
+    const offen = { ergebnis_a: null, ergebnis_b: null, status: 'geplant' as const, tisch_id: null, begonnen: null, beendet: null };
+    const liste = partien.map((x) => (x.id === p.id ? { ...x, ...offen } : x));
+    setPartien(liste);
+    await koAbgleichen(liste);
+    await laden();
   }
 
   // Erstes Ergebnis: Beginn fuer die Zeitprognose merken, TV von der
@@ -2062,10 +2076,20 @@ export default function TurnierAnsicht({
                       mitVerlauf={darfLeiten}
                       speichern={(a, b) => void ergebnisSetzen(p, a, b)}
                       verlauf={() => void verlaufZeigen(p)}
+                      zuruecksetzen={darfLeiten ? () => setRuecksetzPartie(p) : undefined}
                     />
                   ))}
                 </tbody>
               </table>
+              {ruecksetzPartie && verein && (
+                <ZuruecksetzenDialog
+                  partie={ruecksetzPartie}
+                  vereinId={verein.id}
+                  paarung={`${anzeige(ruecksetzPartie.spieler_a)} – ${anzeige(ruecksetzPartie.spieler_b)}`}
+                  abbrechen={() => setRuecksetzPartie(null)}
+                  fertig={() => void zurueckgesetzt(ruecksetzPartie)}
+                />
+              )}
               {spielfreiText && (
                 <p className="hinweis">
                   {aktiv?.zeile === 'P3' ? 'Ohne Gegner' : 'Spielfrei'}
@@ -2575,6 +2599,7 @@ function Spielzeile(props: {
   mitVerlauf: boolean; // die Aenderungsliste duerfen nur Leitungsrollen lesen
   speichern: (a: number | null, b: number | null) => void;
   verlauf: () => void;
+  zuruecksetzen?: () => void; // nur Leitungsrollen
 }) {
   const { partie: p } = props;
   const text = (w: number | null) => (w === null ? '' : String(w));
@@ -2646,6 +2671,19 @@ function Spielzeile(props: {
           <button type="button" className="klein" title="Verlauf" onClick={props.verlauf}>
             Verlauf
           </button>
+        )}
+        {props.bearbeitbar && props.zuruecksetzen && zuruecksetzbar(p) && (
+          <>
+            {' '}
+            <button
+              type="button"
+              className="klein"
+              title="Stellt die Partie zurück auf offen: Tisch frei, Ergebnis gelöscht, am Tablet wieder in der Spielauswahl. Braucht das Schutzwort."
+              onClick={props.zuruecksetzen}
+            >
+              Zurücksetzen
+            </button>
+          </>
         )}
       </td>
     </tr>

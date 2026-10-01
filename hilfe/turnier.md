@@ -39,6 +39,7 @@ Bis zur Auslosung lassen sich Name, Modus und Race über **Ändern** noch anpass
 - Jeder Punkt erscheint sofort in CueDesk, auf den Fernsehern und auf der Seite **Zuschauen**.
 - Ist ein Spiel zu Ende, trägt das Tablet das Ergebnis ein und gibt den Tisch frei.
 - Ergebnisse ohne Tablet trägst du im **Spielplan** direkt in CueDesk ein. **Rückgängig** nimmt die letzte Änderung dort zurück.
+- **Zurücksetzen** am Ende einer Spielzeile stellt eine Partie wieder auf offen: Der Tisch wird frei, das Ergebnis gelöscht, und das Tablet zeigt wieder die Spielauswahl. So brichst du ein Spiel ab oder lässt es neu spielen. Dafür braucht es das Schutzwort des Vereins.
 - **Pausieren** verhindert, dass an den Tablets neue Spiele starten; laufende Spiele gehen weiter. **Fortsetzen** hebt das auf.
 - **Live an** / **Live aus** unter den Knöpfen im Kopf schaltet die Live-Übertragung jederzeit um. Bei **Live aus** sieht nur noch die Turnierleitung die Spielstände.
 
