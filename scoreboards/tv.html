@@ -181,7 +181,8 @@
             const breakColor = tableData.nextBreak === 1 ? "#ff4444" : "#4488ff";
             let extraBadge = '';
             if (tableData.raceTo) extraBadge = ` <span class="game-badge">Race to ${tableData.raceTo}</span>`;
-            else if (tournamentRunning && !tableData.tournamentMatchId) extraBadge = ` <span class="game-badge" style="background:#6c757d;">Freies Spiel</span>`;
+            // CueDesk: auch mit Ausspielziel; dieselbe Regel wie bei 14.1 und auf Live/Zuschauen
+            if (tournamentRunning && !tableData.tournamentMatchId) extraBadge += ` <span class="game-badge" style="background:#6c757d;">Freies Spiel</span>`;
 
             container.innerHTML = `
               <div class="table-title">Tisch ${i} <span class="game-badge">Pool</span>${extraBadge}</div>
@@ -206,7 +207,8 @@
             const activeColor = tableData.turn === 1 ? "#ff4444" : "#4488ff";
             // Höchste Aufnahmen-Zahl ermitteln
             const maxInn = Math.max(tableData.inn1 || 0, tableData.inn2 || 0);
-            const freeBadge141 = tournamentRunning ? ` <span class="game-badge" style="background:#6c757d;">Freies Spiel</span>` : '';
+            // CueDesk: die 14.1-Partie eines Spieltags ist kein freies Spiel
+            const freeBadge141 = tournamentRunning && !tableData.tournamentMatchId ?` <span class="game-badge" style="background:#6c757d;">Freies Spiel</span>` : '';
 
             container.innerHTML = `
               <div class="table-title">Tisch ${i} <span class="game-badge">14.1</span>${freeBadge141}</div>

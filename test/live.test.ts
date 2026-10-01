@@ -37,6 +37,13 @@ describe('Kachel eines Tisches', () => {
     expect(k).toMatchObject({ art: 'pool', laeuft: true, stand1: 3, stand2: 2, raceTo: 5, hinweis: 'Nächster Anstoß: Olli' });
   });
 
+  test('Turnierpartie oder freies Spiel', () => {
+    expect(kachel({ gameType: 'pool', score1: 2, tournamentMatchId: 'p2' }, frisch, jetzt)).toMatchObject({ turnierspiel: true });
+    expect(kachel({ gameType: 'pool', player1: 'Highlander', score1: 2 }, frisch, jetzt)).toMatchObject({ turnierspiel: false });
+    expect(kachel({ gameType: '14.1', s1: 5, tournamentMatchId: 'p1' }, frisch, jetzt)).toMatchObject({ turnierspiel: true });
+    expect(kachel({ gameType: '14.1', s1: 5 }, frisch, jetzt)).toMatchObject({ turnierspiel: false });
+  });
+
   test('Pool: Race-to erreicht heisst beendet', () => {
     const k = kachel({ gameType: 'pool', score1: 5, score2: 2, raceTo: 5 }, frisch, jetzt);
     expect(k).toMatchObject({ laeuft: false, hinweis: 'Spiel beendet' });

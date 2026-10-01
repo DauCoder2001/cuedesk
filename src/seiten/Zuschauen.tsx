@@ -283,6 +283,7 @@ export default function Zuschauen({
                 neuLaden={null}
                 laedtNeu={false}
                 tabletAus={false}
+                turnierLaeuft={turniere.some((t) => t.status === 'laeuft')}
               />
             ))}
           </div>

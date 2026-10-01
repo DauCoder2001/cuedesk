@@ -33,6 +33,7 @@ export type Kachel =
       stand1: number;
       stand2: number;
       raceTo: number | null;
+      turnierspiel: boolean; // Partie aus dem laufenden Turnier (sonst freies Spiel)
       hinweis: string; // Anstoss bzw. wer am Tisch ist
       ziel: string | null; // nur 14.1
     };
@@ -72,6 +73,7 @@ export function kachel(zustand: unknown, aktualisiert: string | null, jetzt = Da
       stand1,
       stand2,
       raceTo: null,
+      turnierspiel: Boolean(z.tournamentMatchId),
       hinweis: z.locked ? 'Spiel beendet' : `Am Tisch: ${amTisch}`,
       ziel: `Ziel ${zahl(z.target)}${zielAufn > 0 ? ` / ${zielAufn} Aufn.` : ''} · Aufnahme ${aufnahme}`
     };
@@ -92,6 +94,7 @@ export function kachel(zustand: unknown, aktualisiert: string | null, jetzt = Da
     stand1,
     stand2,
     raceTo,
+    turnierspiel: Boolean(z.tournamentMatchId),
     hinweis: ende ? 'Spiel beendet' : `Nächster Anstoß: ${anstoss}`,
     ziel: null
   };

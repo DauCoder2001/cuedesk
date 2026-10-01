@@ -34,6 +34,7 @@ export default function Live() {
   const [meldung, setMeldung] = useState<string | null>(null);
   const [, setTakt] = useState(0);
   const [liveAn, setLiveAn] = useState<boolean | null>(null); // null: noch nicht geladen
+  const [turnierLaeuft, setTurnierLaeuft] = useState(false); // fuer die Marke "Freies Spiel"
 
   useEffect(() => {
     if (!verein) return;
@@ -53,6 +54,7 @@ export default function Live() {
       });
       setStaende(neu);
       setLiveAn(liveAktiv(turnierAntwort.data ?? []));
+      setTurnierLaeuft((turnierAntwort.data ?? []).length > 0);
     };
 
     (async () => {
@@ -145,6 +147,7 @@ export default function Live() {
               key={tisch.id}
               tisch={tisch}
               k={k}
+              turnierLaeuft={turnierLaeuft}
               tabletAus={amTisch.length > 0 && !online}
               neuLaden={
                 darfLeiten && online
@@ -225,13 +228,15 @@ export function Tischkachel({
   k,
   neuLaden,
   laedtNeu,
-  tabletAus
+  tabletAus,
+  turnierLaeuft
 }: {
   tisch: Tisch;
   k: Kachel;
   neuLaden: (() => void) | null;
   laedtNeu: boolean;
   tabletAus: boolean;
+  turnierLaeuft: boolean; // dann bekommt ein Spiel ohne Turnierpartie die Marke "Freies Spiel" (wie am TV)
 }) {
   const titel = (
     <>
@@ -273,6 +278,7 @@ export function Tischkachel({
           {titel}
           <span className="marke">{k.art === '14.1' ? '14.1' : 'Pool'}</span>
           {k.raceTo !== null && <span className="marke">Race to {k.raceTo}</span>}
+          {turnierLaeuft && !k.turnierspiel && <span className="marke frei">Freies Spiel</span>}
         </span>
         <span className={k.laeuft ? 'livelaeuft' : ''}>{k.laeuft ? `● ${dauerText(k.seit)}` : 'beendet'}</span>
       </div>
