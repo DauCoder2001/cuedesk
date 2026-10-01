@@ -11,6 +11,7 @@ Mit deinem Konto verfolgst du die Spiele deines Vereins, auch auf dem Handy, sie
 - Auf der Anmeldeseite deine E-Mail-Adresse eintragen und **Anmeldelink schicken**. Du bekommst einen Link und einen Zahlencode per E-Mail.
 - Wer möchte, legt sich unter **Mein Konto** ein Passwort fest und meldet sich künftig mit **Mit Passwort anmelden** an.
 - Ein Konto gibt es nur auf Einladung deines Vereins.
+- Tipp: CueDesk im Browser über **Teilen** → **Zum Home-Bildschirm** ablegen, dann startet es mit eigenem Icon wie eine App. Dort meldest du dich mit Passwort oder dem Zahlencode aus der Mail an; der Link in der Mail öffnet den normalen Browser.
 
 ## Zuschauen
 

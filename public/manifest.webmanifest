@@ -1,0 +1,14 @@
+{
+  "name": "CueDesk",
+  "short_name": "CueDesk",
+  "description": "Spielbetrieb für Billardvereine: Turniere, Live, Rating und Statistik",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f6f1e4",
+  "theme_color": "#f6f1e4",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

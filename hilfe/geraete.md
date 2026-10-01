@@ -15,7 +15,7 @@ Unter **Tische und Geräte** bei **Tische** Nummer und optional eine **Bezeichnu
 1. Auf dem Tablet die CueDesk-Adresse mit dem Zusatz `?geraet` öffnen. Es zeigt einen sechsstelligen Code, der 15 Minuten gilt.
 2. Am PC unter **Gerät koppeln** den Code und einen Namen für das Gerät eintragen (z. B. „Tablet Tisch 1“) und den Tisch wählen.
 3. **Koppeln** klicken. Das Tablet zeigt kurz darauf den Tisch und die Knöpfe **8/9/10-Ball** und **14.1 endlos**.
-4. Tipp: Die Seite auf dem Tablet zum Startbildschirm hinzufügen; dann startet sie im Vollbild.
+4. Tipp: Die Seite auf dem Tablet zum Home-Bildschirm hinzufügen; dann startet sie mit dem CueDesk-Icon im Vollbild. Beim iPad zuerst **Zum Home-Bildschirm** wählen, dann über das Icon öffnen und erst dort koppeln: Die Home-Bildschirm-App hat einen eigenen Speicher, eine Kopplung aus Safari gilt dort nicht.
 
 ## 3. Fernseher koppeln
 
