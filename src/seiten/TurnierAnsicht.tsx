@@ -11,6 +11,7 @@ import { herunterladen } from '../pdf';
 import AusschreibungBlock from './AusschreibungBlock';
 import AuslosungTeilen from './AuslosungTeilen';
 import LiveSchalter from './LiveSchalter';
+import ChatSchalter from './ChatSchalter';
 import ZuruecksetzenDialog from './ZuruecksetzenDialog';
 import { zuruecksetzbar } from '../partie-zuruecksetzen';
 import { useWechsel } from '../ungespeichert';
@@ -1649,6 +1650,9 @@ export default function TurnierAnsicht({
           </div>
           {bearbeitbar && turnier.quelle !== 'import' && turnier.status !== 'beendet' && (
             <LiveSchalter an={einstellungen.live !== false} schalten={(an) => void einstellungenSetzen({ live: an })} />
+          )}
+          {bearbeitbar && turnier.quelle !== 'import' && turnier.status !== 'beendet' && vereinsEinstellungen(verein?.einstellungen).chat && (
+            <ChatSchalter an={einstellungen.chat === true} schalten={(an) => void einstellungenSetzen({ chat: an })} />
           )}
           </div>
         </div>

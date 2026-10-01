@@ -9,6 +9,8 @@ import { schutzwortPruefen } from '../schutzwort';
 import { STATUS_TEXT } from './Turniere';
 import SpielberichtImport from './SpielberichtImport';
 import LiveSchalter from './LiveSchalter';
+import ChatSchalter from './ChatSchalter';
+import { vereinsEinstellungen } from '../vereinseinstellungen';
 import ZuruecksetzenDialog from './ZuruecksetzenDialog';
 import { zuruecksetzbar } from '../partie-zuruecksetzen';
 import type { LigaSpiel } from '../liga';
@@ -446,14 +448,14 @@ export default function LigaAnsicht({
     await verdeckenSetzen(runde, seite, false);
   }
 
-  // Live-Uebertragung gilt fuer den ganzen Spieltag: beide Begegnungen
-  async function liveSetzen(an: boolean) {
+  // Live-Uebertragung und Chat gelten fuer den ganzen Spieltag: beide Begegnungen
+  async function spieltagSetzen(aenderung: Pick<TurnierEinstellungen, 'live' | 'chat'>) {
     if (!turnier || !liga) return;
     const ids = [turnier.id, ...(liga.partner ? [liga.partner] : [])];
     const { data, error } = await supabase.from('turniere').select('id, einstellungen').in('id', ids);
     if (error) return setFehler(error.message);
     for (const t of data ?? []) {
-      const neu = { ...((t.einstellungen ?? {}) as TurnierEinstellungen), live: an };
+      const neu = { ...((t.einstellungen ?? {}) as TurnierEinstellungen), ...aenderung };
       const { error: fehler } = await supabase.from('turniere').update({ einstellungen: neu }).eq('id', t.id);
       if (fehler) return setFehler(fehler.message);
     }
@@ -718,7 +720,10 @@ export default function LigaAnsicht({
             )}
           </div>
           {bearbeitbar && turnier.status !== 'beendet' && (
-            <LiveSchalter an={einstellungen.live !== false} schalten={(an) => void liveSetzen(an)} />
+            <LiveSchalter an={einstellungen.live !== false} schalten={(an) => void spieltagSetzen({ live: an })} />
+          )}
+          {bearbeitbar && turnier.status !== 'beendet' && vereinsEinstellungen(verein?.einstellungen).chat && (
+            <ChatSchalter an={einstellungen.chat === true} schalten={(an) => void spieltagSetzen({ chat: an })} />
           )}
           </div>
         </div>

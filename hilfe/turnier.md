@@ -54,5 +54,5 @@ Bei **Zwei Gruppen** startest du nach den Gruppenspielen die **Duelle**, bei **G
 ## Gut zu wissen
 
 - **Turnier löschen** entfernt das Turnier mit allen Partien. Vorher kommt eine Rückfrage; ein laufendes Turnier kann nur der Vereins-Administrator löschen.
-- Hat der Verein den Chat eingeschaltet, können Mitglieder während des Turniers auf der Seite **Zuschauen** schreiben. Beim Anlegen lässt er sich mit **Mit Chat für Zuschauer** abwählen.
+- Hat der Verein den Chat eingeschaltet, können Mitglieder während des Turniers auf der Seite **Zuschauen** schreiben. Beim Anlegen lässt er sich mit **Mit Chat für Zuschauer** abwählen, später jederzeit mit **Chat an** / **Chat aus** unter **Live an** / **Live aus** umschalten.
 - Liga-Spieltage haben ein eigenes Thema: **Liga-Spieltag**.
