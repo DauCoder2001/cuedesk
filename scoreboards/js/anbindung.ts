@@ -483,15 +483,22 @@ async function alleTischeBeobachten() {
     melden('tables', alle);
   };
 
-  const { data } = await v.supabase
-    .from('live_stand')
-    .select('tisch_id, zustand, aktualisiert')
-    .eq('verein_id', v.vereinId);
-  (data ?? []).forEach((z) => {
-    const nummer = nummerVon.get(z.tisch_id as string);
-    if (nummer) staende.set(nummer, { zustand: z.zustand, aktualisiert: z.aktualisiert as string });
-  });
-  weitergeben();
+  // Komplett neu lesen. Auch wenn ein Turnier startet, endet oder die
+  // Live-Uebertragung umschaltet (Stufe 25): dann liefert die Datenbank dem
+  // Fernseher alle oder keine Staende.
+  const neuLesen = async () => {
+    const { data } = await v.supabase
+      .from('live_stand')
+      .select('tisch_id, zustand, aktualisiert')
+      .eq('verein_id', v.vereinId);
+    staende.clear();
+    (data ?? []).forEach((z) => {
+      const nummer = nummerVon.get(z.tisch_id as string);
+      if (nummer) staende.set(nummer, { zustand: z.zustand, aktualisiert: z.aktualisiert as string });
+    });
+    weitergeben();
+  };
+  await neuLesen();
   // Liegengebliebene Staende auch ohne neue Ereignisse ausblenden
   window.setInterval(weitergeben, 60000);
 
@@ -512,6 +519,11 @@ async function alleTischeBeobachten() {
         else staende.set(nummer, { zustand: zeile.zustand, aktualisiert: zeile.aktualisiert ?? new Date().toISOString() });
         weitergeben();
       }
+    )
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'turniere', filter: `verein_id=eq.${v.vereinId}` },
+      () => void neuLesen()
     )
     .subscribe();
 }

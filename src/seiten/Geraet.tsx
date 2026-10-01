@@ -17,6 +17,8 @@ export default function Geraet() {
   const [tische, setTische] = useState<Tisch[]>([]);
   const [fehler, setFehler] = useState<string | null>(null);
   const laeuft = useRef(false);
+  // E-Mail, wenn im Browser ein Benutzerkonto angemeldet ist (dann keine Kopplung)
+  const [mitKonto, setMitKonto] = useState<string | null>(null);
 
   const standPruefen = useCallback(async () => {
     const { data: konto } = await supabase.auth.getUser();
@@ -52,6 +54,13 @@ export default function Geraet() {
 
     (async () => {
       const { data } = await supabase.auth.getSession();
+      // Mit einem Benutzerkonto angemeldet: nicht koppeln, sonst wuerde das
+      // eigene Konto zum Geraet (und saehe als Leitung mehr als ein Tablet).
+      if (data.session && !data.session.user.is_anonymous) {
+        setMitKonto(data.session.user.email ?? 'ein Benutzerkonto');
+        setBereit(true);
+        return;
+      }
       if (!data.session) {
         const { error } = await supabase.auth.signInAnonymously();
         if (error) {
@@ -71,6 +80,7 @@ export default function Geraet() {
   // zehn Sekunden nach der Kopplung. Im Hintergrund ruht die Abfrage, damit
   // ein vergessener Reiter nicht dauernd Anfragen stellt.
   useEffect(() => {
+    if (mitKonto) return;
     const uhr = window.setInterval(
       () => {
         if (document.visibilityState === 'visible') void standPruefen();
@@ -78,7 +88,7 @@ export default function Geraet() {
       geraet ? 60000 : 10000
     );
     return () => window.clearInterval(uhr);
-  }, [standPruefen, geraet]);
+  }, [standPruefen, geraet, mitKonto]);
 
   async function neuerCode() {
     setCode(null);
@@ -115,6 +125,41 @@ export default function Geraet() {
   }
 
   if (!bereit) return <div className="geraet"><p className="hinweis">Lädt.</p></div>;
+
+  if (mitKonto) {
+    return (
+      <div className="geraet">
+        <div className="geraetkarte">
+          <div className="gross">Nicht als Gerät koppeln</div>
+          <p className="hinweis">
+            In diesem Browser ist {mitKonto} angemeldet. Ein Tablet oder Fernseher braucht eine eigene, anonyme
+            Anmeldung, sonst würde dein Konto zum Gerät.
+          </p>
+          <p className="hinweis">
+            Öffne die Adresse mit <code>?geraet</code> in einem privaten Browser-Fenster oder direkt auf dem Tablet bzw.
+            Fernsehgerät.
+          </p>
+          <div className="spielwahl">
+            <a className="spielknopf" href={import.meta.env.BASE_URL}>
+              Zurück zu CueDesk
+            </a>
+            <button
+              type="button"
+              title="Meldet dein Konto in diesem Browser ab; danach zeigt die Seite einen Kopplungscode für dieses Gerät."
+              onClick={() => {
+                void (async () => {
+                  await supabase.auth.signOut();
+                  window.location.reload();
+                })();
+              }}
+            >
+              Abmelden und dieses Gerät koppeln
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const tisch = tische.find((eintrag) => eintrag.id === geraet?.tisch_id) ?? null;
 

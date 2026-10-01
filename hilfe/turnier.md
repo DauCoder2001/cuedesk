@@ -14,7 +14,8 @@ Ein Turnier läuft in vier Schritten: anlegen, Teilnehmer eintragen, auslosen, s
 3. **Race to** festlegen. Bei Gruppen mit KO-Runde lässt sich das Race je Runde einstellen.
 4. Bei Bedarf **Mit Vorgabe (Handicap)** anhaken: Der schwächere Spieler startet mit Sätzen Vorsprung, berechnet aus dem Vereins-Rating.
 5. **Zählt für das Vereins-Rating** bleibt normalerweise an. Partien mit Gästen zählen nie.
-6. **Anlegen** klicken. Das Turnier öffnet sich.
+6. **Live übertragen** bleibt normalerweise an: Solange das Turnier läuft, sehen Mitglieder und Fernseher die Spielstände aller Tische, auch freie Spiele.
+7. **Anlegen** klicken. Das Turnier öffnet sich.
 
 Die Vorgaben für neue Turniere (Race, Disziplin, Modus, Vorgabe) stellt der Vereins-Administrator auf der Seite **System** ein.
 
@@ -39,6 +40,7 @@ Bis zur Auslosung lassen sich Name, Modus und Race über **Ändern** noch anpass
 - Ist ein Spiel zu Ende, trägt das Tablet das Ergebnis ein und gibt den Tisch frei.
 - Ergebnisse ohne Tablet trägst du im **Spielplan** direkt in CueDesk ein. **Rückgängig** nimmt die letzte Änderung dort zurück.
 - **Pausieren** verhindert, dass an den Tablets neue Spiele starten; laufende Spiele gehen weiter. **Fortsetzen** hebt das auf.
+- **Live an** / **Live aus** unter den Knöpfen im Kopf schaltet die Live-Übertragung jederzeit um. Bei **Live aus** sieht nur noch die Turnierleitung die Spielstände.
 
 Bei **Zwei Gruppen** startest du nach den Gruppenspielen die **Duelle**, bei **Gruppen mit KO-Runde** die **KO-Runde**. Kommt jemand zu spät, hilft **Spieler nachtragen**.
 

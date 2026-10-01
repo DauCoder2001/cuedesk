@@ -10,6 +10,17 @@ export const VERALTET_NACH_MS = 3 * 60 * 60 * 1000;
 // TV-Ansicht (Geraet.tsx oeffnet sie von selbst). Beschriftung der Auswahl.
 export const OHNE_TISCH_TEXT = 'Fernseher (TV-Ansicht)';
 
+// Laeuft gerade eine Live-Uebertragung? Ja, wenn ein Turnier oder
+// Liga-Spieltag laeuft und Live dort nicht abgeschaltet ist (Stufe 25; die
+// Datenbank prueft dasselbe in live_uebertragen).
+export function liveAktiv(turniere: { status: string; einstellungen: unknown }[]): boolean {
+  return turniere.some(
+    (t) => t.status === 'laeuft' && (t.einstellungen as { live?: boolean } | null)?.live !== false
+  );
+}
+
+export const KEIN_LIVE_TEXT = 'Gerade keine Live-Übertragung. Spielstände erscheinen hier, sobald ein Turnier mit Live-Übertragung läuft.';
+
 export type Kachel =
   // "bereit": am Tisch steht ein Tablet, gespielt wird aber noch nicht
   | { art: 'frei'; bereit: boolean }

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { dauerText, kachel } from '../src/live';
+import { dauerText, kachel, liveAktiv } from '../src/live';
 
 const jetzt = Date.parse('2026-09-22T20:00:00Z');
 const frisch = '2026-09-22T19:59:00Z';
@@ -60,5 +60,16 @@ describe('Kachel eines Tisches', () => {
     expect(dauerText(jetzt - 32 * 60000, jetzt)).toBe('läuft seit 32 min');
     expect(dauerText(jetzt - 75 * 60000, jetzt)).toBe('läuft seit 1:15 h');
     expect(dauerText(null, jetzt)).toBe('läuft');
+  });
+});
+
+describe('Live-Uebertragung', () => {
+  test('nur bei laufendem Turnier, Live fehlt = an', () => {
+    expect(liveAktiv([])).toBe(false);
+    expect(liveAktiv([{ status: 'geplant', einstellungen: {} }])).toBe(false);
+    expect(liveAktiv([{ status: 'laeuft', einstellungen: {} }])).toBe(true);
+    expect(liveAktiv([{ status: 'laeuft', einstellungen: { live: false } }])).toBe(false);
+    expect(liveAktiv([{ status: 'laeuft', einstellungen: { live: false } }, { status: 'laeuft', einstellungen: { live: true } }])).toBe(true);
+    expect(liveAktiv([{ status: 'beendet', einstellungen: { live: true } }])).toBe(false);
   });
 });

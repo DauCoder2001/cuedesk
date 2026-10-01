@@ -16,7 +16,7 @@ Mit deinem Konto verfolgst du die Spiele deines Vereins, auch auf dem Handy, sie
 
 Die Seite **Zuschauen** ist fürs Handy gebaut. Oben wählst du:
 
-- **Tische**: alle Tische mit Spielstand, live bei jedem Stoß.
+- **Tische**: alle Tische mit Spielstand, live bei jedem Stoß – solange ein Turnier oder Liga-Spieltag mit Live-Übertragung läuft. Sonst steht dort „Gerade keine Live-Übertragung“.
 - **Turnier**: das laufende Turnier mit Gruppentabellen, KO-Runde, den nächsten Spielen und den heute beendeten Partien. Beim Liga-Spieltag stehen dort Partie- und Matchpunkte.
 - **Chat**: nur, wenn dein Verein ihn eingeschaltet hat und das Turnier läuft.
 

@@ -28,6 +28,7 @@ Ein Liga-Spieltag besteht immer aus zwei Begegnungen gegen dieselbe Mannschaft, 
 
 - **Spieltag starten** gibt die Partien für die Tablets frei. Die Ergebnisse kommen von den Tablets oder werden in der Tabelle eingetragen.
 - **Spielbericht einlesen** übernimmt die Ergebnisse aus dem Spielbericht des Verbands; vorher zeigt CueDesk, was sich ändert.
+- **Live an** / **Live aus** im Kopf gilt für beide Begegnungen: Bei Live an sehen Mitglieder und Fernseher die Spielstände, solange der Spieltag läuft.
 - **Fürs Rating werten** entscheidet, ob die Partien dieses Spieltags ins Vereins-Rating eingehen. 14.1 zählt nie.
 
 ## 5. Abschließen

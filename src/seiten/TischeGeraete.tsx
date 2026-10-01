@@ -247,6 +247,11 @@ export default function TischeGeraete() {
             Auf dem Tablet die Adresse mit dem Zusatz <code>?geraet</code> öffnen. Dort steht ein
             sechsstelliger Code, der 15 Minuten gilt.
           </p>
+          <p className="hinweis">
+            Wichtig: <code>?geraet</code> in einem privaten Browser-Fenster oder direkt auf dem Tablet bzw. Fernsehgerät
+            öffnen und dort koppeln – nicht in dem Browser, in dem du gerade angemeldet bist. Sonst wird dein eigenes
+            Konto zum Gerät und sieht mehr, als ein Tablet oder Fernseher sehen soll.
+          </p>
           <div className="zeile" ref={koppelPflicht.bereich}>
             <input
               style={{ width: '120px', letterSpacing: '2px', textTransform: 'uppercase' }}

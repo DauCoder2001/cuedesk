@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from '../supabase';
 import { useSitzung } from '../sitzung';
-import { kachel } from '../live';
+import { KEIN_LIVE_TEXT, kachel, liveAktiv } from '../live';
 import { rundeText } from '../archiv';
 import { vereinsEinstellungen } from '../vereinseinstellungen';
 import { anzeigeWaehlen, chatAn, ligaStand, ortsTag, spiellage, tabellen } from '../zuschauen';
@@ -79,18 +79,23 @@ export default function Zuschauen({
   useEffect(() => {
     if (!verein) return;
     let vorbei = false;
+    // Staende komplett neu lesen, auch wenn die Live-Uebertragung umschaltet
+    const staendeLaden = async () => {
+      const { data } = await supabase.from('live_stand').select('tisch_id, zustand, aktualisiert').eq('verein_id', verein.id);
+      if (vorbei) return;
+      const neu: Record<string, Stand> = {};
+      (data ?? []).forEach((z) => (neu[z.tisch_id] = { zustand: z.zustand, aktualisiert: z.aktualisiert }));
+      setStaende(neu);
+    };
     void (async () => {
-      const [t, s, p] = await Promise.all([
+      const [t, p] = await Promise.all([
         supabase.from('tische').select('*').eq('verein_id', verein.id).eq('aktiv', true).order('nummer'),
-        supabase.from('live_stand').select('tisch_id, zustand, aktualisiert').eq('verein_id', verein.id),
         supabase.from('personen').select('*').eq('verein_id', verein.id)
       ]);
       if (vorbei) return;
       setTische(t.data ?? []);
       setPersonen(p.data ?? []);
-      const neu: Record<string, Stand> = {};
-      (s.data ?? []).forEach((z) => (neu[z.tisch_id] = { zustand: z.zustand, aktualisiert: z.aktualisiert }));
-      setStaende(neu);
+      await staendeLaden();
     })();
     void turniereLaden();
     void heuteLaden();
@@ -109,9 +114,10 @@ export default function Zuschauen({
         const z = e.new as { tisch_id: string; zustand: unknown; aktualisiert: string };
         setStaende((b) => ({ ...b, [z.tisch_id]: { zustand: z.zustand, aktualisiert: z.aktualisiert } }));
       })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'turniere', filter: `verein_id=eq.${verein.id}` }, () =>
-        void turniereLaden()
-      )
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'turniere', filter: `verein_id=eq.${verein.id}` }, () => {
+        void turniereLaden();
+        void staendeLaden();
+      })
       // Partien des gezeigten Turniers laedt der Effekt weiter unten
       .on('postgres_changes', { event: '*', schema: 'public', table: 'partien', filter: `verein_id=eq.${verein.id}` }, () =>
         void heuteLaden()
@@ -266,8 +272,10 @@ export default function Zuschauen({
       {ansicht === 'tische' && (
         <section>
           {tische.length === 0 && <p className="hinweis">Es ist noch kein Tisch angelegt.</p>}
+          {/* Auch fuer die Leitung: die Seite zeigt, was Mitglieder sehen */}
+          {!liveAktiv(turniere) && <p className="hinweis">{KEIN_LIVE_TEXT}</p>}
           <div className="zuschauentische">
-            {tische.map((tisch) => (
+            {liveAktiv(turniere) && tische.map((tisch) => (
               <Tischkachel
                 key={tisch.id}
                 tisch={tisch}

@@ -8,6 +8,7 @@ import { kaderHinweise } from '../mannschaften';
 import { schutzwortPruefen } from '../schutzwort';
 import { STATUS_TEXT } from './Turniere';
 import SpielberichtImport from './SpielberichtImport';
+import LiveSchalter from './LiveSchalter';
 import type { LigaSpiel } from '../liga';
 import type { TurnierEinstellungen } from './Turniere';
 import type { Mannschaft, MannschaftSpieler, Partie, Person, Turnier, TurnierTeilnehmer } from '../datenbank.types';
@@ -442,6 +443,20 @@ export default function LigaAnsicht({
     await verdeckenSetzen(runde, seite, false);
   }
 
+  // Live-Uebertragung gilt fuer den ganzen Spieltag: beide Begegnungen
+  async function liveSetzen(an: boolean) {
+    if (!turnier || !liga) return;
+    const ids = [turnier.id, ...(liga.partner ? [liga.partner] : [])];
+    const { data, error } = await supabase.from('turniere').select('id, einstellungen').in('id', ids);
+    if (error) return setFehler(error.message);
+    for (const t of data ?? []) {
+      const neu = { ...((t.einstellungen ?? {}) as TurnierEinstellungen), live: an };
+      const { error: fehler } = await supabase.from('turniere').update({ einstellungen: neu }).eq('id', t.id);
+      if (fehler) return setFehler(fehler.message);
+    }
+    await laden();
+  }
+
   async function ratingUmschalten() {
     if (!turnier) return;
     const { error } = await supabase.from('turniere').update({ rating_werten: !turnier.rating_werten }).eq('id', turnier.id);
@@ -648,6 +663,7 @@ export default function LigaAnsicht({
               </p>
             )}
           </div>
+          <div className="kopfrechts">
           <div className="knopfpaar kopfaktionen">
             <span className={`marke ${turnier.status === 'laeuft' ? 'livelaeuft' : ''}`}>{STATUS_TEXT[turnier.status]}</span>
             {bearbeitbar && turnier.status === 'geplant' && (
@@ -697,6 +713,10 @@ export default function LigaAnsicht({
                 Spieltag löschen
               </button>
             )}
+          </div>
+          {bearbeitbar && turnier.status !== 'beendet' && (
+            <LiveSchalter an={einstellungen.live !== false} schalten={(an) => void liveSetzen(an)} />
+          )}
           </div>
         </div>
         <div className="kennzahlen">

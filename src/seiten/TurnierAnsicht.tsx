@@ -10,6 +10,7 @@ import type { BerichtBlock } from '../turnierbericht';
 import { herunterladen } from '../pdf';
 import AusschreibungBlock from './AusschreibungBlock';
 import AuslosungTeilen from './AuslosungTeilen';
+import LiveSchalter from './LiveSchalter';
 import { useWechsel } from '../ungespeichert';
 import { angefangen, auslosen, bergerRunden, hoechstwert, rangliste, spielBeendet } from '../turnier';
 import type { Gleichstand, RanglistenPartie, Zeile } from '../turnier';
@@ -59,8 +60,7 @@ const ZWEI_GRUPPEN_MAX = 16;
 // KO-Runde: Rundennummer im Spielplan
 const KO_RUNDE_NR: Record<KoRunde, number> = { R16: 1, QF: 2, SF: 3, FIN: 4, BRO: 4 };
 const KO_ABSCHNITT: Record<string, string> = { af: 'Achtelfinale', qf: 'Viertelfinale', sf: 'Halbfinale', fin: 'Finale und Platz 3', bro: 'Finale und Platz 3' };
-const istGruppenspiel = (p: Partie) => !p.phase || p.phase === 'gruppe';
-const istGruppenzeile = (zeile: string) => /^[A-D]$/.test(zeile);
+const istGruppenspiel = (p: Partie) => !p.phase || p.phase === 'gruppe';const istGruppenzeile = (zeile: string) => /^[A-D]$/.test(zeile);
 
 type Aenderungszeile = { zeitpunkt: string; nachher: Partial<Partie> | null; aktion: string };
 type Rueckgaengig = { partieId: string; vorher: Pick<Partie, 'ergebnis_a' | 'ergebnis_b' | 'status' | 'beendet'> };
@@ -1590,6 +1590,7 @@ export default function TurnierAnsicht({
               <p className="hinweis">{prognoseText(zeitDaten())}</p>
             )}
           </div>
+          <div className="kopfrechts">
           <div className="knopfpaar">
             <span className={`marke ${turnier.status === 'laeuft' ? 'livelaeuft' : ''}`}>{STATUS_TEXT[turnier.status]}</span>
             {aendern && bearbeitbar && turnier.status === 'geplant' && (
@@ -1631,6 +1632,10 @@ export default function TurnierAnsicht({
                 Turnier löschen
               </button>
             )}
+          </div>
+          {bearbeitbar && turnier.quelle !== 'import' && turnier.status !== 'beendet' && (
+            <LiveSchalter an={einstellungen.live !== false} schalten={(an) => void einstellungenSetzen({ live: an })} />
+          )}
           </div>
         </div>
         {darfLeiten && turnier.quelle !== 'import' && turnier.status !== 'geplant' && (

@@ -82,6 +82,7 @@ export type TurnierEinstellungen = {
   pausiert?: boolean; // Tablets starten keine neuen Spiele
   art?: string; // Turnierart (Bezeichnung aus der Liste des Vereins, beim Anlegen festgehalten)
   chat?: boolean; // Chat fuer Zuschauer (nur wenn der Verein ihn eingeschaltet hat)
+  live?: boolean; // Live-Uebertragung, solange das Turnier laeuft (fehlt: an; Stufe 25)
   tvAnsicht?: 'auslosung' | 'live' | 'results'; // was die Fernseher zeigen
   beginn?: string; // erstes Ergebnis (Zeitprognose)
   ausschreibung?: Ausschreibung; // Einladung zum Turnier (src/ausschreibung.ts)
@@ -127,6 +128,7 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
   const [ratingWerten, setRatingWerten] = useState(true);
   const [art, setArt] = useState('');
   const [chat, setChat] = useState(true);
+  const [live, setLive] = useState(true);
   // Filter der Turnierliste nach Turnierart ('' = alle)
   const [artFilter, setArtFilter] = useState('');
   // Ausgleich in Prozent aus den Rating-Einstellungen, falls der Verein keinen eigenen vorgibt
@@ -137,7 +139,7 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
   // Aenderungen nachfragt
   const formularStand = formular
     ? { name, datum, disziplin, modus, raceTo, racePhase2, raceKo, liga, spieltag, heim, gegner, eigeneMannschaft,
-        mannschaftId, ziele, serieId, vorgabeAn, staerke, obergrenze, ratingWerten, art, chat }
+        mannschaftId, ziele, serieId, vorgabeAn, staerke, obergrenze, ratingWerten, art, chat, live }
     : null;
   const [ursprung, setUrsprung] = useState<unknown>(null);
   useEffect(() => {
@@ -248,7 +250,8 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
         staerke: Math.min(100, Math.max(0, Number(staerke) || 0)),
         obergrenze: Math.max(0, Number(obergrenze) || 0)
       },
-      chat: vorgaben.chat && chat
+      chat: vorgaben.chat && chat,
+      live
     };
     if (bearbeitet) return aenderungSpeichern(bearbeitet, einstellungen);
     const { data, error } = await supabase
@@ -302,6 +305,7 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
     setStaerke(String(e.vorgabe?.staerke ?? ratingStaerke));
     setObergrenze(String(e.vorgabe?.obergrenze ?? 0));
     setChat(e.chat ?? false);
+    setLive(e.live ?? true);
     setRatingWerten(t.rating_werten);
     setArt(e.art ?? '');
     pflicht.zuruecksetzen();
@@ -343,7 +347,7 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
     // Was das Formular festlegt, kommt neu; alles andere (Ausschreibung,
     // TV-Ansicht ...) bleibt. Bei neuem Modus fallen dessen Vorbereitungen weg.
     const behalten = { ...((aktuell.einstellungen ?? {}) as TurnierEinstellungen) };
-    const vomFormular: (keyof TurnierEinstellungen)[] = ['raceTo', 'racePhase2', 'raceKo', 'racePhase3', 'vorgabe', 'art', 'chat'];
+    const vomFormular: (keyof TurnierEinstellungen)[] = ['raceTo', 'racePhase2', 'raceKo', 'racePhase3', 'vorgabe', 'art', 'chat', 'live'];
     const modusAbhaengig: (keyof TurnierEinstellungen)[] = [
       'gruppenzahl', 'weiter', 'paarung', 'ko', 'phase2', 'phase3', 'handReihenfolge', 'tausch', 'nachgetragen'
     ];
@@ -450,6 +454,7 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
                 setRatingWerten(t.ratingWerten);
                 setArt(t.art ?? '');
                 setChat(true);
+                setLive(true);
                 setLiga(vorgaben.liga.liga);
                 // Standard-Mannschaft nach Nummer im Mannschaftspass, sonst die erste der Saison
                 const rang = vorgaben.liga.mannschaftRang;
@@ -645,6 +650,16 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
                   {modus === 'liga'
                     ? 'Im Liga-Spieltag zählen auch die Partien gegen die gegnerische Mannschaft; 14.1 zählt nie.'
                     : 'Partien mit Gästen zählen nie.'}
+                </small>
+              </span>
+            </label>
+            <label className="ankreuz">
+              <input type="checkbox" checked={live} onChange={(e) => setLive(e.target.checked)} />
+              <span>
+                Live übertragen
+                <small>
+                  Spielstände erscheinen auf Live, Zuschauen und dem Fernseher, solange das Turnier läuft – an allen
+                  Tischen, auch freie Spiele.
                 </small>
               </span>
             </label>

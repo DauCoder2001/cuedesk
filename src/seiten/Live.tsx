@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../supabase';
 import { useSitzung } from '../sitzung';
-import { dauerText, kachel } from '../live';
+import { KEIN_LIVE_TEXT, dauerText, kachel, liveAktiv } from '../live';
 import { schutzwortPruefen } from '../schutzwort';
 import type { Kachel } from '../live';
 import type { Geraet, Tisch } from '../datenbank.types';
@@ -33,15 +33,31 @@ export default function Live() {
   const [fehler, setFehler] = useState<string | null>(null);
   const [meldung, setMeldung] = useState<string | null>(null);
   const [, setTakt] = useState(0);
+  const [liveAn, setLiveAn] = useState<boolean | null>(null); // null: noch nicht geladen
 
   useEffect(() => {
     if (!verein) return;
     let vorbei = false;
 
-    (async () => {
-      const [tischAntwort, standAntwort, geraetAntwort] = await Promise.all([
-        supabase.from('tische').select('*').eq('verein_id', verein.id).eq('aktiv', true).order('nummer'),
+    // Staende komplett neu lesen: auch beim Ein- und Ausschalten der
+    // Live-Uebertragung, denn dann aendert sich, was die Datenbank liefert.
+    const staendeLaden = async () => {
+      const [standAntwort, turnierAntwort] = await Promise.all([
         supabase.from('live_stand').select('tisch_id, zustand, aktualisiert').eq('verein_id', verein.id),
+        supabase.from('turniere').select('status, einstellungen').eq('verein_id', verein.id).eq('status', 'laeuft')
+      ]);
+      if (vorbei) return;
+      const neu: Record<string, Stand> = {};
+      (standAntwort.data ?? []).forEach((z) => {
+        neu[z.tisch_id] = { zustand: z.zustand, aktualisiert: z.aktualisiert };
+      });
+      setStaende(neu);
+      setLiveAn(liveAktiv(turnierAntwort.data ?? []));
+    };
+
+    (async () => {
+      const [tischAntwort, geraetAntwort] = await Promise.all([
+        supabase.from('tische').select('*').eq('verein_id', verein.id).eq('aktiv', true).order('nummer'),
         // Die Geraeteliste sehen nur Turnierleitung und Vereins-Admin; fuer
         // alle anderen bleibt sie leer und der Knopf verschwindet.
         supabase.from('geraete').select('*').eq('verein_id', verein.id).eq('aktiv', true)
@@ -49,11 +65,7 @@ export default function Live() {
       if (vorbei) return;
       setTische(tischAntwort.data ?? []);
       setGeraete(geraetAntwort.data ?? []);
-      const neu: Record<string, Stand> = {};
-      (standAntwort.data ?? []).forEach((z) => {
-        neu[z.tisch_id] = { zustand: z.zustand, aktualisiert: z.aktualisiert };
-      });
-      setStaende(neu);
+      await staendeLaden();
     })();
 
     const kanal = supabase
@@ -77,6 +89,10 @@ export default function Live() {
             [zeile.tisch_id]: { zustand: zeile.zustand, aktualisiert: zeile.aktualisiert }
           }));
         }
+      )
+      // Live-Uebertragung ein/aus oder Turnier gestartet/beendet: neu lesen
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'turniere', filter: `verein_id=eq.${verein.id}` }, () =>
+        void staendeLaden()
       )
       .subscribe();
 
@@ -104,6 +120,13 @@ export default function Live() {
     <div className="einspaltig">
       <section className="block">
         {tische.length === 0 && <p className="hinweis">Es ist noch kein Tisch angelegt.</p>}
+        {liveAn === false && (
+          <p className="hinweis">
+            {darfLeiten
+              ? 'Live-Übertragung aus: Diese Spielstände sieht nur die Turnierleitung, nicht die Mitglieder und nicht der Fernseher.'
+              : KEIN_LIVE_TEXT}
+          </p>
+        )}
         {fehler && <p className="fehler">{fehler}</p>}
         {meldung && <p className="meldung">{meldung}</p>}
         <div className="livetische">

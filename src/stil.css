@@ -149,6 +149,8 @@ ul.schlicht { list-style: none; padding: 0; margin: 0; display: flex; flex-direc
 .konto .knopfname { border: none; background: none; padding: 3px 6px; color: var(--text-leise); font-size: 14px; }
 .konto .knopfname:hover:not(:disabled) { background: var(--flaeche-2); color: var(--text); }
 .konto .knopfname.aktiv { background: var(--akzent-hell); color: var(--akzent); }
+/* Rechte Seite im Kopf von Turnier und Liga-Spieltag: Knoepfe, darunter "Live an/aus" */
+.kopfrechts { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
 /* Hilfe-Knopf "?" in der Kopfzeile und auf der Zuschauerseite */
 .hilfeknopf { width: 30px; height: 30px; padding: 0; border-radius: 50%; font-weight: 700; font-size: 15px; line-height: 1; }
 .hilfeknopf.aktiv { background: var(--akzent-hell); color: var(--akzent); border-color: var(--akzent); }
