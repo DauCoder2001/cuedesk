@@ -408,6 +408,8 @@
   }
 
   #btn-back-141 { display: none; background: #6c757d; color: #fff; }
+  /* Turnierspiel abbrechen (wie "Spiel abbrechen" am Pool-Board) */
+  #btn-abort-141 { display: none; font-size: 2.7vmin; padding: 0.9vmin 1.8vmin; }
 
   /* Turnier-Picker: Auswahl der 14.1-Partien eines laufenden Spieltags */
   #picker141 {
@@ -651,6 +653,7 @@
   <div id="bottom-bar">
     <div class="bb-left">
       <button id="undoBtn" type="button" onclick="undo()">↩️ Undo</button>
+      <button id="btn-abort-141" type="button">✖ Spiel abbrechen</button>
       <button id="btn-back-141" type="button">↩ Zurück zum Turnier</button>
     </div>
     <div id="turn-actions">
@@ -738,6 +741,7 @@
         <li><b>↩️ Undo</b> nimmt den letzten Schritt zurück.</li>
         <li><b>📋 Protokoll</b> zeigt den Spielzettel (F | Pkt. | Gesamt je Spieler) und lässt sich drucken.</li>
         <li><b>⚙️</b> ändert die Zielpunkte · <b>✏️</b> die Namen · <b>🔄 Neues Match</b> startet neu.</li>
+        <li>Im Turnierspiel gibt es kein <b>Neues Match</b>: Das Ende bestätigst du mit <b>✅ Ergebnis bestätigen</b>, <b>✖ Spiel abbrechen</b> legt die Partie zurück in den Spielplan.</li>
       </ul>
 
       <h3 style="border-top:1px solid #eee;padding-top:14px;margin-top:16px;">📐 Aufbauhilfe – Wiederaufbau nach 14 Bällen</h3>
@@ -1861,6 +1865,9 @@
     // "Zurueck zum Turnier" fuehrt zum Pool-Picker, solange ein Turnier laeuft.
     const backBtn = document.getElementById('btn-back-141');
     if (backBtn) backBtn.style.display = tournamentActive() && !imTurnier ? 'inline-block' : 'none';
+    // Im Turnierspiel wie am Pool-Board: kein "Neues Match", dafuer "Spiel abbrechen"
+    document.getElementById('newGameBtn').style.display = imTurnier ? 'none' : '';
+    document.getElementById('btn-abort-141').style.display = imTurnier ? 'inline-block' : 'none';
   }
 
   // Verarbeitet den aktuellen Tisch-Stand. 14.1 wird direkt gespielt; ein laufendes
@@ -2002,6 +2009,11 @@
     claimed = true;   // bei leerem Tisch beansprucht erst dieser Klick den Tisch
     save();
     applyMode();
+  });
+  document.getElementById('btn-abort-141').addEventListener('click', async () => {
+    if (!state.tournamentMatchId) return;
+    if (!await confirmModal("Spiel abbrechen und zurück in den Spielplan legen?")) return;
+    await abbruch141();
   });
   document.getElementById('btn-back-141').addEventListener('click', async () => {
     yielded = true;   // verhindert, dass unser onValue den freigegebenen Tisch neu beansprucht
