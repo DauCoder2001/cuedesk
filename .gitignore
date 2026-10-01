@@ -7,3 +7,5 @@ dist/
 tsconfig.tsbuildinfo
 offline/
 offline-bau/
+# Original-Grafiken und Vereinslogos; die fertigen Icons liegen in public/
+Grafiken-Logos/
