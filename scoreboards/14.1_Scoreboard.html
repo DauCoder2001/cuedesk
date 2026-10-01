@@ -875,7 +875,7 @@
   // Die Regeln des Boards (getestet in test/board-regeln.test.ts)
   import {
     freiesSpielLaeuft, offeneSpiele, wartetText, zeige141Auswahl, spielBeanspruchen, spielZuruecklegen,
-    ergebnisSchonEingetragen, ohneSpielParameter, siegerText, haengendeSpiele
+    ergebnisSchonEingetragen, ohneSpielParameter, siegerText, haengendeSpiele, hat141Partien
   } from "./js/board-regeln.ts";
   import { startIdleRedirect } from "./js/idle-timeout.js";
   import { keepScreenAwake } from "./js/wake-lock.js";
@@ -1837,7 +1837,7 @@
       set(dbRef, null).catch(() => {});
       return;
     }
-    const zeigePicker = zeige141Auswahl(tournamentActive(), imTurnier, frei141, offene141().length + haengende141().length);
+    const zeigePicker = zeige141Auswahl(tournamentActive(), imTurnier, frei141, hat141Partien(tournament));
     const overlay = document.getElementById('picker141');
     if (overlay) {
       overlay.style.display = zeigePicker ? 'flex' : 'none';
@@ -1919,8 +1919,15 @@
         state.gameType = "14.1";
       }
     } else {
-      // leerer Tisch -> 14.1-Default anlegen (Spieler hat 14.1 gewaehlt)
       state = freshState141();
+      if (!tournamentLoaded || auswahlStattFrei()) {
+        // Wie am Pool-Board: Turnierstatus noch offen oder Spielauswahl -> nichts
+        // an den Tisch schreiben, sonst stuende dort ein leeres Spiel ("belegt").
+        render();
+        applyMode();
+        return;
+      }
+      // leerer Tisch ohne Turnier -> 14.1-Default anlegen (Spieler hat 14.1 gewaehlt)
       claimed = true;
       save();
     }
@@ -1928,7 +1935,11 @@
     applyMode();
   }
 
-  onValue(dbRef, (snapshot) => { tableData = snapshot.val(); syncFromTable(); });
+  // Liegt bei leerem Tisch die Spielauswahl ueber dem Board?
+  function auswahlStattFrei() { return tournamentActive() && !frei141 && hat141Partien(tournament); }
+
+  let tischGeladen = false;   // erst nach dem ersten Tisch-Stand darf "leer" gelten
+  onValue(dbRef, (snapshot) => { tableData = snapshot.val(); tischGeladen = true; syncFromTable(); });
 
   // Turnier-Status beobachten. WICHTIG: nur die UI aktualisieren (applyMode) –
   // die Tisch-Logik steuert allein der tables-Listener (mit immer frischen Daten).
@@ -1938,6 +1949,14 @@
   onValue(ref(db, 'tournament/active'), (snap) => {
     tournament = snap.val();
     tournamentLoaded = true;
+    // Leerer Tisch und keine Spielauswahl (kein Turnier, keine 14.1-Partien):
+    // Frei-Default nachtraeglich anlegen, wie am Pool-Board
+    if (tischGeladen && tableData == null && !claimed && !yielded && !auswahlStattFrei()) {
+      state = freshState141();
+      claimed = true;
+      save();
+      render();
+    }
     applyMode();
   });
 
@@ -1980,6 +1999,7 @@
     frei141 = true;
     // Merken, damit das Board auch nach dem Neuladen im freien Spiel bleibt
     state.frei = true;
+    claimed = true;   // bei leerem Tisch beansprucht erst dieser Klick den Tisch
     save();
     applyMode();
   });

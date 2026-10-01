@@ -31,6 +31,7 @@ Was der Fernseher während eines Turniers zeigt (**Auslosung**, **Live-Tische**,
 - Hängt ein Tablet, schickt **Neu laden** auf der Seite Live ihm den Befehl zum Neuladen. Dafür braucht es das Schutzwort.
 - Ein Tablet an einen anderen Tisch umziehen: in der Geräteliste den Tisch ändern, oder direkt am Tablet unter **Tisch wechseln**.
 - Läuft an einem Tisch eine 14.1-Turnierpartie, lässt sich der Tisch nicht im 8/9/10-Ball-Board öffnen; es bietet **Zum 14.1-Board** an. Ist der Spielstand einer Partie am Tisch verloren gegangen, steht sie in der Spielauswahl oben unter „Läuft an diesem Tisch, der Spielstand fehlt“ und kann mit **neu beginnen** wieder bei 0:0 starten.
+- Nach **Ergebnis bestätigen** zeigen beide Boards wieder die Spielauswahl, auch wenn an diesem Board keine Partie mehr offen ist; darunter stehen die Spiele, die am anderen Board warten, und **Frei spielen**.
 - **Trennen** löst die Kopplung; das Gerät zeigt danach wieder einen Code.
 
 ## Ohne Internet

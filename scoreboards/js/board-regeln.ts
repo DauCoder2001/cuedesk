@@ -178,9 +178,17 @@ export function poolModus(turnierAktiv: boolean, freiGewaehlt: boolean, hatSpiel
   return 'free';
 }
 
-// Legt sich die 14.1-Auswahl ueber das Board?
-export function zeige141Auswahl(turnierAktiv: boolean, imTurnierspiel: boolean, freiGewaehlt: boolean, offen: number): boolean {
-  return turnierAktiv && !imTurnierspiel && !freiGewaehlt && offen > 0;
+// Hat das Turnier ueberhaupt 14.1-Partien (offen, laufend oder gespielt)?
+export function hat141Partien(turnier: BoardTurnier): boolean {
+  return Object.values(turnier?.schedule ?? {}).some((m) => m.discipline === '14.1');
+}
+
+// Legt sich die 14.1-Auswahl ueber das Board? Wie am Pool-Board auch dann,
+// wenn alle 14.1-Partien vergeben sind - sonst landete das Board nach dem
+// Bestaetigen in einem leeren freien Spiel. Ein Turnier ganz ohne 14.1
+// (etwa reines 9-Ball) laesst das Board frei spielen.
+export function zeige141Auswahl(turnierAktiv: boolean, imTurnierspiel: boolean, freiGewaehlt: boolean, mit141: boolean): boolean {
+  return turnierAktiv && !imTurnierspiel && !freiGewaehlt && mit141;
 }
 
 // ---------- Direktlink ----------

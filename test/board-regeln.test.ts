@@ -10,6 +10,7 @@ import {
   fremdesTurnierspiel,
   gehoertZumTisch,
   haengendeSpiele,
+  hat141Partien,
   koFortschreibung,
   ohneSpielParameter,
   offeneSpiele,
@@ -165,12 +166,23 @@ describe('Spielauswahl am Pool-Board', () => {
     expect(poolModus(false, false, false)).toBe('free');
   });
 
-  test('14.1-Auswahl nur bei laufendem Turnier mit offenen Spielen', () => {
-    expect(zeige141Auswahl(true, false, false, 1)).toBe(true);
-    expect(zeige141Auswahl(true, true, false, 1)).toBe(false);
-    expect(zeige141Auswahl(true, false, true, 1)).toBe(false);
-    expect(zeige141Auswahl(true, false, false, 0)).toBe(false);
-    expect(zeige141Auswahl(false, false, false, 2)).toBe(false);
+  test('14.1-Auswahl nur bei laufendem Turnier mit 14.1-Partien', () => {
+    expect(zeige141Auswahl(true, false, false, true)).toBe(true);
+    expect(zeige141Auswahl(true, true, false, true)).toBe(false);
+    expect(zeige141Auswahl(true, false, true, true)).toBe(false);
+    expect(zeige141Auswahl(true, false, false, false)).toBe(false);
+    expect(zeige141Auswahl(false, false, false, true)).toBe(false);
+  });
+
+  test('14.1-Partien im Turnier, auch wenn alle gespielt sind', () => {
+    expect(hat141Partien(spieltag())).toBe(true);
+    const gespielt = spieltag()!;
+    gespielt.schedule!.p1.status = 'completed';
+    gespielt.schedule!.p5.status = 'completed';
+    expect(offeneSpiele(gespielt, '14.1')).toEqual([]);
+    expect(hat141Partien(gespielt)).toBe(true);
+    expect(hat141Partien({ status: 'running', schedule: { a: spiel({ discipline: '9-Ball' }) } })).toBe(false);
+    expect(hat141Partien(null)).toBe(false);
   });
 });
 
