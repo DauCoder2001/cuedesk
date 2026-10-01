@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, test } from 'vitest';
-import { angefangen, auslosen, bergerRunden, hoechstwert, rangliste, spielBeendet } from '../src/turnier';
+import { angefangen, auslosen, bergerRunden, hoechstwert, rangliste, spielBeendet, spielZaehler, spielZaehlerText } from '../src/turnier';
 import type { RanglistenPartie } from '../src/turnier';
 
 // Original aus Turnier light. Fehlt die Datei, entfallen die Vergleichstests.
@@ -61,6 +61,29 @@ describe('Ergebnisse', () => {
     expect(angefangen(0, 2, 0, 2)).toBe(false);
     expect(angefangen(1, 2, 0, 2)).toBe(true);
     expect(angefangen(null, null, 0, 0)).toBe(false);
+  });
+});
+
+describe('Spielstand im Turnierkopf', () => {
+  const p = (a: number | null, b: number | null, tisch: string | null = null, vA = 0, vB = 0) => ({
+    ergebnis_a: a,
+    ergebnis_b: b,
+    vorgabe_a: vA,
+    vorgabe_b: vB,
+    tisch_id: tisch
+  });
+  const fertig = (x: ReturnType<typeof p>) => spielBeendet(x.ergebnis_a, x.ergebnis_b, 3);
+
+  test('beendet, laufend und offen', () => {
+    const liste = [p(3, 1), p(null, null, 't1'), p(2, 1), p(null, null), p(1, 0, null, 1, 0), p(null, null)];
+    // 1:0 bei Vorgabe 1:0 ist noch nicht angefangen
+    expect(spielZaehler(liste, fertig)).toEqual({ gesamt: 6, beendet: 1, laufen: 2, offen: 3 });
+  });
+
+  test('Text ohne leere Teile', () => {
+    expect(spielZaehlerText({ gesamt: 24, beendet: 6, laufen: 2, offen: 16 })).toBe('Spiele: 6 von 24 beendet · 2 laufen · 16 offen');
+    expect(spielZaehlerText({ gesamt: 24, beendet: 0, laufen: 0, offen: 24 })).toBe('Spiele: 0 von 24 beendet · 24 offen');
+    expect(spielZaehlerText({ gesamt: 3, beendet: 2, laufen: 1, offen: 0 })).toBe('Spiele: 2 von 3 beendet · 1 läuft');
   });
 });
 

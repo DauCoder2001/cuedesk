@@ -38,6 +38,7 @@ Bis zur Auslosung lassen sich Name, Modus und Race über **Ändern** noch anpass
 - An jedem Tablet unter **8/9/10-Ball** das Scoreboard öffnen. Es bietet die offenen Spiele des Turniers an; ein Tipp startet das Spiel am Tisch.
 - Jeder Punkt erscheint sofort in CueDesk, auf den Fernsehern und auf der Seite **Zuschauen**.
 - Ist ein Spiel zu Ende, trägt das Tablet das Ergebnis ein und gibt den Tisch frei.
+- Im Kopf steht unter dem geschätzten Turnierende, wie viele Spiele beendet sind, gerade laufen und noch offen sind.
 - Ergebnisse ohne Tablet trägst du im **Spielplan** direkt in CueDesk ein. **Rückgängig** nimmt die letzte Änderung dort zurück.
 - **Zurücksetzen** am Ende einer Spielzeile stellt eine Partie wieder auf offen: Der Tisch wird frei, das Ergebnis gelöscht, und das Tablet zeigt wieder die Spielauswahl. So brichst du ein Spiel ab oder lässt es neu spielen. Dafür braucht es das Schutzwort des Vereins.
 - **Pausieren** verhindert, dass an den Tablets neue Spiele starten; laufende Spiele gehen weiter. **Fortsetzen** hebt das auf.

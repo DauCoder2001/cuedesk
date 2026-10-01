@@ -60,6 +60,28 @@ export function angefangen(a: Stand, b: Stand, vorgabeA: number, vorgabeB: numbe
   return (a !== null && a !== vorgabeA) || (b !== null && b !== vorgabeB);
 }
 
+// Spielstand fuer den Turnierkopf: beendet, laufend (am Tisch oder mit
+// Zwischenstand) und offen
+export type SpielZaehler = { gesamt: number; beendet: number; laufen: number; offen: number };
+type ZaehlPartie = { ergebnis_a: Stand; ergebnis_b: Stand; vorgabe_a: number; vorgabe_b: number; tisch_id: string | null };
+
+export function spielZaehler<T extends ZaehlPartie>(partien: T[], beendet: (p: T) => boolean): SpielZaehler {
+  const z = { gesamt: partien.length, beendet: 0, laufen: 0, offen: 0 };
+  for (const p of partien) {
+    if (beendet(p)) z.beendet += 1;
+    else if (p.tisch_id !== null || angefangen(p.ergebnis_a, p.ergebnis_b, p.vorgabe_a, p.vorgabe_b)) z.laufen += 1;
+    else z.offen += 1;
+  }
+  return z;
+}
+
+export function spielZaehlerText(z: SpielZaehler): string {
+  const teile = [`Spiele: ${z.beendet} von ${z.gesamt} beendet`];
+  if (z.laufen > 0) teile.push(z.laufen === 1 ? '1 läuft' : `${z.laufen} laufen`);
+  if (z.offen > 0) teile.push(`${z.offen} offen`);
+  return teile.join(' · ');
+}
+
 // ---------- Rangliste ----------
 
 export type RanglistenPartie = {

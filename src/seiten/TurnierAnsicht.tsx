@@ -15,7 +15,7 @@ import ChatSchalter from './ChatSchalter';
 import ZuruecksetzenDialog from './ZuruecksetzenDialog';
 import { zuruecksetzbar } from '../partie-zuruecksetzen';
 import { useWechsel } from '../ungespeichert';
-import { angefangen, auslosen, bergerRunden, hoechstwert, rangliste, spielBeendet } from '../turnier';
+import { angefangen, auslosen, bergerRunden, hoechstwert, rangliste, spielBeendet, spielZaehler, spielZaehlerText } from '../turnier';
 import type { Gleichstand, RanglistenPartie, Zeile } from '../turnier';
 import {
   endtabelleZweiGruppen,
@@ -1603,6 +1603,9 @@ export default function TurnierAnsicht({
             )}
             {turnier.quelle !== 'import' && prognoseText(zeitDaten()) && (
               <p className="hinweis">{prognoseText(zeitDaten())}</p>
+            )}
+            {turnier.quelle !== 'import' && turnier.status === 'laeuft' && partien.length > 0 && (
+              <p className="hinweis">{spielZaehlerText(spielZaehler(partien, beendetBei))}</p>
             )}
           </div>
           <div className="kopfrechts">
