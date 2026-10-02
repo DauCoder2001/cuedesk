@@ -70,28 +70,38 @@ export default function Live() {
       await staendeLaden();
     })();
 
+    const standUebernehmen = (neu: unknown) => {
+      const zeile = neu as { tisch_id: string; zustand: unknown; aktualisiert: string };
+      setStaende((bisher) => ({
+        ...bisher,
+        [zeile.tisch_id]: { zustand: zeile.zustand, aktualisiert: zeile.aktualisiert }
+      }));
+    };
     const kanal = supabase
       .channel(`live-seite-${verein.id}`)
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'live_stand', filter: `verein_id=eq.${verein.id}` },
-        (ereignis) => {
-          if (ereignis.eventType === 'DELETE') {
-            const alt = ereignis.old as { tisch_id: string };
-            setStaende((bisher) => {
-              const kopie = { ...bisher };
-              delete kopie[alt.tisch_id];
-              return kopie;
-            });
-            return;
-          }
-          const zeile = ereignis.new as { tisch_id: string; zustand: unknown; aktualisiert: string };
-          setStaende((bisher) => ({
-            ...bisher,
-            [zeile.tisch_id]: { zustand: zeile.zustand, aktualisiert: zeile.aktualisiert }
-          }));
-        }
+        { event: 'INSERT', schema: 'public', table: 'live_stand', filter: `verein_id=eq.${verein.id}` },
+        (ereignis) => standUebernehmen(ereignis.new)
       )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'live_stand', filter: `verein_id=eq.${verein.id}` },
+        (ereignis) => standUebernehmen(ereignis.new)
+      )
+      // Beim Loeschen liefert die Datenbank nur den Schluessel (tisch_id), ein
+      // Filter auf verein_id greift dann nie - deshalb ungefiltert. Fremde
+      // Tische stehen nicht in der Liste und bleiben wirkungslos.
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'live_stand' }, (ereignis) => {
+        const alt = ereignis.old as { tisch_id?: string };
+        if (!alt.tisch_id) return;
+        setStaende((bisher) => {
+          if (!(alt.tisch_id! in bisher)) return bisher;
+          const kopie = { ...bisher };
+          delete kopie[alt.tisch_id!];
+          return kopie;
+        });
+      })
       // Live-Uebertragung ein/aus oder Turnier gestartet/beendet: neu lesen
       .on('postgres_changes', { event: '*', schema: 'public', table: 'turniere', filter: `verein_id=eq.${verein.id}` }, () =>
         void staendeLaden()

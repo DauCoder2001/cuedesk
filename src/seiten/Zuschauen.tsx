@@ -99,20 +99,30 @@ export default function Zuschauen({
     })();
     void turniereLaden();
     void heuteLaden();
+    const standUebernehmen = (neu: unknown) => {
+      const z = neu as { tisch_id: string; zustand: unknown; aktualisiert: string };
+      setStaende((b) => ({ ...b, [z.tisch_id]: { zustand: z.zustand, aktualisiert: z.aktualisiert } }));
+    };
     const kanal = supabase
       .channel(`zuschauen-${verein.id}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'live_stand', filter: `verein_id=eq.${verein.id}` }, (e) => {
-        if (e.eventType === 'DELETE') {
-          const alt = e.old as { tisch_id: string };
-          setStaende((b) => {
-            const k = { ...b };
-            delete k[alt.tisch_id];
-            return k;
-          });
-          return;
-        }
-        const z = e.new as { tisch_id: string; zustand: unknown; aktualisiert: string };
-        setStaende((b) => ({ ...b, [z.tisch_id]: { zustand: z.zustand, aktualisiert: z.aktualisiert } }));
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'live_stand', filter: `verein_id=eq.${verein.id}` }, (e) =>
+        standUebernehmen(e.new)
+      )
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'live_stand', filter: `verein_id=eq.${verein.id}` }, (e) =>
+        standUebernehmen(e.new)
+      )
+      // Beim Loeschen liefert die Datenbank nur den Schluessel (tisch_id), ein
+      // Filter auf verein_id greift dann nie - deshalb ungefiltert. Fremde
+      // Tische stehen nicht in der Liste und bleiben wirkungslos.
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'live_stand' }, (e) => {
+        const alt = (e.old as { tisch_id?: string }).tisch_id;
+        if (!alt) return;
+        setStaende((b) => {
+          if (!(alt in b)) return b;
+          const k = { ...b };
+          delete k[alt];
+          return k;
+        });
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'turniere', filter: `verein_id=eq.${verein.id}` }, () => {
         void turniereLaden();
