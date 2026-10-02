@@ -194,6 +194,12 @@ export default function App() {
       tipp: 'Turniere und Liga-Spieltage anlegen, Spielplan führen, Ergebnisse eintragen und abschließen.'
     },
     {
+      wert: 'serien',
+      name: 'Serien',
+      sichtbar: true,
+      tipp: 'Serienwertung: Punkte aus den Platzierungen mehrerer Turniere, mit Streichergebnissen.'
+    },
+    {
       wert: 'mannschaften',
       name: 'Mannschaften',
       sichtbar: true,
@@ -210,12 +216,6 @@ export default function App() {
       name: 'Rating',
       sichtbar: true,
       tipp: 'Vereins-Rating je Disziplin. Die Lupe zeigt, welche Partien in den Wert eines Spielers eingegangen sind.'
-    },
-    {
-      wert: 'serien',
-      name: 'Serien',
-      sichtbar: true,
-      tipp: 'Serienwertung: Punkte aus den Platzierungen mehrerer Turniere, mit Streichergebnissen.'
     },
     {
       wert: 'ranglisten',
