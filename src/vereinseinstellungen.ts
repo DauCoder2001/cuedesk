@@ -17,6 +17,9 @@ export type VereinsEinstellungen = {
     obergrenze: number; // 0 = ohne Grenze
     ratingWerten: boolean;
     art: string | null; // vorgewaehlte Turnierart, null: keine
+    // Modus am Turniertag: Vorschlag nach Teilnehmerzahl (src/modus-wahl.ts)
+    einzelBis: number; // bis hier Einzelgruppe
+    zweiBis: number; // bis hier Zwei Gruppen, darueber Gruppen mit KO
   };
   // Turnierarten des Vereins, z. B. "Liga-Spiel", "Vereinsmeisterschaft".
   // Nur eine Bezeichnung - Spiel, Rating und Scoreboard bleiben unberuehrt.
@@ -39,7 +42,9 @@ export const STANDARD_EINSTELLUNGEN: VereinsEinstellungen = {
     staerke: null,
     obergrenze: 0,
     ratingWerten: true,
-    art: null
+    art: null,
+    einzelBis: 7,
+    zweiBis: 15
   },
   turnierarten: [],
   liga: { liga: 'kreisliga', mannschaftRang: null },
@@ -90,6 +95,11 @@ export function vereinsEinstellungen(roh: unknown): VereinsEinstellungen {
   const l = (e.liga && typeof e.liga === 'object' ? e.liga : {}) as Record<string, unknown>;
   const s = STANDARD_EINSTELLUNGEN;
   const turnierarten = artenLesen(e.turnierarten);
+  // Grenzen fuer den Modus-Vorschlag: Einzelgruppe 3-12, Zwei Gruppen 4-16 (und
+  // groesser als die Einzelgruppen-Grenze)
+  const einzelBis = ganzeZahl(t.einzelBis, 3, 12) ?? s.turnier.einzelBis;
+  const zweiRoh = ganzeZahl(t.zweiBis, 4, 16) ?? s.turnier.zweiBis;
+  const zweiBis = zweiRoh > einzelBis ? zweiRoh : Math.max(einzelBis + 1, s.turnier.zweiBis);
   return {
     turnier: {
       raceTo: ganzeZahl(t.raceTo, 1, 25) ?? s.turnier.raceTo,
@@ -99,7 +109,9 @@ export function vereinsEinstellungen(roh: unknown): VereinsEinstellungen {
       staerke: ganzeZahl(t.staerke, 0, 100),
       obergrenze: ganzeZahl(t.obergrenze, 0, 24) ?? s.turnier.obergrenze,
       ratingWerten: typeof t.ratingWerten === 'boolean' ? t.ratingWerten : s.turnier.ratingWerten,
-      art: typeof t.art === 'string' && turnierarten.includes(t.art) ? t.art : null
+      art: typeof t.art === 'string' && turnierarten.includes(t.art) ? t.art : null,
+      einzelBis,
+      zweiBis
     },
     turnierarten,
     liga: {

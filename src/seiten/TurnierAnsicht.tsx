@@ -15,6 +15,8 @@ import ChatSchalter from './ChatSchalter';
 import ZuruecksetzenDialog from './ZuruecksetzenDialog';
 import { zuruecksetzbar } from '../partie-zuruecksetzen';
 import { useLaufendeStaende } from '../laufende-staende';
+import { modusOptionen, modusVorschlag } from '../modus-wahl';
+import type { WaehlbarerModus } from '../modus-wahl';
 import { laufenderStand, laufenderStandText } from '../live';
 import { useWechsel } from '../ungespeichert';
 import { angefangen, auslosen, bergerRunden, hoechstwert, rangliste, spielBeendet, spielZaehler, spielZaehlerText } from '../turnier';
@@ -111,6 +113,8 @@ export default function TurnierAnsicht({
   const [meldung, setMeldung] = useState<string | null>(null);
   const [arbeitet, setArbeitet] = useState(false);
   const [festDisziplin, setFestDisziplin] = useState<'' | '8-ball' | '9-ball' | '10-ball'>('');
+  // Wahl im Kasten "Modus festlegen"; null: der Vorschlag gilt
+  const [modusWahl, setModusWahl] = useState<WaehlbarerModus | null>(null);
   const [suche, setSuche] = useState('');
   const [gastName, setGastName] = useState('');
   const [abschnitt, setAbschnitt] = useState<string | null>(null);
@@ -220,6 +224,8 @@ export default function TurnierAnsicht({
   const einstellungen = (turnier?.einstellungen ?? {}) as TurnierEinstellungen;
   // Disziplin wird erst am Spieltag festgelegt (Serie ohne feste Disziplin)
   const disziplinOffen = Boolean(einstellungen.disziplinOffen);
+  // Modus wird am Turniertag nach der Teilnehmerzahl festgelegt
+  const modusOffen = Boolean(einstellungen.modusOffen);
   const turnierarten = vereinsEinstellungen(verein?.einstellungen).turnierarten;
   const raceTo = einstellungen.raceTo ?? 5;
   const va = einstellungen.vorgabe ?? { aktiv: false, staerke: 75, obergrenze: 0 };
@@ -543,11 +549,24 @@ export default function TurnierAnsicht({
     await laden();
   }
 
+  // ---------- Modus am Turniertag festlegen ----------
+
+  async function modusFestlegen(neu: WaehlbarerModus) {
+    if (!turnier) return;
+    const { modusOffen: _o, ...rest } = einstellungen;
+    const { error } = await supabase.from('turniere').update({ modus: neu, einstellungen: rest }).eq('id', turnier.id);
+    if (error) return setFehler(error.message);
+    setMeldung(`Modus festgelegt: ${MODUS_TEXT[neu]}.`);
+    setModusWahl(null);
+    await laden();
+  }
+
   // ---------- Auslosung ----------
 
   async function auslosenUndStarten() {
     if (!turnier) return;
     if (disziplinOffen) return setFehler('Erst die Disziplin festlegen, dann auslosen.');
+    if (modusOffen) return setFehler('Erst den Modus festlegen, dann auslosen.');
     if (mehrgruppig) {
       const [min, max] = grenzen;
       if (teilnehmer.length < min || teilnehmer.length > max) {
@@ -1615,9 +1634,12 @@ export default function TurnierAnsicht({
                 month: '2-digit',
                 year: 'numeric'
               })}{' '}
-              · {disziplinOffen ? 'Disziplin offen' : DISZIPLIN_TEXT[turnier.disziplin]} · {MODUS_TEXT[turnier.modus]}
+              · {disziplinOffen ? 'Disziplin offen' : DISZIPLIN_TEXT[turnier.disziplin]} ·{' '}
+              {modusOffen ? 'Modus nach Teilnehmerzahl' : MODUS_TEXT[turnier.modus]}
               {turnier.quelle !== 'import' &&
-                (zwei
+                (modusOffen
+                  ? ` · Race to ${raceTo}`
+                  : zwei
                   ? ` · Race to ${raceTo}, Duelle Race to ${race2}`
                   : mitKo
                     ? ` · Race to ${raceTo}, KO ${raceFuer('QF')}/${raceFuer('SF')}/${raceFuer('FIN')}`
@@ -1765,8 +1787,10 @@ export default function TurnierAnsicht({
             art: einstellungen.art,
             spielweise: [
               disziplinOffen ? 'Disziplin wird am Spieltag festgelegt' : DISZIPLIN_TEXT[turnier.disziplin],
-              MODUS_TEXT[turnier.modus],
-              zwei
+              modusOffen ? 'Modus nach Teilnehmerzahl' : MODUS_TEXT[turnier.modus],
+              modusOffen
+                ? `Race to ${raceTo}`
+                : zwei
                 ? `Race to ${raceTo}, Duelle Race to ${race2}`
                 : mitKo
                   ? `Race to ${raceTo}, KO ${raceFuer('QF')}/${raceFuer('SF')}/${raceFuer('FIN')}`
@@ -1955,8 +1979,48 @@ export default function TurnierAnsicht({
                   Gast hinzufügen
                 </button>
               </div>
+              {modusOffen && (() => {
+                const anzahl = teilnehmer.length;
+                const grenzenVerein = vereinsEinstellungen(verein?.einstellungen).turnier;
+                const vorschlag = modusVorschlag(anzahl, grenzenVerein);
+                const gewaehlt = modusWahl ?? vorschlag;
+                return (
+                  <div className="kasten">
+                    <div className="feldkopf">Modus festlegen – {anzahl} Teilnehmer</div>
+                    {modusOptionen(anzahl).map((o) => (
+                      <label key={o.modus} className={o.passt ? 'ankreuz' : 'ankreuz gesperrt'}>
+                        <input
+                          type="radio"
+                          name="modus-wahl"
+                          disabled={!o.passt}
+                          checked={gewaehlt === o.modus}
+                          onChange={() => setModusWahl(o.modus)}
+                        />
+                        <span>
+                          {MODUS_TEXT[o.modus]}
+                          {o.passt ? ` · ${o.spiele} Spiele` : ` · passt nicht (${o.grund})`}
+                          {o.modus === vorschlag && ' · Vorschlag'}
+                        </span>
+                      </label>
+                    ))}
+                    <p className="hinweis">
+                      Vorschlag nach den Grenzen auf der Seite System: bis {grenzenVerein.einzelBis} Einzelgruppe, bis{' '}
+                      {grenzenVerein.zweiBis} Zwei Gruppen, darüber Gruppen mit KO-Runde. Die Zahl der Spiele rechnet mit
+                      jeder Anmeldung mit; bei der KO-Runde ohne freiwillige Platzierungsspiele.
+                    </p>
+                    <button
+                      type="button"
+                      title="Legt den Modus fest. Danach lassen sich Gruppen einstellen und das Turnier auslosen."
+                      disabled={!gewaehlt}
+                      onClick={() => gewaehlt && void modusFestlegen(gewaehlt)}
+                    >
+                      Modus festlegen
+                    </button>
+                  </div>
+                );
+              })()}
               <div className="knopfpaar">
-                <button type="button" title="Lost Gruppen und Spielplan aus und startet das Turnier. Danach stehen die Spiele an den Tablets zur Auswahl." onClick={() => void auslosenUndStarten()} disabled={arbeitet || !teilnehmerOk || disziplinOffen}>
+                <button type="button" title="Lost Gruppen und Spielplan aus und startet das Turnier. Danach stehen die Spiele an den Tablets zur Auswahl." onClick={() => void auslosenUndStarten()} disabled={arbeitet || !teilnehmerOk || disziplinOffen || modusOffen}>
                   Auslosen und starten
                 </button>
               </div>

@@ -19,6 +19,8 @@ Ein Turnier läuft in vier Schritten: anlegen, Teilnehmer eintragen, auslosen, s
 
 Die Vorgaben für neue Turniere (Race, Disziplin, Modus, Vorgabe) stellt der Vereins-Administrator auf der Seite **System** ein.
 
+**Modus am Turniertag:** Steht die Teilnehmerzahl noch nicht fest, bei **Modus** „am Turniertag festlegen“ wählen. Das Formular zeigt dann die Race-Felder aller Modi. Vor der Auslosung steht in der Turnieransicht **Modus festlegen** mit der aktuellen Teilnehmerzahl: jeder Modus mit seiner Spielzahl, nicht passende ausgegraut, dazu ein **Vorschlag**. Die Grenzen dafür (Vorgabe: bis 7 Einzelgruppe, bis 15 Zwei Gruppen, darüber Gruppen mit KO) stellt der Vereins-Administrator auf der Seite **System** ein. Erst nach **Modus festlegen** lässt sich auslosen.
+
 **Serie mit Disziplin am Spieltag:** Hat die gewählte **Serie** die Disziplin „am Spieltag festgelegt“, gibt es bei **Disziplin** zusätzlich „noch offen“. Die Ausschreibung schreibt dann „Disziplin wird am Spieltag festgelegt“. Am Spieltag in der Turnieransicht die Disziplin wählen und **Disziplin festlegen** klicken; erst danach lässt sich auslosen. Eine Serie mit fester Disziplin bringt ihre Disziplin beim Auswählen gleich mit.
 
 ## 2. Teilnehmer eintragen

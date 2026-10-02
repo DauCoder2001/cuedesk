@@ -48,6 +48,8 @@ type Formular = {
   obergrenze: string;
   ratingWerten: boolean;
   art: string; // vorgewaehlte Turnierart, leer: keine
+  einzelBis: string; // Modus-Vorschlag am Turniertag
+  zweiBis: string;
   turnierarten: string[];
   liga: LigaKennung;
   mannschaftRang: string; // leer: erste der Saison
@@ -102,6 +104,8 @@ function ausEinstellungen(
     obergrenze: String(e.turnier.obergrenze),
     ratingWerten: e.turnier.ratingWerten,
     art: e.turnier.art ?? '',
+    einzelBis: String(e.turnier.einzelBis),
+    zweiBis: String(e.turnier.zweiBis),
     turnierarten: e.turnierarten,
     liga: e.liga.liga,
     mannschaftRang: e.liga.mannschaftRang === null ? '' : String(e.liga.mannschaftRang),
@@ -222,6 +226,14 @@ export default function System() {
       return vereinPflicht.melden('Ausgleich in Prozent zwischen 0 und 100, oder leer lassen.');
     }
     if (!Number.isInteger(grenze) || grenze < 0 || grenze > 24) return vereinPflicht.melden('Höchstens Sätze Vorgabe zwischen 0 und 24.');
+    const einzelBis = zahl(f.einzelBis);
+    const zweiBis = zahl(f.zweiBis);
+    if (einzelBis === null || !Number.isInteger(einzelBis) || einzelBis < 3 || einzelBis > 12) {
+      return vereinPflicht.melden('Einzelgruppe bis: zwischen 3 und 12 Teilnehmern.');
+    }
+    if (zweiBis === null || !Number.isInteger(zweiBis) || zweiBis <= einzelBis || zweiBis > 16) {
+      return vereinPflicht.melden(`Zwei Gruppen bis: mehr als ${einzelBis} und höchstens 16 Teilnehmer.`);
+    }
 
     const einstellungen: VereinsEinstellungen = {
       turnier: {
@@ -232,7 +244,9 @@ export default function System() {
         staerke,
         obergrenze: grenze,
         ratingWerten: f.ratingWerten,
-        art: f.art || null
+        art: f.art || null,
+        einzelBis,
+        zweiBis
       },
       turnierarten: f.turnierarten,
       liga: { liga: f.liga, mannschaftRang: zahl(f.mannschaftRang) },
@@ -424,6 +438,23 @@ export default function System() {
           <input type="checkbox" checked={f.ratingWerten} onChange={(e) => setze({ ratingWerten: e.target.checked })} />
           <span>Zählt für das Vereins-Rating</span>
         </label>
+
+        <div className="feldkopf">Modus am Turniertag</div>
+        <p className="hinweis">
+          Wird ein Turnier mit Modus „am Turniertag festlegen“ angelegt, schlägt CueDesk vor der Auslosung nach der
+          Teilnehmerzahl einen Modus vor: bis {f.einzelBis || '…'} Einzelgruppe, bis {f.zweiBis || '…'} Zwei Gruppen, darüber
+          Gruppen mit KO-Runde.
+        </p>
+        <div className="felder">
+          <label className="feld">
+            <span>Einzelgruppe bis (Teilnehmer)</span>
+            <input inputMode="numeric" required value={f.einzelBis} onChange={(e) => setze({ einzelBis: e.target.value })} />
+          </label>
+          <label className="feld">
+            <span>Zwei Gruppen bis (Teilnehmer)</span>
+            <input inputMode="numeric" required value={f.zweiBis} onChange={(e) => setze({ zweiBis: e.target.value })} />
+          </label>
+        </div>
 
         <div className="feldkopf">Turnierarten</div>
         <p className="hinweis">

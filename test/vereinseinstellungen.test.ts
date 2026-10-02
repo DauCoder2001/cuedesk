@@ -22,10 +22,19 @@ describe('Vereinseinstellungen', () => {
       staerke: 60,
       obergrenze: 3,
       ratingWerten: false,
-      art: null
+      art: null,
+      einzelBis: 7,
+      zweiBis: 15
     });
     expect(e.liga).toEqual({ liga: 'bezirksliga', mannschaftRang: 2 });
     expect(e.saisonbeginn).toBe(8);
+  });
+
+  test('Grenzen fuer den Modus-Vorschlag', () => {
+    expect(vereinsEinstellungen({ turnier: { einzelBis: 6, zweiBis: 12 } }).turnier).toMatchObject({ einzelBis: 6, zweiBis: 12 });
+    // ausserhalb der Modus-Grenzen oder nicht aufsteigend: zurueck auf brauchbare Werte
+    expect(vereinsEinstellungen({ turnier: { einzelBis: 20, zweiBis: 40 } }).turnier).toMatchObject({ einzelBis: 7, zweiBis: 15 });
+    expect(vereinsEinstellungen({ turnier: { einzelBis: 10, zweiBis: 9 } }).turnier).toMatchObject({ einzelBis: 10, zweiBis: 15 });
   });
 
   test('Chat nur, wenn ausdruecklich eingeschaltet', () => {
