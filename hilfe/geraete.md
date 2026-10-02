@@ -15,7 +15,19 @@ Unter **Tische und Geräte** bei **Tische** Nummer und optional eine **Bezeichnu
 1. Auf dem Tablet die CueDesk-Adresse mit dem Zusatz `?geraet` öffnen. Es zeigt einen sechsstelligen Code, der 15 Minuten gilt.
 2. Am PC unter **Gerät koppeln** den Code und einen Namen für das Gerät eintragen (z. B. „Tablet Tisch 1“) und den Tisch wählen.
 3. **Koppeln** klicken. Das Tablet zeigt kurz darauf den Tisch und die Knöpfe **8/9/10-Ball** und **14.1 endlos**.
-4. Tipp: Die Seite auf dem Tablet zum Home-Bildschirm hinzufügen; dann startet sie mit dem CueDesk-Icon im Vollbild. Beim iPad zuerst **Zum Home-Bildschirm** wählen, dann über das Icon öffnen und erst dort koppeln: Die Home-Bildschirm-App hat einen eigenen Speicher, eine Kopplung aus Safari gilt dort nicht.
+
+### Tablet mit CueDesk-Icon auf dem Home-Bildschirm (iPad)
+
+So startet das Tablet über ein eigenes Icon im Vollbild, ohne Adressleiste. Die Home-Bildschirm-App hat einen eigenen Speicher, deshalb erst das Icon anlegen und dann koppeln.
+
+1. Ein altes CueDesk-Icon vom Home-Bildschirm löschen, falls vorhanden.
+2. In Safari die CueDesk-Adresse mit `?geraet` öffnen. In Safari darf dabei kein Konto angemeldet sein. Den angezeigten Code nicht verwenden.
+3. **Teilen** antippen, dann **Zum Home-Bildschirm** und **Hinzufügen**.
+4. Safari schließen und CueDesk über das neue Icon öffnen. Dort erscheint ein neuer Code.
+5. Am PC unter **Tische und Geräte** Code, Name und Tisch eintragen und **Koppeln** klicken.
+6. Am iPad erscheinen der Tisch und die Knöpfe **8/9/10-Ball** und **14.1 endlos**.
+
+War das Tablet vorher schon in Safari gekoppelt, steht es unter **Geräte** zweimal; den alten Eintrag mit **Trennen** entfernen.
 
 ## 3. Fernseher koppeln
 
