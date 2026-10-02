@@ -411,6 +411,9 @@ tr.klickbar:hover td { background: var(--flaeche-2); }
 .tabelle .marke, .bearbeitenkopf .marke { margin-left: 6px; }
 .tabelle .marke.vorne { margin-left: 0; margin-right: 6px; }
 .zurueck { border: none; background: transparent; color: var(--akzent); padding: 0 0 6px; font-size: 14px; }
+/* Knopf, der wie ein Verweis aussieht (Konto-Zeile auf der Spielerseite) */
+.linkknopf { border: none; background: transparent; color: var(--akzent); padding: 0; font-size: 14px; text-align: left; }
+.linkknopf:disabled { color: var(--text-leise); cursor: default; }
 .turnierzweier { display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); gap: 20px; }
 @media (max-width: 900px) { .turnierzweier { grid-template-columns: 1fr; } }
 /* Gruppentabellen: so viele nebeneinander, wie mit mindestens 300 px passen */

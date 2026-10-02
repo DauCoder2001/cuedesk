@@ -12,7 +12,7 @@ const ROLLEN_TEXT: Record<string, string> = {
   vereinsadmin: 'Vereins-Administrator',
   sportwart: 'Sportwart',
   turnierleiter: 'Turnierleiter',
-  mitglied: 'Mitglied'
+  mitglied: 'Lesezugang'
 };
 
 function Inline({ teile }: { teile: Teil[] }) {

@@ -27,6 +27,11 @@ Der **Rating-Startwert** hilft bei neuen Spielern, die schon gut spielen; sonst 
 - Kommt jemand zurück, wieder auf **Mitglied** setzen und den neuen **Eintritt** eintragen.
 - Wechselt jemand zu einem anderen Verein, legt der neue Verein ihn dort neu an. Daten wandern nicht zwischen Vereinen.
 
+## Spieler mit Konto
+
+- Ist ein Spieler mit einem Konto verknüpft, steht unten **Konto: … · Rollen**. Ein Klick öffnet das Konto unter **Konten und Rollen**.
+- Der Status (Mitglied, Gast, Ausgetreten) ändert nichts an den Rollen des Kontos. Stellst du einen Spieler mit Konto auf **Gast** oder **Ausgetreten**, fragt CueDesk deshalb nach: **Behalten** oder **Zugang entziehen**. Entziehen kann nur der Vereins-Administrator.
+
 ## Auskunft und Löschen
 
 - **Auskunft**: Unter **Auskunft über alle gespeicherten Daten** gibt es ein PDF und eine JSON-Datei mit allem, was CueDesk zu diesem Spieler speichert (Art. 15 und 20 DSGVO). Mitglieder mit Konto finden dasselbe selbst unter **Mein Konto → Meine Daten**.

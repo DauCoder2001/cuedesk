@@ -27,6 +27,7 @@ import Zuschauen from './seiten/Zuschauen';
 import Hilfe from './seiten/Hilfe';
 import { themaZurSeite, themenFuer } from './hilfe';
 import { THEMEN } from './hilfe-texte';
+import { hoechsteRolle } from './rollen';
 
 type Bereich =
   | 'live'
@@ -115,6 +116,16 @@ export default function App() {
       vorbei = true;
     };
   }, [vereinId]);
+
+  // Sprung von der Spielerseite zum verknuepften Konto
+  const [kontoStart, setKontoStart] = useState<string | null>(null);
+  const kontoOeffnen = (id: string) => {
+    void (async () => {
+      if (!(await wechselErlaubt())) return;
+      setKontoStart(id);
+      setBereich('benutzer');
+    })();
+  };
 
   // Hilfe: Thema zur Seite, von der aus "?" gedrueckt wurde (Kontexthilfe)
   const [hilfeThema, setHilfeThema] = useState<string | null>(null);
@@ -232,9 +243,9 @@ export default function App() {
     },
     {
       wert: 'benutzer',
-      name: 'Benutzer und Rollen',
+      name: 'Konten und Rollen',
       sichtbar: darf('vereinsadmin', 'sportwart'),
-      tipp: 'Konten einladen, Rollen vergeben und Konten mit Spielern verknüpfen.'
+      tipp: 'Wer sich anmelden darf: Konten einladen, Rollen vergeben (Lesezugang bis Vereins-Administrator) und Konten mit Spielern verknüpfen.'
     },
     {
       wert: 'tische',
@@ -318,7 +329,9 @@ export default function App() {
                 onClick={() => {
                   if (eintrag.wert === angezeigt) return;
                   void (async () => {
-                    if (await wechselErlaubt()) setBereich(eintrag.wert);
+                    if (!(await wechselErlaubt())) return;
+                    setKontoStart(null);
+                    setBereich(eintrag.wert);
                   })();
                 }}
               >
@@ -403,14 +416,14 @@ export default function App() {
         {angezeigt === 'live' && <Live />}
         {angezeigt === 'turniere' && <Turniere hervorheben={startAnmeldung} />}
         {angezeigt === 'mannschaften' && <Mannschaften />}
-        {angezeigt === 'personen' && <Personen />}
+        {angezeigt === 'personen' && <Personen kontoOeffnen={kontoOeffnen} />}
         {angezeigt === 'rating' && <Rating />}
         {angezeigt === 'serien' && <Serien />}
         {angezeigt === 'ranglisten' && <Ranglisten />}
         {angezeigt === 'archiv' && <Archiv />}
         {angezeigt === 'statistikPool' && <StatistikPool />}
         {angezeigt === 'statistik141' && <Statistik141 />}
-        {angezeigt === 'benutzer' && <BenutzerRollen />}
+        {angezeigt === 'benutzer' && <BenutzerRollen key={kontoStart ?? ''} start={kontoStart} />}
         {angezeigt === 'tische' && <TischeGeraete />}
         {angezeigt === 'system' && <System />}
         {angezeigt === 'altdaten' && <Altdaten />}
@@ -419,16 +432,4 @@ export default function App() {
       </main>
     </div>
   );
-}
-
-function hoechsteRolle(rollen: string[]) {
-  const reihenfolge = ['vereinsadmin', 'sportwart', 'turnierleiter', 'mitglied'];
-  const namen: Record<string, string> = {
-    vereinsadmin: 'Vereins-Administrator',
-    sportwart: 'Sportwart',
-    turnierleiter: 'Turnierleiter',
-    mitglied: 'Mitglied'
-  };
-  const hoechste = reihenfolge.find((rolle) => rollen.includes(rolle));
-  return hoechste ? namen[hoechste] : '';
 }

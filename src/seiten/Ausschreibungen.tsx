@@ -88,7 +88,7 @@ export default function Ausschreibungen({
       <h2>Ausschreibungen</h2>
       {eigene === null && (
         <p className="hinweis">
-          Dein Konto ist noch mit keinem Spieler verknüpft. Das macht der Vereins-Administrator unter Benutzer und Rollen.
+          Dein Konto ist noch mit keinem Spieler verknüpft. Das macht der Vereins-Administrator unter Konten und Rollen.
           Bis dahin trägt dich die Turnierleitung ein.
         </p>
       )}

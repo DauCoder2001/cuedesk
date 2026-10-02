@@ -22,7 +22,7 @@ Jeder Verein führt seine eigenen Spieler und ist für deren Daten verantwortlic
 
 1. **A** setzt den Spieler auf der Seite „Spieler“ auf „Ausgetreten“ und trägt den Austritt ein. Er erscheint nicht mehr in neuen Turnieren; Partien, Platzierungen und Rating bleiben in A, damit Tabellen und das Rating der Gegner stimmen.
 2. **B** legt ihn als neuen Spieler mit Status „Mitglied“ an. Damit er nicht beim Vereinsschnitt anfängt, trägt B bei Bedarf einen „Rating-Startwert“ ein.
-3. **Das Konto bleibt dasselbe** (gleiche E-Mail-Adresse): B lädt ihn unter „Benutzer und Rollen“ ein und setzt den „Verknüpften Spieler“. A entfernt dort seine Rolle, sobald er in A nichts mehr sehen soll.
+3. **Das Konto bleibt dasselbe** (gleiche E-Mail-Adresse): B lädt ihn unter „Konten und Rollen“ ein und setzt den „Verknüpften Spieler“. A entfernt dort seine Rolle, sobald er in A nichts mehr sehen soll.
 4. **Seine alten Ergebnisse** lädt der Spieler in A unter „Mein Konto → Meine Daten“ herunter (PDF oder JSON), solange er dort noch ein Konto hat; sonst gibt A sie ihm über die Auskunft auf der Seite „Spieler“.
 
 **Zeitweise ohne Verein**

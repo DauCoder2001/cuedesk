@@ -202,7 +202,7 @@ export default function Statistik141() {
         {fehler && <p className="fehler">{fehler}</p>}
         {!person && (
           <p className="hinweis">
-            Deinem Konto ist keine Person zugeordnet. Der Vereins-Administrator kann das unter „Benutzer und Rollen“
+            Deinem Konto ist keine Person zugeordnet. Der Vereins-Administrator kann das unter „Konten und Rollen“
             nachholen.
           </p>
         )}

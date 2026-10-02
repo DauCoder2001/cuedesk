@@ -8,10 +8,15 @@ import { Pflichthinweis, usePflicht } from '../pflicht';
 import { useUngespeichert, weichtAb } from '../ungespeichert';
 import AuskunftKnoepfe from './AuskunftKnoepfe';
 import { EinwilligungLeitung } from './Einwilligungen';
+import { rollenText } from '../rollen';
 
 type Entwurf = Omit<Person, 'id' | 'erstellt_am' | 'geaendert_am'> & { id: string | null };
 type EntwurfIntern = Omit<PersonIntern, 'person_id' | 'verein_id'>;
-type Bindung = { partien: number; teilnahmen: number; aufnahmen: number; konten: string[] };
+// Konto, das mit dem Spieler verknuepft ist, mit seinen Rollen in diesem Verein
+type KontoKurz = { id: string; email: string; rollen: string[] };
+type Bindung = { partien: number; teilnahmen: number; aufnahmen: number; konten: KontoKurz[] };
+// Rueckfrage beim Wechsel auf Gast/Ausgetreten, wenn das Konto noch Rollen hat
+type KontoFrage = { konto: KontoKurz; name: string; status: PersonenStatus; antwort: (wahl: 'behalten' | 'entziehen' | null) => void };
 
 const LEER_INTERN: EntwurfIntern = {
   eintritt: null,
@@ -29,9 +34,10 @@ const STATUS_TEXT: Record<PersonenStatus, string> = {
   ausgetreten: 'Ausgetreten'
 };
 
-export default function Personen() {
-  const { verein, darf } = useSitzung();
+export default function Personen({ kontoOeffnen }: { kontoOeffnen?: (kontoId: string) => void }) {
+  const { verein, darf, benutzer: ichSelbst } = useSitzung();
   const [rueckfrage, fragen] = useRueckfrage();
+  const [kontoFrage, setKontoFrage] = useState<KontoFrage | null>(null);
   const darfSehen = darf('vereinsadmin', 'sportwart', 'turnierleiter');
   const darfAendern = darf('vereinsadmin', 'sportwart');
   // Anonymisieren ist nicht umkehrbar, deshalb nur der Vereins-Administrator
@@ -131,6 +137,21 @@ export default function Personen() {
     if (!pflicht.pruefen()) return;
     setFehler(null);
 
+    // Wird ein Spieler mit Konto Gast oder ausgetreten, behaelt das Konto
+    // sonst stillschweigend seine Rollen. Das eigene Konto bleibt aussen vor.
+    const alterStatus = (ursprung as { entwurf?: Entwurf } | null)?.entwurf?.status;
+    const konto = bindung?.konten.find((k) => k.rollen.length > 0 && k.id !== ichSelbst?.id);
+    let entziehen = false;
+    if (entwurf.id && konto && alterStatus !== entwurf.status && ['gast', 'ausgetreten'].includes(entwurf.status)) {
+      const name = `${entwurf.vorname} ${entwurf.nachname}`.trim();
+      const wahl = await new Promise<'behalten' | 'entziehen' | null>((antwort) =>
+        setKontoFrage({ konto, name, status: entwurf.status, antwort })
+      );
+      setKontoFrage(null);
+      if (wahl === null) return;
+      entziehen = wahl === 'entziehen';
+    }
+
     const stamm = {
       verein_id: verein.id,
       vorname: entwurf.vorname.trim(),
@@ -160,9 +181,22 @@ export default function Personen() {
       }
     }
 
+    if (entziehen && konto) {
+      const { error: fehlerRollen } = await supabase
+        .from('benutzer_rollen')
+        .delete()
+        .eq('benutzer_id', konto.id)
+        .eq('verein_id', verein.id);
+      if (fehlerRollen) {
+        setFehler(`Gespeichert, aber der Zugang wurde nicht entzogen: ${fehlerRollen.message}`);
+        return;
+      }
+    }
+
     setEntwurf({ ...data });
     setUrsprung({ entwurf: { ...data }, intern });
-    setMeldung('Gespeichert.');
+    setMeldung(entziehen && konto ? `Gespeichert. Dem Konto ${konto.email} wurde der Zugang entzogen.` : 'Gespeichert.');
+    if (darfAendern) void bindungLaden(data.id).then((b) => setBindung(b));
     await laden(verein.id);
     return true;
   }
@@ -207,10 +241,19 @@ export default function Personen() {
       supabase.from('benutzer_personen').select('benutzer_id').eq('person_id', id)
     ]);
     const kontoIds = (kontoAntwort.data ?? []).map((z) => z.benutzer_id);
-    let konten: string[] = [];
+    let konten: KontoKurz[] = [];
     if (kontoIds.length > 0) {
-      const { data } = await supabase.from('benutzer').select('email').in('id', kontoIds);
-      konten = (data ?? []).map((b) => b.email ?? 'ohne E-Mail');
+      const [kontenAntwort, rollenAntwort] = await Promise.all([
+        supabase.from('benutzer').select('id, email').in('id', kontoIds),
+        verein
+          ? supabase.from('benutzer_rollen').select('benutzer_id, rolle').in('benutzer_id', kontoIds).eq('verein_id', verein.id)
+          : Promise.resolve({ data: [] as { benutzer_id: string; rolle: string }[] })
+      ]);
+      konten = (kontenAntwort.data ?? []).map((b) => ({
+        id: b.id,
+        email: b.email ?? 'ohne E-Mail',
+        rollen: (rollenAntwort.data ?? []).filter((r) => r.benutzer_id === b.id).map((r) => r.rolle)
+      }));
     }
     return {
       partien: partienAntwort.count ?? 0,
@@ -278,7 +321,7 @@ export default function Personen() {
       '• Der Name wird zu „Ehemaliger Spieler …“.\n' +
       '• Gelöscht werden Kürzel, Anzeigename, Ein- und Austritt, Pass- und DBU-Nummer, Notiz, Turnier-Anmeldungen und Einladungen, dazu die Einträge im Änderungsprotokoll, die den Namen enthalten.\n' +
       (b.konten.length > 0
-        ? `• Die Verknüpfung mit dem Konto ${b.konten.join(', ')} wird gelöst, seine Rollen in diesem Verein enden. Hat es in keinem anderen Verein eine Rolle, wird es gelöscht.\n`
+        ? `• Die Verknüpfung mit dem Konto ${b.konten.map((k) => k.email).join(', ')} wird gelöst, seine Rollen in diesem Verein enden. Hat es in keinem anderen Verein eine Rolle, wird es gelöscht.\n`
         : '') +
       `• Erhalten bleiben: ${bleibt.join(', ')}.\n\n` +
       'Schon erzeugte PDFs, Aushänge und geteilte Texte kann CueDesk nicht ändern. In den Sicherungen verschwindet der Name nach spätestens 12 Wochen.';
@@ -545,12 +588,61 @@ export default function Personen() {
               <AuskunftKnoepfe personId={entwurf.id} beschriftung="Auskunft über alle gespeicherten Daten (Art. 15/20 DSGVO):" />
             )}
 
+            {/* Bruecke zu "Konten und Rollen": wer mit diesem Spieler angemeldet ist */}
+            {entwurf.id &&
+              bindung?.konten.map((k) => (
+                <p key={k.id} className="zeile">
+                  <button
+                    type="button"
+                    className="linkknopf"
+                    title="Dieses Konto unter „Konten und Rollen“ öffnen"
+                    disabled={!kontoOeffnen}
+                    onClick={() => kontoOeffnen?.(k.id)}
+                  >
+                    Konto: {k.email} · {rollenText(k.rollen)} →
+                  </button>
+                </p>
+              ))}
+
             {fehler && <p className="fehler">{fehler}</p>}
             {meldung && <p className="meldung">{meldung}</p>}
           </>
         )}
       </section>
       {rueckfrage}
+      {kontoFrage && (
+        <div className="dialoghintergrund" onClick={() => kontoFrage.antwort(null)}>
+          <div className="dialog" onClick={(e) => e.stopPropagation()}>
+            <h2>
+              {kontoFrage.name} auf „{STATUS_TEXT[kontoFrage.status]}“ stellen?
+            </h2>
+            <p>
+              Das Konto {kontoFrage.konto.email} hat {rollenText(kontoFrage.konto.rollen)}.
+              {darfAnonymisieren
+                ? ' Soll es den Zugang behalten?'
+                : ' Den Zugang kann der Vereins-Administrator unter „Konten und Rollen“ entziehen.'}
+            </p>
+            <div className="knopfpaar">
+              <button type="button" title="Status speichern, das Konto behält seine Rollen" onClick={() => kontoFrage.antwort('behalten')}>
+                {darfAnonymisieren ? 'Behalten' : 'Speichern'}
+              </button>
+              {darfAnonymisieren && (
+                <button
+                  type="button"
+                  className="gefahrknopf"
+                  title="Status speichern und alle Rollen dieses Kontos im Verein entfernen. Spieler und Ergebnisse bleiben."
+                  onClick={() => kontoFrage.antwort('entziehen')}
+                >
+                  Zugang entziehen
+                </button>
+              )}
+              <button type="button" onClick={() => kontoFrage.antwort(null)}>
+                Abbrechen
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

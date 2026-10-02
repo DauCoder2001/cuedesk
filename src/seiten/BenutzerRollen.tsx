@@ -5,6 +5,7 @@ import { funktionsFehlerText } from '../funktionsfehler';
 import { useSitzung } from '../sitzung';
 import { Pflichthinweis, usePflicht } from '../pflicht';
 import { useUngespeichert } from '../ungespeichert';
+import { ROLLEN, rollenText } from '../rollen';
 import type { Benutzer, Person, Rolle } from '../datenbank.types';
 
 type Konto = Benutzer & {
@@ -13,20 +14,19 @@ type Konto = Benutzer & {
   darf_einladen: boolean;
 };
 
-const ROLLEN: { wert: Rolle; name: string; erklaerung: string }[] = [
-  { wert: 'vereinsadmin', name: 'Vereins-Administrator', erklaerung: 'Benutzer, Rollen, Geräte, Löschen' },
-  { wert: 'sportwart', name: 'Sportwart', erklaerung: 'Spieler, Serien, Rating' },
-  { wert: 'turnierleiter', name: 'Turnierleiter', erklaerung: 'Turniere, Auslosung, Ergebnisse' },
-  { wert: 'mitglied', name: 'Mitglied', erklaerung: 'Eigene Statistik, Ranglisten' }
-];
+const STATUS_NAME: Record<string, string> = { mitglied: 'Mitglied', gast: 'Gast', ausgetreten: 'Ausgetreten' };
+// Spieler in den Auswahllisten mit Status, damit Gast und Ausgetreten auffallen
+const spielerText = (p: Person) => `${p.nachname}, ${p.vorname} · ${STATUS_NAME[p.status] ?? p.status}`;
 
-export default function BenutzerRollen() {
+// Seite "Konten und Rollen". "start": Konto, das gleich geoeffnet wird
+// (Sprung von der Spielerseite).
+export default function BenutzerRollen({ start = null }: { start?: string | null }) {
   const { verein, benutzer: ichSelbst, darf } = useSitzung();
   const darfVerwalten = darf('vereinsadmin');
 
   const [konten, setKonten] = useState<Konto[]>([]);
   const [personen, setPersonen] = useState<Person[]>([]);
-  const [gewaehlt, setGewaehlt] = useState<string | null>(null);
+  const [gewaehlt, setGewaehlt] = useState<string | null>(start);
   const [darfEinladen, setDarfEinladen] = useState(false);
   const [zeigeEinladung, setZeigeEinladung] = useState(false);
   const [meldung, setMeldung] = useState<string | null>(null);
@@ -293,7 +293,7 @@ export default function BenutzerRollen() {
                   <option value="neu">— neuen Spieler anlegen —</option>
                   {freiePersonen.map((person) => (
                     <option key={person.id} value={person.id}>
-                      {person.nachname}, {person.vorname}
+                      {spielerText(person)}
                     </option>
                   ))}
                 </select>
@@ -343,7 +343,7 @@ export default function BenutzerRollen() {
               </div>
               {!darfVerwalten && (
                 <p className="hinweis">
-                  Du darfst einladen, aber nur mit der Rolle Mitglied. Weitere Rollen vergibt der
+                  Du darfst einladen, aber nur mit Lesezugang. Weitere Rollen vergibt der
                   Vereins-Administrator.
                 </p>
               )}
@@ -413,8 +413,8 @@ export default function BenutzerRollen() {
                 <span>
                   Darf einladen
                   <small>
-                    Für Vorstandsmitglieder und ausgewählte Personen. Sie laden nur mit der Rolle
-                    Mitglied ein. Vereins-Administrator und Sportwart dürfen ohnehin.
+                    Für Vorstandsmitglieder und ausgewählte Personen. Sie laden nur mit Lesezugang
+                    ein. Vereins-Administrator und Sportwart dürfen ohnehin.
                   </small>
                 </span>
               </label>
@@ -436,7 +436,7 @@ export default function BenutzerRollen() {
                   )
                   .map((person) => (
                     <option key={person.id} value={person.id}>
-                      {person.nachname}, {person.vorname}
+                      {spielerText(person)}
                     </option>
                   ))}
               </select>
@@ -482,11 +482,4 @@ function zeichen(konto: Konto) {
   const quelle = konto.anzeigename ?? konto.email ?? '?';
   const teile = quelle.split(/[\s.@]+/).filter(Boolean);
   return (teile[0]?.charAt(0) ?? '?').toUpperCase() + (teile[1]?.charAt(0) ?? '').toUpperCase();
-}
-
-function rollenText(rollen: Rolle[]) {
-  if (rollen.length === 0) return 'keine Rolle';
-  return ROLLEN.filter((rolle) => rollen.includes(rolle.wert))
-    .map((rolle) => rolle.name)
-    .join(', ');
 }

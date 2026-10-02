@@ -22,15 +22,17 @@ Beim ersten Aufruf erscheint **Bevor es losgeht**. Lies die **Nutzungsbedingunge
 
 Das **Schutzwort** schützt Dinge, die nicht jeder am Tablet auslösen soll, etwa das Neuladen eines Tablets oder das Zeigen einer verborgenen Liga-Aufstellung. Unter **Schutzwort** ein neues eintragen, **Noch einmal** wiederholen und speichern. Gib es nur der Turnierleitung.
 
-## 4. Mitglieder einladen (Benutzer und Rollen)
+## 4. Konten einladen (Konten und Rollen)
+
+Ein **Spieler** braucht kein Konto; ein **Konto** ist der Zugang einer Person zu CueDesk, und die **Rollen** sagen, was dieses Konto in eurem Verein darf.
 
 1. Unter **Einladen** E-Mail-Adresse, Vorname und Nachname eintragen, Rollen wählen und die Einladung schicken. Die Person bekommt einen Anmeldelink.
 2. Die Rollen:
-   - **Mitglied**: sieht Live, Zuschauen, Ranglisten, Archiv und die eigene Statistik.
+   - **Lesezugang**: sieht Live, Zuschauen und Chat, Ranglisten, Archiv und die eigene Statistik.
    - **Turnierleiter**: legt Turniere an und führt sie durch, koppelt Tablets.
    - **Sportwart**: wie Turnierleiter, dazu Spieler, Mannschaften, Einladungen und Altdaten.
    - **Vereins-Administrator**: alles, auch System und Rollen.
-3. Unter **Spieler zuordnen** das Konto mit dem passenden Spieler verknüpfen (**Verknüpfter Spieler**). Erst dann sieht das Mitglied seine eigene Statistik.
+3. Unter **Spieler zuordnen** das Konto mit dem passenden Spieler verknüpfen (**Verknüpfter Spieler**). Erst dann sieht die Person ihre eigene Statistik. In der Auswahl steht hinter jedem Spieler sein Status (Mitglied, Gast, Ausgetreten).
 
 ## 5. Tische und Geräte
 

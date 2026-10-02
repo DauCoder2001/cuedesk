@@ -21,7 +21,7 @@ Die Seite **Zuschauen** ist fürs Handy gebaut. Oben wählst du:
 - **Turnier**: das laufende Turnier mit Gruppentabellen, KO-Runde, den nächsten Spielen und den heute beendeten Partien. Beim Liga-Spieltag stehen dort Partie- und Matchpunkte.
 - **Chat**: nur, wenn dein Verein ihn eingeschaltet hat, die Turnierleitung ihn für das Turnier eingeschaltet hat und das Turnier läuft.
 
-Wer nur Mitglied ist, landet nach der Anmeldung am Handy direkt hier, am PC oder Tablet auf **Live**. **Weitere Seiten** führt zu Ranglisten, Archiv und Statistik.
+Wer nur Lesezugang hat, landet nach der Anmeldung am Handy direkt hier, am PC oder Tablet auf **Live**. **Weitere Seiten** führt zu Ranglisten, Archiv und Statistik.
 
 ## Chat
 

@@ -56,7 +56,7 @@ const ROLLE: Record<string, string> = {
   vereinsadmin: 'Vereins-Administrator',
   sportwart: 'Sportwart',
   turnierleiter: 'Turnierleiter',
-  mitglied: 'Mitglied'
+  mitglied: 'Lesezugang' // Kontorolle; der Spieler-Status "Mitglied" steht in STATUS
 };
 const STATUS: Record<string, string> = { mitglied: 'Mitglied', gast: 'Gast', ausgetreten: 'Ausgetreten' };
 const BEREICH: Record<string, string> = {

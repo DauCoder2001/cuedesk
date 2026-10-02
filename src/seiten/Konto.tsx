@@ -202,7 +202,7 @@ export default function Konto() {
         </p>
         {eigeneSpieler.length === 0 ? (
           <p className="hinweis">
-            Mit deinem Konto ist kein Spieler verknüpft. Der Vereins-Administrator kann das unter „Benutzer und Rollen“
+            Mit deinem Konto ist kein Spieler verknüpft. Der Vereins-Administrator kann das unter „Konten und Rollen“
             nachholen.
           </p>
         ) : (

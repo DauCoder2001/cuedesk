@@ -283,7 +283,7 @@ Vereins-Administrator sehen alle Statistiken ihres Vereins.
 | Turnierleitung | Turnierübersicht, Turnier anlegen, Teilnehmer und Gäste, Auslosung, Vorgaben, Spielplan mit Tischzuteilung, Live-Übersicht, Abschluss mit PDF-Bericht |
 | Mitglied | Mein Profil, meine Statistik Pool, meine Statistik 14.1, Ranglisten, Vereinswechsel (bei mehreren Vereinen) |
 | Sportwart | Personen, Serien, Rating-Liste mit Lupe, Startwerte, Rating-Einstellungen |
-| Vereins-Administrator | Benutzer und Rollen, Geräte und Tische, Aussehen des Vereins, Änderungsprotokoll |
+| Vereins-Administrator | Konten und Rollen, Geräte und Tische, Aussehen des Vereins, Änderungsprotokoll |
 | Systemadministrator | Vereine, Datensicherung |
 
 ## 10. Datenschutz
