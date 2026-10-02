@@ -155,6 +155,28 @@ export default function LigaAnsicht({
     void laden();
   }, [laden]);
 
+  // Ergebnisse und Tischwahl von den Tablets sofort uebernehmen (wie in der
+  // Turnieransicht). Nur die Partien neu lesen, damit eine halb gewaehlte
+  // Aufstellung stehen bleibt.
+  useEffect(() => {
+    let zeitgeber: number | null = null;
+    const partienNeu = async () => {
+      const { data } = await supabase.from('partien').select('*').eq('turnier_id', turnierId).order('runde').order('paarung');
+      if (data) setPartien(data);
+    };
+    const kanal = supabase
+      .channel(`liga-leitung-${turnierId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'partien', filter: `turnier_id=eq.${turnierId}` }, () => {
+        if (zeitgeber !== null) window.clearTimeout(zeitgeber);
+        zeitgeber = window.setTimeout(() => void partienNeu(), 300);
+      })
+      .subscribe();
+    return () => {
+      if (zeitgeber !== null) window.clearTimeout(zeitgeber);
+      void supabase.removeChannel(kanal);
+    };
+  }, [turnierId]);
+
   const anzeige = useCallback(
     (id: string | null) => {
       if (!id) return '';
