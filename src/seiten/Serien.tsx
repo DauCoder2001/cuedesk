@@ -6,7 +6,7 @@ import { useRueckfrage } from '../rueckfrage';
 import { herunterladen } from '../pdf';
 import { serienwertung } from '../serien';
 import { serienDateiname, serienPdf } from '../serienbericht';
-import { DISZIPLIN_TEXT } from './Turniere';
+import { DISZIPLIN_OFFEN_TEXT, DISZIPLIN_TEXT, turnierDisziplinText } from './Turniere';
 import { Pflichthinweis, usePflicht } from '../pflicht';
 import { useUngespeichert, weichtAb } from '../ungespeichert';
 import type { SerienTurnier } from '../serien';
@@ -23,7 +23,7 @@ type Formular = {
   id: string | null; // null: neue Serie
   name: string;
   saison: string;
-  disziplin: Disziplin;
+  disziplin: Disziplin | ''; // '': am Spieltag festgelegt
   streicher: string;
   bonus: string;
   aktiv: boolean;
@@ -149,7 +149,7 @@ export default function Serien() {
       id: null,
       name: '',
       saison: '',
-      disziplin: serie?.disziplin ?? '8-ball',
+      disziplin: serie ? serie.disziplin ?? '' : '8-ball',
       streicher: '0',
       bonus: '1',
       aktiv: true
@@ -161,7 +161,7 @@ export default function Serien() {
       id: s.id,
       name: s.name,
       saison: s.saison ?? '',
-      disziplin: s.disziplin,
+      disziplin: s.disziplin ?? '',
       streicher: String(s.streicher),
       bonus: String(s.bonus),
       aktiv: s.aktiv
@@ -178,7 +178,7 @@ export default function Serien() {
     const daten = {
       name: formular.name.trim(),
       saison: formular.saison.trim() || null,
-      disziplin: formular.disziplin,
+      disziplin: formular.disziplin || null,
       streicher,
       bonus,
       aktiv: formular.aktiv
@@ -220,7 +220,7 @@ export default function Serien() {
     const bytes = serienPdf({
       name: serie.name,
       saison: serie.saison,
-      disziplin: DISZIPLIN_TEXT[serie.disziplin],
+      disziplin: serie.disziplin ? DISZIPLIN_TEXT[serie.disziplin] : `Disziplin ${DISZIPLIN_OFFEN_TEXT}`,
       streicher: serie.streicher,
       bonus: serie.bonus,
       stand: new Date(),
@@ -285,7 +285,7 @@ export default function Serien() {
         </div>
         {serie && !formular && (
           <p className="hinweis">
-            {DISZIPLIN_TEXT[serie.disziplin]} · {turniere.length} Turniere ·{' '}
+            {serie.disziplin ? DISZIPLIN_TEXT[serie.disziplin] : `Disziplin ${DISZIPLIN_OFFEN_TEXT}`} · {turniere.length} Turniere ·{' '}
             {serie.streicher > 0 ? `gewertet: beste ${serie.streicher}` : 'alle Turniere zählen'} ·{' '}
             {serie.bonus > 0 ? `Sieger-Bonus +${serie.bonus}` : 'ohne Sieger-Bonus'} · Punkte = Teilnehmerzahl + 1 − Platz
             {!serie.aktiv && ' · beendet'}
@@ -311,12 +311,13 @@ export default function Serien() {
               </label>
               <label className="feld">
                 <span>Disziplin</span>
-                <select value={formular.disziplin} onChange={(e) => setFormular({ ...formular, disziplin: e.target.value as Disziplin })}>
+                <select value={formular.disziplin} onChange={(e) => setFormular({ ...formular, disziplin: e.target.value as Disziplin | '' })}>
                   {(Object.keys(DISZIPLIN_TEXT) as Disziplin[]).map((d) => (
                     <option key={d} value={d}>
                       {DISZIPLIN_TEXT[d]}
                     </option>
                   ))}
+                  <option value="">{DISZIPLIN_OFFEN_TEXT}</option>
                 </select>
               </label>
               <label className="feld">
@@ -434,6 +435,7 @@ export default function Serien() {
                       {t.name}
                       {t.quelle === 'import' && <span className="marke">aus Turnier light</span>}
                     </td>
+                    <td style={{ width: '140px' }}>{turnierDisziplinText(t)}</td>
                     <td className="rechts">
                       <button type="button" title="Das Turnier zählt dann nicht mehr für diese Serie." className="klein" onClick={() => void turnierZuordnen(t.id, null)}>
                         aus der Serie nehmen

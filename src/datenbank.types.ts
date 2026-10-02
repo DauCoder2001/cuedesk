@@ -263,7 +263,7 @@ export type Serie = {
   verein_id: string;
   name: string;
   saison: string | null;
-  disziplin: Disziplin;
+  disziplin: Disziplin | null; // null: wird je Spieltag festgelegt (Stufe 27)
   streicher: number;
   bonus: number;
   aktiv: boolean;

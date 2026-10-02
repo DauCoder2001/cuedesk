@@ -110,6 +110,7 @@ export default function TurnierAnsicht({
   const [fehler, setFehler] = useState<string | null>(null);
   const [meldung, setMeldung] = useState<string | null>(null);
   const [arbeitet, setArbeitet] = useState(false);
+  const [festDisziplin, setFestDisziplin] = useState<'' | '8-ball' | '9-ball' | '10-ball'>('');
   const [suche, setSuche] = useState('');
   const [gastName, setGastName] = useState('');
   const [abschnitt, setAbschnitt] = useState<string | null>(null);
@@ -217,6 +218,8 @@ export default function TurnierAnsicht({
   );
 
   const einstellungen = (turnier?.einstellungen ?? {}) as TurnierEinstellungen;
+  // Disziplin wird erst am Spieltag festgelegt (Serie ohne feste Disziplin)
+  const disziplinOffen = Boolean(einstellungen.disziplinOffen);
   const turnierarten = vereinsEinstellungen(verein?.einstellungen).turnierarten;
   const raceTo = einstellungen.raceTo ?? 5;
   const va = einstellungen.vorgabe ?? { aktiv: false, staerke: 75, obergrenze: 0 };
@@ -524,10 +527,27 @@ export default function TurnierAnsicht({
     return data.id;
   }
 
+  // ---------- Disziplin am Spieltag festlegen ----------
+
+  // Serie ohne feste Disziplin: das Turnier wurde mit "noch offen" angelegt.
+  async function disziplinFestlegen() {
+    if (!turnier || !festDisziplin) return;
+    const { disziplinOffen: _o, ...rest } = einstellungen;
+    const { error } = await supabase
+      .from('turniere')
+      .update({ disziplin: festDisziplin, einstellungen: rest })
+      .eq('id', turnier.id);
+    if (error) return setFehler(error.message);
+    setMeldung(`Disziplin festgelegt: ${DISZIPLIN_TEXT[festDisziplin]}.`);
+    setFestDisziplin('');
+    await laden();
+  }
+
   // ---------- Auslosung ----------
 
   async function auslosenUndStarten() {
     if (!turnier) return;
+    if (disziplinOffen) return setFehler('Erst die Disziplin festlegen, dann auslosen.');
     if (mehrgruppig) {
       const [min, max] = grenzen;
       if (teilnehmer.length < min || teilnehmer.length > max) {
@@ -1595,7 +1615,7 @@ export default function TurnierAnsicht({
                 month: '2-digit',
                 year: 'numeric'
               })}{' '}
-              · {DISZIPLIN_TEXT[turnier.disziplin]} · {MODUS_TEXT[turnier.modus]}
+              · {disziplinOffen ? 'Disziplin offen' : DISZIPLIN_TEXT[turnier.disziplin]} · {MODUS_TEXT[turnier.modus]}
               {turnier.quelle !== 'import' &&
                 (zwei
                   ? ` · Race to ${raceTo}, Duelle Race to ${race2}`
@@ -1604,6 +1624,33 @@ export default function TurnierAnsicht({
                     : ` · Race to ${raceTo}`)}
               {va.aktiv && ` · Vorgabe ${va.staerke} %${va.obergrenze > 0 ? `, höchstens ${va.obergrenze}` : ''}`}
             </p>
+            {disziplinOffen && turnier.status === 'geplant' && (
+              <div className="zeile">
+                <span className="hinweis">Disziplin noch offen – vor der Auslosung festlegen.</span>
+                {darfLeiten && (
+                  <>
+                    <select
+                      aria-label="Disziplin"
+                      value={festDisziplin}
+                      onChange={(e) => setFestDisziplin(e.target.value as typeof festDisziplin)}
+                    >
+                      <option value="">Disziplin wählen</option>
+                      <option value="8-ball">8-Ball</option>
+                      <option value="9-ball">9-Ball</option>
+                      <option value="10-ball">10-Ball</option>
+                    </select>
+                    <button
+                      type="button"
+                      title="Legt die Disziplin dieses Turniers fest. Danach lässt es sich auslosen."
+                      disabled={!festDisziplin}
+                      onClick={() => void disziplinFestlegen()}
+                    >
+                      Disziplin festlegen
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
             {!turnier.rating_werten && (
               <p className="hinweis">
                 Keine Partie dieses Turniers zählt fürs Rating. So wurde es beim Anlegen des Turniers festgelegt.
@@ -1717,7 +1764,7 @@ export default function TurnierAnsicht({
             datum: turnier.datum,
             art: einstellungen.art,
             spielweise: [
-              DISZIPLIN_TEXT[turnier.disziplin],
+              disziplinOffen ? 'Disziplin wird am Spieltag festgelegt' : DISZIPLIN_TEXT[turnier.disziplin],
               MODUS_TEXT[turnier.modus],
               zwei
                 ? `Race to ${raceTo}, Duelle Race to ${race2}`
@@ -1909,7 +1956,7 @@ export default function TurnierAnsicht({
                 </button>
               </div>
               <div className="knopfpaar">
-                <button type="button" title="Lost Gruppen und Spielplan aus und startet das Turnier. Danach stehen die Spiele an den Tablets zur Auswahl." onClick={() => void auslosenUndStarten()} disabled={arbeitet || !teilnehmerOk}>
+                <button type="button" title="Lost Gruppen und Spielplan aus und startet das Turnier. Danach stehen die Spiele an den Tablets zur Auswahl." onClick={() => void auslosenUndStarten()} disabled={arbeitet || !teilnehmerOk || disziplinOffen}>
                   Auslosen und starten
                 </button>
               </div>

@@ -26,6 +26,14 @@ export const DISZIPLIN_TEXT: Record<Disziplin, string> = {
   '14-1': '14.1'
 };
 
+// Serie ohne feste Disziplin bzw. Turnier, dessen Disziplin noch offen ist
+export const DISZIPLIN_OFFEN_TEXT = 'am Spieltag festgelegt';
+
+// Disziplin eines Turniers fuer die Anzeige: offen, bis sie festgelegt ist
+export function turnierDisziplinText(t: Pick<Turnier, 'disziplin' | 'einstellungen'>): string {
+  return (t.einstellungen as TurnierEinstellungen | null)?.disziplinOffen ? 'Disziplin offen' : DISZIPLIN_TEXT[t.disziplin];
+}
+
 export const MODUS_TEXT: Record<TurnierModus, string> = {
   einzelgruppe: 'Einzelgruppe',
   'zwei-gruppen': 'Zwei Gruppen',
@@ -84,6 +92,9 @@ export type TurnierEinstellungen = {
   handReihenfolge?: Record<string, number[]>;
   pausiert?: boolean; // Tablets starten keine neuen Spiele
   art?: string; // Turnierart (Bezeichnung aus der Liste des Vereins, beim Anlegen festgehalten)
+  // Disziplin wird erst am Spieltag festgelegt (Serie ohne feste Disziplin).
+  // turniere.disziplin traegt bis dahin einen Platzhalter; Auslosen geht erst danach.
+  disziplinOffen?: boolean;
   chat?: boolean; // Chat fuer Zuschauer (nur wenn der Verein ihn eingeschaltet hat)
   live?: boolean; // Live-Uebertragung, solange das Turnier laeuft (fehlt: an; Stufe 25)
   tvAnsicht?: 'auslosung' | 'live' | 'results'; // was die Fernseher zeigen
@@ -110,7 +121,8 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
   // Formularfelder
   const [name, setName] = useState('');
   const [datum, setDatum] = useState(heute());
-  const [disziplin, setDisziplin] = useState<Disziplin>('9-ball');
+  // 'offen': Disziplin wird am Spieltag festgelegt (nur bei Serien ohne feste Disziplin)
+  const [disziplin, setDisziplin] = useState<Disziplin | 'offen'>('9-ball');
   const [modus, setModus] = useState<TurnierModus>('einzelgruppe');
   const [raceTo, setRaceTo] = useState('5');
   const [racePhase2, setRacePhase2] = useState('5');
@@ -184,6 +196,7 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
   // Gemeldete Mannschaften der Saison, in die das Datum faellt
   const mannschaftenDerSaison = mannschaften.filter((m) => m.saison === saisonAus(datum, vorgaben.saisonbeginn));
   const gewaehlteMannschaft = mannschaftenDerSaison.find((m) => m.id === mannschaftId) ?? null;
+  const gewaehlteSerie = serien.find((s) => s.id === serieId) ?? null;
 
   // Die Mannschaft bringt ihre Liga mit; frei eingetragene Namen nicht.
   function mannschaftWaehlen(id: string) {
@@ -254,16 +267,20 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
         obergrenze: Math.max(0, Number(obergrenze) || 0)
       },
       chat: vorgaben.chat && chat,
-      live
+      live,
+      ...(modus !== 'liga' && disziplin === 'offen' ? { disziplinOffen: true } : {})
     };
-    if (bearbeitet) return aenderungSpeichern(bearbeitet, einstellungen);
+    // Platzhalter, solange die Disziplin offen ist; festgelegt wird vor dem Auslosen
+    const dbDisziplin: Disziplin =
+      modus === 'liga' ? 'multi-ball' : disziplin === 'offen' ? vorgaben.turnier.disziplin : disziplin;
+    if (bearbeitet) return aenderungSpeichern(bearbeitet, einstellungen, dbDisziplin);
     const { data, error } = await supabase
       .from('turniere')
       .insert({
         verein_id: verein.id,
         name: name.trim(),
         datum,
-        disziplin: modus === 'liga' ? 'multi-ball' : disziplin,
+        disziplin: dbDisziplin,
         modus,
         serie_id: serieId || null,
         status: 'geplant',
@@ -292,7 +309,7 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
     const race = String(e.raceTo ?? vorgaben.turnier.raceTo);
     setName(t.name);
     setDatum(t.datum);
-    setDisziplin(t.disziplin);
+    setDisziplin(e.disziplinOffen ? 'offen' : t.disziplin);
     setModus(t.modus);
     setRaceTo(race);
     setRacePhase2(String(e.racePhase2 ?? race));
@@ -326,7 +343,7 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
     setOffen(t.id);
   }
 
-  async function aenderungSpeichern(t: Turnier, formEinstellungen: TurnierEinstellungen) {
+  async function aenderungSpeichern(t: Turnier, formEinstellungen: TurnierEinstellungen, dbDisziplin: Disziplin) {
     // Frisch lesen: Ausschreibung und Turnierart koennen sich in der Ansicht geaendert haben
     const { data: aktuell, error: lesefehler } = await supabase
       .from('turniere')
@@ -350,7 +367,7 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
     // Was das Formular festlegt, kommt neu; alles andere (Ausschreibung,
     // TV-Ansicht ...) bleibt. Bei neuem Modus fallen dessen Vorbereitungen weg.
     const behalten = { ...((aktuell.einstellungen ?? {}) as TurnierEinstellungen) };
-    const vomFormular: (keyof TurnierEinstellungen)[] = ['raceTo', 'racePhase2', 'raceKo', 'racePhase3', 'vorgabe', 'art', 'chat', 'live'];
+    const vomFormular: (keyof TurnierEinstellungen)[] = ['raceTo', 'racePhase2', 'raceKo', 'racePhase3', 'vorgabe', 'art', 'chat', 'live', 'disziplinOffen'];
     const modusAbhaengig: (keyof TurnierEinstellungen)[] = [
       'gruppenzahl', 'weiter', 'paarung', 'ko', 'phase2', 'phase3', 'handReihenfolge', 'tausch', 'nachgetragen'
     ];
@@ -360,7 +377,7 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
       .update({
         name: name.trim(),
         datum,
-        disziplin,
+        disziplin: dbDisziplin,
         modus,
         serie_id: serieId || null,
         rating_werten: ratingWerten,
@@ -501,10 +518,13 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
               {modus !== 'liga' && (
               <label className="feld">
                 <span>Disziplin</span>
-                <select value={disziplin} onChange={(e) => setDisziplin(e.target.value as Disziplin)}>
+                <select value={disziplin} onChange={(e) => setDisziplin(e.target.value as Disziplin | 'offen')}>
                   <option value="8-ball">8-Ball</option>
                   <option value="9-ball">9-Ball</option>
                   <option value="10-ball">10-Ball</option>
+                  {(disziplin === 'offen' || (gewaehlteSerie && gewaehlteSerie.disziplin === null)) && (
+                    <option value="offen">noch offen ({DISZIPLIN_OFFEN_TEXT})</option>
+                  )}
                 </select>
               </label>
               )}
@@ -612,7 +632,17 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
                 ))}
               <label className="feld">
                 <span>Serie</span>
-                <select value={serieId} onChange={(e) => setSerieId(e.target.value)}>
+                <select
+                  value={serieId}
+                  onChange={(e) => {
+                    setSerieId(e.target.value);
+                    // Serie mit fester Disziplin bringt sie mit; "offen" gibt es nur bei Serien ohne
+                    const s = serien.find((x) => x.id === e.target.value);
+                    const fest = s?.disziplin;
+                    if (fest === '8-ball' || fest === '9-ball' || fest === '10-ball') setDisziplin(fest);
+                    else if (disziplin === 'offen' && !(s && s.disziplin === null)) setDisziplin(vorgaben.turnier.disziplin);
+                  }}
+                >
                   <option value="">keine</option>
                   {serien.map((s) => (
                     <option key={s.id} value={s.id}>
@@ -749,7 +779,7 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
                     {t.quelle === 'import' && <span className="marke">aus Turnier light</span>}
                   </td>
                   {artenInListe.length > 0 && <td>{artVon(t) ?? '–'}</td>}
-                  <td>{DISZIPLIN_TEXT[t.disziplin]}</td>
+                  <td>{turnierDisziplinText(t)}</td>
                   <td>{MODUS_TEXT[t.modus]}</td>
                   <td className={stand.status === 'laeuft' ? 'livelaeuft' : ''}>
                     {stand.teilBeendet ? `${stand.teilBeendet}. Begegnung beendet` : STATUS_TEXT[stand.status]}
