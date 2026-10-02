@@ -129,15 +129,23 @@ const DISZIPLIN_NAME: Record<string, string> = {
 };
 
 export type Verdeckt = { hin?: { heim?: boolean; gast?: boolean }; rueck?: { heim?: boolean; gast?: boolean } };
+// Liga: Hin- und Rueckrunde einer Begegnung werden einzeln gestartet. Fehlt
+// der Eintrag (Spieltage von vor dieser Regel), gelten beide als gestartet.
+export type Gestartet = { hin?: boolean; rueck?: boolean };
+
+export function rundeGestartet(gestartet: Gestartet | undefined, runde: number | null): boolean {
+  if (!gestartet) return true;
+  return Boolean(runde === 2 ? gestartet.rueck : gestartet.hin);
+}
 
 // Was am Tablet zur Auswahl steht: eine verdeckte Aufstellung bleibt auch am
-// Tisch verdeckt, sonst waere das Verbergen umsonst. Welches Board welche
-// Disziplin zeigt, entscheidet das Board (8/9/10-Ball am Pool-Board, 14.1 am
-// 14.1-Board).
-export function fuersTablet<T extends { runde: number | null }>(partien: T[], verdeckt?: Verdeckt): T[] {
-  if (!verdeckt) return partien;
+// Tisch verdeckt, sonst waere das Verbergen umsonst; eine noch nicht
+// gestartete Runde erscheint gar nicht. Welches Board welche Disziplin zeigt,
+// entscheidet das Board (8/9/10-Ball am Pool-Board, 14.1 am 14.1-Board).
+export function fuersTablet<T extends { runde: number | null }>(partien: T[], verdeckt?: Verdeckt, gestartet?: Gestartet): T[] {
   return partien.filter((p) => {
-    const seiten = p.runde === 2 ? verdeckt.rueck : verdeckt.hin;
+    if (!rundeGestartet(gestartet, p.runde)) return false;
+    const seiten = p.runde === 2 ? verdeckt?.rueck : verdeckt?.hin;
     return !(seiten?.heim || seiten?.gast);
   });
 }

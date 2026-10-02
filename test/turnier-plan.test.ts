@@ -6,6 +6,7 @@ import {
   fuersTablet,
   ohneZusatz,
   planStatus,
+  rundeGestartet,
   tabletSpielplan,
   tvErgebnis
 } from '../scoreboards/js/turnier-plan';
@@ -119,6 +120,15 @@ describe('Welche Partien am Tablet erscheinen', () => {
     expect(fuersTablet(liste, { hin: { heim: true } }).map((p) => p.id)).toEqual(['c']);
     expect(fuersTablet(liste, { rueck: { gast: true } }).map((p) => p.id)).toEqual(['a', 'b']);
     expect(fuersTablet(liste, { hin: { heim: false, gast: false } }).map((p) => p.id)).toEqual(['a', 'b', 'c']);
+  });
+
+  test('nur gestartete Runden; alte Spieltage ohne Eintrag zeigen alles', () => {
+    expect(fuersTablet(liste, undefined, { hin: true }).map((p) => p.id)).toEqual(['a', 'b']);
+    expect(fuersTablet(liste, undefined, { hin: true, rueck: true }).map((p) => p.id)).toEqual(['a', 'b', 'c']);
+    expect(fuersTablet(liste, undefined, {}).map((p) => p.id)).toEqual([]);
+    expect(fuersTablet(liste, { hin: { heim: true } }, { hin: true }).map((p) => p.id)).toEqual([]);
+    expect(rundeGestartet(undefined, 2)).toBe(true);
+    expect(rundeGestartet({ hin: true }, 2)).toBe(false);
   });
 });
 

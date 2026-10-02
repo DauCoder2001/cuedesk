@@ -26,7 +26,8 @@ Ein Liga-Spieltag besteht immer aus zwei Begegnungen gegen dieselbe Mannschaft, 
 
 ## 4. Spielen
 
-- **Spieltag starten** gibt die Partien für die Tablets frei. Die Ergebnisse kommen von den Tablets oder werden in der Tabelle eingetragen.
+- **Hinrunde starten** (rechts über der Hinrunde) gibt deren vier Partien für die Tablets frei; die Begegnung läuft dann. **Rückrunde starten** erscheint danach über der Rückrunde und gibt deren Partien frei. Bis dahin lässt sich die Aufstellung der Rückrunde in Ruhe eintragen. Gestartet wird je Begegnung.
+- Die Ergebnisse kommen von den Tablets oder werden in der Tabelle eingetragen, von Hand auch für eine noch nicht gestartete Runde.
 - **Spielbericht einlesen** übernimmt die Ergebnisse aus dem Spielbericht des Verbands; vorher zeigt CueDesk, was sich ändert.
 - **Live an** / **Live aus** im Kopf gilt für beide Begegnungen: Bei Live an sehen Mitglieder und Fernseher die Spielstände, solange der Spieltag läuft. Darunter schaltet **Chat an** / **Chat aus** den Chat für beide Begegnungen (nur, wenn der Verein den Chat eingeschaltet hat).
 - **Fürs Rating werten** entscheidet, ob die Partien dieses Spieltags ins Vereins-Rating eingehen. 14.1 zählt nie.

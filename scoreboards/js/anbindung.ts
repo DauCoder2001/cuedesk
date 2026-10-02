@@ -680,7 +680,7 @@ async function turnierLaden(): Promise<void> {
     pausiert?: boolean;
     tvAnsicht?: string;
     handReihenfolge?: Record<string, number[]>;
-    liga?: { verdeckt?: Verdeckt; ziele?: { aufnahmen141?: number } };
+    liga?: { verdeckt?: Verdeckt; gestartet?: Gestartet; ziele?: { aufnahmen141?: number } };
   };
   const partien = (partienAntwort.data ?? []) as (PlanPartie & { ergebnis_a: number | null; ergebnis_b: number | null })[];
   const aufstellung = (teilnehmerAntwort.data ?? [])
@@ -701,7 +701,7 @@ async function turnierLaden(): Promise<void> {
           paused: Boolean(einstellungen.pausiert),
           raceTo: einstellungen.raceTo ?? 0,
           schedule: tabletSpielplan(
-            fuersTablet(partien, einstellungen.liga?.verdeckt),
+            fuersTablet(partien, einstellungen.liga?.verdeckt, einstellungen.liga?.gestartet),
             name,
             (id) => nummern.get(id) ?? null,
             einstellungen.liga?.ziele?.aufnahmen141
@@ -1053,7 +1053,7 @@ import {
   tvErgebnis
 } from './turnier-plan';
 import { neueKennung } from './kennung';
-import type { PlanEintrag, PlanPartie, TabletTurnier, TvErgebnis, Verdeckt } from './turnier-plan';
+import type { Gestartet, PlanEintrag, PlanPartie, TabletTurnier, TvErgebnis, Verdeckt } from './turnier-plan';
 import { aufnahmenAusProtokoll, protokollAusAufnahmen } from './protokoll-141';
 import type { AufnahmeZeile, Zustand141 } from './protokoll-141';
 

@@ -47,6 +47,7 @@ export async function andereBegegnungAnlegen(
     ...liga,
     aufstellung: undefined,
     verdeckt: undefined,
+    gestartet: undefined,
     quelle: undefined,
     heim: !liga.heim,
     begegnung: nummer,
@@ -204,6 +205,10 @@ export default function LigaAnsicht({
   // Aeltere Spieltage kennen die Begegnungsnummer noch nicht
   const liga = einstellungen.liga ? { ...einstellungen.liga, begegnung: einstellungen.liga.begegnung ?? 1 } : undefined;
   const spiele = useMemo(() => (liga ? spielplan(liga.ziele) : []), [liga]);
+  // Welche Runden die Tablets sehen. Laufende Spieltage von vor dieser Regel
+  // haben keinen Eintrag: dort gelten beide als gestartet.
+  const gestartet: { hin?: boolean; rueck?: boolean } =
+    liga?.gestartet ?? (turnier && turnier.status !== 'geplant' ? { hin: true, rueck: true } : {});
 
   // Partie zu einem Spiel des Plans (Runde 1 = Hinrunde, 2 = Rueckrunde)
   const partieVon = useCallback(
@@ -556,11 +561,19 @@ export default function LigaAnsicht({
 
   // Erst ein laufender Spieltag erscheint an den Tablets. Gestartet wird er
   // von Hand, damit die Aufstellung vorher in Ruhe eingetragen werden kann.
-  async function starten() {
-    if (!turnier) return;
-    const { error } = await supabase.from('turniere').update({ status: 'laeuft' }).eq('id', turnier.id);
+  // Hin- und Rueckrunde dieser Begegnung einzeln fuer die Tablets freigeben.
+  // Die Hinrunde setzt die Begegnung auf "laeuft" (Live, Chat, Tablets).
+  async function rundeStarten(runde: 'hin' | 'rueck') {
+    if (!turnier || !liga) return;
+    const neu = { ...einstellungen, liga: { ...liga, gestartet: { ...gestartet, [runde]: true } } };
+    const { error } = await supabase
+      .from('turniere')
+      .update({ einstellungen: neu, ...(turnier.status === 'geplant' ? { status: 'laeuft' as const } : {}) })
+      .eq('id', turnier.id);
     if (error) return setFehler(error.message);
-    setMeldung('Spieltag gestartet. Die Partien stehen jetzt an den Tablets zur Auswahl.');
+    setMeldung(
+      `${runde === 'hin' ? 'Hinrunde' : 'Rückrunde'} gestartet. Ihre Partien stehen jetzt an den Tablets zur Auswahl.`
+    );
     await laden();
   }
 
@@ -600,7 +613,7 @@ export default function LigaAnsicht({
         return setFehler(error.message);
       }
     }
-    const { aufstellung: _a, verdeckt: _v, quelle: _q, ...ligaLeer } = liga;
+    const { aufstellung: _a, verdeckt: _v, quelle: _q, gestartet: _g, ...ligaLeer } = liga;
     const { error } = await supabase
       .from('turniere')
       .update({ status: 'geplant', einstellungen: { ...einstellungen, liga: ligaLeer } })
@@ -707,11 +720,6 @@ export default function LigaAnsicht({
           <div className="kopfrechts">
           <div className="knopfpaar kopfaktionen">
             <span className={`marke ${turnier.status === 'laeuft' ? 'livelaeuft' : ''}`}>{STATUS_TEXT[turnier.status]}</span>
-            {bearbeitbar && turnier.status === 'geplant' && (
-              <button type="button" title="Gibt den Spieltag für die Tablets frei. Erst danach stehen die Partien an den Tischen zur Auswahl; die Aufstellung lässt sich vorher in Ruhe eintragen." onClick={() => void starten()}>
-                Spieltag starten
-              </button>
-            )}
             {bearbeitbar && (
               <button type="button" title="Den Spielbericht des Verbands einlesen und die Ergebnisse in diese Begegnung übernehmen. Vorher zeigt eine Vorschau jede Partie." onClick={() => setImportOffen(true)}>
                 Spielbericht einlesen
@@ -807,7 +815,23 @@ export default function LigaAnsicht({
 
       {reihen.map((r) => (
         <section key={r.runde} className="block">
-          <h2>{r.titel}</h2>
+          <div className="rundenkopf">
+            <h2>{r.titel}</h2>
+            {gestartet[r.runde] ? (
+              turnier.status === 'laeuft' && <span className="livelaeuft">● läuft</span>
+            ) : (
+              bearbeitbar &&
+              (r.runde === 'hin' || gestartet.hin) && (
+                <button
+                  type="button"
+                  title={`Gibt die Partien der ${r.titel} für die Tablets frei. Vorher lässt sich die Aufstellung in Ruhe eintragen; Ergebnisse von Hand gehen jederzeit.`}
+                  onClick={() => void rundeStarten(r.runde)}
+                >
+                  {r.titel} starten
+                </button>
+              )
+            )}
+          </div>
           <table className="tabelle">
             <thead>
               <tr>
