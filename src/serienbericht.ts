@@ -58,7 +58,7 @@ export function serienPdf(b: SerienBericht): Uint8Array {
   );
   absatz(
     dok,
-    'Punkte je Turnier: Teilnehmerzahl + 1 - Platz' +
+    'Punkte je Turnier: Sieger = Teilnehmerzahl, jeder Platz darunter einen weniger, Letzter 1 Punkt' +
       (b.bonus > 0 ? `, für Platz 1 zusätzlich ${b.bonus} Bonuspunkt${b.bonus === 1 ? '' : 'e'}.` : ', ohne Sieger-Bonus.') +
       (b.streicher > 0 ? ' Werte in Klammern sind Streichergebnisse und zählen nicht mit.' : '')
   );

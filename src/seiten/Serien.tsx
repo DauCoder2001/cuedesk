@@ -287,7 +287,7 @@ export default function Serien() {
           <p className="hinweis">
             {serie.disziplin ? DISZIPLIN_TEXT[serie.disziplin] : `Disziplin ${DISZIPLIN_OFFEN_TEXT}`} · {turniere.length} Turniere ·{' '}
             {serie.streicher > 0 ? `gewertet: beste ${serie.streicher}` : 'alle Turniere zählen'} ·{' '}
-            {serie.bonus > 0 ? `Sieger-Bonus +${serie.bonus}` : 'ohne Sieger-Bonus'} · Punkte = Teilnehmerzahl + 1 − Platz
+            {serie.bonus > 0 ? `Sieger-Bonus +${serie.bonus}` : 'ohne Sieger-Bonus'} · Punkte: Sieger = Teilnehmerzahl, jeder Platz darunter einen weniger, Letzter 1 Punkt
             {!serie.aktiv && ' · beendet'}
           </p>
         )}
