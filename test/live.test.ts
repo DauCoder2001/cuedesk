@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { dauerText, kachel, liveAktiv } from '../src/live';
+import { dauerText, kachel, laufenderStand, laufenderStandText, liveAktiv } from '../src/live';
 
 const jetzt = Date.parse('2026-09-22T20:00:00Z');
 const frisch = '2026-09-22T19:59:00Z';
@@ -42,6 +42,21 @@ describe('Kachel eines Tisches', () => {
     expect(kachel({ gameType: 'pool', player1: 'Highlander', score1: 2 }, frisch, jetzt)).toMatchObject({ turnierspiel: false });
     expect(kachel({ gameType: '14.1', s1: 5, tournamentMatchId: 'p1' }, frisch, jetzt)).toMatchObject({ turnierspiel: true });
     expect(kachel({ gameType: '14.1', s1: 5 }, frisch, jetzt)).toMatchObject({ turnierspiel: false });
+  });
+
+  test('Laufender Stand im Spielplan, auch nach Seitenwechsel', () => {
+    const z141 = { gameType: '14.1', player1: 'Frank F.', player2: 'Kura', s1: 14, s2: 28, inn1: 1, inn2: 1, tournamentMatchId: 'p1' };
+    const s = laufenderStand(z141, frisch, 'Frank F.', 'Kura (Bassum)', jetzt);
+    expect(s).toEqual({ a: 14, b: 28, aufnahme: 1, beendet: false });
+    expect(laufenderStandText(s!, 1)).toBe('● Tisch 1 · 14 : 28 · Aufn. 1');
+    // Seiten am Board getauscht: Kura steht links
+    const getauscht = { ...z141, player1: 'Kura', player2: 'Frank F.', s1: 28, s2: 14 };
+    expect(laufenderStand(getauscht, frisch, 'Frank F.', 'Kura (Bassum)', jetzt)).toMatchObject({ a: 14, b: 28 });
+    // Pool am Ziel, noch nicht bestaetigt
+    const pool = { gameType: 'pool', player1: 'Sven', player2: 'Olli', score1: 4, score2: 2, raceTo: 4, tournamentMatchId: 'p2' };
+    expect(laufenderStandText(laufenderStand(pool, frisch, 'Sven', 'Olli', jetzt)!, 2)).toBe('● Tisch 2 · 4 : 2 · beendet, noch nicht bestätigt');
+    // Freies Spiel gehoert in keinen Spielplan
+    expect(laufenderStand({ gameType: 'pool', player1: 'A', score1: 1 }, frisch, 'A', 'B', jetzt)).toBeNull();
   });
 
   test('Pool: Race-to erreicht heisst beendet', () => {

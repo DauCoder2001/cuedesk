@@ -14,6 +14,8 @@ import LiveSchalter from './LiveSchalter';
 import ChatSchalter from './ChatSchalter';
 import ZuruecksetzenDialog from './ZuruecksetzenDialog';
 import { zuruecksetzbar } from '../partie-zuruecksetzen';
+import { useLaufendeStaende } from '../laufende-staende';
+import { laufenderStand, laufenderStandText } from '../live';
 import { useWechsel } from '../ungespeichert';
 import { angefangen, auslosen, bergerRunden, hoechstwert, rangliste, spielBeendet, spielZaehler, spielZaehlerText } from '../turnier';
 import type { Gleichstand, RanglistenPartie, Zeile } from '../turnier';
@@ -195,6 +197,15 @@ export default function TurnierAnsicht({
       void supabase.removeChannel(kanal);
     };
   }, [turnierId]);
+
+  // Laufender Stand am Tisch neben dem (noch leeren) Ergebnis
+  const laufendeStaende = useLaufendeStaende(verein?.id);
+  const laufendText = (p: Partie) => {
+    const t = laufendeStaende.get(p.id);
+    if (!t || p.status === 'beendet') return null;
+    const stand = laufenderStand(t.zustand, t.aktualisiert, anzeige(p.spieler_a), anzeige(p.spieler_b));
+    return stand ? laufenderStandText(stand, tische.get(t.tischId) ?? null) : null;
+  };
 
   const person = useCallback((id: string) => personen.find((p) => p.id === id), [personen]);
   const anzeige = useCallback(
@@ -2079,6 +2090,7 @@ export default function TurnierAnsicht({
                       nameA={anzeige(p.spieler_a)}
                       nameB={anzeige(p.spieler_b)}
                       tisch={p.tisch_id ? tische.get(p.tisch_id) ?? null : null}
+                      laufend={laufendText(p)}
                       bearbeitbar={bearbeitbar && !(istGruppenspiel(p) && mehrgruppig && gruppenGesperrt) && !koGesperrt(p)}
                       mitVerlauf={darfLeiten}
                       speichern={(a, b) => void ergebnisSetzen(p, a, b)}
@@ -2602,6 +2614,7 @@ function Spielzeile(props: {
   nameA: string;
   nameB: string;
   tisch: number | null;
+  laufend: string | null; // laufender Stand am Tisch ("● Tisch 1 · 2 : 1"), nur zum Ansehen
   bearbeitbar: boolean;
   mitVerlauf: boolean; // die Aenderungsliste duerfen nur Leitungsrollen lesen
   speichern: (a: number | null, b: number | null) => void;
@@ -2636,7 +2649,9 @@ function Spielzeile(props: {
   const vorgabeText = p.vorgabe_a || p.vorgabe_b ? `${p.vorgabe_a} : ${p.vorgabe_b}` : '–';
   const status = fertig
     ? 'fertig'
-    : props.tisch !== null
+    : props.laufend
+      ? props.laufend
+      : props.tisch !== null
       ? `● Tisch ${props.tisch}`
       : p.status === 'laeuft'
         ? 'läuft'

@@ -100,6 +100,48 @@ export function kachel(zustand: unknown, aktualisiert: string | null, jetzt = Da
   };
 }
 
+// ---------- Laufender Stand im Spielplan (Turnier und Liga-Spieltag) ----------
+
+const kurzName = (text: string) => text.replace(/\s*\([^()]*\)\s*$/, '').trim().toLowerCase();
+
+// Laufender Stand einer Turnierpartie am Tisch, umgerechnet auf Spieler A/B
+// der Partie. Nach einem Seitenwechsel stehen die Spieler am Board vertauscht;
+// massgeblich ist deshalb der Name (wie beim Speichern, turnier-plan.ts).
+export function laufenderStand(
+  zustand: unknown,
+  aktualisiert: string | null,
+  nameA: string,
+  nameB: string,
+  jetzt = Date.now()
+): { a: number; b: number; aufnahme: number | null; beendet: boolean } | null {
+  const k = kachel(zustand, aktualisiert, jetzt);
+  if (k.art === 'frei' || !k.turnierspiel) return null;
+  const z = zustand as Record<string, unknown>;
+  const getauscht =
+    kurzName(nameA) !== kurzName(nameB) &&
+    kurzName(k.spieler1) === kurzName(nameB) &&
+    kurzName(k.spieler2) === kurzName(nameA);
+  return {
+    a: getauscht ? k.stand2 : k.stand1,
+    b: getauscht ? k.stand1 : k.stand2,
+    aufnahme: k.art === '14.1' ? Math.max(zahl(z.inn1), zahl(z.inn2)) : null,
+    beendet: !k.laeuft
+  };
+}
+
+// "● Tisch 1 · 14 : 28 · Aufn. 1" bzw. mit "beendet, noch nicht bestätigt"
+export function laufenderStandText(
+  stand: { a: number; b: number; aufnahme: number | null; beendet: boolean },
+  tischNummer: number | null
+): string {
+  return [
+    `● ${tischNummer !== null ? `Tisch ${tischNummer}` : 'am Tisch'}`,
+    `${stand.a} : ${stand.b}`,
+    ...(stand.aufnahme !== null ? [`Aufn. ${stand.aufnahme}`] : []),
+    ...(stand.beendet ? ['beendet, noch nicht bestätigt'] : [])
+  ].join(' · ');
+}
+
 export function dauerText(seit: number | null, jetzt = Date.now()): string {
   if (seit === null) return 'läuft';
   const minuten = Math.max(0, Math.floor((jetzt - seit) / 60000));

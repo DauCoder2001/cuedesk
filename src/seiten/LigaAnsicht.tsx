@@ -12,6 +12,8 @@ import LiveSchalter from './LiveSchalter';
 import ChatSchalter from './ChatSchalter';
 import { vereinsEinstellungen } from '../vereinseinstellungen';
 import ZuruecksetzenDialog from './ZuruecksetzenDialog';
+import { useLaufendeStaende } from '../laufende-staende';
+import { laufenderStand, laufenderStandText } from '../live';
 import { zuruecksetzbar } from '../partie-zuruecksetzen';
 import type { LigaSpiel } from '../liga';
 import type { TurnierEinstellungen } from './Turniere';
@@ -176,6 +178,18 @@ export default function LigaAnsicht({
       void supabase.removeChannel(kanal);
     };
   }, [turnierId]);
+
+  // Laufender Stand am Tisch neben dem (noch leeren) Ergebnis
+  const laufendeStaende = useLaufendeStaende(verein?.id);
+  const [tischNummern, setTischNummern] = useState<Map<string, number>>(new Map());
+  useEffect(() => {
+    if (!verein) return;
+    void supabase
+      .from('tische')
+      .select('id, nummer')
+      .eq('verein_id', verein.id)
+      .then(({ data }) => setTischNummern(new Map((data ?? []).map((x) => [x.id, x.nummer]))));
+  }, [verein]);
 
   const anzeige = useCallback(
     (id: string | null) => {
@@ -834,6 +848,11 @@ export default function LigaAnsicht({
                       ergebnisSetzen={(a, b) => void ergebnisSetzen(s, a, b)}
                       wertungSetzen={(werten) => void partieWertung(s, werten)}
                       zuruecksetzen={p ? () => setRuecksetzPartie(p) : undefined}
+                      laufend={(() => {
+                        const t = p && p.status !== 'beendet' ? laufendeStaende.get(p.id) : undefined;
+                        const stand = t && p ? laufenderStand(t.zustand, t.aktualisiert, anzeige(p.spieler_a), anzeige(p.spieler_b)) : null;
+                        return stand && t ? laufenderStandText(stand, tischNummern.get(t.tischId) ?? null) : null;
+                      })()}
                       spieltagWertet={turnier.rating_werten}
                     />
                   );
@@ -966,6 +985,7 @@ function Spielzeile(props: {
   ergebnisSetzen: (heim: number | null, gast: number | null) => void;
   wertungSetzen: (werten: boolean) => void;
   zuruecksetzen?: () => void;
+  laufend: string | null; // laufender Stand am Tisch ("● Tisch 1 · 14 : 28 · Aufn. 1"), nur zum Ansehen
   spieltagWertet: boolean; // Schalter "Fürs Rating werten" des Spieltags
 }) {
   const { spiel, partie } = props;
@@ -1059,6 +1079,13 @@ function Spielzeile(props: {
         )}
       </td>
       <td className="rechts">
+        {props.laufend && (
+          <>
+            <span className="livelaeuft" title="Laufender Stand am Tisch. Ins Ergebnis kommt er erst mit „Ergebnis bestätigen“ am Tablet.">
+              {props.laufend}
+            </span>{' '}
+          </>
+        )}
         {spiel.disziplin === '14-1' ? (
           <span className="hinweis" title="14.1 wird auf Punkte gespielt und geht nie ins Rating ein">
             14.1: kein Rating
