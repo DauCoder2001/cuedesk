@@ -577,6 +577,34 @@ export default function LigaAnsicht({
     await laden();
   }
 
+  // Versehentlich gestartete Runde zuruecknehmen: nur solange keine ihrer
+  // Partien am Tisch liegt oder ein Ergebnis hat, sonst haenge ein Tablet in
+  // einer Partie, die es nicht mehr sieht. Ohne gestartete Runde steht die
+  // Begegnung wieder auf "in Vorbereitung" (Live und Chat aus).
+  const rundeBelegt = (runde: 'hin' | 'rueck') =>
+    partien.some(
+      (p) =>
+        p.runde === (runde === 'hin' ? 1 : 2) &&
+        (p.tisch_id !== null || p.status !== 'geplant' || p.ergebnis_a !== null || p.ergebnis_b !== null)
+    );
+  async function rundeZuruecknehmen(runde: 'hin' | 'rueck') {
+    if (!turnier || !liga) return;
+    const titel = runde === 'hin' ? 'Hinrunde' : 'Rückrunde';
+    const frage =
+      runde === 'hin'
+        ? 'Start der Hinrunde zurücknehmen?\nIhre Partien verschwinden wieder von den Tablets, die Begegnung steht wieder auf „in Vorbereitung“ (Live und Chat aus). Aufstellung bleibt.'
+        : 'Start der Rückrunde zurücknehmen?\nIhre Partien verschwinden wieder von den Tablets. Aufstellung bleibt.';
+    if (!(await fragen(frage, 'Zurücknehmen'))) return;
+    const neu = { ...einstellungen, liga: { ...liga, gestartet: { ...gestartet, [runde]: false } } };
+    const { error } = await supabase
+      .from('turniere')
+      .update({ einstellungen: neu, ...(runde === 'hin' ? { status: 'geplant' as const } : {}) })
+      .eq('id', turnier.id);
+    if (error) return setFehler(error.message);
+    setMeldung(`Start der ${titel} zurückgenommen.`);
+    await laden();
+  }
+
   async function wiederOeffnen() {
     if (!turnier || !(await fragen('Spieltag wieder öffnen?', 'Wieder öffnen'))) return;
     const { error } = await supabase.from('turniere').update({ status: 'laeuft' }).eq('id', turnier.id);
@@ -818,7 +846,24 @@ export default function LigaAnsicht({
           <div className="rundenkopf">
             <h2>{r.titel}</h2>
             {gestartet[r.runde] ? (
-              turnier.status === 'laeuft' && <span className="livelaeuft">● läuft</span>
+              <span className="knopfpaar">
+                {turnier.status === 'laeuft' && <span className="livelaeuft">● läuft</span>}
+                {bearbeitbar &&
+                  (r.runde === 'rueck' || !gestartet.rueck) &&
+                  (rundeBelegt(r.runde) ? (
+                    <span className="hinweis">
+                      Partie läuft schon. Erst dort Spiel abbrechen oder hier Zurücksetzen.
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      title={`Nimmt den Start der ${r.titel} zurück: Ihre Partien verschwinden wieder von den Tablets. Geht nur, solange keine Partie am Tisch liegt oder ein Ergebnis hat.`}
+                      onClick={() => void rundeZuruecknehmen(r.runde)}
+                    >
+                      Start zurücknehmen
+                    </button>
+                  ))}
+              </span>
             ) : (
               bearbeitbar &&
               (r.runde === 'hin' || gestartet.hin) && (
