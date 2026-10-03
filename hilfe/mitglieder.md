@@ -34,6 +34,7 @@ Wer nur Lesezugang hat, landet nach der Anmeldung am Handy direkt hier, am PC od
 
 Ein Klick auf deinen Namen oben rechts öffnet **Mein Konto**:
 
+- **E-Mail-Adresse ändern**: neue Adresse eintragen und **Bestätigungsmails schicken**. Je eine Mail geht an die bisherige und an die neue Adresse; erst wenn du in beiden den Link geklickt hast, gilt die neue. Bis dahin meldest du dich mit der bisherigen an. Kommst du an die bisherige Adresse nicht mehr heran, hilft der Vereins-Administrator.
 - **Passwort festlegen oder ändern**: Code an deine E-Mail schicken lassen, **Code aus der Mail** und **Neues Passwort** eintragen.
 - **Meine Daten**: alles, was CueDesk über dich speichert, als PDF oder JSON herunterladen.
 - Unten stehen Impressum, Datenschutz, Nutzungsbedingungen und der Vertrag zur Auftragsverarbeitung.

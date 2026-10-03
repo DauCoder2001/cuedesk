@@ -7,11 +7,17 @@ import { PASSWORT_MINDESTLAENGE, passwortFehler } from '../passwort';
 import AuskunftKnoepfe from './AuskunftKnoepfe';
 import { EinwilligungSelbst } from './Einwilligungen';
 import { NAMENSANZEIGE_AKTIV, NAMENSANZEIGE_FASSUNG, NAMENSANZEIGE_TEXT } from '../einwilligung';
+import { ANWENDUNGSADRESSE } from '../adresse';
 
 // "Mein Konto": eigene Angaben und wahlweise ein Passwort. Die Anmeldung per
 // Mail-Link bleibt immer moeglich. Wer ein Passwort setzt, bestaetigt vorher mit
 // einem Code aus der Mail, dass ihm das Postfach gehoert - Vereins-PCs sind
 // geteilt, eine offene Sitzung allein reicht deshalb nicht.
+// Eine neue E-Mail-Adresse gilt erst, wenn beide Postfaecher den Link aus ihrer
+// Mail bestaetigt haben (Supabase "Secure email change"); der Trigger
+// email_mitschreiben zieht dann public.benutzer nach.
+
+const EMAIL_MUSTER = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function Konto() {
   const { benutzer, vereine } = useSitzung();
@@ -26,6 +32,25 @@ export default function Konto() {
   const [meldung, setMeldung] = useState<string | null>(null);
   const pflicht = usePflicht<HTMLElement>();
   useUngespeichert('konto-passwort', `${code}${neu}${wiederholt}` !== '', 'Das neue Passwort', () => speichern());
+  // E-Mail-Adresse aendern: null = Formular zu
+  const [neueAdresse, setNeueAdresse] = useState<string | null>(null);
+  // Adresse, deren Bestaetigung noch aussteht (auth.users.new_email)
+  const [wartend, setWartend] = useState<string | null>(null);
+  const [mailArbeitet, setMailArbeitet] = useState(false);
+  const [mailMeldung, setMailMeldung] = useState<string | null>(null);
+  const mailPflicht = usePflicht<HTMLElement>();
+  useUngespeichert('konto-email', !!neueAdresse?.trim(), 'Die neue E-Mail-Adresse', () => adresseAendern());
+
+  useEffect(() => {
+    if (!benutzer) return;
+    let vorbei = false;
+    void supabase.auth.getUser().then(({ data }) => {
+      if (!vorbei) setWartend(data.user?.new_email ?? null);
+    });
+    return () => {
+      vorbei = true;
+    };
+  }, [benutzer]);
 
   useEffect(() => {
     if (!benutzer) return;
@@ -51,6 +76,34 @@ export default function Konto() {
     if (error) return setFehler(error.message);
     setCodeGeschickt(true);
     setMeldung(`Der Code ist unterwegs an ${benutzer?.email ?? 'deine E-Mail-Adresse'}.`);
+  }
+
+  async function adresseAendern() {
+    if (!mailPflicht.pruefen()) return;
+    const adresse = (neueAdresse ?? '').trim().toLowerCase();
+    if (!EMAIL_MUSTER.test(adresse)) return mailPflicht.melden('Bitte eine gültige E-Mail-Adresse eingeben.');
+    if (adresse === benutzer?.email?.toLowerCase()) return mailPflicht.melden('Das ist schon deine E-Mail-Adresse.');
+    setMailArbeitet(true);
+    const { error } = await supabase.auth.updateUser({ email: adresse }, { emailRedirectTo: ANWENDUNGSADRESSE });
+    setMailArbeitet(false);
+    if (error) {
+      const text = error.message.toLowerCase();
+      return mailPflicht.melden(
+        text.includes('already') || text.includes('registered') || text.includes('exists')
+          ? 'Diese E-Mail-Adresse gehört schon zu einem anderen Konto.'
+          : text.includes('rate') || text.includes('seconds')
+            ? 'Gerade wurden zu viele Mails verschickt. Bitte in ein paar Minuten noch einmal versuchen.'
+            : error.message
+      );
+    }
+    setNeueAdresse(null);
+    mailPflicht.zuruecksetzen();
+    setWartend(adresse);
+    setMailMeldung(
+      `Bestätigungsmails sind unterwegs an ${benutzer?.email ?? 'deine bisherige Adresse'} und an ${adresse}. ` +
+        'Erst wenn du in beiden Mails den Link geklickt hast, gilt die neue Adresse; bis dahin meldest du dich mit der bisherigen an.'
+    );
+    return true;
   }
 
   async function speichern() {
@@ -84,7 +137,7 @@ export default function Konto() {
 
   return (
     <div className="einspaltig">
-      <section className="block">
+      <section className="block" ref={mailPflicht.bereich}>
         <h2>Mein Konto</h2>
         <div className="felder">
           <label className="feld">
@@ -95,7 +148,65 @@ export default function Konto() {
             <span>Name</span>
             <input value={benutzer?.anzeigename ?? ''} disabled />
           </label>
+          {neueAdresse !== null && (
+            <label className="feld">
+              <span>Neue E-Mail-Adresse</span>
+              <input
+                required
+                type="email"
+                autoComplete="email"
+                value={neueAdresse}
+                placeholder="name@beispiel.de"
+                onChange={(e) => setNeueAdresse(e.target.value)}
+              />
+            </label>
+          )}
         </div>
+        {wartend && neueAdresse === null && (
+          <p className="hinweis">
+            Wechsel auf {wartend} wartet auf Bestätigung: Klicke den Link in der Mail an deine bisherige und an die neue
+            Adresse.
+          </p>
+        )}
+        {neueAdresse === null ? (
+          <div className="knopfpaar">
+            <button
+              type="button"
+              title="Eine neue E-Mail-Adresse für die Anmeldung und alle Mails von CueDesk eintragen"
+              onClick={() => {
+                setMailMeldung(null);
+                setNeueAdresse('');
+              }}
+            >
+              E-Mail-Adresse ändern
+            </button>
+          </div>
+        ) : (
+          <>
+            <p className="hinweis">
+              Du bekommst zwei Mails: eine an deine bisherige und eine an die neue Adresse. Die neue Adresse gilt erst,
+              wenn du in beiden den Link geklickt hast. Kommst du an die bisherige nicht mehr heran, hilft der
+              Vereins-Administrator.
+            </p>
+            <div className="knopfpaar">
+              <button type="button" title="Die Bestätigungsmails verschicken" onClick={() => void adresseAendern()} disabled={mailArbeitet}>
+                {mailArbeitet ? 'Wird geschickt …' : 'Bestätigungsmails schicken'}
+              </button>
+              <button
+                type="button"
+                title="Ohne Ändern schließen"
+                onClick={() => {
+                  setNeueAdresse(null);
+                  mailPflicht.zuruecksetzen();
+                }}
+              >
+                Abbrechen
+              </button>
+              <Pflichthinweis hinweis={mailPflicht.hinweis} />
+            </div>
+          </>
+        )}
+        {mailMeldung && <p className="meldung">{mailMeldung}</p>}
         {fehler && <p className="fehler">{fehler}</p>}
         {meldung && <p className="meldung">{meldung}</p>}
       </section>
