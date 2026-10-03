@@ -34,7 +34,13 @@ describe('Lesen', () => {
   test('ohne Kopf: fuer alle, Titel aus dem Dateinamen', () => {
     const o = themaLesen('frei.md', 'Nur Text');
     expect(o).toMatchObject({ id: 'frei', titel: 'frei', rollen: ['alle'] });
+    expect(o.anhang).toBeUndefined();
     expect(bloecke('Nur Text')[0].art).toBe('p');
+  });
+  test('Anhang aus dem Kopf: Knopftext und Datei', () => {
+    const a = themaLesen('rating.md', '---\ntitel: Rating\nanhang: Ausführlich erklärt | rating.pdf\n---\nText');
+    expect(a.anhang).toEqual({ text: 'Ausführlich erklärt', datei: 'rating.pdf' });
+    expect(themaLesen('x.md', '---\nanhang: nur Text\n---\nText').anhang).toBeUndefined();
   });
   test('Inline-Teile', () => {
     expect(teile('a **b** `c` [d](e) f')).toEqual([
@@ -105,6 +111,13 @@ describe('Die echten Hilfetexte', () => {
     expect(themenFuer(THEMEN, [], true).eigene.map((t) => t.id)).toContain('konsole');
     expect(themaZurSeite(THEMEN, 'turniere')?.id).toBe('turnier');
     expect(themaZurSeite(THEMEN, 'personen')?.id).toBe('spieler-datenschutz');
+  });
+  test('jeder Anhang liegt in public/hilfe', async () => {
+    const { THEMEN } = await import('../src/hilfe-texte');
+    const { existsSync } = await import('node:fs');
+    const anhaenge = THEMEN.flatMap((t) => (t.anhang ? [t.anhang.datei] : []));
+    expect(anhaenge).toContain('vereins-rating-erklaert.pdf');
+    anhaenge.forEach((datei) => expect(existsSync(`public/hilfe/${datei}`), datei).toBe(true));
   });
   test('Handbuch: jede Seite beginnt, keine unlesbaren Zeichen', async () => {
     const { THEMEN } = await import('../src/hilfe-texte');

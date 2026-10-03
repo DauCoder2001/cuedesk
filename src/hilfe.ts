@@ -23,6 +23,9 @@ export type Thema = {
   rollen: string[]; // 'alle', 'mitglied', 'turnierleiter', 'sportwart', 'vereinsadmin', 'superadmin'
   seiten: string[]; // Bereiche aus src/App.tsx, fuer die Kontexthilfe
   reihenfolge: number;
+  // Zusaetzliches Dokument zum Thema, Kopfzeile "anhang: Knopftext | datei.pdf";
+  // die Datei liegt in public/hilfe/
+  anhang?: { text: string; datei: string };
   bloecke: Block[];
   roh: string; // Text ohne Kopf, fuer die Suche
 };
@@ -49,12 +52,14 @@ export function themaLesen(dateiname: string, inhalt: string): Thema {
     rumpf = text.slice(treffer[0].length);
   }
   const id = dateiname.replace(/^.*\//, '').replace(/\.md$/, '');
+  const [anhangText, anhangDatei] = (kopf.anhang ?? '').split('|').map((x) => x.trim());
   return {
     id,
     titel: kopf.titel || id,
     rollen: liste(kopf.rollen).length ? liste(kopf.rollen) : ['alle'],
     seiten: liste(kopf.seiten),
     reihenfolge: Number(kopf.reihenfolge) || 999,
+    ...(anhangText && anhangDatei ? { anhang: { text: anhangText, datei: anhangDatei } } : {}),
     bloecke: bloecke(rumpf),
     roh: rumpf
   };

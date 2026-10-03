@@ -3,13 +3,14 @@ titel: Vereins-Rating und Ranglisten
 rollen: alle
 seiten: rating, ranglisten, statistikPool, statistik141, serien
 reihenfolge: 60
+anhang: Ausführlich erklärt | vereins-rating-erklaert.pdf
 ---
-Das Vereins-Rating zeigt die Spielstärke je Disziplin (8-, 9- und 10-Ball) als Zahl. Der Vereinsschnitt liegt bei 500; 100 Punkte Unterschied bedeuten die doppelte Chance, ein Rack zu gewinnen.
+Das Vereins-Rating zeigt die Spielstärke je Disziplin (8-, 9-, 10-Ball und Multi-Ball) als Zahl. Der Vereinsschnitt liegt bei 500; 100 Punkte Unterschied bedeuten die doppelte Chance, ein Rack zu gewinnen. Wie genau gerechnet wird und wie daraus die Vorgabe entsteht, steht im PDF **Ausführlich erklärt** oben rechts.
 
 ## Woraus es entsteht
 
-- Es zählen gewertete Partien aus Turnieren und Liga-Spieltagen der letzten Monate, jeweils Rack für Rack.
-- **Nicht** zählen: Einzelspiele ohne Turnier, Partien mit Gästen und 14.1.
+- Es zählen gewertete Partien aus Turnieren und Liga-Spieltagen der letzten zwölf Monate, jeweils Rack für Rack. Wer darin weniger als 100 Racks hat, bekommt ältere Partien dazu, höchstens drei Jahre zurück.
+- **Nicht** zählen: Einzelspiele ohne Turnier, Partien mit Gästen in Vereinsturnieren und 14.1. Im Liga-Spieltag zählen auch Partien gegen Spieler anderer Vereine.
 - Wer noch wenige Racks gespielt hat, startet beim Vereinsschnitt oder beim **Rating-Startwert**, den die Vereinsleitung eintragen kann.
 - Neu berechnet wird jede Nacht und beim Abschließen eines Turniers.
 

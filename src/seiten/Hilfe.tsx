@@ -143,14 +143,28 @@ export default function Hilfe({ startThema }: { startThema: string | null }) {
               <>
                 <div className="bearbeitenkopf">
                   <h2>{thema.titel}</h2>
-                  <button
-                    type="button"
-                    className="klein"
-                    title="Dieses Thema als PDF zum Ausdrucken herunterladen"
-                    onClick={() => herunterladen(handoutPdf(thema, vereinName), dateiName(thema.titel))}
-                  >
-                    Handout (PDF)
-                  </button>
+                  <div>
+                    {thema.anhang && (
+                      <button
+                        type="button"
+                        className="klein"
+                        title="Ausführliche Beschreibung als PDF in einem neuen Fenster öffnen"
+                        onClick={() =>
+                          window.open(`${import.meta.env.BASE_URL}hilfe/${thema.anhang!.datei}`, '_blank', 'noopener')
+                        }
+                      >
+                        {thema.anhang.text}
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      className="klein"
+                      title="Dieses Thema als PDF zum Ausdrucken herunterladen"
+                      onClick={() => herunterladen(handoutPdf(thema, vereinName), dateiName(thema.titel))}
+                    >
+                      Handout (PDF)
+                    </button>
+                  </div>
                 </div>
                 <Bloecke bloecke={thema.bloecke} />
               </>
