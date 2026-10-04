@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type CSSProperties } from 'react';
 import { supabase } from '../supabase';
 import { useSitzung } from '../sitzung';
 import { KEIN_LIVE_TEXT, dauerText, kachel, liveAktiv } from '../live';
@@ -158,6 +158,7 @@ export default function Live() {
               tisch={tisch}
               k={k}
               turnierLaeuft={turnierLaeuft}
+              tischform
               tabletAus={amTisch.length > 0 && !online}
               neuLaden={
                 darfLeiten && online
@@ -232,14 +233,47 @@ export default function Live() {
   }
 }
 
-// Auch auf der Zuschauerseite (Zuschauen.tsx), dort ohne Knoepfe
+// Rahmen der Tischform: sechs Taschen, je Langbande sechs und je Kopfbande drei
+// Diamanten (Positionen in Prozent, damit sie bei jeder Kachelbreite passen)
+// (Masse passend zu .tischform in stil.css: Spielflaeche 16px innen, Taschen 16px)
+const TASCHEN: CSSProperties[] = [{ top: 8 }, { bottom: 8 }].flatMap((hoehe) => [
+  { ...hoehe, left: 8 },
+  { ...hoehe, left: 'calc(50% - 8px)' },
+  { ...hoehe, right: 8 }
+]);
+const DIAMANTEN: CSSProperties[] = [
+  ...[12.5, 25, 37.5, 62.5, 75, 87.5].flatMap((x) => [
+    { left: `calc(${x}% - 2.5px)`, top: 4.5 },
+    { left: `calc(${x}% - 2.5px)`, bottom: 4.5 }
+  ]),
+  ...[25, 50, 75].flatMap((y) => [
+    { top: `calc(${y}% - 2.5px)`, left: 4.5 },
+    { top: `calc(${y}% - 2.5px)`, right: 4.5 }
+  ])
+];
+
+function Tischrahmen() {
+  return (
+    <>
+      {TASCHEN.map((stil, i) => (
+        <span key={i} className="tasche" style={stil} aria-hidden="true" />
+      ))}
+      {DIAMANTEN.map((stil, i) => (
+        <span key={i} className="diamant" style={stil} aria-hidden="true" />
+      ))}
+    </>
+  );
+}
+
+// Auch auf der Zuschauerseite (Zuschauen.tsx), dort ohne Knoepfe und ohne Tischform
 export function Tischkachel({
   tisch,
   k,
   neuLaden,
   laedtNeu,
   tabletAus,
-  turnierLaeuft
+  turnierLaeuft,
+  tischform = false
 }: {
   tisch: Tisch;
   k: Kachel;
@@ -247,7 +281,10 @@ export function Tischkachel({
   laedtNeu: boolean;
   tabletAus: boolean;
   turnierLaeuft: boolean; // dann bekommt ein Spiel ohne Turnierpartie die Marke "Freies Spiel" (wie am TV)
+  tischform?: boolean; // Kachel als Billardtisch zeichnen (Seite Live)
 }) {
+  const klasse = tischform ? 'livekachel tischform' : 'livekachel';
+  const rahmen = tischform && <Tischrahmen />;
   const titel = (
     <>
       Tisch {tisch.nummer}
@@ -270,7 +307,8 @@ export function Tischkachel({
 
   if (k.art === 'frei') {
     return (
-      <div className="livekachel">
+      <div className={klasse}>
+        {rahmen}
         <div className="livekopf">
           <span>{titel}</span>
           <span>{k.bereit ? 'bereit' : 'frei'}</span>
@@ -282,7 +320,8 @@ export function Tischkachel({
   }
 
   return (
-    <div className="livekachel">
+    <div className={klasse}>
+      {rahmen}
       <div className="livekopf">
         <span>
           {titel}

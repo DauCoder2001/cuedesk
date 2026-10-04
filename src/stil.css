@@ -390,7 +390,15 @@ h2 small.hinweis { font-weight: 400; font-size: 14px; margin-left: 6px; }
 .spielknopf.tv { background: #1f3b73; }
 
 /* Live-Tische */
-.livetische { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; }
+/* auto-fill: ein einzelner Tisch bleibt eine Spalte breit statt die ganze Zeile zu fuellen */
+.livetische { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
+/* Seite Live: Kachel als Billardtisch - Bande, sechs Taschen, Diamanten */
+/* Spielflaeche 16px innen; die Taschen (16px) sitzen mittig auf ihrer Linie */
+.livekachel.tischform { position: relative; border: 1.5px solid var(--text-leise); border-radius: 22px; padding: 28px 26px; }
+.tischform .livekopf > span:last-child { white-space: nowrap; }
+.tischform::before { content: ""; position: absolute; inset: 16px; border: 1px solid var(--text-leise); border-radius: 3px; pointer-events: none; }
+.tischform > .tasche { position: absolute; width: 16px; height: 16px; border: 1px solid var(--text-leise); border-radius: 50%; background: var(--flaeche); }
+.tischform > .diamant { position: absolute; width: 5px; height: 5px; border-radius: 50%; background: #8b2a2a; }
 .livekachel { border: 1px solid var(--rand); border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; justify-content: space-between; gap: 14px; min-height: 190px; }
 .livekopf { display: flex; justify-content: space-between; gap: 8px; font-size: 14px; color: var(--text-leise); }
 .livekopf .marke { font-size: 12px; border: 1px solid var(--rand); border-radius: var(--radius); padding: 1px 6px; margin-left: 6px; }
