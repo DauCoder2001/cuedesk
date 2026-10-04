@@ -256,10 +256,10 @@ function Tischrahmen() {
   return (
     <>
       {TASCHEN.map((stil, i) => (
-        <span key={i} className="tasche" style={stil} aria-hidden="true" />
+        <span key={`t${i}`} className="tasche" style={stil} aria-hidden="true" />
       ))}
       {DIAMANTEN.map((stil, i) => (
-        <span key={i} className="diamant" style={stil} aria-hidden="true" />
+        <span key={`d${i}`} className="diamant" style={stil} aria-hidden="true" />
       ))}
     </>
   );
