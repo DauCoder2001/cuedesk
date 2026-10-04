@@ -105,6 +105,10 @@ export default function LigaAnsicht({
   const [gastName, setGastName] = useState('');
   const [passwortFrage, setPasswortFrage] = useState<{ runde: 'hin' | 'rueck'; seite: 'heim' | 'gast' } | null>(null);
   const [passwort, setPasswort] = useState('');
+  // Schutz der Hinrunde, sobald die Rueckrunde gestartet ist: aufheben nur mit
+  // dem Schutzwort und nur hier, bis zum Verlassen der Seite (nicht gespeichert)
+  const [hinFrei, setHinFrei] = useState(false);
+  const [schutzFrage, setSchutzFrage] = useState(false);
   const [ruecksetzPartie, setRuecksetzPartie] = useState<Partie | null>(null); // Partie zuruecksetzen (Dialog)
   const [importOffen, setImportOffen] = useState(false);
   // Halbe Aufstellung: solange nur eine Seite gewaehlt ist, gibt es noch keine
@@ -307,6 +311,7 @@ export default function LigaAnsicht({
   }
 
   const bearbeitbar = darfLeiten && turnier.status !== 'beendet';
+  const hinGeschuetzt = gestartet.rueck === true && !hinFrei;
 
   // ---------- Aufstellung und Ergebnisse ----------
 
@@ -476,6 +481,17 @@ export default function LigaAnsicht({
     setTurnier({ ...turnier, einstellungen: neu });
   }
 
+  async function schutzAufheben() {
+    if (!verein || !(await schutzwortPruefen(verein.id, passwort))) {
+      setFehler('Das Passwort stimmt nicht.');
+      return;
+    }
+    setFehler(null);
+    setSchutzFrage(false);
+    setPasswort('');
+    setHinFrei(true);
+  }
+
   async function passwortPruefen() {
     if (!passwortFrage) return;
     if (!verein || !(await schutzwortPruefen(verein.id, passwort))) {
@@ -571,8 +587,11 @@ export default function LigaAnsicht({
       .update({ einstellungen: neu, ...(turnier.status === 'geplant' ? { status: 'laeuft' as const } : {}) })
       .eq('id', turnier.id);
     if (error) return setFehler(error.message);
+    if (runde === 'rueck') setHinFrei(false);
     setMeldung(
-      `${runde === 'hin' ? 'Hinrunde' : 'Rückrunde'} gestartet. Ihre Partien stehen jetzt an den Tablets zur Auswahl.`
+      runde === 'hin'
+        ? 'Hinrunde gestartet. Ihre Partien stehen jetzt an den Tablets zur Auswahl.'
+        : 'Rückrunde gestartet. Ihre Partien stehen jetzt an den Tablets zur Auswahl; die Hinrunde ist geschützt.'
     );
     await laden();
   }
@@ -852,6 +871,24 @@ export default function LigaAnsicht({
             {gestartet[r.runde] ? (
               <span className="knopfpaar">
                 {turnier.status === 'laeuft' && <span className="livelaeuft">● läuft</span>}
+                {bearbeitbar && r.runde === 'hin' && gestartet.rueck && (
+                  <button
+                    type="button"
+                    title={
+                      hinGeschuetzt
+                        ? 'Ergebnisse der Hinrunde wieder bearbeitbar machen. Braucht das Schutzwort und gilt nur hier, bis du die Seite verlässt.'
+                        : 'Die Hinrunde wieder schützen'
+                    }
+                    onClick={() => {
+                      if (!hinGeschuetzt) return setHinFrei(false);
+                      setFehler(null);
+                      setPasswort('');
+                      setSchutzFrage(true);
+                    }}
+                  >
+                    {hinGeschuetzt ? 'Schutz aufheben' : 'Schutz einschalten'}
+                  </button>
+                )}
                 {bearbeitbar &&
                   (r.runde === 'rueck' || !gestartet.rueck) &&
                   (rundeBelegt(r.runde) ? (
@@ -916,7 +953,7 @@ export default function LigaAnsicht({
                       heimVerdeckt={istVerdeckt(r.runde, 'heim')}
                       gastVerdeckt={istVerdeckt(r.runde, 'gast')}
                       anzeige={anzeige}
-                      bearbeitbar={bearbeitbar}
+                      bearbeitbar={bearbeitbar && !(r.runde === 'hin' && hinGeschuetzt)}
                       spielerSetzen={(seite, id) => void spielerSetzen(s, seite, id)}
                       ergebnisSetzen={(a, b) => void ergebnisSetzen(s, a, b)}
                       wertungSetzen={(werten) => void partieWertung(s, werten)}
@@ -955,6 +992,12 @@ export default function LigaAnsicht({
               </tfoot>
             )}
           </table>
+          {bearbeitbar && r.runde === 'hin' && hinGeschuetzt && (
+            <p className="hinweis">
+              Hinrunde geschützt, weil die Rückrunde läuft: Ergebnisse, Aufstellung, Rating-Haken und Zurücksetzen sind
+              gesperrt. Ergebnisse von den Tablets kommen weiter an.
+            </p>
+          )}
         </section>
       ))}
 
@@ -1003,6 +1046,40 @@ export default function LigaAnsicht({
             void laden();
           }}
         />
+      )}
+      {schutzFrage && (
+        <div className="dialoghintergrund" onClick={() => setSchutzFrage(false)}>
+          <div className="dialog" onClick={(e) => e.stopPropagation()}>
+            <h2>Schutz der Hinrunde aufheben</h2>
+            <p>
+              Danach lassen sich Ergebnisse, Aufstellung und Rating-Haken der Hinrunde wieder ändern. Das gilt nur hier und
+              bis du die Seite verlässt.
+            </p>
+            <div className="zeile">
+              <input
+                type="password"
+                placeholder="Passwort"
+                value={passwort}
+                autoFocus
+                onChange={(e) => setPasswort(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && void schutzAufheben()}
+              />
+              <button type="button" title="Mit dem Passwort den Schutz der Hinrunde aufheben" onClick={() => void schutzAufheben()}>
+                Aufheben
+              </button>
+            </div>
+            {fehler && <p className="fehler">{fehler}</p>}
+            <button
+              type="button"
+              onClick={() => {
+                setSchutzFrage(false);
+                setPasswort('');
+              }}
+            >
+              Abbrechen
+            </button>
+          </div>
+        </div>
       )}
       {passwortFrage && (
         <div className="dialoghintergrund" onClick={() => setPasswortFrage(null)}>
