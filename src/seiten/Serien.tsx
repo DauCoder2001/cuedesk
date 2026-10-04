@@ -363,26 +363,33 @@ export default function Serien() {
       </section>
 
       <section className="block">
-        <div className="rollbereich" ref={rollbereich}>
-          <table className="tabelle">
+        <div className="rollbereich waagerecht" ref={rollbereich}>
+          {/* Platz, Name und Punkte vorne und beim waagerechten Scrollen stehend,
+              dahinter die Turniere chronologisch (turniere ist nach Datum sortiert) */}
+          <table className="tabelle serientabelle">
             <thead>
               <tr>
-                <th style={{ width: '50px' }}>Platz</th>
-                <th>Name</th>
+                <th className="fest platz">Platz</th>
+                <th className="fest name">Name</th>
+                <th className="fest punkte">Punkte</th>
                 {turniere.map((turnier) => (
-                  <th key={turnier.id} style={{ width: '90px' }}>
+                  <th key={turnier.id} className="turnier">
                     {new Date(`${turnier.datum}T12:00:00`).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })}
                     <small title={turnier.name}>{turnier.name.length > 12 ? `${turnier.name.slice(0, 12)}…` : turnier.name}</small>
                   </th>
                 ))}
-                <th style={{ width: '80px' }}>Punkte</th>
               </tr>
             </thead>
             <tbody>
               {wertung.map((spieler) => (
                 <tr key={spieler.spieler}>
-                  <td>{spieler.zeigePlatz ? spieler.platz : ''}</td>
-                  <td>{namen.get(spieler.spieler) ?? 'unbekannt'}</td>
+                  <td className="fest platz">{spieler.zeigePlatz ? spieler.platz : ''}</td>
+                  <td className="fest name" title={namen.get(spieler.spieler)}>
+                    {namen.get(spieler.spieler) ?? 'unbekannt'}
+                  </td>
+                  <td className="fest punkte">
+                    <strong>{spieler.summe}</strong>
+                  </td>
                   {turniere.map((turnier) => {
                     const ergebnis = spieler.ergebnisse[turnier.id];
                     if (!ergebnis) return <td key={turnier.id}>—</td>;
@@ -393,9 +400,6 @@ export default function Serien() {
                       </td>
                     );
                   })}
-                  <td>
-                    <strong>{spieler.summe}</strong>
-                  </td>
                 </tr>
               ))}
               {wertung.length === 0 && (
