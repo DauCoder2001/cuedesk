@@ -8,8 +8,8 @@ Die **Konsole** ist nur für Super-Admins, also den Betreiber von CueDesk. Sie g
 
 ## Verein anlegen
 
-1. Unter **Neuer Verein** Name, Kurzname und Web-Adresse eintragen; **Test** markiert einen Test-Verein.
-2. Unter **Vereine** bei der neuen Zeile **Admin einladen** klicken und die **E-Mail des Vereins-Administrators** eintragen. Er bekommt einen Anmeldelink.
+1. Unter **Neuer Verein** Name, Kurzname und Web-Adresse eintragen; **Test-Verein** markiert einen Test-Verein.
+2. Steht die **E-Mail des Vereins-Administrators** schon fest, gleich eintragen: Der Knopf heißt dann **Verein anlegen und einladen**, und der Vereins-Administrator bekommt sofort einen Anmeldelink. Sonst später unter **Vereine** bei der neuen Zeile **Admin einladen** klicken.
 3. Beim ersten Aufruf stimmt der Vereins-Administrator den Nutzungsbedingungen und dem Vertrag zur Auftragsverarbeitung zu. Die Spalte **Verträge** zeigt „✓ Fassung 1“ oder „offen“.
 
 ## Vereine verwalten

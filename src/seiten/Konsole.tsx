@@ -853,6 +853,7 @@ export default function Konsole() {
           <label className="feld">
             <span>E-Mail des Vereins-Administrators</span>
             <input type="email" value={adminMail} placeholder="optional, z. B. name@verein.de" onChange={(e) => setAdminMail(e.target.value)} />
+            <small>Bekommt beim Anlegen gleich eine Einladung mit Anmeldelink.</small>
           </label>
         </div>
         <label className="ankreuz">
@@ -863,8 +864,17 @@ export default function Konsole() {
           </span>
         </label>
         <div className="knopfpaar">
-          <button type="button" title="Den Verein anlegen und, falls angegeben, den Vereins-Administrator einladen" onClick={() => void vereinAnlegen()} disabled={arbeitet}>
-            {arbeitet ? 'Wird angelegt …' : 'Verein anlegen'}
+          <button
+            type="button"
+            title={
+              adminMail.trim()
+                ? `Den Verein anlegen und ${adminMail.trim()} als Vereins-Administrator einladen`
+                : 'Den Verein anlegen; den Vereins-Administrator lädst du später in der Vereinsliste ein'
+            }
+            onClick={() => void vereinAnlegen()}
+            disabled={arbeitet}
+          >
+            {arbeitet ? 'Wird angelegt …' : adminMail.trim() ? 'Verein anlegen und einladen' : 'Verein anlegen'}
           </button>
           <Pflichthinweis hinweis={neuPflicht.hinweis} />
         </div>
