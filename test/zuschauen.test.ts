@@ -88,6 +88,12 @@ describe('Welches Turnier', () => {
     expect(chatAn(zweite)).toBe(true);
     expect(chatAn(erste)).toBe(false);
   });
+  test('Chat nur mit Live-Übertragung; die Einstellung bleibt gespeichert', () => {
+    expect(chatAn(turnier('a', { einstellungen: { chat: true } }))).toBe(true);
+    expect(chatAn(turnier('b', { einstellungen: { chat: true, live: true } }))).toBe(true);
+    expect(chatAn(turnier('c', { einstellungen: { chat: true, live: false } }))).toBe(false);
+    expect(chatAn(turnier('d', { einstellungen: { chat: false, live: true } }))).toBe(false);
+  });
 });
 
 describe('Tabellen', () => {

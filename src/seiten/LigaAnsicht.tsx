@@ -795,7 +795,11 @@ export default function LigaAnsicht({
             <LiveSchalter an={einstellungen.live !== false} schalten={(an) => void spieltagSetzen({ live: an })} />
           )}
           {bearbeitbar && turnier.status !== 'beendet' && vereinsEinstellungen(verein?.einstellungen).chat && (
-            <ChatSchalter an={einstellungen.chat === true} schalten={(an) => void spieltagSetzen({ chat: an })} />
+            <ChatSchalter
+              an={einstellungen.chat === true}
+              gesperrt={einstellungen.live === false}
+              schalten={(an) => void spieltagSetzen({ chat: an })}
+            />
           )}
           </div>
         </div>

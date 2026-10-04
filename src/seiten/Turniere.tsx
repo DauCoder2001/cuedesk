@@ -712,11 +712,15 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
               </span>
             </label>
             {vorgaben.chat && (
-              <label className="ankreuz">
-                <input type="checkbox" checked={chat} onChange={(e) => setChat(e.target.checked)} />
+              <label className={live ? 'ankreuz eingerueckt' : 'ankreuz eingerueckt gesperrt'}>
+                <input type="checkbox" checked={live && chat} disabled={!live} onChange={(e) => setChat(e.target.checked)} />
                 <span>
                   Mit Chat für Zuschauer
-                  <small>Mitglieder können auf der Seite „Zuschauen“ schreiben, solange das Turnier läuft.</small>
+                  <small>
+                    {live
+                      ? 'Mitglieder können auf der Seite „Zuschauen“ schreiben, solange das Turnier läuft.'
+                      : 'Nur mit Live-Übertragung möglich.'}
+                  </small>
                 </span>
               </label>
             )}

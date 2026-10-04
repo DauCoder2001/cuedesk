@@ -1735,7 +1735,11 @@ export default function TurnierAnsicht({
             <LiveSchalter an={einstellungen.live !== false} schalten={(an) => void einstellungenSetzen({ live: an })} />
           )}
           {bearbeitbar && turnier.quelle !== 'import' && turnier.status !== 'beendet' && vereinsEinstellungen(verein?.einstellungen).chat && (
-            <ChatSchalter an={einstellungen.chat === true} schalten={(an) => void einstellungenSetzen({ chat: an })} />
+            <ChatSchalter
+              an={einstellungen.chat === true}
+              gesperrt={einstellungen.live === false}
+              schalten={(an) => void einstellungenSetzen({ chat: an })}
+            />
           )}
           </div>
         </div>

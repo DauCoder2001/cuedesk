@@ -14,6 +14,7 @@ type Einstellungen = {
   gruppenzahl?: number;
   handReihenfolge?: Record<string, number[]>;
   chat?: boolean;
+  live?: boolean; // fehlt = an (Stufe 25)
   liga?: { begegnung?: 1 | 2; partner?: string; heim?: boolean; eigene?: string; gegner?: string };
 };
 const einstellungenVon = (t: Turnier) => (t.einstellungen ?? {}) as Einstellungen;
@@ -46,7 +47,9 @@ export function anzeigeWaehlen(turniere: Turnier[], jetzt = Date.now()): Anzeige
   return { turnier, begegnungen: beide, chatTurnier: beide[0] };
 }
 
-export const chatAn = (t: Turnier) => einstellungenVon(t).chat === true;
+// Chat nur mit Live-Uebertragung (Stufe 29); "chat" bleibt gespeichert und gilt
+// wieder, sobald Live an ist
+export const chatAn = (t: Turnier) => einstellungenVon(t).chat === true && einstellungenVon(t).live !== false;
 
 // ---------- Tabellen ----------
 
