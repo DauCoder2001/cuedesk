@@ -299,6 +299,16 @@ ul.schlicht { list-style: none; padding: 0; margin: 0; display: flex; flex-direc
 .tabelle { width: 100%; border-collapse: collapse; font-size: 15px; }
 .tabelle th { text-align: left; font-weight: 400; font-size: 13px; color: var(--text-leise); padding: 4px 6px 4px 0; }
 .tabelle td { border-top: 1px solid var(--rand); padding: 6px 6px 6px 0; }
+/* Kompakte Tabelle (05.10.2026): so breit wie der Inhalt statt ueber die ganze
+   Seite verteilt, 24 px Abstand je Spalte; die Namensspalte ist mindestens
+   180 px breit, damit untereinander stehende Tabellen aehnlich ausgerichtet sind */
+.tabelle.kompakt { width: auto; align-self: flex-start; } /* .block ist Flex: sonst gestreckt */
+.tabelle.kompakt > * > tr > :is(th, td) { padding-right: 24px; }
+.tabelle.kompakt > * > tr > :is(th, td):last-child { padding-right: 0; }
+.tabelle.kompakt .namenspalte { min-width: 180px; }
+/* Zahlenspalten (alles ausser Platz und Name) mindestens 72 px, damit kurze
+   Ueberschriften wie "S : N" oder "Wert" nicht an die Spalte davor ruecken */
+.tabelle.kompakt > * > tr > :is(th, td):not(.namenspalte):not(:first-child) { min-width: 72px; }
 .tabelle td input[type="text"], .tabelle td input:not([type]) { width: 100%; }
 .tabelle .rechts { text-align: right; }
 .tabelle .rechts button { font-size: 13px; padding: 3px 8px; }

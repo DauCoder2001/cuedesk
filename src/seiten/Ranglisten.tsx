@@ -222,11 +222,11 @@ export default function Ranglisten() {
 
       <section className="block">
         <h2>Siegquote {disziplin === 'alle' ? '' : `· ${DISZIPLIN_TEXT[disziplin]}`}</h2>
-        <table className="tabelle">
+        <table className="tabelle kompakt">
           <thead>
             <tr>
               <th style={{ width: '50px' }}>Platz</th>
-              <th>Name</th>
+              <th className="namenspalte">Name</th>
               <th className="rechts">Partien</th>
               <th className="rechts">S : N</th>
               <th className="rechts">Siegquote</th>
@@ -264,11 +264,11 @@ export default function Ranglisten() {
 
       <section className="block">
         <h2>Bestenliste 14.1</h2>
-        <table className="tabelle">
+        <table className="tabelle kompakt">
           <thead>
             <tr>
               <th style={{ width: '50px' }}>Platz</th>
-              <th>Name</th>
+              <th className="namenspalte">Name</th>
               <th className="rechts">Partien</th>
               <th className="rechts">Aufnahmen</th>
               <th className="rechts">GD</th>
@@ -306,11 +306,11 @@ export default function Ranglisten() {
             auch ohne Podestplatz
           </label>
         </div>
-        <table className="tabelle">
+        <table className="tabelle kompakt">
           <thead>
             <tr>
               <th style={{ width: '50px' }}>Platz</th>
-              <th>Name</th>
+              <th className="namenspalte">Name</th>
               <th className="rechts">Turniersiege</th>
               <th className="rechts">Podest</th>
               <th className="rechts">Teilnahmen</th>
@@ -343,10 +343,10 @@ export default function Ranglisten() {
 
       <section className="block">
         <h2>Vereinsserien</h2>
-        <table className="tabelle">
+        <table className="tabelle kompakt">
           <thead>
             <tr>
-              <th>Name</th>
+              <th className="namenspalte">Name</th>
               {serienbild.serien.map((s) => (
                 <th key={s.id} className="rechts">
                   {s.name}

@@ -189,15 +189,15 @@ export default function Rating() {
       </section>
 
       <section className="block">
-        <table className="tabelle">
+        <table className="tabelle kompakt">
           <thead>
             <tr>
               <th style={{ width: '50px' }}>Platz</th>
-              <th>Name</th>
-              <th style={{ width: '80px' }}>Wert</th>
-              <th style={{ width: '80px' }}>Racks</th>
-              <th style={{ width: '170px' }}>Grundlage</th>
-              <th style={{ width: '90px' }}></th>
+              <th className="namenspalte">Name</th>
+              <th>Wert</th>
+              <th>Racks</th>
+              <th>Grundlage</th>
+              <th></th>
             </tr>
           </thead>
           <tbody>
