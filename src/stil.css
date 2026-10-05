@@ -203,6 +203,17 @@ ul.schlicht { list-style: none; padding: 0; margin: 0; display: flex; flex-direc
 .felder > .feld { display: grid; grid-row: span 3; grid-template-rows: subgrid; row-gap: 0; }
 .felder > .feld > span:first-child { align-self: end; margin-bottom: 4px; }
 .felder > .feld > small { margin-top: 4px; }
+/* Standardbreiten (05.10.2026): Raster aus 120-px-Spalten statt gestreckter
+   Felder. Feld = M (2 Spalten, 250 px), .s = 1 Spalte (120 px, PLZ, kurze
+   Zahlen), .l = 3 Spalten (380 px, Strasse, E-Mail, Homepage). Rechts bleibt
+   frei, was nicht gebraucht wird; schmale Bildschirme brechen um. */
+.felder.raster { grid-template-columns: repeat(auto-fill, 120px); }
+.felder.raster > .feld { grid-column: span 2; }
+.felder.raster > .feld.s { grid-column: span 1; }
+.felder.raster > .feld.l { grid-column: span 3; }
+@media (max-width: 420px) { .felder.raster { grid-template-columns: repeat(2, minmax(0, 1fr)); } .felder.raster > .feld.l { grid-column: 1 / -1; } }
+/* Eingabe mit Knopf daneben (z. B. "Neue Turnierart"): Eingabe in L-Breite */
+.zeile.raster > input { flex: 0 1 380px; }
 .formzeile { align-items: flex-end; }
 /* Turnierart im Kopf der Turnieransicht */
 .artwahl { display: flex; align-items: center; gap: 6px; margin: 4px 0; }
