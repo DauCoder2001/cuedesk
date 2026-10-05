@@ -138,7 +138,7 @@ export default function TischeGeraete() {
         )}
         {darfVerwalten && (
           <>
-            <table className="tabelle">
+            <table className="tabelle kompakt">
               <thead>
                 <tr>
                   <th style={{ width: '70px' }}>Nr.</th>

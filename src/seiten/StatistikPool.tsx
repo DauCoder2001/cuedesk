@@ -404,7 +404,7 @@ export default function StatistikPool() {
 
 function Bilanztabelle({ zeilen, erste }: { zeilen: { name: string; bilanz: PoolBilanz }[]; erste: string }) {
   return (
-    <table className="tabelle">
+    <table className="tabelle kompakt">
       <thead>
         <tr>
           <th>{erste}</th>
@@ -445,7 +445,7 @@ function Partienliste({
   turniere: TurnierZeile[];
 }) {
   return (
-    <table className="tabelle">
+    <table className="tabelle kompakt">
       <thead>
         <tr>
           <th>Datum</th>

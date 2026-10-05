@@ -428,7 +428,7 @@ export default function Serien() {
       {darfVerwalten && serie && (
         <section className="block">
           <h2>Turniere der Serie</h2>
-          <table className="tabelle">
+          <table className="tabelle kompakt">
             <tbody>
               {alleTurniere
                 .filter((t) => t.serie_id === gewaehlt)

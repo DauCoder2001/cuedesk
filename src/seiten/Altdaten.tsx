@@ -375,7 +375,7 @@ export default function Altdaten() {
 
           <section className="block">
             <h2>Namen zu Spielern</h2>
-            <table className="tabelle">
+            <table className="tabelle kompakt">
               <thead>
                 <tr>
                   <th>Name in der Datei</th>

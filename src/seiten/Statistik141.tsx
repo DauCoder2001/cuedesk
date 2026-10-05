@@ -254,7 +254,7 @@ export default function Statistik141() {
             </section>
             <section className="block">
               <h2>Quoten</h2>
-              <table className="tabelle">
+              <table className="tabelle kompakt">
                 <tbody>
                   <tr>
                     <td>Nullaufnahmen</td>
@@ -402,7 +402,7 @@ function Partienliste({ jePartie }: { jePartie: PartieWerte[] }) {
   const neueste = [...jePartie].reverse();
   const basis = import.meta.env.BASE_URL;
   return (
-    <table className="tabelle">
+    <table className="tabelle kompakt">
       <thead>
         <tr>
           <th>Datum</th>

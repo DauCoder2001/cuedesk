@@ -667,10 +667,10 @@ export default function Konsole() {
       <section className="block">
         <h2>Nutzung</h2>
         <p className="hinweis">Nur Zahlen. Test-Vereine sind markiert und zählen später in keiner Auswertung.</p>
-        <table className="tabelle">
+        <table className="tabelle kompakt">
           <thead>
             <tr>
-              <th>Verein</th>
+              <th className="namenspalte">Verein</th>
               <th className="rechts" title="Konten mit einer Rolle im Verein">Konten</th>
               <th title="Jüngste Anmeldung eines dieser Konten">zuletzt angemeldet</th>
               <th className="rechts" title="Spieler mit Status Mitglied, dahinter die Gäste">Mitglieder / Gäste</th>
@@ -751,7 +751,7 @@ export default function Konsole() {
                 <small>gerade offen, auch die der Serverfunktionen</small>
               </div>
             </div>
-            <table className="tabelle">
+            <table className="tabelle kompakt">
               <thead>
                 <tr>
                   <th>Größte Tabellen</th>
@@ -778,7 +778,7 @@ export default function Konsole() {
       <section className="block">
         <h2>Aufräumen</h2>
         <p className="hinweis">Über alle Vereine. Erst zählen, dann die angehakten Punkte löschen.</p>
-        <table className="tabelle">
+        <table className="tabelle kompakt">
           <tbody>
             {AUFRAEUMEN_ARTEN.map((a) => (
               <tr key={a.art}>
@@ -920,7 +920,7 @@ export default function Konsole() {
         {protokoll.length === 0 ? (
           <p className="hinweis">Noch keine Einträge.</p>
         ) : (
-          <table className="tabelle">
+          <table className="tabelle kompakt">
             <tbody>
               {protokoll.map((p) => (
                 <tr key={p.id}>

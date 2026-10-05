@@ -1855,7 +1855,7 @@ export default function TurnierAnsicht({
       ) : turnier.status === 'geplant' ? (
         <section className="block">
           <h2>Teilnehmer ({teilnehmer.length})</h2>
-          <table className="tabelle">
+          <table className="tabelle kompakt">
             <tbody>
               {[...teilnehmer]
                 .sort((a, b) => anzeige(a.person_id).localeCompare(anzeige(b.person_id), 'de'))
@@ -1918,7 +1918,7 @@ export default function TurnierAnsicht({
             return (
               <div className="anmeldeliste">
                 <h3>Anmeldungen ({stand.filter((s) => s.art !== 'abgemeldet').length})</h3>
-                <table className="tabelle">
+                <table className="tabelle kompakt">
                   <tbody>
                     {stand.map((s) => (
                       <tr key={s.person_id}>
@@ -2090,11 +2090,11 @@ export default function TurnierAnsicht({
                   </button>
                 )}
               </div>
-              <table className="tabelle">
+              <table className="tabelle kompakt">
                 <thead>
                   <tr>
                     <th>Nr.</th>
-                    <th>Name</th>
+                    <th className="namenspalte">Name</th>
                     {mehrgruppig && <th>Gruppe</th>}
                     <th className="rechts">Rating</th>
                   </tr>
@@ -2291,11 +2291,11 @@ export default function TurnierAnsicht({
                 ) : (
                   <>
                     <h3>Endtabelle</h3>
-                    <table className="tabelle">
+                    <table className="tabelle kompakt">
                       <thead>
                         <tr>
                           <th>Pl.</th>
-                          <th>Name</th>
+                          <th className="namenspalte">Name</th>
                           <th>Gruppe</th>
                           <th className="rechts">Duell</th>
                           <th></th>
@@ -2412,11 +2412,11 @@ export default function TurnierAnsicht({
                   {koFest && (
                     <section className="block">
                       <h2>Endtabelle</h2>
-                      <table className="tabelle">
+                      <table className="tabelle kompakt">
                         <thead>
                           <tr>
                             <th>Pl.</th>
-                            <th>Name</th>
+                            <th className="namenspalte">Name</th>
                             <th>Gruppe</th>
                             <th>Wie</th>
                           </tr>
@@ -2842,7 +2842,7 @@ function Altturnier({
     <div className="turnierzweier">
       <section className="block">
         <h2>Endstand</h2>
-        <table className="tabelle">
+        <table className="tabelle kompakt">
           <tbody>
             {plaetze.map((t) => (
               <tr key={t.person_id}>
@@ -2855,7 +2855,7 @@ function Altturnier({
       </section>
       <section className="block">
         <h2>Partien ({partien.length})</h2>
-        <table className="tabelle">
+        <table className="tabelle kompakt">
           <tbody>
             {partien.map((p) => (
               <tr key={p.id}>

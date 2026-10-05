@@ -667,7 +667,7 @@ export default function System() {
           Nur zur Ansicht. Eine Änderung würde alle Ratings verschieben, und die Rating-Erklärung stimmte nicht mehr.
         </p>
         {rating ? (
-          <table className="tabelle">
+          <table className="tabelle kompakt">
             <tbody>
               <tr><td>Vereinsschnitt</td><td className="rechts">{rating.vereinsschnitt}</td></tr>
               <tr><td>Zeitraum</td><td className="rechts">{rating.zeitraum_monate} Monate</td></tr>

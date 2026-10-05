@@ -249,7 +249,7 @@ export default function SpielberichtImport({
                 {liga.heim ? bericht.heimMannschaft : bericht.gastMannschaft}“. Stimmt das Heimrecht dieses Spieltags?
               </div>
             )}
-            <table className="tabelle">
+            <table className="tabelle kompakt">
               <thead>
                 <tr>
                   <th>Nr.</th>

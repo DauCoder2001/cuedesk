@@ -559,10 +559,10 @@ export default function Mannschaften() {
 
             <h4>Kader</h4>
             {hinweisStamm && <p className="hinweis">{hinweisStamm}</p>}
-            <table className="tabelle">
+            <table className="tabelle kompakt">
               <thead>
                 <tr>
-                  <th>Name</th>
+                  <th className="namenspalte">Name</th>
                   <th>Stammspieler</th>
                   <th>Kapitän</th>
                   <th>Berechtigt</th>
@@ -658,7 +658,7 @@ export default function Mannschaften() {
             {eigeneSpieltage.length === 0 ? (
               <p className="hinweis">Noch kein Spieltag dieser Mannschaft zugeordnet.</p>
             ) : (
-              <table className="tabelle">
+              <table className="tabelle kompakt">
                 <thead>
                   <tr>
                     <th>Datum</th>

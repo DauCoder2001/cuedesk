@@ -388,7 +388,7 @@ export default function Archiv() {
                 )}
               </div>
 
-              <table className="tabelle">
+              <table className="tabelle kompakt">
                 <thead>
                   <tr>
                     <th>Disziplin</th>

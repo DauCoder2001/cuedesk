@@ -143,7 +143,7 @@ export function EinwilligungLeitung({
         </div>
       )}
       {verlauf.length > 0 && (
-        <table className="tabelle">
+        <table className="tabelle kompakt">
           <thead>
             <tr>
               <th>Zeitpunkt</th>

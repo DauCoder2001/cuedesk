@@ -32,7 +32,7 @@ export default function KoBaum(props: {
             <h3>
               {r.titel} <span className="hinweis">{race}</span>
             </h3>
-            <table className="tabelle">
+            <table className="tabelle kompakt">
               <tbody>
                 {liste.map((s) => {
                   const m = props.baum[s.id];

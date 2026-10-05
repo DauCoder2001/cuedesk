@@ -265,11 +265,11 @@ export default function KaderImport({
                 {m.liga ? LIGEN[m.liga].name : 'ohne Liga'}
                 {m.staffel ? ` · Staffel ${m.staffel}` : ''} · Nummer {m.nummer} im Mannschaftspass
               </p>
-              <table className="tabelle">
+              <table className="tabelle kompakt">
                 <thead>
                   <tr>
                     <th style={{ width: '28px' }} />
-                    <th>Name</th>
+                    <th className="namenspalte">Name</th>
                     <th>Pass-Nr.</th>
                     <th>DBU-Nr.</th>
                     <th>Berechtigt ab</th>
