@@ -508,7 +508,7 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
           <div className="kasten" ref={pflicht.bereich}>
             <div className="feldkopf">{bearbeitet ? `Turnier ändern: ${bearbeitet.name}` : 'Neues Turnier'}</div>
             <div className="felder">
-              <label className="feld">
+              <label className="feld l">
                 <span>Name</span>
                 <input required value={name} onChange={(e) => setName(e.target.value)} placeholder="z. B. 3. Serienturnier 9-Ball" />
               </label>
@@ -542,7 +542,7 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
                 </select>
               </label>
               )}
-              <label className="feld">
+              <label className="feld l">
                 <span>Modus</span>
                 <select value={modus} onChange={(e) => setModus(e.target.value as TurnierModus | 'offen')}>
                   <option value="einzelgruppe">Einzelgruppe (jeder gegen jeden)</option>
@@ -564,7 +564,7 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
                       ))}
                     </select>
                   </label>
-                  <label className="feld">
+                  <label className="feld s">
                     <span>Spieltag</span>
                     <input inputMode="numeric" required value={spieltag} onChange={(e) => setSpieltag(e.target.value)} />
                   </label>
@@ -578,7 +578,7 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
                         ['10-ball', '10-Ball: Gewinnsätze']
                       ] as const
                     ).map(([k, text]) => (
-                      <label key={k} className="feld">
+                      <label key={k} className="feld s">
                         <span>{text}</span>
                         <input inputMode="numeric" required value={ziele[k]} onChange={(e) => setZiele({ ...ziele, [k]: e.target.value })} />
                       </label>
@@ -590,7 +590,7 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
                       <option value="gast">Auswärtsspiel</option>
                     </select>
                   </label>
-                  <label className="feld">
+                  <label className="feld l">
                     <span>Eigene Mannschaft</span>
                     {mannschaftenDerSaison.length > 0 ? (
                       <select value={mannschaftId} onChange={(e) => mannschaftWaehlen(e.target.value)}>
@@ -612,20 +612,20 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
                       <input value={eigeneMannschaft} onChange={(e) => setEigeneMannschaft(e.target.value)} placeholder={`leer = ${verein.name}`} />
                     </label>
                   )}
-                  <label className="feld">
+                  <label className="feld l">
                     <span>Gegner</span>
                     <input required value={gegner} onChange={(e) => setGegner(e.target.value)} placeholder="z. B. BC Achim 2" />
                   </label>
                 </>
               )}
               {modus !== 'liga' && (
-              <label className="feld">
+              <label className="feld s">
                 <span>{modus === 'einzelgruppe' ? 'Race to' : modus === 'offen' ? 'Race to (Einzelgruppe bzw. Gruppenphase)' : 'Race to Gruppenphase'}</span>
                 <input inputMode="numeric" required value={raceTo} onChange={(e) => setRaceTo(e.target.value)} />
               </label>
               )}
               {mitZwei && (
-                <label className="feld">
+                <label className="feld s">
                   <span>Race to Platzierungsduelle</span>
                   <input inputMode="numeric" required value={racePhase2} onChange={(e) => setRacePhase2(e.target.value)} />
                 </label>
@@ -640,12 +640,12 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
                     ['P3', 'Race to Platzierungsspiele']
                   ] as const
                 ).map(([k, text]) => (
-                  <label key={k} className="feld">
+                  <label key={k} className="feld s">
                     <span>{text}</span>
                     <input inputMode="numeric" required value={raceKo[k]} onChange={(e) => setRaceKo({ ...raceKo, [k]: e.target.value })} />
                   </label>
                 ))}
-              <label className="feld">
+              <label className="feld l">
                 <span>Serie</span>
                 <select
                   value={serieId}

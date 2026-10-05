@@ -276,7 +276,7 @@ export default function BenutzerRollen({ start = null }: { start?: string | null
             </div>
 
             <div className="felder">
-              <label className="feld">
+              <label className="feld l">
                 <span>E-Mail-Adresse</span>
                 <input
                   type="email"
@@ -420,27 +420,29 @@ export default function BenutzerRollen({ start = null }: { start?: string | null
               </label>
             )}
 
-            <label className="feld">
-              <span>Verknüpfter Spieler</span>
-              <select
-                value={konto.person_id ?? ''}
-                disabled={!darfVerwalten}
-                onChange={(e) => void personVerknuepfen(e.target.value)}
-              >
-                <option value="">— keine —</option>
-                {personen
-                  .filter(
-                    (person) =>
-                      person.id === konto.person_id ||
-                      !konten.some((eintrag) => eintrag.person_id === person.id)
-                  )
-                  .map((person) => (
-                    <option key={person.id} value={person.id}>
-                      {spielerText(person)}
-                    </option>
-                  ))}
-              </select>
-            </label>
+            <div className="felder">
+              <label className="feld l">
+                <span>Verknüpfter Spieler</span>
+                <select
+                  value={konto.person_id ?? ''}
+                  disabled={!darfVerwalten}
+                  onChange={(e) => void personVerknuepfen(e.target.value)}
+                >
+                  <option value="">— keine —</option>
+                  {personen
+                    .filter(
+                      (person) =>
+                        person.id === konto.person_id ||
+                        !konten.some((eintrag) => eintrag.person_id === person.id)
+                    )
+                    .map((person) => (
+                      <option key={person.id} value={person.id}>
+                        {spielerText(person)}
+                      </option>
+                    ))}
+                </select>
+              </label>
+            </div>
 
             {darfVerwalten && konto.id !== ichSelbst?.id && (
               <div className="gefahr">

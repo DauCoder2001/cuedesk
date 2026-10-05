@@ -70,6 +70,7 @@ button:disabled { cursor: default; color: var(--text-leise); }
 .rechtsseite form { margin-top: 12px; }
 .rechtsseite form > .hinweis { margin-top: 10px; }
 .felder.paarfelder { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.felder.paarfelder > .feld:not(.ganzebreite) { grid-column: auto; }
 .rechtsseite .knopfpaar { margin-top: 8px; }
 .feld textarea { width: 100%; font: inherit; font-size: 15px; color: var(--text); border: 1px solid var(--rand); border-radius: var(--radius); padding: 7px 10px; resize: vertical; }
 /* Kontaktformular: Feld fuer Programme, fuer Menschen unsichtbar */
@@ -125,8 +126,6 @@ button:disabled { cursor: default; color: var(--text-leise); }
 .anmeldeliste h3 { margin: 0 0 4px; }
 .ausschreibungsliste tr.hervorgehoben td { background: var(--akzent-hell); }
 .ausschreibungsliste td .hinweis { margin-top: 2px; }
-/* Breitere Spalten, z. B. fuer Datum mit Uhrzeit (braucht rund 190 px) */
-.felder.breitefelder { grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); }
 .teiltext { background: var(--flaeche-2); border-radius: var(--radius); padding: 10px 12px; margin: 12px 0 8px; font-family: ui-monospace, Consolas, monospace; font-size: 14px; line-height: 1.5; white-space: pre-wrap; max-width: 720px; }
 .adminname button.klein { margin-left: 4px; padding: 0 5px; line-height: 1.3; }
 /* Konsole: Loeschung vorgemerkt */
@@ -194,7 +193,7 @@ ul.schlicht { list-style: none; padding: 0; margin: 0; display: flex; flex-direc
 .bearbeiten { padding: 14px 16px; display: flex; flex-direction: column; gap: 14px; }
 .bearbeitenkopf { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 
-.felder { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.felder { display: grid; grid-template-columns: repeat(auto-fill, 120px); gap: 10px; }
 .feld { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--text-leise); }
 .feld input, .feld select { width: 100%; font-size: 15px; color: var(--text); }
 /* Nebeneinander stehende Felder auf einer Linie: Beschriftung, Eingabe und
@@ -203,15 +202,15 @@ ul.schlicht { list-style: none; padding: 0; margin: 0; display: flex; flex-direc
 .felder > .feld { display: grid; grid-row: span 3; grid-template-rows: subgrid; row-gap: 0; }
 .felder > .feld > span:first-child { align-self: end; margin-bottom: 4px; }
 .felder > .feld > small { margin-top: 4px; }
-/* Standardbreiten (05.10.2026): Raster aus 120-px-Spalten statt gestreckter
-   Felder. Feld = M (2 Spalten, 250 px), .s = 1 Spalte (120 px, PLZ, kurze
-   Zahlen), .l = 3 Spalten (380 px, Strasse, E-Mail, Homepage). Rechts bleibt
-   frei, was nicht gebraucht wird; schmale Bildschirme brechen um. */
-.felder.raster { grid-template-columns: repeat(auto-fill, 120px); }
-.felder.raster > .feld { grid-column: span 2; }
-.felder.raster > .feld.s { grid-column: span 1; }
-.felder.raster > .feld.l { grid-column: span 3; }
-@media (max-width: 420px) { .felder.raster { grid-template-columns: repeat(2, minmax(0, 1fr)); } .felder.raster > .feld.l { grid-column: 1 / -1; } }
+/* Standardbreiten (05.10.2026): .felder ist ein Raster aus 120-px-Spalten
+   statt gestreckter Felder. Feld = M (2 Spalten, 250 px), .s = 1 Spalte
+   (120 px, PLZ, kurze Zahlen), .l = 3 Spalten (380 px, Strasse, E-Mail,
+   Homepage, Namen von Turnier und Verein), .ganzebreite = ganze Zeile (lange
+   Texte). Rechts bleibt frei, was nicht gebraucht wird; schmal bricht um. */
+.felder > .feld { grid-column: span 2; }
+.felder > .feld.s { grid-column: span 1; }
+.felder > .feld.l { grid-column: span 3; }
+@media (max-width: 420px) { .felder { grid-template-columns: repeat(2, minmax(0, 1fr)); } .felder > .feld.l { grid-column: 1 / -1; } }
 /* Eingabe mit Knopf daneben (z. B. "Neue Turnierart"): Eingabe in L-Breite */
 .zeile.raster > input { flex: 0 1 380px; }
 .formzeile { align-items: flex-end; }
@@ -225,9 +224,6 @@ ul.schlicht { list-style: none; padding: 0; margin: 0; display: flex; flex-direc
 .mitpraefix { display: flex; align-items: stretch; }
 .mitpraefix .praefix { display: flex; align-items: center; padding: 0 8px; font-size: 15px; color: var(--text-leise); background: var(--flaeche-2); border: 1px solid var(--rand); border-right: 0; border-radius: var(--radius) 0 0 var(--radius); }
 .mitpraefix input { border-radius: 0 var(--radius) var(--radius) 0; min-width: 0; }
-/* Spiellokal: Strasse breit, PLZ schmal, Ort mittel */
-.felder.anschrift { grid-template-columns: minmax(180px, 2fr) minmax(80px, 0.7fr) minmax(140px, 1.5fr); }
-@media (max-width: 560px) { .felder.anschrift { grid-template-columns: 1fr; } }
 .versucht :is(input, select, textarea):required:invalid { border-color: var(--fehler); box-shadow: 0 0 0 1px var(--fehler); }
 .pflichthinweis { align-self: center; font-size: 13px; color: var(--text-leise); }
 .pflichthinweis.fehlt { color: var(--fehler); }

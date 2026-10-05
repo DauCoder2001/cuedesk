@@ -348,7 +348,7 @@ export default function System() {
       <div ref={vereinPflicht.bereich} style={{ display: 'contents' }}>
       <section className="block">
         <h2>Verein</h2>
-        <div className="felder raster">
+        <div className="felder">
           <label className="feld l">
             <span>Name</span>
             <input required value={f.name} onChange={(e) => setze({ name: e.target.value })} />
@@ -359,7 +359,7 @@ export default function System() {
           </label>
           <WebAdresseFeld wert={verein.slug} nurLesen hinweis="Ändern kann sie nur der Betreiber von CueDesk." />
         </div>
-        <AngabenFelder werte={f.angaben} aendern={(angaben) => setze({ angaben })} raster />
+        <AngabenFelder werte={f.angaben} aendern={(angaben) => setze({ angaben })} />
         <div className="logozeile">
           <span className="zeichen gross">
             {f.logo ? <img src={f.logo} alt="Vereinslogo" /> : vereinsKuerzel(f.kurzname, f.name)}
@@ -388,7 +388,7 @@ export default function System() {
       <section className="block">
         <h2>Vorgaben für „Neues Turnier“</h2>
         <p className="hinweis">Mit diesen Werten öffnet sich das Formular. Im Formular lassen sie sich für jedes Turnier ändern.</p>
-        <div className="felder raster">
+        <div className="felder">
           <label className="feld s">
             <span>Race to</span>
             <input inputMode="numeric" required value={f.raceTo} onChange={(e) => setze({ raceTo: e.target.value })} />
@@ -445,7 +445,7 @@ export default function System() {
           Teilnehmerzahl einen Modus vor: bis {f.einzelBis || '…'} Einzelgruppe, bis {f.zweiBis || '…'} Zwei Gruppen, darüber
           Gruppen mit KO-Runde.
         </p>
-        <div className="felder raster">
+        <div className="felder">
           <label className="feld s">
             <span>Einzelgruppe bis (Teilnehmer)</span>
             <input inputMode="numeric" required value={f.einzelBis} onChange={(e) => setze({ einzelBis: e.target.value })} />
@@ -506,7 +506,7 @@ export default function System() {
 
       <section className="block">
         <h2>Vorgaben für Liga-Spieltage</h2>
-        <div className="felder raster">
+        <div className="felder">
           <label className="feld">
             <span>Liga</span>
             <select value={f.liga} onChange={(e) => setze({ liga: e.target.value as LigaKennung })}>
@@ -572,7 +572,7 @@ export default function System() {
           Partie im Spielplan. Das aktuelle Wort
           wird nirgends angezeigt; ohne eigenes Wort gilt „8-Ball“.
         </p>
-        <div className="felder raster">
+        <div className="felder">
           <label className="feld">
             <span>Neues Schutzwort</span>
             <input type="password" required autoComplete="new-password" value={wort} onChange={(e) => setWort(e.target.value)} />

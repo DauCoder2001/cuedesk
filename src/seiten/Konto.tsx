@@ -140,7 +140,7 @@ export default function Konto() {
       <section className="block" ref={mailPflicht.bereich}>
         <h2>Mein Konto</h2>
         <div className="felder">
-          <label className="feld">
+          <label className="feld l">
             <span>E-Mail-Adresse</span>
             <input value={benutzer?.email ?? ''} disabled />
           </label>
@@ -149,7 +149,7 @@ export default function Konto() {
             <input value={benutzer?.anzeigename ?? ''} disabled />
           </label>
           {neueAdresse !== null && (
-            <label className="feld">
+            <label className="feld l">
               <span>Neue E-Mail-Adresse</span>
               <input
                 required

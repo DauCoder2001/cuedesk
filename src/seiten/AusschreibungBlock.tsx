@@ -80,7 +80,7 @@ export default function AusschreibungBlock({
           </div>
         )}
       </div>
-      <div className="felder breitefelder">
+      <div className="felder">
         <label className="feld">
           <span>Beginn</span>
           <input type="time" value={entwurf.uhrzeit ?? ''} onChange={(e) => uhrzeitSetzen(e.target.value)} />
@@ -94,7 +94,7 @@ export default function AusschreibungBlock({
           />
           <small>Vorschlag: eine Stunde vor Beginn</small>
         </label>
-        <label className="feld">
+        <label className="feld s">
           <span>Startgeld</span>
           <input
             value={entwurf.startgeld ?? ''}
@@ -102,7 +102,7 @@ export default function AusschreibungBlock({
             onChange={(e) => setEntwurf({ ...entwurf, startgeld: e.target.value || undefined })}
           />
         </label>
-        <label className="feld">
+        <label className="feld s">
           <span>Höchstens Teilnehmer</span>
           <input
             type="number"

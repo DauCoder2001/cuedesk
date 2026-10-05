@@ -594,7 +594,7 @@ export default function Konsole() {
                     <td colSpan={6}>
                       <div className="kasten">
                         <div className="felder">
-                          <label className="feld">
+                          <label className="feld l">
                             <span>Name</span>
                             <input
                               required
@@ -826,7 +826,7 @@ export default function Konsole() {
       <section className="block" ref={neuPflicht.bereich}>
         <h2>Neuer Verein</h2>
         <div className="felder">
-          <label className="feld">
+          <label className="feld l">
             <span>Name</span>
             <input
               required
@@ -850,7 +850,7 @@ export default function Konsole() {
             }}
             hinweis="Wird aus dem Namen erzeugt. Nur Kleinbuchstaben, Ziffern und Bindestrich."
           />
-          <label className="feld">
+          <label className="feld l">
             <span>E-Mail des Vereins-Administrators</span>
             <input type="email" value={adminMail} placeholder="optional, z. B. name@verein.de" onChange={(e) => setAdminMail(e.target.value)} />
             <small>Bekommt beim Anlegen gleich eine Einladung mit Anmeldelink.</small>

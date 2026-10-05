@@ -447,7 +447,7 @@ export default function Personen({ kontoOeffnen }: { kontoOeffnen?: (kontoId: st
                   onChange={(e) => setEntwurf({ ...entwurf, anzeigename: e.target.value })}
                 />
               </Feld>
-              <Feld beschriftung="Kürzel">
+              <Feld beschriftung="Kürzel" breite="s">
                 <input
                   value={entwurf.kuerzel ?? ''}
                   maxLength={4}
@@ -501,7 +501,7 @@ export default function Personen({ kontoOeffnen }: { kontoOeffnen?: (kontoId: st
                       onChange={(e) => setIntern({ ...intern, austritt: e.target.value || null })}
                     />
                   </Feld>
-                  <Feld beschriftung="Rating-Startwert">
+                  <Feld beschriftung="Rating-Startwert" breite="s">
                     <input
                       type="number"
                       min={100}
@@ -541,13 +541,15 @@ export default function Personen({ kontoOeffnen }: { kontoOeffnen?: (kontoId: st
                   />
                   <span>Minderjährig</span>
                 </label>
-                <Feld beschriftung="Notiz">
-                  <input
-                    value={intern.notiz ?? ''}
-                    disabled={!bearbeitbar}
-                    onChange={(e) => setIntern({ ...intern, notiz: e.target.value || null })}
-                  />
-                </Feld>
+                <div className="felder">
+                  <Feld beschriftung="Notiz" breite="l">
+                    <input
+                      value={intern.notiz ?? ''}
+                      disabled={!bearbeitbar}
+                      onChange={(e) => setIntern({ ...intern, notiz: e.target.value || null })}
+                    />
+                  </Feld>
+                </div>
               </fieldset>
             )}
 
@@ -647,9 +649,10 @@ export default function Personen({ kontoOeffnen }: { kontoOeffnen?: (kontoId: st
   );
 }
 
-function Feld({ beschriftung, children }: { beschriftung: string; children: React.ReactNode }) {
+// breite: Standardbreite im Raster von .felder (s = schmal, l = breit, sonst mittel)
+function Feld({ beschriftung, breite, children }: { beschriftung: string; breite?: 's' | 'l'; children: React.ReactNode }) {
   return (
-    <label className="feld">
+    <label className={breite ? `feld ${breite}` : 'feld'}>
       <span>{beschriftung}</span>
       {children}
     </label>

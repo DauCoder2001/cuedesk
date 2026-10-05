@@ -296,7 +296,7 @@ export default function Serien() {
           <div className="kasten" ref={pflicht.bereich}>
             <div className="feldkopf">{formular.id ? 'Serie ändern' : 'Neue Serie'}</div>
             <div className="felder">
-              <label className="feld">
+              <label className="feld l">
                 <span>Name</span>
                 <input
                   required
@@ -305,7 +305,7 @@ export default function Serien() {
                   placeholder="z. B. 8-Ball Serie am 3. Freitag"
                 />
               </label>
-              <label className="feld">
+              <label className="feld s">
                 <span>Saison</span>
                 <input value={formular.saison} onChange={(e) => setFormular({ ...formular, saison: e.target.value })} placeholder="z. B. 26/27" />
               </label>
@@ -320,11 +320,11 @@ export default function Serien() {
                   <option value="">{DISZIPLIN_OFFEN_TEXT}</option>
                 </select>
               </label>
-              <label className="feld">
+              <label className="feld s">
                 <span>Gewertet: beste (0 = alle)</span>
                 <input inputMode="numeric" value={formular.streicher} onChange={(e) => setFormular({ ...formular, streicher: e.target.value })} />
               </label>
-              <label className="feld">
+              <label className="feld s">
                 <span>Sieger-Bonus</span>
                 <input inputMode="numeric" value={formular.bonus} onChange={(e) => setFormular({ ...formular, bonus: e.target.value })} />
               </label>

@@ -59,13 +59,11 @@ export function WebAdresseFeld({
 export function AngabenFelder({
   werte,
   aendern,
-  gesperrt = false,
-  raster = false
+  gesperrt = false
 }: {
   werte: Vereinsangaben;
   aendern: (neu: Vereinsangaben) => void;
   gesperrt?: boolean;
-  raster?: boolean; // Standardbreiten S/M/L statt gestreckter Felder (stil.css .felder.raster)
 }) {
   const feld = (schluessel: keyof Vereinsangaben, beschriftung: string, platzhalter: string, breite: '' | 's' | 'l', typ = 'text') => (
     <label className={breite ? `feld ${breite}` : 'feld'}>
@@ -82,12 +80,12 @@ export function AngabenFelder({
   return (
     <>
       <div className="feldkopf">Spiellokal</div>
-      <div className={raster ? 'felder raster' : 'felder anschrift'}>
+      <div className="felder">
         {feld('strasse', 'Straße und Hausnummer', 'z. B. Am Markt 1', 'l')}
         {feld('plz', 'PLZ', 'z. B. 27211', 's')}
         {feld('ort', 'Ort', 'z. B. Musterstadt', '')}
       </div>
-      <div className={raster ? 'felder raster' : 'felder'}>
+      <div className="felder">
         {feld('homepage', 'Homepage', 'z. B. www.verein.de', 'l')}
         {feld('kontakt_email', 'Kontakt-E-Mail', 'z. B. vorstand@verein.de', 'l', 'email')}
       </div>
