@@ -50,7 +50,7 @@ export function berichtPdf(b: Bericht): Uint8Array {
   absatz(dok, b.kopf);
 
   const mitRating = b.zeilen.some((z) => z.rating !== null);
-  ueberschrift(dok, 'Abschlusstabelle', 11);
+  ueberschrift(dok, 'Endtabelle', 11);
   tabelle(
     dok,
     [

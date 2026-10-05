@@ -950,7 +950,7 @@ export default function TurnierAnsicht({
     gruppenNamen.forEach((g) => {
       bloecke.push({
         art: 'gruppe',
-        titel: `Gruppe ${g} - Abschlusstabelle`,
+        titel: `Gruppe ${g}`,
         zeilen: gruppenTabellen[g].zeilen.map((zeile, i) => berichtZeile(zeile, i + 1)),
         vermerke: offenInGruppe(g) === 0 ? stichkampfVermerke(gruppenTabellen[g].gleichstaende) : []
       });
@@ -2443,7 +2443,7 @@ export default function TurnierAnsicht({
             </>
           ) : (
             <section className="block">
-              <h2>Rangliste{turnier.status === 'laeuft' ? ' (live)' : ''}</h2>
+              <h2>{turnier.status === 'beendet' ? 'Endtabelle' : turnier.status === 'laeuft' ? 'Tabelle (live)' : 'Tabelle'}</h2>
               <Tabelle
                 zeilen={tabelle.zeilen}
                 gleichstaende={tabelle.gleichstaende}
@@ -2841,7 +2841,7 @@ function Altturnier({
   return (
     <div className="turnierzweier">
       <section className="block">
-        <h2>Endstand</h2>
+        <h2>Endtabelle</h2>
         <table className="tabelle kompakt">
           <tbody>
             {plaetze.map((t) => (

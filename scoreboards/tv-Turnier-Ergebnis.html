@@ -116,7 +116,7 @@
               + `<td>${p.wins || 0}</td><td>${p.losses || 0}</td>`
               + `<td>${p.plus || 0} : ${p.minus || 0} (${diff > 0 ? '+' + diff : diff})</td></tr>`;
           }).join('');
-          const label = groupKeys.length > 1 ? ('Gruppe ' + g) : 'Rangliste';
+          const label = groupKeys.length > 1 ? ('Gruppe ' + g) : 'Tabelle';
           html += `<h2 class="sec">👥 ${label}</h2>
             <table><thead><tr><th>Platz</th><th class="left">Spieler</th><th>Spiele</th><th>Siege</th><th>Niederlagen</th><th>Kugeln / Punkte (Diff.)</th></tr></thead>
             <tbody>${rows}</tbody></table>`;
