@@ -13,6 +13,7 @@ import AuslosungTeilen from './AuslosungTeilen';
 import LiveSchalter from './LiveSchalter';
 import ChatSchalter from './ChatSchalter';
 import Platz from './Platz';
+import { diffText, LEERE_BILANZ, turnierBilanz } from '../turnier-bilanz';
 import ZuruecksetzenDialog from './ZuruecksetzenDialog';
 import { zuruecksetzbar } from '../partie-zuruecksetzen';
 import { useLaufendeStaende } from '../laufende-staende';
@@ -292,6 +293,10 @@ export default function TurnierAnsicht({
         })),
     [gruppenPartien, posVon]
   );
+
+  // Bilanz ueber das ganze Turnier fuer die Endtabellen (Zwei Gruppen, KO)
+  const bilanz = useMemo(() => turnierBilanz(partien), [partien]);
+  const bilanzVon = (id: string | null) => (id && bilanz.get(id)) || LEERE_BILANZ;
 
   const tabelle = useMemo(
     () => rangliste(aufstellung.length, eingabe, einstellungen.handReihenfolge ?? {}),
@@ -826,17 +831,26 @@ export default function TurnierAnsicht({
           spalten: [
             { text: 'Platz', align: 'mitte' },
             { text: 'Name', align: 'links' },
-            { text: 'Gruppe', align: 'mitte' },
             { text: 'Gruppenplatz', align: 'mitte' },
-            { text: 'Duell-Ergebnis', align: 'mitte' }
+            { text: 'Duell-Ergebnis', align: 'mitte' },
+            { text: 'Spiele', align: 'mitte' },
+            { text: 'Siege', align: 'mitte' },
+            { text: 'Sätze', align: 'mitte' },
+            { text: 'Satz-Diff.', align: 'mitte' }
           ],
-          zeilen: endtabelle.map((x) => [
-            String(x.platz),
-            anzeige(x.wer),
-            gruppeVon(x.wer),
-            String(x.gruppenplatz),
-            x.ergebnis ? `${x.ergebnis}${x.offen ? ' (offen)' : ''}` : ''
-          ])
+          zeilen: endtabelle.map((x) => {
+            const b = bilanzVon(x.wer);
+            return [
+              String(x.platz),
+              anzeige(x.wer),
+              `${gruppeVon(x.wer)}, Platz ${x.gruppenplatz}`,
+              x.ergebnis ? `${x.ergebnis}${x.offen ? ' (offen)' : ''}` : '',
+              String(b.spiele),
+              String(b.siege),
+              `${b.gewonnen} : ${b.verloren}`,
+              diffText(b)
+            ];
+          })
         });
         bloecke.push({
           art: 'tabelle',
@@ -870,17 +884,26 @@ export default function TurnierAnsicht({
           spalten: [
             { text: 'Platz', align: 'mitte' },
             { text: 'Name', align: 'links' },
-            { text: 'Gruppe', align: 'mitte' },
             { text: 'Gruppenplatz', align: 'mitte' },
-            { text: 'Ermittelt durch', align: 'links' }
+            { text: 'Ermittelt durch', align: 'links' },
+            { text: 'Spiele', align: 'mitte' },
+            { text: 'Siege', align: 'mitte' },
+            { text: 'Sätze', align: 'mitte' },
+            { text: 'Satz-Diff.', align: 'mitte' }
           ],
-          zeilen: endtabelleMitKo.map((x) => [
-            x.zeigePlatz ? String(x.platz) : '',
-            x.wer ? anzeige(x.wer) : '-',
-            x.wer ? gruppeVon(x.wer) : '',
-            x.wer ? String(gruppenplatzVon(x.wer)) : '',
-            x.wie
-          ])
+          zeilen: endtabelleMitKo.map((x) => {
+            const b = bilanzVon(x.wer);
+            return [
+              x.zeigePlatz ? String(x.platz) : '',
+              x.wer ? anzeige(x.wer) : '-',
+              x.wer ? `${gruppeVon(x.wer)}, Platz ${gruppenplatzVon(x.wer)}` : '',
+              x.wie,
+              x.wer ? String(b.spiele) : '',
+              x.wer ? String(b.siege) : '',
+              x.wer ? `${b.gewonnen} : ${b.verloren}` : '',
+              x.wer ? diffText(b) : ''
+            ];
+          })
         });
         bloecke.push({
           art: 'tabelle',
@@ -2299,6 +2322,10 @@ export default function TurnierAnsicht({
                           <th className="namenspalte">Name</th>
                           <th>Gruppenplatz</th>
                           <th className="rechts">Duell</th>
+                          <th className="rechts">Spiele</th>
+                          <th className="rechts">Siege</th>
+                          <th className="rechts">Sätze</th>
+                          <th className="rechts">Satz-Diff.</th>
                           <th></th>
                         </tr>
                       </thead>
@@ -2313,6 +2340,12 @@ export default function TurnierAnsicht({
                               {teilnehmer.find((t) => t.person_id === z.wer)?.gruppe}, Platz {z.gruppenplatz}
                             </td>
                             <td className="rechts">{z.ergebnis}</td>
+                            <td className="rechts">{bilanzVon(z.wer).spiele}</td>
+                            <td className="rechts">{bilanzVon(z.wer).siege}</td>
+                            <td className="rechts">
+                              {bilanzVon(z.wer).gewonnen} : {bilanzVon(z.wer).verloren}
+                            </td>
+                            <td className="rechts">{diffText(bilanzVon(z.wer))}</td>
                             <td className="hinweis">{z.offen ? 'offen' : ''}</td>
                           </tr>
                         ))}
@@ -2421,6 +2454,10 @@ export default function TurnierAnsicht({
                             <th className="namenspalte">Name</th>
                             <th>Gruppenplatz</th>
                             <th>Wie</th>
+                            <th className="rechts">Spiele</th>
+                            <th className="rechts">Siege</th>
+                            <th className="rechts">Sätze</th>
+                            <th className="rechts">Satz-Diff.</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -2432,6 +2469,12 @@ export default function TurnierAnsicht({
                               <td>{z.wer ? anzeige(z.wer) : '–'}</td>
                               <td>{z.wer && leistung.get(z.wer) ? `${leistung.get(z.wer)?.gruppe}, Platz ${leistung.get(z.wer)?.platz}` : ''}</td>
                               <td className="hinweis">{z.wie}</td>
+                              <td className="rechts">{z.wer ? bilanzVon(z.wer).spiele : ''}</td>
+                              <td className="rechts">{z.wer ? bilanzVon(z.wer).siege : ''}</td>
+                              <td className="rechts">
+                                {z.wer ? `${bilanzVon(z.wer).gewonnen} : ${bilanzVon(z.wer).verloren}` : ''}
+                              </td>
+                              <td className="rechts">{z.wer ? diffText(bilanzVon(z.wer)) : ''}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -2439,7 +2482,7 @@ export default function TurnierAnsicht({
                       <p className="hinweis">
                         Plätze 1 bis 4 aus Finale und Spiel um Platz 3, danach die Verlierer jeder Runde nach ihrem
                         Gruppenplatz, bei gleichem Gruppenplatz nach Punkten und Sätzen aus der Gruppe; Gleichgute teilen
-                        sich einen Platz.
+                        sich einen Platz. Spiele, Siege und Sätze zählen über das ganze Turnier.
                       </p>
                     </section>
                   )}
