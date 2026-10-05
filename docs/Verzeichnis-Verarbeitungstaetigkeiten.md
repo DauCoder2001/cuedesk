@@ -8,8 +8,8 @@ Stand: [Datum]
 
 | | |
 |---|---|
-| Name | [Vor- und Nachname] |
-| Anschrift | [Anschrift vom Impressum-Dienst], [PLZ Ort] |
+| Name | Matthias Haas |
+| Anschrift | Königstr. 41, 28857 Syke |
 | Kontakt | kontakt.cuedesk@gmail.com, Kontaktformular auf der Webseite |
 | Datenschutzbeauftragter | keiner, keine Pflicht (§ 38 BDSG) [prüfen] |
 
