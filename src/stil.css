@@ -379,6 +379,11 @@ h2 small.hinweis { font-weight: 400; font-size: 14px; margin-left: 6px; }
 .marke.quelle-startwert, .marke.quelle-vereinsschnitt { background: #eceff1; color: #4a5560; }
 .marke.quelle-von-hand { background: #ece4fb; color: #5a3d99; }
 .marke.quelle-gast { background: #fde7d6; color: #8a4b14; }
+/* Platzspalte der Endtabellen (src/seiten/Platz.tsx): mittig, 1-3 als Medaille */
+.tabelle :is(th, td).platzspalte { text-align: center; width: 44px; }
+.tabelle.kompakt > * > tr > :is(th, td).platzspalte { padding-left: 0; padding-right: 16px; }
+.platzzahl { font-weight: 600; }
+.medaille { display: block; margin: 0 auto; }
 .ratinglegende { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; align-items: center; font-size: 13px; color: var(--text-leise); margin-top: 14px; }
 .ratinglegende .marke { justify-self: start; margin-left: 0; font-size: 12px; padding: 1px 6px; border: 1px solid transparent; border-radius: var(--radius); }
 .tabelle td .marke { display: inline-block; }

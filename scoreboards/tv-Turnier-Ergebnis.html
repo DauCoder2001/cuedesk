@@ -20,7 +20,8 @@
     th.left, td.left { text-align: left; padding-left: 18px; }
     td { padding: 9px 12px; font-size: 2.6vh; border-bottom: 1px solid #2a2a2a; text-align: center; }
     tr:nth-child(even) td { background: #191919; }
-    .medal { font-size: 3vh; }
+    .medal { font-size: 3vh; text-align: center; }
+    .medal .medaille { display: block; margin: 0 auto; height: 4vh; width: auto; }
     .res { width: 18%; font-weight: bold; color: #38bdf8; }
     .empty { text-align: center; color: #666; font-size: 4vh; margin-top: 18vh; }
   </style>
@@ -70,7 +71,16 @@
     const contentEl = document.getElementById('content');
     const emptyEl = document.getElementById('empty');
 
-    function medal(p) { return p === 1 ? '🥇' : p === 2 ? '🥈' : p === 3 ? '🥉' : ('<strong>' + p + '.</strong>'); }
+    // Plaetze 1-3 als Medaille wie in CueDesk (src/seiten/Platz.tsx)
+    const MEDAILLE = { 1: ['#f4c542', '#c99a1a', '#5a3d00'], 2: ['#d5d9de', '#9aa1a9', '#3c4248'], 3: ['#d99a5b', '#a8692e', '#5a2e0a'] };
+    function medal(p) {
+      const f = MEDAILLE[p];
+      if (!f) return '<strong>' + p + '.</strong>';
+      return '<svg class="medaille" viewBox="0 0 24 30" role="img" aria-label="Platz ' + p + '">'
+        + '<path d="M6 0h5l2 9H8z" fill="#3b6fd8"/><path d="M13 0h5l-2 9h-5z" fill="#2c56b0"/>'
+        + '<circle cx="12" cy="19" r="9" fill="' + f[0] + '" stroke="' + f[1] + '" stroke-width="1.5"/>'
+        + '<text x="12" y="22.5" text-anchor="middle" font-size="10" font-weight="700" fill="' + f[2] + '">' + p + '</text></svg>';
+    }
 
     onValue(ref(db, 'tournament_archive'), (snap) => {
       const data = snap.val();
@@ -97,7 +107,7 @@
         const rows = Object.values(t.finalPlacement).map(e =>
           `<tr><td class="medal">${medal(e.place)}</td><td class="left">${esc(e.name)}</td><td class="res">${e.score || ''}</td></tr>`
         ).join('');
-        html += `<h2 class="sec">🏆 Endplatzierung</h2>
+        html += `<h2 class="sec">🏆 Endtabelle</h2>
           <table><thead><tr><th>Platz</th><th class="left">Spieler</th><th class="res">Ergebnis</th></tr></thead>
           <tbody>${rows}</tbody></table>`;
       }

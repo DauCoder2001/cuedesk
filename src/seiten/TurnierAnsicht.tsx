@@ -12,6 +12,7 @@ import AusschreibungBlock from './AusschreibungBlock';
 import AuslosungTeilen from './AuslosungTeilen';
 import LiveSchalter from './LiveSchalter';
 import ChatSchalter from './ChatSchalter';
+import Platz from './Platz';
 import ZuruecksetzenDialog from './ZuruecksetzenDialog';
 import { zuruecksetzbar } from '../partie-zuruecksetzen';
 import { useLaufendeStaende } from '../laufende-staende';
@@ -2294,7 +2295,7 @@ export default function TurnierAnsicht({
                     <table className="tabelle kompakt">
                       <thead>
                         <tr>
-                          <th>Pl.</th>
+                          <th className="platzspalte">Pl.</th>
                           <th className="namenspalte">Name</th>
                           <th>Gruppe</th>
                           <th className="rechts">Duell</th>
@@ -2304,7 +2305,9 @@ export default function TurnierAnsicht({
                       <tbody>
                         {endtabelle.map((z) => (
                           <tr key={z.wer} className={z.offen ? '' : 'gespielt'}>
-                            <td>{z.platz}</td>
+                            <td className="platzspalte">
+                              <Platz platz={z.platz} medaille={turnier.status === 'beendet'} />
+                            </td>
                             <td>{anzeige(z.wer)}</td>
                             <td>
                               {teilnehmer.find((t) => t.person_id === z.wer)?.gruppe}
@@ -2415,7 +2418,7 @@ export default function TurnierAnsicht({
                       <table className="tabelle kompakt">
                         <thead>
                           <tr>
-                            <th>Pl.</th>
+                            <th className="platzspalte">Pl.</th>
                             <th className="namenspalte">Name</th>
                             <th>Gruppe</th>
                             <th>Wie</th>
@@ -2424,7 +2427,9 @@ export default function TurnierAnsicht({
                         <tbody>
                           {endtabelleMitKo.map((z, i) => (
                             <tr key={z.wer ?? `offen-${i}`} className={z.offen ? '' : 'gespielt'}>
-                              <td>{z.zeigePlatz ? z.platz : ''}</td>
+                              <td className="platzspalte">
+                                {z.zeigePlatz && <Platz platz={z.platz} medaille={turnier.status === 'beendet'} />}
+                              </td>
                               <td>{z.wer ? anzeige(z.wer) : '–'}</td>
                               <td>{z.wer && leistung.get(z.wer) ? `${leistung.get(z.wer)?.gruppe}${leistung.get(z.wer)?.platz}` : ''}</td>
                               <td className="hinweis">{z.wie}</td>
@@ -2448,6 +2453,7 @@ export default function TurnierAnsicht({
                 zeilen={tabelle.zeilen}
                 gleichstaende={tabelle.gleichstaende}
                 stichkampf={alleFertig}
+                medaillen={turnier.status === 'beendet'}
                 name={tabellenname}
                 bearbeitbar={bearbeitbar}
                 setzen={(k, r) => void handReihenfolgeSetzen(k, r)}
@@ -2646,6 +2652,7 @@ function Tabelle(props: {
   zeilen: Zeile[];
   gleichstaende: Gleichstand[];
   stichkampf: boolean;
+  medaillen?: boolean; // Endtabelle eines beendeten Turniers: Plaetze 1-3 als Medaille
   name: (pos: number) => string;
   bearbeitbar: boolean;
   setzen: (schluessel: string, reihenfolge: number[] | null) => void;
@@ -2654,7 +2661,7 @@ function Tabelle(props: {
     <table className="tabelle">
       <thead>
         <tr>
-          <th>Pl.</th>
+          <th className="platzspalte">Pl.</th>
           <th>Name</th>
           <th className="rechts">Spiele</th>
           <th className="rechts">Punkte</th>
@@ -2677,7 +2684,9 @@ function Tabelle(props: {
           };
           return (
             <tr key={z.pos}>
-              <td>{i + 1}</td>
+              <td className="platzspalte">
+                <Platz platz={i + 1} medaille={props.medaillen === true} />
+              </td>
               <td>{props.name(z.pos)}</td>
               <td className="rechts">{z.spiele}</td>
               <td className="rechts">{z.punkte}</td>
@@ -2846,7 +2855,7 @@ function Altturnier({
           <tbody>
             {plaetze.map((t) => (
               <tr key={t.person_id}>
-                <td>{t.endplatz ?? '–'}</td>
+                <td className="platzspalte">{t.endplatz ? <Platz platz={t.endplatz} medaille /> : '–'}</td>
                 <td>{anzeige(t.person_id)}</td>
               </tr>
             ))}
