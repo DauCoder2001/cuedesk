@@ -4,6 +4,7 @@ import { useSitzung } from '../sitzung';
 import { personName } from '../namen';
 import { funktionsFehlerText } from '../funktionsfehler';
 import type { Person, RatingQuelle, RatingStand } from '../datenbank.types';
+import { gewertetePartien } from '../rating-partien';
 
 // Vereins-Rating: Liste je Disziplin, dazu die Lupe mit allen Partien, die in
 // den Wert eines Spielers eingegangen sind.
@@ -49,7 +50,7 @@ export default function Rating() {
   const [stand, setStand] = useState<RatingStand[]>([]);
   const [personen, setPersonen] = useState<Person[]>([]);
   const [offen, setOffen] = useState<string | null>(null);
-  const [partien, setPartien] = useState<Partiezeile[]>([]);
+  const [partien, setPartien] = useState<Partiezeile[] | null>(null); // null = laedt
   const [rechnet, setRechnet] = useState(false);
   const [meldung, setMeldung] = useState<string | null>(null);
   const [fehler, setFehler] = useState<string | null>(null);
@@ -112,24 +113,56 @@ export default function Rating() {
     await laden();
   }
 
-  async function lupe(personId: string) {
-    if (offen === personId) {
-      setOffen(null);
-      return;
-    }
-    setOffen(personId);
-    setPartien([]);
-    const { data } = await supabase
-      .from('partien')
-      .select(
-        'id, datum, phase, spieler_a, spieler_b, ergebnis_a, ergebnis_b, vorgabe_a, vorgabe_b, disziplin, turniere(name)'
-      )
-      .or(`spieler_a.eq.${personId},spieler_b.eq.${personId}`)
-      .eq('status', 'beendet')
-      .order('datum', { ascending: false })
-      .limit(200);
-    setPartien((data ?? []) as unknown as Partiezeile[]);
+  function lupe(personId: string) {
+    setOffen(offen === personId ? null : personId);
   }
+
+  // Partien zum geoeffneten Spieler: dieselbe Auswahl wie bei der Berechnung
+  // (src/rating-partien.ts), passend zur gewaehlten Ansicht
+  useEffect(() => {
+    if (!verein || !offen || !stichtag) return;
+    let vorbei = false;
+    setPartien(null);
+    void (async () => {
+      const [roh, einst] = await Promise.all([
+        supabase
+          .from('rating_partien')
+          .select('id, datum, disziplin, spieler_a, spieler_b, racks_a, racks_b')
+          .eq('verein_id', verein.id),
+        supabase.from('rating_einstellungen').select('*').eq('verein_id', verein.id).maybeSingle()
+      ]);
+      const e = einst.data;
+      const gewertet = gewertetePartien(
+        (roh.data ?? []).map((p) => ({
+          id: p.id,
+          datum: p.datum,
+          disziplin: p.disziplin,
+          a: p.spieler_a,
+          b: p.spieler_b,
+          wa: p.racks_a,
+          wb: p.racks_b
+        })),
+        offen,
+        ansicht,
+        stichtag,
+        e
+          ? { zeitraum: e.zeitraum_monate, mindestRacks: e.mindest_racks, rueckgriff: e.rueckgriff_monate, gewicht: e.gewicht, vereinsschnitt: e.vereinsschnitt }
+          : undefined
+      );
+      const ids = gewertet.map((p) => p.id);
+      const { data } = ids.length
+        ? await supabase
+            .from('partien')
+            .select('id, datum, phase, spieler_a, spieler_b, ergebnis_a, ergebnis_b, vorgabe_a, vorgabe_b, disziplin, turniere(name)')
+            .in('id', ids)
+            .order('datum', { ascending: false })
+        : { data: [] };
+      if (!vorbei) setPartien((data ?? []) as unknown as Partiezeile[]);
+    })();
+    return () => {
+      vorbei = true;
+    };
+  }, [verein, offen, ansicht, stichtag]);
 
   const namen = useMemo(() => {
     const map = new Map<string, string>();
@@ -226,6 +259,7 @@ export default function Rating() {
                         partien={partien}
                         personId={zeile.person_id}
                         namen={namen}
+                        quelle={zeile.quelle}
                       />
                     </td>
                   </tr>
@@ -249,15 +283,28 @@ export default function Rating() {
 function PartienListe({
   partien,
   personId,
-  namen
+  namen,
+  quelle
 }: {
-  partien: Partiezeile[];
+  partien: Partiezeile[] | null;
   personId: string;
   namen: Map<string, string>;
+  quelle: RatingQuelle;
 }) {
-  if (partien.length === 0) return <p className="hinweis">Keine Partien gefunden.</p>;
+  if (partien === null) return <p className="hinweis">Lädt …</p>;
+  if (partien.length === 0)
+    return (
+      <p className="hinweis">
+        In dieser Ansicht ist keine Partie gewertet. Grundlage des Werts: {QUELLE_TEXT[quelle]}.
+      </p>
+    );
 
   return (
+    <>
+    <p className="hinweis">
+      {partien.length} gewertete {partien.length === 1 ? 'Partie' : 'Partien'} – nur Turniere und Liga-Spieltage, die fürs
+      Rating zählen, ohne freie Spiele und 14.1, im Zeitraum der Berechnung.
+    </p>
     <table className="tabelle innen">
       <thead>
         <tr>
@@ -280,7 +327,7 @@ function PartienListe({
             <tr key={partie.id}>
               <td>{new Date(partie.datum).toLocaleDateString('de-DE')}</td>
               <td>
-                {partie.turniere?.name ?? 'Einzelspiel'}
+                {partie.turniere?.name ?? '–'}
                 {partie.phase ? <small> · {partie.phase}</small> : null}
               </td>
               <td>{gegner}</td>
@@ -301,5 +348,6 @@ function PartienListe({
         })}
       </tbody>
     </table>
+    </>
   );
 }
