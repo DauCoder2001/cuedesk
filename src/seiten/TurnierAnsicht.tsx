@@ -2297,7 +2297,7 @@ export default function TurnierAnsicht({
                         <tr>
                           <th className="platzspalte">Pl.</th>
                           <th className="namenspalte">Name</th>
-                          <th>Gruppe</th>
+                          <th>Gruppenplatz</th>
                           <th className="rechts">Duell</th>
                           <th></th>
                         </tr>
@@ -2310,8 +2310,7 @@ export default function TurnierAnsicht({
                             </td>
                             <td>{anzeige(z.wer)}</td>
                             <td>
-                              {teilnehmer.find((t) => t.person_id === z.wer)?.gruppe}
-                              {z.gruppenplatz}
+                              {teilnehmer.find((t) => t.person_id === z.wer)?.gruppe}, Platz {z.gruppenplatz}
                             </td>
                             <td className="rechts">{z.ergebnis}</td>
                             <td className="hinweis">{z.offen ? 'offen' : ''}</td>
@@ -2420,7 +2419,7 @@ export default function TurnierAnsicht({
                           <tr>
                             <th className="platzspalte">Pl.</th>
                             <th className="namenspalte">Name</th>
-                            <th>Gruppe</th>
+                            <th>Gruppenplatz</th>
                             <th>Wie</th>
                           </tr>
                         </thead>
@@ -2431,15 +2430,16 @@ export default function TurnierAnsicht({
                                 {z.zeigePlatz && <Platz platz={z.platz} medaille={turnier.status === 'beendet'} />}
                               </td>
                               <td>{z.wer ? anzeige(z.wer) : '–'}</td>
-                              <td>{z.wer && leistung.get(z.wer) ? `${leistung.get(z.wer)?.gruppe}${leistung.get(z.wer)?.platz}` : ''}</td>
+                              <td>{z.wer && leistung.get(z.wer) ? `${leistung.get(z.wer)?.gruppe}, Platz ${leistung.get(z.wer)?.platz}` : ''}</td>
                               <td className="hinweis">{z.wie}</td>
                             </tr>
                           ))}
                         </tbody>
                       </table>
                       <p className="hinweis">
-                        Plätze 1 bis 4 aus Finale und Spiel um Platz 3, danach die Verlierer jeder Runde nach
-                        Gruppenleistung; Gleichgute teilen sich einen Platz.
+                        Plätze 1 bis 4 aus Finale und Spiel um Platz 3, danach die Verlierer jeder Runde nach ihrem
+                        Gruppenplatz, bei gleichem Gruppenplatz nach Punkten und Sätzen aus der Gruppe; Gleichgute teilen
+                        sich einen Platz.
                       </p>
                     </section>
                   )}
