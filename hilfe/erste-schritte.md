@@ -28,7 +28,7 @@ Ein **Spieler** braucht kein Konto; ein **Konto** ist der Zugang einer Person zu
 
 1. Unter **Einladen** E-Mail-Adresse, Vorname und Nachname eintragen, Rollen wählen und die Einladung schicken. Die Person bekommt einen Anmeldelink.
 2. Die Rollen:
-   - **Lesezugang**: sieht Live, Zuschauen und Chat, Ranglisten, Archiv und die eigene Statistik.
+   - **Lesezugang**: sieht Live, Zuschauen und Chat, Ranglisten, Auswertung und Archiv und die eigene Statistik.
    - **Turnierleiter**: legt Turniere an und führt sie durch, koppelt Tablets.
    - **Sportwart**: wie Turnierleiter, dazu Spieler, Mannschaften, Einladungen und Altdaten.
    - **Vereins-Administrator**: alles, auch System und Rollen.

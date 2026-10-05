@@ -225,9 +225,9 @@ export default function App() {
     },
     {
       wert: 'archiv',
-      name: 'Archiv',
+      name: 'Auswertung und Archiv',
       sichtbar: true,
-      tipp: 'Alle beendeten Turniere und Partien nach Saison, Disziplin, Turnierart und Spieler, dazu der direkte Vergleich zweier Spieler.'
+      tipp: 'Saison-Überblick mit Spielen, Spielzeit und den besten Spielern, dazu alle beendeten Turniere und Partien nach Saison, Disziplin, Turnierart und Spieler und der direkte Vergleich zweier Spieler.'
     },
     {
       wert: 'statistikPool',

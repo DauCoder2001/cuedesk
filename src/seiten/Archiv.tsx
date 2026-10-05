@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { supabase } from '../supabase';
 import { useSitzung } from '../sitzung';
@@ -23,7 +23,9 @@ import { DISZIPLIN_TEXT, STATUS_TEXT } from './Turniere';
 import type { TurnierEinstellungen } from './Turniere';
 import TurnierAnsicht from './TurnierAnsicht';
 import LigaAnsicht from './LigaAnsicht';
-import type { Disziplin, Person } from '../datenbank.types';
+import type { Disziplin, Person, Tisch } from '../datenbank.types';
+import { dauerText, saisonUeberblick } from '../saison-ueberblick';
+import Platz from './Platz';
 
 // Spiele- und Turnierarchiv: beendete Turniere und Partien mit Filtern nach
 // Saison, Disziplin, Turnierart und Spieler. Mit "gegen" entsteht der direkte
@@ -61,6 +63,7 @@ export default function Archiv() {
   const [fruehestes, setFruehestes] = useState<string | null>(null);
   const [mitEinzelspielen, setMitEinzelspielen] = useState(false);
   const [partien, setPartien] = useState<ArchivPartie[]>([]);
+  const [tische, setTische] = useState<Pick<Tisch, 'id' | 'nummer' | 'bezeichnung'>[]>([]);
   const [ratings, setRatings] = useState<Map<string, number>>(new Map()); // "person|disziplin"
   const [werte141, setWerte141] = useState<Werte141[]>([]);
   const [offen, setOffen] = useState<ArchivTurnier | null>(null);
@@ -79,7 +82,7 @@ export default function Archiv() {
     let vorbei = false;
     void (async () => {
       try {
-        const [personenAntwort, turnierZeilen, teilnahmeZeilen, erstesAntwort, einzelAntwort, standAntwort] = await Promise.all([
+        const [personenAntwort, turnierZeilen, teilnahmeZeilen, erstesAntwort, einzelAntwort, standAntwort, tischAntwort] = await Promise.all([
           supabase.from('personen').select('*').eq('verein_id', verein.id),
           alleZeilen((von, bis) =>
             supabase
@@ -110,10 +113,12 @@ export default function Archiv() {
             .select('stichtag, disziplin, person_id, wert')
             .eq('verein_id', verein.id)
             .order('stichtag', { ascending: false })
-            .limit(3000)
+            .limit(3000),
+          supabase.from('tische').select('id, nummer, bezeichnung').eq('verein_id', verein.id).order('nummer')
         ]);
         if (vorbei) return;
         setPersonen(personenAntwort.data ?? []);
+        setTische(tischAntwort.data ?? []);
         const liste = turnierZeilen.map((t) => {
           const e = (t.einstellungen ?? {}) as TurnierEinstellungen;
           return {
@@ -167,7 +172,7 @@ export default function Archiv() {
         const zeilen = await alleZeilen((von, bis) => {
           let abfrage = supabase
             .from('partien')
-            .select('id, turnier_id, disziplin, datum, phase, gruppe, spieler_a, spieler_b, ergebnis_a, ergebnis_b, vorgabe_a, vorgabe_b, beendet')
+            .select('id, turnier_id, disziplin, datum, phase, gruppe, spieler_a, spieler_b, ergebnis_a, ergebnis_b, vorgabe_a, vorgabe_b, beendet, begonnen, tisch_id')
             .eq('verein_id', verein.id)
             .eq('status', 'beendet');
           if (zeitraum) abfrage = abfrage.gte('datum', zeitraum.von).lte('datum', zeitraum.bis);
@@ -191,6 +196,16 @@ export default function Archiv() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [turniere, partien, teilnahmen, saison, disziplin, art, spieler, gegen, beginn]
   );
+
+  // Saison-Ueberblick: nur nach Saison, die anderen Filter gelten ihm nicht
+  const saisonArchiv = useMemo(
+    () => archivFiltern(turniere, partien, teilnahmen, { saison, disziplin: 'alle', art: '', spieler: '', gegen: '' }, beginn),
+    [turniere, partien, teilnahmen, saison, beginn]
+  );
+  const ueberblick = useMemo(() => {
+    const mitglieder = new Set(personen.filter((p) => p.status === 'mitglied').map((p) => p.id));
+    return saisonUeberblick(saisonArchiv.partien, (id) => mitglieder.has(id));
+  }, [saisonArchiv, personen]);
 
   const vergleich = useMemo(
     () => (spieler && gegen ? direktvergleich(spieler, gegen, gefiltert.partien, werte141) : null),
@@ -276,9 +291,9 @@ export default function Archiv() {
     // Umschalter zur anderen Begegnung: sie hat im Archiv keine eigene Zeile
     const begegnungOeffnen = (id: string) => setOffen({ ...offen, id });
     return offen.modus === 'liga' ? (
-      <LigaAnsicht turnierId={offen.id} zurueck={zurueck} zurueckText="Archiv" oeffnen={begegnungOeffnen} />
+      <LigaAnsicht turnierId={offen.id} zurueck={zurueck} zurueckText="Auswertung und Archiv" oeffnen={begegnungOeffnen} />
     ) : (
-      <TurnierAnsicht turnierId={offen.id} zurueck={zurueck} zurueckText="Archiv" />
+      <TurnierAnsicht turnierId={offen.id} zurueck={zurueck} zurueckText="Auswertung und Archiv" />
     );
   }
 
@@ -358,6 +373,87 @@ export default function Archiv() {
           beginnt im {new Date(2000, beginn - 1, 1).toLocaleDateString('de-DE', { month: 'long' })}.
           Mit „gegen“ entsteht der direkte Vergleich zweier Spieler.
         </p>
+      </section>
+
+      <section className="block">
+        <h2>{saison === 'alle' ? 'Gesamtbilanz aller Saisons' : `Saison-Überblick ${saison}`}</h2>
+        <div className="kennzahlen">
+          <div>
+            <span>Spiele</span>
+            <strong>{ueberblick.spiele}</strong>
+            <small>mit Einzelspielen, Liga und 14.1</small>
+          </div>
+          <div>
+            <span>Spielzeit an den Tischen</span>
+            <strong>{ueberblick.mitDauer > 0 ? dauerText(ueberblick.minuten) : '–'}</strong>
+            <small>
+              aus {ueberblick.mitDauer} von {ueberblick.spiele} Spielen
+            </small>
+          </div>
+          <div>
+            <span>Ø Spieldauer</span>
+            <strong>{ueberblick.schnitt !== null ? dauerText(ueberblick.schnitt) : '–'}</strong>
+            <small>pro Spiel am Tablet</small>
+          </div>
+          <div>
+            <span>Turniere</span>
+            <strong>{saisonArchiv.turniere.length}</strong>
+            <small>und Liga-Spieltage im Archiv</small>
+          </div>
+          <div>
+            <span>Aktivster Spieler</span>
+            <strong>{ueberblick.aktivster ? name(ueberblick.aktivster.id) : '–'}</strong>
+            <small>{ueberblick.aktivster ? `${ueberblick.aktivster.spiele} Spiele` : 'noch keine Spiele'}</small>
+          </div>
+        </div>
+        <div className="ueberblickzweier">
+          <div>
+            <h3>Beste drei Spieler</h3>
+            <p className="hinweis">Nach Siegen, nur Mitglieder.</p>
+            {ueberblick.beste.length === 0 ? (
+              <p className="hinweis">Noch keine Siege in dieser Auswahl.</p>
+            ) : (
+              <table className="tabelle kompakt">
+                <tbody>
+                  {ueberblick.beste.map((z, i) => (
+                    <tr key={z.id}>
+                      <td className="platzspalte">
+                        <Platz platz={i + 1} medaille />
+                      </td>
+                      <td className="namenspalte">{name(z.id)}</td>
+                      <td className="rechts">{z.siege} Siege</td>
+                      <td className="rechts">{z.spiele} Spiele</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+          <div>
+            <h3>Spielzeit je Tisch</h3>
+            <p className="hinweis">Summe der erfassten Spieldauer, nur Spiele am Tablet.</p>
+            {ueberblick.jeTisch.length === 0 ? (
+              <p className="hinweis">Keine Spieldauer erfasst.</p>
+            ) : (
+              <div className="tischbalken">
+                {ueberblick.jeTisch.map((t) => {
+                  const tisch = tische.find((x) => x.id === t.tischId);
+                  return (
+                    <Fragment key={t.tischId}>
+                      <span>
+                        {tisch ? `Tisch ${tisch.nummer}${tisch.bezeichnung ? ` · ${tisch.bezeichnung}` : ''}` : 'Tisch (gelöscht)'}
+                      </span>
+                      <span className="balken">
+                        <i style={{ width: `${Math.max(2, (t.minuten / ueberblick.jeTisch[0].minuten) * 100)}%` }} />
+                      </span>
+                      <span className="rechts">{dauerText(t.minuten)}</span>
+                    </Fragment>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
       </section>
 
       {vergleich && (

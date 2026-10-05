@@ -379,6 +379,12 @@ h2 small.hinweis { font-weight: 400; font-size: 14px; margin-left: 6px; }
 .marke.quelle-startwert, .marke.quelle-vereinsschnitt { background: #eceff1; color: #4a5560; }
 .marke.quelle-von-hand { background: #ece4fb; color: #5a3d99; }
 .marke.quelle-gast { background: #fde7d6; color: #8a4b14; }
+/* Saison-Ueberblick (Auswertung und Archiv) */
+.ueberblickzweier { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; margin-top: 16px; }
+.ueberblickzweier h3 { margin: 0 0 2px; }
+.tischbalken { display: grid; grid-template-columns: auto minmax(80px, 1fr) auto; gap: 8px 12px; align-items: center; font-size: 14px; }
+.tischbalken .balken { height: 10px; background: var(--flaeche-2); border-radius: 5px; overflow: hidden; }
+.tischbalken .balken i { display: block; height: 100%; background: #85b7eb; border-radius: 5px; }
 /* Platzspalte der Endtabellen (src/seiten/Platz.tsx): mittig, 1-3 als Medaille */
 .tabelle :is(th, td).platzspalte { text-align: center; width: 44px; }
 .tabelle.kompakt > * > tr > :is(th, td).platzspalte { padding-left: 0; padding-right: 16px; }

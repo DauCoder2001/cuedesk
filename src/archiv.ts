@@ -36,6 +36,8 @@ export type ArchivPartie = {
   vorgabe_a: number;
   vorgabe_b: number;
   beendet: string | null;
+  begonnen?: string | null; // fuer die Spieldauer im Saison-Ueberblick
+  tisch_id?: string | null;
 };
 
 export type ArchivTeilnahme = { turnier_id: string; person_id: string; endplatz: number | null };
