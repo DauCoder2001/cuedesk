@@ -1868,7 +1868,7 @@ export default function TurnierAnsicht({
                         {person(t.person_id)?.status === 'gast' && <span className="marke">Gast</span>}
                       </td>
                       <td className="rechts">
-                        {QUELLE_KURZ[r.quelle] && <span className="marke vorne">{QUELLE_KURZ[r.quelle]}</span>}
+                        {QUELLE_KURZ[r.quelle] && <span className={`marke vorne quelle-${r.quelle}`}>{QUELLE_KURZ[r.quelle]}</span>}
                         {r.wert}
                       </td>
                       {mehrgruppig && (
@@ -2132,7 +2132,7 @@ export default function TurnierAnsicht({
                       )}
                       <td className="rechts">
                         {t.rating_quelle && QUELLE_KURZ[t.rating_quelle] && (
-                          <span className="marke vorne">{QUELLE_KURZ[t.rating_quelle]}</span>
+                          <span className={`marke vorne quelle-${t.rating_quelle}`}>{QUELLE_KURZ[t.rating_quelle]}</span>
                         )}
                         {bearbeitbar && !irgendeinErgebnis ? (
                           <input

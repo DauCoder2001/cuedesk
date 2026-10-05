@@ -275,10 +275,28 @@ export default function Rating() {
             )}
           </tbody>
         </table>
+        <div className="ratinglegende">
+          {LEGENDE.map(([klasse, text, bedeutung]) => (
+            <Fragment key={klasse}>
+              <span className={`marke quelle-${klasse}`}>{text}</span>
+              <span>{bedeutung}</span>
+            </Fragment>
+          ))}
+        </div>
       </section>
     </div>
   );
 }
+
+// Wie Punkt 8 der Rating-Erklaerung (public/hilfe/vereins-rating-erklaert.pdf)
+const LEGENDE: [RatingQuelle, string, string][] = [
+  ['eigene-daten', 'eigene Daten', 'Mindestens 100 eigene Racks, gut abgesichert.'],
+  ['vorlaeufig', 'vorläufig', 'Eigene Racks vorhanden, aber noch unter 100.'],
+  ['andere-disziplin', 'aus anderer Disziplin', 'In dieser Disziplin noch nichts gespielt, Wert übertragen.'],
+  ['startwert', 'Startwert / Vereinsschnitt', 'Keine gewerteten Partien, Ausgangswert gesetzt oder 500.'],
+  ['von-hand', 'von Hand gesetzt', 'Nur im Turnier: Die Turnierleitung hat den Wert überschrieben, bevor das erste Ergebnis stand.'],
+  ['gast', 'Gast', 'Nur im Turnier: Spieler eines anderen Vereins. Er spielt mit 500 und erscheint in keiner Rating-Liste.']
+];
 
 function PartienListe({
   partien,

@@ -365,9 +365,17 @@ h2 small.hinweis { font-weight: 400; font-size: 14px; margin-left: 6px; }
 .protokoll { margin: 0; padding-left: 18px; font-size: 14px; color: var(--text-leise); }
 .protokoll li { margin: 2px 0; }
 
-.marke.quelle-eigene-daten { color: var(--gut); border-color: #bcd9cd; }
-.marke.quelle-vorlaeufig { color: #854f0b; border-color: #e8cfa3; }
-.marke.quelle-andere-disziplin { color: var(--akzent); border-color: #b9d4ee; }
+/* Rating-Grundlage (Rating-Liste, Teilnehmerliste, Legende): helle Flaeche,
+   dunkle Schrift im selben Farbton; wie Punkt 8 der Rating-Erklaerung */
+.marke[class*='quelle-'] { border-color: transparent; }
+.marke.quelle-eigene-daten { background: #dff3e4; color: #1e6b3a; }
+.marke.quelle-vorlaeufig { background: #fdf3c4; color: #7a5a00; }
+.marke.quelle-andere-disziplin { background: #dbeafe; color: #1d4f91; }
+.marke.quelle-startwert, .marke.quelle-vereinsschnitt { background: #eceff1; color: #4a5560; }
+.marke.quelle-von-hand { background: #ece4fb; color: #5a3d99; }
+.marke.quelle-gast { background: #fde7d6; color: #8a4b14; }
+.ratinglegende { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; align-items: center; font-size: 13px; color: var(--text-leise); margin-top: 14px; }
+.ratinglegende .marke { justify-self: start; margin-left: 0; font-size: 12px; padding: 1px 6px; border: 1px solid transparent; border-radius: var(--radius); }
 .tabelle td .marke { display: inline-block; }
 .tabelle.innen { margin: 6px 0; font-size: 14px; background: var(--flaeche-2); }
 .tabelle.innen td, .tabelle.innen th { padding: 4px 8px; }
