@@ -455,7 +455,11 @@ h2 small.hinweis { font-weight: 400; font-size: 14px; margin-left: 6px; }
 .tischform > .diamant { position: absolute; width: 5px; height: 5px; border-radius: 50%; background: #8b2a2a; }
 .livekachel { border: 1px solid var(--rand); border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; justify-content: space-between; gap: 14px; min-height: 190px; }
 .livekopf { display: flex; justify-content: space-between; gap: 8px; font-size: 14px; color: var(--text-leise); }
-.livekopf .marke { font-size: 12px; border: 1px solid var(--rand); border-radius: var(--radius); padding: 1px 6px; margin-left: 6px; }
+.livekopf .marke { font-size: 12px; border: 1px solid var(--rand); border-radius: var(--radius); padding: 1px 6px; margin-left: 6px; white-space: nowrap; display: inline-block; }
+.livekopf .marke.warnmarke { border-color: transparent; align-self: flex-start; }
+.livefuss.ungespeichert { color: #7a4b00; }
+.livefussknoepfe { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+.livefussknoepfe > span { display: flex; gap: 6px; }
 .livekopf .marke.frei { background: #6c757d; border-color: #6c757d; color: #fff; }
 .livelaeuft { color: var(--gut); }
 .livestand { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px; font-size: 18px; font-weight: 500; padding: 16px 0; }

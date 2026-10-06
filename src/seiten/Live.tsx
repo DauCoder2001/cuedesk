@@ -1,9 +1,10 @@
 import { useEffect, useState, type CSSProperties } from 'react';
 import { supabase } from '../supabase';
 import { useSitzung } from '../sitzung';
-import { KEIN_LIVE_TEXT, dauerText, kachel, liveAktiv } from '../live';
+import { KEIN_LIVE_TEXT, dauerText, einzelspielAusStand, kachel, liveAktiv, nichtGespeichert } from '../live';
 import { schutzwortPruefen } from '../schutzwort';
-import type { Kachel } from '../live';
+import { datumText } from '../auskunft';
+import type { Kachel, PoolDisziplin } from '../live';
 import type { Geraet, Tisch } from '../datenbank.types';
 
 // Live-Tische: eine Kachel je aktivem Tisch, aktualisiert sich bei jedem
@@ -35,6 +36,15 @@ export default function Live() {
   const [, setTakt] = useState(0);
   const [liveAn, setLiveAn] = useState<boolean | null>(null); // null: noch nicht geladen
   const [turnierLaeuft, setTurnierLaeuft] = useState(false); // fuer die Marke "Freies Spiel"
+  // Liegengebliebener, nie gespeicherter Stand: ohne Tablet speichern oder verwerfen
+  const [offenFrage, setOffenFrage] = useState<{
+    tisch: Tisch;
+    stand: Stand;
+    k: NonNullable<ReturnType<typeof nichtGespeichert>>;
+    art: 'speichern' | 'verwerfen';
+  } | null>(null);
+  const [disziplin, setDisziplin] = useState<PoolDisziplin | ''>('');
+  const [arbeitet, setArbeitet] = useState(false);
 
   useEffect(() => {
     if (!verein) return;
@@ -152,6 +162,9 @@ export default function Live() {
             // "bereit" nur, wenn wirklich ein Tablet an ist - ein alter Stand
             // ohne Tablet ist bloss ein Rest.
             if (k.art === 'frei' && k.bereit && !online) k = { art: 'frei', bereit: false };
+            // Liegengeblieben, aber nie gespeichert: Die Turnierleitung soll es merken
+            const offen = darfLeiten && stand ? nichtGespeichert(stand.zustand, stand.aktualisiert) : null;
+            if (offen) k = offen;
             return (
             <Tischkachel
               key={tisch.id}
@@ -171,6 +184,17 @@ export default function Live() {
                   : null
               }
               laedtNeu={amTisch.some((g) => offeneBitte(g.neu_laden_am))}
+              ungespeichertSeit={offen ? stand!.aktualisiert : null}
+              ungespeichert={
+                offen
+                  ? {
+                      speichern: einzelspielAusStand(stand!.zustand, stand!.aktualisiert, '9-ball', verein.id, tisch.id)
+                        ? () => offenOeffnen(tisch, stand!, offen, 'speichern')
+                        : null,
+                      verwerfen: () => offenOeffnen(tisch, stand!, offen, 'verwerfen')
+                    }
+                  : null
+              }
             />
             );
           })}
@@ -203,8 +227,104 @@ export default function Live() {
           </div>
         </div>
       )}
+      {offenFrage && (
+        <div className="dialoghintergrund" onClick={() => !arbeitet && setOffenFrage(null)}>
+          <div className="dialog" onClick={(e) => e.stopPropagation()}>
+            <h2>{offenFrage.art === 'speichern' ? 'Ergebnis speichern' : 'Stand verwerfen'}</h2>
+            <p>
+              Tisch {offenFrage.tisch.nummer}: {offenFrage.k.spieler1} {offenFrage.k.stand1} : {offenFrage.k.stand2}{' '}
+              {offenFrage.k.spieler2}
+              {offenFrage.k.raceTo !== null ? `, Race to ${offenFrage.k.raceTo}` : ''}, Stand vom{' '}
+              {datumText(offenFrage.stand.aktualisiert, true)} Uhr.
+            </p>
+            {offenFrage.art === 'speichern' ? (
+              <>
+                <p>
+                  Gespeichert wird als Einzelspiel{offenFrage.k.laeuft ? ', abgebrochen, weil das Race nicht erreicht ist' : ''}.
+                  Für das Rating zählt es nicht. Danach ist der Tisch frei.
+                </p>
+                <div className="felder">
+                  <label className="feld s">
+                    <span>Disziplin</span>
+                    <select value={disziplin} onChange={(e) => setDisziplin(e.target.value as PoolDisziplin | '')}>
+                      <option value="">bitte wählen</option>
+                      <option value="8-ball">8-Ball</option>
+                      <option value="9-ball">9-Ball</option>
+                      <option value="10-ball">10-Ball</option>
+                    </select>
+                  </label>
+                </div>
+              </>
+            ) : (
+              <p>Der Stand wird gelöscht und nicht gespeichert. Danach ist der Tisch frei.</p>
+            )}
+            {fehler && <p className="fehler">{fehler}</p>}
+            <div className="zeile">
+              {offenFrage.art === 'speichern' ? (
+                <button type="button" disabled={arbeitet || !disziplin} onClick={() => void offenErledigen()}>
+                  Speichern
+                </button>
+              ) : (
+                <button type="button" className="gefahrknopf" disabled={arbeitet} onClick={() => void offenErledigen()}>
+                  Verwerfen
+                </button>
+              )}
+              <button type="button" disabled={arbeitet} onClick={() => setOffenFrage(null)}>
+                Abbrechen
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
+
+  function offenOeffnen(tisch: Tisch, stand: Stand, k: NonNullable<ReturnType<typeof nichtGespeichert>>, art: 'speichern' | 'verwerfen') {
+    const vorgabe = (stand.zustand as { disziplin?: unknown } | null)?.disziplin;
+    setDisziplin(vorgabe === '8-ball' || vorgabe === '9-ball' || vorgabe === '10-ball' ? vorgabe : '');
+    setFehler(null);
+    setMeldung(null);
+    setOffenFrage({ tisch, stand, k, art });
+  }
+
+  // Liegengebliebenen Stand ohne Tablet erledigen: speichern oder verwerfen,
+  // in beiden Faellen ist der Tisch danach frei.
+  async function offenErledigen() {
+    if (!offenFrage || !verein) return;
+    const { tisch, stand, art } = offenFrage;
+    setArbeitet(true);
+    setFehler(null);
+    if (art === 'speichern') {
+      const zeile = disziplin ? einzelspielAusStand(stand.zustand, stand.aktualisiert, disziplin, verein.id, tisch.id) : null;
+      if (!zeile) {
+        setArbeitet(false);
+        return setFehler('Dieses Spiel lässt sich nur am Tablet speichern.');
+      }
+      const { error } = await supabase.from('partien').insert(zeile);
+      if (error) {
+        setArbeitet(false);
+        return setFehler(error.message);
+      }
+    }
+    const { error } = await supabase.from('live_stand').delete().eq('tisch_id', tisch.id);
+    setArbeitet(false);
+    if (error) {
+      return setFehler(
+        art === 'speichern' ? `Gespeichert, aber der Tisch ist noch belegt: ${error.message}` : error.message
+      );
+    }
+    setStaende((bisher) => {
+      const kopie = { ...bisher };
+      delete kopie[tisch.id];
+      return kopie;
+    });
+    setOffenFrage(null);
+    setMeldung(
+      art === 'speichern'
+        ? `Tisch ${tisch.nummer}: Ergebnis als Einzelspiel gespeichert, der Tisch ist frei.`
+        : `Tisch ${tisch.nummer}: Stand verworfen, der Tisch ist frei.`
+    );
+  }
 
   // Bitte an alle Tablets dieses Tisches
   async function neuLadenAusloesen() {
@@ -273,7 +393,9 @@ export function Tischkachel({
   laedtNeu,
   tabletAus,
   turnierLaeuft,
-  tischform = false
+  tischform = false,
+  ungespeichertSeit = null,
+  ungespeichert = null
 }: {
   tisch: Tisch;
   k: Kachel;
@@ -282,6 +404,8 @@ export function Tischkachel({
   tabletAus: boolean;
   turnierLaeuft: boolean; // dann bekommt ein Spiel ohne Turnierpartie die Marke "Freies Spiel" (wie am TV)
   tischform?: boolean; // Kachel als Billardtisch zeichnen (Seite Live)
+  ungespeichertSeit?: string | null; // liegengebliebener Stand, Ergebnis nie gespeichert (nur Turnierleitung)
+  ungespeichert?: { speichern: (() => void) | null; verwerfen: () => void } | null; // Knoepfe dazu
 }) {
   const klasse = tischform ? 'livekachel tischform' : 'livekachel';
   const rahmen = tischform && <Tischrahmen />;
@@ -329,7 +453,11 @@ export function Tischkachel({
           {k.raceTo !== null && <span className="marke">Race to {k.raceTo}</span>}
           {turnierLaeuft && !k.turnierspiel && <span className="marke frei">Freies Spiel</span>}
         </span>
-        <span className={k.laeuft ? 'livelaeuft' : ''}>{k.laeuft ? `● ${dauerText(k.seit)}` : 'beendet'}</span>
+        {ungespeichertSeit ? (
+          <span className="marke warnmarke">nicht gespeichert</span>
+        ) : (
+          <span className={k.laeuft ? 'livelaeuft' : ''}>{k.laeuft ? `● ${dauerText(k.seit)}` : 'beendet'}</span>
+        )}
       </div>
       <div className="livestand">
         <span className="rot rechts">{k.spieler1}</span>
@@ -338,6 +466,11 @@ export function Tischkachel({
         </span>
         <span className="blau">{k.spieler2}</span>
       </div>
+      {ungespeichertSeit && (
+        <div className="livefuss ungespeichert">
+          Ergebnis nicht gespeichert, Stand vom {datumText(ungespeichertSeit, true)} Uhr.
+        </div>
+      )}
       <div className="livefuss">
         {k.hinweis}
         {k.ziel ? ` · ${k.ziel}` : ''}
@@ -354,7 +487,23 @@ export function Tischkachel({
           </>
         )}
       </div>
-      {knopf && <div className="livefuss rechts">{knopf}</div>}
+      {ungespeichert ? (
+        <div className="livefuss livefussknoepfe">
+          <span>
+            {ungespeichert.speichern && (
+              <button type="button" className="klein" onClick={ungespeichert.speichern}>
+                Ergebnis speichern
+              </button>
+            )}
+            <button type="button" className="klein" onClick={ungespeichert.verwerfen}>
+              Verwerfen
+            </button>
+          </span>
+          {knopf}
+        </div>
+      ) : (
+        knopf && <div className="livefuss rechts">{knopf}</div>
+      )}
     </div>
   );
 }

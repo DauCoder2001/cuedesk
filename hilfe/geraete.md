@@ -38,6 +38,9 @@ Was der Fernseher während eines Turniers zeigt (**Auslosung**, **Live-Tische**,
 ## 4. Im Betrieb
 
 - Die Seite **Live** zeigt alle Tische mit Spielstand und ob das Tablet an ist.
+- Ein Spielstand, an dem drei Stunden lang nichts passiert ist, gilt als liegengeblieben; der Tisch zeigt dann „Kein Spiel“. Wurde das Ergebnis vorher nicht gespeichert, sieht die Turnierleitung stattdessen den alten Stand mit **nicht gespeichert** und kann den Tisch ohne Tablet freigeben:
+  - **Ergebnis speichern**: Disziplin wählen, das Spiel wird als Einzelspiel gespeichert (ohne Rating; ist das Race nicht erreicht, als abgebrochen). Das geht nur bei Pool und wenn beide Spieler aus der Liste gewählt waren. Ein 14.1-Spiel wird nur am Tablet mit vollem Protokoll gespeichert.
+  - **Verwerfen**: Der Stand wird gelöscht, ohne zu speichern.
 - Mitglieder und der Fernseher sehen Spielstände nur, solange ein Turnier oder Liga-Spieltag mit **Live an** läuft – dann an allen Tischen, auch freie Spiele. Sonst sieht sie nur die Turnierleitung; der Fernseher zeigt „Tisch nicht besetzt“.
 - **Protokoll live** (bei 14.1) zeigt die Aufnahmen der laufenden Partie. **Zum Board** gibt es dort nur am Tablet des Tisches, damit niemand am PC dem Tablet den Tisch wegnimmt. **Drucken** und **Senden** sieht nur die Turnierleitung.
 - Hängt ein Tablet, schickt **Neu laden** auf der Seite Live ihm den Befehl zum Neuladen. Dafür braucht es das Schutzwort.

@@ -100,6 +100,57 @@ export function kachel(zustand: unknown, aktualisiert: string | null, jetzt = Da
   };
 }
 
+// Liegengebliebener Stand mit begonnenem Spiel: Das Ergebnis wurde nie
+// gespeichert, denn nach dem Speichern setzt das Tablet seinen Stand zurueck.
+// Fuer den Hinweis an die Turnierleitung auf der Seite Live, sonst null.
+export function nichtGespeichert(
+  zustand: unknown,
+  aktualisiert: string | null,
+  jetzt = Date.now()
+): Exclude<Kachel, { art: 'frei' }> | null {
+  if (!aktualisiert || jetzt - Date.parse(aktualisiert) <= VERALTET_NACH_MS) return null;
+  const k = kachel(zustand, aktualisiert, Date.parse(aktualisiert));
+  return k.art === 'frei' ? null : k;
+}
+
+// Liegengebliebenes Pool-Einzelspiel ohne Tablet speichern (Seite Live): die
+// Zeile fuer "partien", genau wie ergebnisSpeichernPool am Tablet sie schreibt.
+// Zeitpunkt ist der letzte Stand, nicht der Moment des Speicherns. null, wenn
+// das so nicht geht: 14.1 (nur mit vollem Protokoll vom Tablet), Turnierpartie
+// oder Spieler nicht aus der Liste gewaehlt.
+export type PoolDisziplin = '8-ball' | '9-ball' | '10-ball';
+
+export function einzelspielAusStand(
+  zustand: unknown,
+  aktualisiert: string,
+  disziplin: PoolDisziplin,
+  vereinId: string,
+  tischId: string
+) {
+  const k = kachel(zustand, aktualisiert, Date.parse(aktualisiert));
+  if (k.art !== 'pool' || k.turnierspiel) return null;
+  const z = zustand as Record<string, unknown>;
+  const a = typeof z.player1Id === 'string' ? z.player1Id : null;
+  const b = typeof z.player2Id === 'string' ? z.player2Id : null;
+  if (!a || !b || a === b) return null;
+  return {
+    verein_id: vereinId,
+    turnier_id: null,
+    disziplin,
+    datum: new Date(aktualisiert).toISOString().slice(0, 10),
+    tisch_id: tischId,
+    spieler_a: a,
+    spieler_b: b,
+    race_to: k.raceTo,
+    ergebnis_a: k.stand1,
+    ergebnis_b: k.stand2,
+    status: k.laeuft ? ('abgebrochen' as const) : ('beendet' as const),
+    rating_werten: false, // Einzelspiele zaehlen nie fuer das Rating
+    begonnen: k.seit !== null ? new Date(k.seit).toISOString() : null,
+    beendet: new Date(aktualisiert).toISOString()
+  };
+}
+
 // ---------- Laufender Stand im Spielplan (Turnier und Liga-Spieltag) ----------
 
 const kurzName = (text: string) => text.replace(/\s*\([^()]*\)\s*$/, '').trim().toLowerCase();

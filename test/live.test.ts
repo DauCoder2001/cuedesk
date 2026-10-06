@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { dauerText, kachel, laufenderStand, laufenderStandText, liveAktiv } from '../src/live';
+import { dauerText, einzelspielAusStand, kachel, laufenderStand, laufenderStandText, liveAktiv, nichtGespeichert } from '../src/live';
 
 const jetzt = Date.parse('2026-09-22T20:00:00Z');
 const frisch = '2026-09-22T19:59:00Z';
@@ -82,6 +82,57 @@ describe('Kachel eines Tisches', () => {
     expect(dauerText(jetzt - 32 * 60000, jetzt)).toBe('läuft seit 32 min');
     expect(dauerText(jetzt - 75 * 60000, jetzt)).toBe('läuft seit 1:15 h');
     expect(dauerText(null, jetzt)).toBe('läuft');
+  });
+});
+
+describe('Liegengeblieben und nicht gespeichert', () => {
+  const alt = '2026-09-22T16:00:00Z'; // vier Stunden her
+  test('veraltetes begonnenes Spiel wird gemeldet, mit dem alten Stand', () => {
+    const k = nichtGespeichert({ gameType: 'pool', score1: 0, score2: 3, raceTo: 3, player1: 'Ingo', player2: 'Matthias' }, alt, jetzt);
+    expect(k?.art).toBe('pool');
+    expect(k && k.art !== 'frei' && [k.spieler1, k.stand1, k.stand2, k.laeuft]).toEqual(['Ingo', 0, 3, false]);
+  });
+
+  test('frischer Stand, leeres Board oder kein Stand: nichts zu melden', () => {
+    expect(nichtGespeichert({ gameType: 'pool', score1: 1, score2: 0, player1: 'Kai' }, frisch, jetzt)).toBeNull();
+    expect(nichtGespeichert({ gameType: 'pool', score1: 0, score2: 0 }, alt, jetzt)).toBeNull();
+    expect(nichtGespeichert(null, alt, jetzt)).toBeNull();
+    expect(nichtGespeichert({ gameType: 'pool', score1: 2, score2: 1 }, null, jetzt)).toBeNull();
+  });
+});
+
+describe('Einzelspiel aus liegengebliebenem Stand', () => {
+  const alt = '2026-09-22T16:00:00Z';
+  const pool = { gameType: 'pool', score1: 0, score2: 3, raceTo: 3, player1: 'Ingo', player2: 'Matthias', player1Id: 'i', player2Id: 'm', startedAt: Date.parse('2026-09-22T15:30:00Z') };
+
+  test('Pool mit Spielern aus der Liste: Zeile wie am Tablet, Zeit vom Stand', () => {
+    expect(einzelspielAusStand(pool, alt, '9-ball', 'v', 't')).toEqual({
+      verein_id: 'v',
+      turnier_id: null,
+      disziplin: '9-ball',
+      datum: '2026-09-22',
+      tisch_id: 't',
+      spieler_a: 'i',
+      spieler_b: 'm',
+      race_to: 3,
+      ergebnis_a: 0,
+      ergebnis_b: 3,
+      status: 'beendet',
+      rating_werten: false,
+      begonnen: '2026-09-22T15:30:00.000Z',
+      beendet: '2026-09-22T16:00:00.000Z'
+    });
+  });
+
+  test('Race nicht erreicht: abgebrochen', () => {
+    expect(einzelspielAusStand({ ...pool, score2: 2 }, alt, '8-ball', 'v', 't')?.status).toBe('abgebrochen');
+  });
+
+  test('nicht moeglich bei 14.1, Turnierpartie, frei eingetippten oder gleichen Spielern', () => {
+    expect(einzelspielAusStand({ gameType: '14.1', s1: 20, s2: 10, player1: 'A', player1Id: 'i', player2Id: 'm' }, alt, '9-ball', 'v', 't')).toBeNull();
+    expect(einzelspielAusStand({ ...pool, tournamentMatchId: 'x' }, alt, '9-ball', 'v', 't')).toBeNull();
+    expect(einzelspielAusStand({ ...pool, player2Id: null }, alt, '9-ball', 'v', 't')).toBeNull();
+    expect(einzelspielAusStand({ ...pool, player2Id: 'i' }, alt, '9-ball', 'v', 't')).toBeNull();
   });
 });
 
