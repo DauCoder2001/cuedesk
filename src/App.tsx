@@ -260,16 +260,17 @@ export default function App() {
       tipp: 'Den Datenbestand aus Turnier light einlesen und den Spielern zuordnen.'
     },
     {
-      wert: 'konsole',
-      name: 'Konsole',
-      sichtbar: istSuperAdmin,
-      tipp: 'Nur für Super-Admins: Vereine anlegen, sperren und freigeben, Vereins-Administratoren einladen, Super-Admins verwalten.'
-    },
-    {
       wert: 'system',
       name: 'System',
       sichtbar: darf('vereinsadmin'),
       tipp: 'Einstellungen des Vereins: Name und Logo, Vorgaben für neue Turniere und Liga-Spieltage, Saisonbeginn, Schutzwort.'
+    },
+    // Ganz hinten: gilt fuer ganz CueDesk, nicht fuer den Verein
+    {
+      wert: 'konsole',
+      name: 'Konsole',
+      sichtbar: istSuperAdmin,
+      tipp: 'Nur für Super-Admins: Vereine anlegen, sperren und freigeben, Vereins-Administratoren einladen, Super-Admins verwalten.'
     }
   ];
 
