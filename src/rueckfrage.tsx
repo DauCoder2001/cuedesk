@@ -28,7 +28,9 @@ export function useRueckfrage(): [ReactNode, (text: string, ja?: string) => Prom
   };
 
   const element = offen ? (
-    <div className="dialoghintergrund" onClick={() => schliessen(false)}>
+    // Eigene Ebene: Eine Rueckfrage liegt immer ueber einem offenen Dialog,
+    // egal wo sie im Seitenaufbau steht
+    <div className="dialoghintergrund rueckfrageebene" onClick={() => schliessen(false)}>
       <div className="dialog" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
         <p style={{ margin: 0, whiteSpace: 'pre-line' }}>{offen.text}</p>
         <div className="knopfpaar">

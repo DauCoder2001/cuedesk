@@ -76,7 +76,7 @@ export function UngespeichertBereich({ children }: { children: ReactNode }) {
     <Kontext.Provider value={{ melden, wechselErlaubt }}>
       {children}
       {frage && (
-        <div className="dialoghintergrund" onClick={() => waehlen('zurueck')}>
+        <div className="dialoghintergrund rueckfrageebene" onClick={() => waehlen('zurueck')}>
           <div className="dialog" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
             <p style={{ margin: 0, whiteSpace: 'pre-line' }}>{frage}</p>
             <div className="knopfpaar">
