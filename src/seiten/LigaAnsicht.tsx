@@ -6,6 +6,7 @@ import { useRueckfrage } from '../rueckfrage';
 import {
   LIGEN,
   aufstellungPruefen,
+  doppelPlanAendern,
   doppelPlanAusEingabe,
   doppelSeitePruefen,
   doppelSpielplan,
@@ -202,6 +203,8 @@ export default function LigaAnsicht({
   const [teile, setTeile] = useState<SpieltagTeil[]>([]);
   // Doppel-Begegnung nachtraeglich hinzufuegen (Partienliste im Dialog)
   const [doppelDialog, setDoppelDialog] = useState<DoppelZeile[] | null>(null);
+  // Partienliste der angezeigten Doppel-Begegnung aendern
+  const [planDialog, setPlanDialog] = useState<DoppelZeile[] | null>(null);
   const [gastName, setGastName] = useState('');
   const [passwortFrage, setPasswortFrage] = useState<{ runde: 'hin' | 'rueck'; seite: 'heim' | 'gast' } | null>(null);
   const [passwort, setPasswort] = useState('');
@@ -653,6 +656,102 @@ export default function LigaAnsicht({
     oeffnen(neu.id as string);
   }
 
+  // Partienliste der Doppel-Begegnung aendern: vorhandene Partien und halbe
+  // Aufstellungen folgen ihrer Zeile, die Regeln stehen in doppelPlanAendern
+  async function planSpeichern() {
+    if (!planDialog || !turnier || !liga) return;
+    const geprueft = doppelPlanAusEingabe(planDialog);
+    if (geprueft.fehler !== null) return setFehler(geprueft.fehler);
+    const zeilen = geprueft.plan.map((p, i) => ({ ...p, herkunft: planDialog[i].herkunft }));
+    const ergebnis = doppelPlanAendern(
+      zeilen,
+      liga.doppelPlan ?? [],
+      partien.map((p) => ({
+        paarung: p.paarung ?? 0,
+        gespielt: p.status === 'beendet' || p.ergebnis_a !== null || p.ergebnis_b !== null,
+        amTisch: Boolean(p.tisch_id) || p.status === 'laeuft'
+      }))
+    );
+    if (ergebnis.fehler !== null) return setFehler(ergebnis.fehler);
+    const { plan, folgen, entfallen } = ergebnis.aenderung;
+    if (entfallen.some((nr) => partien.some((p) => p.paarung === nr))) {
+      const liste = entfallen.filter((nr) => partien.some((p) => p.paarung === nr)).join(', ');
+      if (!(await fragen(`Die Aufstellung von Doppel ${liste} wird gelöscht. Weiter?`, 'Speichern'))) return;
+    }
+    setArbeitet(true);
+    for (const nr of entfallen) {
+      const p = partien.find((x) => x.paarung === nr);
+      if (p) {
+        const { error } = await supabase.from('partien').delete().eq('id', p.id);
+        if (error) {
+          setArbeitet(false);
+          return setFehler(error.message);
+        }
+      }
+    }
+    for (const f of folgen) {
+      const p = partien.find((x) => x.paarung === f.von);
+      if (!p) continue;
+      const { error } = await supabase
+        .from('partien')
+        .update({ paarung: f.nach, disziplin: f.disziplin, race_to: f.ziel })
+        .eq('id', p.id);
+      if (error) {
+        setArbeitet(false);
+        return setFehler(error.message);
+      }
+    }
+    // Plan und halbe Aufstellung frisch lesen und gemeinsam speichern
+    const { data } = await supabase.from('turniere').select('einstellungen').eq('id', turnier.id).maybeSingle();
+    const aktuell = (data?.einstellungen ?? einstellungen) as TurnierEinstellungen;
+    const bisher = aktuell.liga?.aufstellung ?? {};
+    const aufstellung: NonNullable<NonNullable<TurnierEinstellungen['liga']>['aufstellung']> = {};
+    folgen.forEach((f) => {
+      if (bisher[String(f.von)]) aufstellung[String(f.nach)] = bisher[String(f.von)];
+    });
+    const { error } = await supabase
+      .from('turniere')
+      .update({ einstellungen: { ...aktuell, liga: { ...aktuell.liga!, doppelPlan: plan, aufstellung } } })
+      .eq('id', turnier.id);
+    setArbeitet(false);
+    if (error) return setFehler(error.message);
+    setPlanDialog(null);
+    setMeldung('Doppel-Partien geändert.');
+    await laden();
+  }
+
+  // Doppel-Begegnung entfernen (nur Vereins-Administrator): mit allen Partien;
+  // die 1. Begegnung verliert den Verweis, die 3. heisst wieder 2.
+  async function doppelEntfernen() {
+    if (!turnier || !liga || !istDoppel) return;
+    if (partien.some((p) => p.status === 'laeuft' || p.tisch_id)) {
+      return setFehler('An den Tablets laufen noch Doppel. Erst beenden oder abbrechen, dann entfernen.');
+    }
+    const mitErgebnis = partien.filter((p) => p.ergebnis_a !== null || p.ergebnis_b !== null).length;
+    const frage =
+      'Doppel-Begegnung entfernen? Das lässt sich nicht rückgängig machen.\n\n' +
+      `${partien.length} ${partien.length === 1 ? 'Partie' : 'Partien'}${mitErgebnis > 0 ? `, davon ${mitErgebnis} mit Ergebnis,` : ''} ${partien.length === 1 ? 'geht' : 'gehen'} verloren. ` +
+      'Die bisherige 3. Begegnung heißt danach wieder 2. Begegnung.';
+    if (!(await fragen(frage, 'Entfernen'))) return;
+    setArbeitet(true);
+    const { error } = await supabase.from('turniere').delete().eq('id', turnier.id);
+    if (error) {
+      setArbeitet(false);
+      return setFehler(error.message);
+    }
+    if (liga.haupt) {
+      const { data } = await supabase.from('turniere').select('einstellungen').eq('id', liga.haupt).maybeSingle();
+      const erste = (data?.einstellungen ?? null) as TurnierEinstellungen | null;
+      if (erste?.liga) {
+        const { doppel: _d, ...ohne } = erste.liga;
+        await supabase.from('turniere').update({ einstellungen: { ...erste, liga: ohne } }).eq('id', liga.haupt);
+      }
+    }
+    setArbeitet(false);
+    if (liga.haupt) oeffnen(liga.haupt);
+    else zurueck();
+  }
+
   // Aufstellung einer Mannschaft verbergen oder wieder zeigen. Verbergen geht
   // ohne Nachfrage, zeigen nur mit dem Passwort.
   async function verdeckenSetzen(runde: 'hin' | 'rueck', seite: 'heim' | 'gast', verbergen: boolean) {
@@ -1016,6 +1115,21 @@ export default function LigaAnsicht({
                 {turnier.rating_werten ? 'Nicht fürs Rating werten' : 'Fürs Rating werten'}
               </button>
             )}
+            {bearbeitbar && istDoppel && (
+              <button
+                type="button"
+                title="Doppel-Partien ändern: Disziplin, Race to, Reihenfolge, Partien hinzufügen oder entfernen. Partien mit Ergebnis behalten Disziplin und Race to."
+                disabled={arbeitet}
+                onClick={() => {
+                  setFehler(null);
+                  setPlanDialog(
+                    (liga.doppelPlan ?? []).map((p, i) => ({ disziplin: p.disziplin, ziel: String(p.ziel), herkunft: i + 1 }))
+                  );
+                }}
+              >
+                Partien ändern
+              </button>
+            )}
             {bearbeitbar && (
               <button type="button" title="Beendet diese Begegnung und sperrt ihre Ergebnisse. Ist die andere Begegnung schon abgeschlossen, wird das Rating sofort neu berechnet." onClick={() => void abschliessen()} disabled={arbeitet}>
                 Begegnung abschließen
@@ -1035,6 +1149,17 @@ export default function LigaAnsicht({
                 disabled={arbeitet}
               >
                 Inhalt löschen
+              </button>
+            )}
+            {istAdmin && istDoppel && (
+              <button
+                type="button"
+                title="Entfernt nur diese Doppel-Begegnung mit ihren Partien. Die anderen Begegnungen bleiben; die 3. heißt danach wieder 2."
+                className="gefahrknopf"
+                onClick={() => void doppelEntfernen()}
+                disabled={arbeitet}
+              >
+                Doppel-Begegnung entfernen
               </button>
             )}
             {istAdmin && (
@@ -1273,7 +1398,6 @@ export default function LigaAnsicht({
           </p>
         </section>
       )}
-      {rueckfrage}
       {doppelDialog && (
         <div className="dialoghintergrund" onClick={() => !arbeitet && setDoppelDialog(null)}>
           <div className="dialog" onClick={(e) => e.stopPropagation()}>
@@ -1289,6 +1413,27 @@ export default function LigaAnsicht({
                 Anlegen
               </button>
               <button type="button" disabled={arbeitet} onClick={() => setDoppelDialog(null)}>
+                Abbrechen
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {planDialog && (
+        <div className="dialoghintergrund" onClick={() => !arbeitet && setPlanDialog(null)}>
+          <div className="dialog" onClick={(e) => e.stopPropagation()}>
+            <h2>Doppel-Partien ändern</h2>
+            <p>
+              Aufstellungen bleiben bei ihrer Partie, auch wenn sich die Reihenfolge ändert. Partien mit Ergebnis behalten
+              Disziplin und Race to und lassen sich nicht entfernen.
+            </p>
+            <DoppelPlanFelder zeilen={planDialog} aendern={setPlanDialog} />
+            {fehler && <p className="fehler">{fehler}</p>}
+            <div className="zeile">
+              <button type="button" disabled={arbeitet} onClick={() => void planSpeichern()}>
+                Speichern
+              </button>
+              <button type="button" disabled={arbeitet} onClick={() => setPlanDialog(null)}>
                 Abbrechen
               </button>
             </div>
@@ -1387,6 +1532,8 @@ export default function LigaAnsicht({
           </div>
         </div>
       )}
+      {/* Zuletzt: Rueckfragen liegen ueber jedem anderen Dialog (z. B. "Partien aendern") */}
+      {rueckfrage}
     </div>
   );
 }

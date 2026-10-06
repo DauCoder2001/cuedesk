@@ -4,7 +4,9 @@ import type { DoppelDisziplin } from '../liga';
 // Partie. Gebraucht beim Anlegen des Spieltags und beim nachtraeglichen
 // Hinzufuegen in der Liga-Ansicht.
 
-export type DoppelZeile = { disziplin: DoppelDisziplin; ziel: string };
+// herkunft: Nummer der Partie vor dem Aendern (fehlt bei neuen Zeilen), damit
+// vorhandene Partien beim Speichern ihrer Zeile folgen
+export type DoppelZeile = { disziplin: DoppelDisziplin; ziel: string; herkunft?: number };
 
 export const DOPPEL_ZEILEN_STANDARD: DoppelZeile[] = [
   { disziplin: '8-ball', ziel: '4' },
@@ -70,7 +72,10 @@ export default function DoppelPlanFelder({
         type="button"
         className="klein"
         disabled={zeilen.length >= 12}
-        onClick={() => aendern([...zeilen, { ...(zeilen[zeilen.length - 1] ?? DOPPEL_ZEILEN_STANDARD[0]) }])}
+        onClick={() => {
+          const vorlage = zeilen[zeilen.length - 1] ?? DOPPEL_ZEILEN_STANDARD[0];
+          aendern([...zeilen, { disziplin: vorlage.disziplin, ziel: vorlage.ziel }]);
+        }}
       >
         + Partie
       </button>

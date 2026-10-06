@@ -225,6 +225,50 @@ export function doppelPlanAusEingabe(
   return { plan, fehler: null };
 }
 
+// Partienliste einer angelegten Doppel-Begegnung aendern. Jede Zeile kennt
+// ihre bisherige Nummer (herkunft); vorhandene Partien folgen ihrer Zeile,
+// Partien entfernter Zeilen entfallen. Gesperrt ist, was am Tisch laeuft,
+// und bei Partien mit Ergebnis das Entfernen und Aendern von Disziplin oder
+// Race to (Verschieben in der Reihenfolge geht).
+export type DoppelAenderung = {
+  plan: DoppelPartie[];
+  folgen: { von: number; nach: number; disziplin: DoppelDisziplin; ziel: number }[];
+  entfallen: number[]; // bisherige Nummern, deren Partie geloescht wird
+};
+
+export function doppelPlanAendern(
+  zeilen: { disziplin: DoppelDisziplin; ziel: number; herkunft?: number }[],
+  alt: DoppelPartie[],
+  partien: { paarung: number; gespielt: boolean; amTisch: boolean }[]
+): { aenderung: DoppelAenderung; fehler: null } | { aenderung: null; fehler: string } {
+  const partieVon = (nr: number) => partien.find((p) => p.paarung === nr);
+  const folgen: DoppelAenderung['folgen'] = [];
+  for (const [i, z] of zeilen.entries()) {
+    if (z.herkunft === undefined) continue;
+    const vorher = alt[z.herkunft - 1];
+    const p = partieVon(z.herkunft);
+    const geaendert = !vorher || vorher.disziplin !== z.disziplin || vorher.ziel !== z.ziel;
+    if (p?.amTisch && (geaendert || z.herkunft !== i + 1)) {
+      return { aenderung: null, fehler: `Doppel ${z.herkunft} läuft gerade am Tisch und lässt sich nicht ändern.` };
+    }
+    if (p?.gespielt && geaendert) {
+      return { aenderung: null, fehler: `Doppel ${z.herkunft} hat schon ein Ergebnis; Disziplin und Race to bleiben.` };
+    }
+    folgen.push({ von: z.herkunft, nach: i + 1, disziplin: z.disziplin, ziel: z.ziel });
+  }
+  const behalten = new Set(folgen.map((f) => f.von));
+  const entfallen = alt.map((_, i) => i + 1).filter((nr) => !behalten.has(nr));
+  for (const nr of entfallen) {
+    const p = partieVon(nr);
+    if (p?.amTisch) return { aenderung: null, fehler: `Doppel ${nr} läuft gerade am Tisch und lässt sich nicht entfernen.` };
+    if (p?.gespielt) return { aenderung: null, fehler: `Doppel ${nr} hat schon ein Ergebnis und lässt sich nicht entfernen.` };
+  }
+  return {
+    aenderung: { plan: zeilen.map((z) => ({ disziplin: z.disziplin, ziel: z.ziel })), folgen, entfallen },
+    fehler: null
+  };
+}
+
 // Eine Seite eines Doppels: zwei verschiedene Spieler. Wer in mehreren Doppeln
 // derselben Begegnung antritt, ist erlaubt.
 export function doppelSeitePruefen(

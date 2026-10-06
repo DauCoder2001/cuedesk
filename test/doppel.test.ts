@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import {
   doppelBegegnungIds,
+  doppelPlanAendern,
   doppelPlanAusEingabe,
   doppelSeitePruefen,
   doppelSpielplan,
@@ -45,6 +46,47 @@ describe('Doppel-Begegnung: Plan und Pruefung', () => {
     expect(doppelSeitePruefen(2, 'f', 'f', () => 'Frank F.')).toBe('Doppel 2: Frank F. steht zweimal auf derselben Seite.');
     expect(doppelSeitePruefen(2, 'f', 'v', () => '')).toBeNull();
     expect(doppelSeitePruefen(2, 'f', null, () => '')).toBeNull();
+  });
+});
+
+describe('Doppel-Partien nachtraeglich aendern', () => {
+  const alt = [
+    { disziplin: '8-ball' as const, ziel: 4 },
+    { disziplin: '10-ball' as const, ziel: 4 },
+    { disziplin: '9-ball' as const, ziel: 3 }
+  ];
+  const offen = (paarung: number) => ({ paarung, gespielt: false, amTisch: false });
+
+  test('Reihenfolge tauschen, eine entfernen, eine neu: Partien folgen ihrer Zeile', () => {
+    const r = doppelPlanAendern(
+      [
+        { disziplin: '10-ball', ziel: 4, herkunft: 2 },
+        { disziplin: '8-ball', ziel: 5, herkunft: 1 },
+        { disziplin: '9-ball', ziel: 4 }
+      ],
+      alt,
+      [offen(1), offen(2), offen(3)]
+    );
+    expect(r.fehler).toBeNull();
+    expect(r.aenderung?.folgen).toEqual([
+      { von: 2, nach: 1, disziplin: '10-ball', ziel: 4 },
+      { von: 1, nach: 2, disziplin: '8-ball', ziel: 5 }
+    ]);
+    expect(r.aenderung?.entfallen).toEqual([3]);
+    expect(r.aenderung?.plan).toHaveLength(3);
+  });
+
+  test('mit Ergebnis: verschieben ja, aendern und entfernen nein', () => {
+    const gespielt = { paarung: 1, gespielt: true, amTisch: false };
+    expect(doppelPlanAendern([alt[1], { ...alt[0], herkunft: 1 }].map((z, i) => ({ ...z, herkunft: i === 0 ? 2 : 1 })), alt.slice(0, 2), [gespielt]).fehler).toBeNull();
+    expect(doppelPlanAendern([{ disziplin: '8-ball', ziel: 5, herkunft: 1 }], alt.slice(0, 1), [gespielt]).fehler).toMatch(/schon ein Ergebnis/);
+    expect(doppelPlanAendern([{ disziplin: '10-ball', ziel: 4, herkunft: 2 }], alt.slice(0, 2), [gespielt]).fehler).toMatch(/nicht entfernen/);
+  });
+
+  test('am Tisch: nichts aendern', () => {
+    const tisch = { paarung: 2, gespielt: false, amTisch: true };
+    expect(doppelPlanAendern([{ disziplin: '8-ball', ziel: 4, herkunft: 1 }], alt.slice(0, 2), [tisch]).fehler).toMatch(/am Tisch/);
+    expect(doppelPlanAendern([{ disziplin: '10-ball', ziel: 4, herkunft: 2 }, { disziplin: '8-ball', ziel: 4, herkunft: 1 }], alt.slice(0, 2), [tisch]).fehler).toMatch(/am Tisch/);
   });
 });
 
