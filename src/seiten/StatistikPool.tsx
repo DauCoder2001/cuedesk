@@ -66,7 +66,7 @@ export default function StatistikPool() {
         supabase.from('personen').select('*').eq('verein_id', verein.id),
         supabase.from('benutzer_personen').select('person_id').eq('benutzer_id', sitzung.user.id).eq('verein_id', verein.id),
         // Doppel gehoeren in keine Statistik eines Spielers
-        supabase.from('partien').select('spieler_a, spieler_b').eq('verein_id', verein.id).neq('disziplin', '14-1').is('partner_a', null)
+        supabase.from('partien').select('spieler_a, spieler_b').eq('verein_id', verein.id).neq('disziplin', '14-1').eq('doppel', false)
       ]);
       if (vorbei) return;
       const alle = personenAntwort.data ?? [];
@@ -97,7 +97,7 @@ export default function StatistikPool() {
         .select('id, datum, disziplin, status, turnier_id, spieler_a, spieler_b, ergebnis_a, ergebnis_b, vorgabe_a, vorgabe_b, beendet')
         .eq('verein_id', verein.id)
         .neq('disziplin', '14-1')
-        .is('partner_a', null) // ohne Doppel
+        .eq('doppel', false) // ohne Doppel
         .or(`spieler_a.eq.${person},spieler_b.eq.${person}`)
         .in('status', mitAbgebrochenen ? ['beendet', 'abgebrochen'] : ['beendet'])
         .order('datum', { ascending: false })

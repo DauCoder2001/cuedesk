@@ -35,7 +35,8 @@ export type ArchivPartie = {
   gruppe: string | null;
   spieler_a: string;
   spieler_b: string;
-  // Doppel: zweiter Spieler je Seite (fehlt oder leer bei Einzelpartien)
+  // Doppel: zweiter Spieler je Seite (im Doppel leer = Geist)
+  doppel?: boolean;
   partner_a?: string | null;
   partner_b?: string | null;
   ergebnis_a: number | null;
@@ -146,7 +147,7 @@ export function saisonZeitraum(saison: string, beginn = 7): { von: string; bis: 
 // Auch als Partner im Doppel
 const spielt = (p: ArchivPartie, person: string) =>
   p.spieler_a === person || p.spieler_b === person || p.partner_a === person || p.partner_b === person;
-export const istDoppel = (p: { partner_a?: string | null }) => Boolean(p.partner_a);
+export const istDoppel = (p: { doppel?: boolean }) => Boolean(p.doppel);
 
 // Partien und Turniere, die zu den Filtern passen. Im Archiv stehen nur
 // beendete und abgebrochene Turniere und nur beendete Partien.

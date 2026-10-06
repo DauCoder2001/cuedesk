@@ -175,7 +175,7 @@ export default function Archiv() {
         const zeilen = await alleZeilen((von, bis) => {
           let abfrage = supabase
             .from('partien')
-            .select('id, turnier_id, disziplin, datum, phase, gruppe, spieler_a, spieler_b, partner_a, partner_b, ergebnis_a, ergebnis_b, vorgabe_a, vorgabe_b, beendet, begonnen, tisch_id')
+            .select('id, turnier_id, disziplin, datum, phase, gruppe, spieler_a, spieler_b, doppel, partner_a, partner_b, ergebnis_a, ergebnis_b, vorgabe_a, vorgabe_b, beendet, begonnen, tisch_id')
             .eq('verein_id', verein.id)
             .eq('status', 'beendet');
           if (zeitraum) abfrage = abfrage.gte('datum', zeitraum.von).lte('datum', zeitraum.bis);
@@ -643,7 +643,7 @@ export default function Archiv() {
                     <td>{p.turnier_id ? rundeText(p) : '–'}</td>
                     <td>
                       {DISZIPLIN_TEXT[p.disziplin]}
-                      {p.partner_a && <span className="marke">Doppel</span>}
+                      {p.doppel && <span className="marke">Doppel</span>}
                     </td>
                     <td className={sieger === 'a' ? 'sieger' : ''}>
                       {p.partner_a ? `${name(p.spieler_a)} / ${name(p.partner_a)}` : name(p.spieler_a)}

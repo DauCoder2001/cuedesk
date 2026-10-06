@@ -143,6 +143,33 @@ describe('Doppel am Tablet', () => {
     expect(plan.p1.player1).toBe('Frank F. / Volker B.');
     expect(plan.p1.player2).toBe('Meier / Kurz');
   });
+
+  test('Geist: nur der eine Name', () => {
+    const namen: Record<string, string> = { z: 'Zeki', k: 'Kura (Bassum)', m: 'Marcel B. (Bassum)' };
+    const plan = tabletSpielplan(
+      [
+        {
+          id: 'p4',
+          spieler_a: 'z',
+          spieler_b: 'k',
+          partner_a: null,
+          partner_b: 'm',
+          race_to: 3,
+          vorgabe_a: 0,
+          vorgabe_b: 0,
+          status: 'geplant',
+          tisch_id: null,
+          runde: 1,
+          begonnen: null,
+          disziplin: '10-ball'
+        }
+      ],
+      (id) => namen[id],
+      () => null
+    );
+    expect(plan.p4.player1).toBe('Zeki');
+    expect(plan.p4.player2).toBe('Kura / Marcel B.');
+  });
 });
 
 describe('Doppel im Archiv und in Auswertungen', () => {
@@ -180,7 +207,9 @@ describe('Doppel im Archiv und in Auswertungen', () => {
   });
   const partien = [
     ap('e1', 'b1', 'frank', 'gast1', 4, 2),
-    ap('d1', 'd', 'frank', 'gast1', 1, 4, { partner_a: 'volker', partner_b: 'gast2' })
+    ap('d1', 'd', 'frank', 'gast1', 1, 4, { doppel: true, partner_a: 'volker', partner_b: 'gast2' }),
+    // Geist auf beiden Seiten: wirkt wie ein Einzel, bleibt aber ein Doppel
+    ap('d2', 'd', 'frank', 'gast1', 3, 0, { doppel: true, partner_a: null, partner_b: null })
   ];
 
   test('eine Zeile fuer alle drei Begegnungen, archiviert erst, wenn alle fertig sind', () => {
@@ -198,7 +227,7 @@ describe('Doppel im Archiv und in Auswertungen', () => {
 
   test('Saison-Ueberblick: Doppel bei den Spielen ja, beim Spieler nein', () => {
     const u = saisonUeberblick(partien, () => true);
-    expect(u.spiele).toBe(2);
+    expect(u.spiele).toBe(3);
     expect(u.aktivster).toEqual({ id: 'frank', spiele: 1, siege: 1 });
   });
 });

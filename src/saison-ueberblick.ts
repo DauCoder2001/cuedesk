@@ -9,7 +9,7 @@
 export type UeberblickPartie = {
   spieler_a: string;
   spieler_b: string;
-  partner_a?: string | null; // Doppel
+  doppel?: boolean;
   ergebnis_a: number | null;
   ergebnis_b: number | null;
   begonnen?: string | null;
@@ -56,7 +56,7 @@ export function saisonUeberblick(partien: UeberblickPartie[], istMitglied: (id: 
     const a = p.ergebnis_a ?? 0;
     const b = p.ergebnis_b ?? 0;
     // Doppel zaehlen bei Spielen und Zeiten mit, aber in keiner Bilanz eines Spielers
-    if (!p.partner_a) {
+    if (!p.doppel) {
       zaehle(p.spieler_a, a > b);
       zaehle(p.spieler_b, b > a);
     }

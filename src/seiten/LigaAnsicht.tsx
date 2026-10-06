@@ -46,6 +46,8 @@ const DISZIPLIN_KURZ: Record<string, string> = {
 // Halbe Aufstellung eines Spiels; heim2/gast2 nur im Doppel
 type Wahl = { heim?: string | null; gast?: string | null; heim2?: string | null; gast2?: string | null };
 type Slot = 'heim' | 'gast' | 'heim2' | 'gast2';
+// Leerer zweiter Platz im Doppel (Stufe 31): in der Partie partner = null
+const GEIST = 'geist';
 
 // Eine Begegnung des Spieltags, wie sie im Umschalter steht
 type SpieltagTeil = { nummer: 1 | 2 | 3; id: string; status: Turnier['status']; doppel: boolean };
@@ -304,6 +306,7 @@ export default function LigaAnsicht({
   const anzeige = useCallback(
     (id: string | null) => {
       if (!id) return '';
+      if (id === GEIST) return 'Geist';
       const p = personen.find((x) => x.id === id);
       return p ? p.anzeigename || `${p.vorname} ${p.nachname}`.trim() : '?';
     },
@@ -344,7 +347,11 @@ export default function LigaAnsicht({
   };
   const spielerIn = (s: LigaSpiel, slot: Slot): string | null => {
     const gemerkt = wahl[s.nr]?.[slot];
-    return gemerkt !== undefined ? gemerkt : partieVon(s)?.[SPALTE[slot]] ?? null;
+    if (gemerkt !== undefined) return gemerkt;
+    const p = partieVon(s);
+    // Im Doppel ist ein leerer zweiter Platz der Geist
+    if (p?.doppel && (slot === 'heim2' || slot === 'gast2') && !p[SPALTE[slot]]) return GEIST;
+    return p?.[SPALTE[slot]] ?? null;
   };
   const heimSpieler = (s: LigaSpiel) => spielerIn(s, 'heim');
   const gastSpieler = (s: LigaSpiel) => spielerIn(s, 'gast');
@@ -483,8 +490,11 @@ export default function LigaAnsicht({
     const spieler_a = neu.heim as string;
     const spieler_b = neu.gast as string;
     if (spieler_a === spieler_b) return setFehler('Ein Spieler kann nicht gegen sich selbst antreten.');
-    const partner = istDoppel ? { partner_a: neu.heim2 as string, partner_b: neu.gast2 as string } : {};
-    if (istDoppel && new Set(plaetze).size < 4) {
+    // Geist = leerer Platz; er darf mehrfach vorkommen, echte Spieler nicht
+    const echt = (x: string | null | undefined) => (x && x !== GEIST ? x : null);
+    const partner = istDoppel ? { doppel: true, partner_a: echt(neu.heim2), partner_b: echt(neu.gast2) } : {};
+    const personen4 = plaetze.filter((x) => x && x !== GEIST);
+    if (istDoppel && new Set(personen4).size < personen4.length) {
       // Die halbe Wahl bleibt stehen, damit der Platz neu gewaehlt werden kann
       await halbeAufstellungMerken(s.nr, neu);
       return setFehler(`Doppel ${s.nr}: Jeder Spieler darf in einer Partie nur einmal stehen.`);
@@ -515,7 +525,7 @@ export default function LigaAnsicht({
       if (error) return setFehler(error.message);
     }
     await halbeAufstellungMerken(s.nr, null);
-    await teilnehmerPflegen(plaetze);
+    await teilnehmerPflegen(personen4);
     await laden();
   }
 
@@ -1594,6 +1604,8 @@ function Spielzeile(props: {
     ) : props.bearbeitbar && !festgezurrt ? (
       <select value={gewaehlt ?? ''} onChange={(e) => props.spielerSetzen(seite, e.target.value || null)}>
         <option value="">– offen –</option>
+        {/* Doppel: der zweite Platz darf leer bleiben (Geist, z. B. bei ungerader Spielerzahl) */}
+        {(seite === 'heim2' || seite === 'gast2') && <option value={GEIST}>– Geist –</option>}
         {liste.map((p) => (
           <option key={p.id} value={p.id}>
             {p.anzeigename || personName(p)}
