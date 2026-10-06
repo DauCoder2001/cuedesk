@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../supabase';
 import { useSitzung } from '../sitzung';
-import LigaAnsicht, { andereBegegnungAnlegen } from './LigaAnsicht';
+import LigaAnsicht, { andereBegegnungAnlegen, doppelBegegnungAnlegen } from './LigaAnsicht';
+import DoppelPlanFelder, { DOPPEL_ZEILEN_STANDARD } from './DoppelPlanFelder';
+import type { DoppelZeile } from './DoppelPlanFelder';
 import TurnierAnsicht from './TurnierAnsicht';
 import Ausschreibungen from './Ausschreibungen';
-import { LIGEN, partnerVon, spieltagStand, zweiteBegegnungIds } from '../liga';
-import type { Ausspielziele, LigaKennung } from '../liga';
+import { LIGEN, doppelBegegnungIds, doppelPlanAusEingabe, doppelVon, partnerVon, spieltagStand, zweiteBegegnungIds } from '../liga';
+import type { Ausspielziele, DoppelPartie, LigaKennung } from '../liga';
 import type { Ausschreibung } from '../ausschreibung';
 import { saisonAus } from '../mannschaften';
 import { vereinsEinstellungen } from '../vereinseinstellungen';
@@ -88,8 +90,16 @@ export type TurnierEinstellungen = {
     partner?: string; // die jeweils andere Begegnung des Spieltags
     // Halbe Aufstellung: Spiele, in denen erst eine Seite feststeht (Schluessel
     // ist die Spielnummer). Mit beiden Spielern wird daraus eine Partie.
-    aufstellung?: Record<string, { heim?: string | null; gast?: string | null }>;
+    // Im Doppel zusaetzlich der zweite Spieler je Seite (heim2, gast2)
+    aufstellung?: Record<string, { heim?: string | null; gast?: string | null; heim2?: string | null; gast2?: string | null }>;
     quelle?: string; // URL des eingelesenen Spielberichts
+    // Doppel-Begegnung (nur Spass-Liga, src/liga.ts): Sie selbst traegt
+    // art 'doppel', ihren Plan und den Verweis auf die 1. Begegnung; die
+    // 1. Begegnung verweist ueber doppel auf sie.
+    art?: 'doppel';
+    haupt?: string;
+    doppel?: string;
+    doppelPlan?: DoppelPartie[];
   };
   vorgabe?: { aktiv: boolean; staerke: number; obergrenze: number };
   handReihenfolge?: Record<string, number[]>;
@@ -143,6 +153,9 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
   const [mannschaftId, setMannschaftId] = useState('');
   // Spaß-Liga: eigene Ausspielziele
   const [ziele, setZiele] = useState({ punkte141: '50', aufnahmen141: '20', '8-ball': '4', '9-ball': '5', '10-ball': '4' });
+  // Spaß-Liga: Doppel-Begegnung zwischen 1. und 2. Begegnung
+  const [mitDoppel, setMitDoppel] = useState(false);
+  const [doppelZeilen, setDoppelZeilen] = useState<DoppelZeile[]>(DOPPEL_ZEILEN_STANDARD);
   const [serieId, setSerieId] = useState('');
   const [vorgabeAn, setVorgabeAn] = useState(true);
   const [staerke, setStaerke] = useState('75');
@@ -161,7 +174,7 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
   // Aenderungen nachfragt
   const formularStand = formular
     ? { name, datum, disziplin, modus, raceTo, racePhase2, raceKo, liga, spieltag, heim, gegner, eigeneMannschaft,
-        mannschaftId, ziele, serieId, vorgabeAn, staerke, obergrenze, ratingWerten, art, chat, live }
+        mannschaftId, ziele, mitDoppel, doppelZeilen, serieId, vorgabeAn, staerke, obergrenze, ratingWerten, art, chat, live }
     : null;
   const [ursprung, setUrsprung] = useState<unknown>(null);
   useEffect(() => {
@@ -250,6 +263,9 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
     ) {
       return pflicht.melden('Ausspielziele: ganze Zahlen zwischen 1 und 200.');
     }
+    const mitDoppelBegegnung = modus === 'liga' && liga === 'spass' && mitDoppel && !bearbeitet;
+    const doppelGeprueft = mitDoppelBegegnung ? doppelPlanAusEingabe(doppelZeilen) : null;
+    if (doppelGeprueft && doppelGeprueft.fehler !== null) return pflicht.melden(doppelGeprueft.fehler);
     const einstellungen: TurnierEinstellungen = {
       raceTo: race,
       ...(modus === 'liga'
@@ -308,6 +324,13 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
     if (modus === 'liga') {
       const zweite = await andereBegegnungAnlegen(data);
       if (zweite.fehler !== null) setFehler(`Die 2. Begegnung wurde nicht angelegt: ${zweite.fehler}`);
+      // Die Doppel-Begegnung haengt an der 1. Begegnung; frisch lesen, denn
+      // andereBegegnungAnlegen hat dort den Verweis auf die 2. ergaenzt
+      if (doppelGeprueft?.plan) {
+        const { data: erste } = await supabase.from('turniere').select('*').eq('id', data.id).single();
+        const doppel = erste ? await doppelBegegnungAnlegen(erste, doppelGeprueft.plan) : null;
+        if (doppel && doppel.fehler !== null) setFehler(`Die Doppel-Begegnung wurde nicht angelegt: ${doppel.fehler}`);
+      }
     }
     setFormular(false);
     setName('');
@@ -423,7 +446,10 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
   // Die 2. Begegnung eines Spieltags bekommt keine eigene Zeile; in turniere
   // bleibt sie, damit der Umschalter der Liga-Ansicht sie findet.
   const zweite = zweiteBegegnungIds(turniere);
-  const zeilen = turniere.filter((t) => !zweite.has(t.id) && (!artFilter || artVon(t) === artFilter));
+  const doppelIds = doppelBegegnungIds(turniere);
+  const zeilen = turniere.filter(
+    (t) => !zweite.has(t.id) && !doppelIds.has(t.id) && (!artFilter || artVon(t) === artFilter)
+  );
 
   const offenesTurnier = turniere.find((t) => t.id === offen);
   if (offen && offenesTurnier?.modus === 'liga') {
@@ -489,6 +515,8 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
                 setArt(t.art ?? '');
                 setChat(true);
                 setLive(true);
+                setMitDoppel(false);
+                setDoppelZeilen(DOPPEL_ZEILEN_STANDARD.map((z) => ({ ...z })));
                 setLiga(vorgaben.liga.liga);
                 // Standard-Mannschaft nach Nummer im Mannschaftspass, sonst die erste der Saison
                 const rang = vorgaben.liga.mannschaftRang;
@@ -668,6 +696,21 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
                 </select>
               </label>
             </div>
+            {modus === 'liga' && liga === 'spass' && !bearbeitet && (
+              <>
+                <label className="ankreuz">
+                  <input type="checkbox" checked={mitDoppel} onChange={(e) => setMitDoppel(e.target.checked)} />
+                  <span>
+                    Mit Doppel-Begegnung
+                    <small>
+                      Wird als 2. Begegnung gespielt, die bisherige 2. wird zur 3. Zählt nicht fürs Rating und nicht in die
+                      Bilanz der Mannschaft.
+                    </small>
+                  </span>
+                </label>
+                {mitDoppel && <DoppelPlanFelder zeilen={doppelZeilen} aendern={setDoppelZeilen} />}
+              </>
+            )}
             {modus !== 'liga' && (
             <label className="ankreuz">
               <input type="checkbox" checked={vorgabeAn} onChange={(e) => setVorgabeAn(e.target.checked)} />
@@ -781,7 +824,8 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
             {zeilen.map((t) => {
               // Liga-Spieltag: eine Zeile fuer beide Begegnungen
               const partner = t.modus === 'liga' ? partnerVon(t, turniere) : null;
-              const stand = spieltagStand(t.status, partner?.status ?? null);
+              const doppel = t.modus === 'liga' ? doppelVon(t, turniere) : null;
+              const stand = spieltagStand(t.status, partner?.status ?? null, doppel?.status ?? null);
               return (
                 <tr
                   key={t.id}

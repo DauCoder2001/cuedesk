@@ -235,7 +235,7 @@ export default function Personen({ kontoOeffnen }: { kontoOeffnen?: (kontoId: st
   // Partien, Turnierteilnahmen, 14.1-Aufnahmen und verknuepfte Konten eines Spielers
   async function bindungLaden(id: string): Promise<Bindung> {
     const [partienAntwort, teilnahmeAntwort, aufnahmeAntwort, kontoAntwort] = await Promise.all([
-      supabase.from('partien').select('id', { count: 'exact', head: true }).or(`spieler_a.eq.${id},spieler_b.eq.${id}`),
+      supabase.from('partien').select('id', { count: 'exact', head: true }).or(`spieler_a.eq.${id},spieler_b.eq.${id},partner_a.eq.${id},partner_b.eq.${id}`),
       supabase.from('turnier_teilnehmer').select('person_id', { count: 'exact', head: true }).eq('person_id', id),
       supabase.from('aufnahmen_141').select('partie_id', { count: 'exact', head: true }).eq('spieler', id),
       supabase.from('benutzer_personen').select('benutzer_id').eq('person_id', id)

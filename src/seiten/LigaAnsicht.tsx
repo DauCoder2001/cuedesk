@@ -3,7 +3,19 @@ import { supabase } from '../supabase';
 import { useSitzung } from '../sitzung';
 import { personName } from '../namen';
 import { useRueckfrage } from '../rueckfrage';
-import { LIGEN, aufstellungPruefen, gesperrteSpieler, spielplan, wertung } from '../liga';
+import {
+  LIGEN,
+  aufstellungPruefen,
+  doppelPlanAusEingabe,
+  doppelSeitePruefen,
+  doppelSpielplan,
+  gesperrteSpieler,
+  spielplan,
+  wertung
+} from '../liga';
+import DoppelPlanFelder, { DOPPEL_ZEILEN_STANDARD } from './DoppelPlanFelder';
+import type { DoppelZeile } from './DoppelPlanFelder';
+import type { DoppelPartie } from '../liga';
 import { kaderHinweise } from '../mannschaften';
 import { schutzwortPruefen } from '../schutzwort';
 import { STATUS_TEXT } from './Turniere';
@@ -30,6 +42,13 @@ const DISZIPLIN_KURZ: Record<string, string> = {
   '10-ball': '10-Ball'
 };
 
+// Halbe Aufstellung eines Spiels; heim2/gast2 nur im Doppel
+type Wahl = { heim?: string | null; gast?: string | null; heim2?: string | null; gast2?: string | null };
+type Slot = 'heim' | 'gast' | 'heim2' | 'gast2';
+
+// Eine Begegnung des Spieltags, wie sie im Umschalter steht
+type SpieltagTeil = { nummer: 1 | 2 | 3; id: string; status: Turnier['status']; doppel: boolean };
+
 const datumLang = (iso: string) =>
   new Date(`${iso}T12:00:00`).toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' });
 
@@ -51,7 +70,9 @@ export async function andereBegegnungAnlegen(
     quelle: undefined,
     heim: !liga.heim,
     begegnung: nummer,
-    partner: turnier.id
+    partner: turnier.id,
+    doppel: undefined,
+    doppelPlan: undefined
   };
   const { data, error } = await supabase
     .from('turniere')
@@ -77,6 +98,82 @@ export async function andereBegegnungAnlegen(
   return { id: data.id, fehler: null };
 }
 
+// Doppel-Begegnung eines Spass-Liga-Spieltags anlegen (src/liga.ts): gleicher
+// Tag, Gegner und Heimrecht wie die 1. Begegnung, eigene Partienliste, nie
+// fuers Rating. Danach verweist die 1. Begegnung ueber liga.doppel auf sie.
+export async function doppelBegegnungAnlegen(
+  erste: Turnier,
+  plan: DoppelPartie[]
+): Promise<{ id: string; fehler: null } | { id: null; fehler: string }> {
+  const einstellungen = (erste.einstellungen ?? {}) as TurnierEinstellungen;
+  const liga = einstellungen.liga;
+  if (!liga || liga.liga !== 'spass') return { id: null, fehler: 'Doppel gibt es nur in der Spaß-Liga.' };
+  if ((liga.begegnung ?? 1) !== 1) return { id: null, fehler: 'Die Doppel-Begegnung hängt an der 1. Begegnung.' };
+  const doppel = {
+    ...liga,
+    aufstellung: undefined,
+    verdeckt: undefined,
+    gestartet: undefined,
+    quelle: undefined,
+    partner: undefined,
+    doppel: undefined,
+    begegnung: 1 as const,
+    art: 'doppel' as const,
+    haupt: erste.id,
+    doppelPlan: plan
+  };
+  const { data, error } = await supabase
+    .from('turniere')
+    .insert({
+      verein_id: erste.verein_id,
+      name: `${erste.name.replace(/ · [12]\. Begegnung$/, '')} · Doppel`,
+      datum: erste.datum,
+      disziplin: 'multi-ball',
+      modus: 'liga',
+      status: 'geplant',
+      rating_werten: false,
+      einstellungen: { ...einstellungen, liga: doppel }
+    })
+    .select('id')
+    .single();
+  if (error || !data) return { id: null, fehler: error?.message ?? 'Doppel-Begegnung nicht angelegt.' };
+  // Verweis in der 1. Begegnung frisch lesen und ergaenzen
+  const { data: frisch } = await supabase.from('turniere').select('einstellungen').eq('id', erste.id).maybeSingle();
+  const aktuell = (frisch?.einstellungen ?? einstellungen) as TurnierEinstellungen;
+  const { error: verweisFehler } = await supabase
+    .from('turniere')
+    .update({ einstellungen: { ...aktuell, liga: { ...aktuell.liga!, doppel: data.id } } })
+    .eq('id', erste.id);
+  if (verweisFehler) return { id: null, fehler: verweisFehler.message };
+  return { id: data.id, fehler: null };
+}
+
+// Alle Begegnungen des Spieltags dieser Begegnung, in Spielreihenfolge. Nur
+// Verweise, die zurueckzeigen, zaehlen (wie partnerVon in src/liga.ts).
+async function spieltagTeileLaden(t: Turnier): Promise<SpieltagTeil[]> {
+  const liga = ((t.einstellungen ?? {}) as TurnierEinstellungen).liga;
+  if (!liga) return [];
+  const ersteId = liga.art === 'doppel' ? liga.haupt : (liga.begegnung ?? 1) === 1 ? t.id : liga.partner;
+  const nurDiese: SpieltagTeil[] = [
+    { nummer: liga.art === 'doppel' ? 2 : (liga.begegnung ?? 1), id: t.id, status: t.status, doppel: liga.art === 'doppel' }
+  ];
+  if (!ersteId) return nurDiese;
+  const { data: erste } = await supabase.from('turniere').select('id, status, einstellungen').eq('id', ersteId).maybeSingle();
+  if (!erste) return nurDiese;
+  const ersteLiga = ((erste.einstellungen ?? {}) as TurnierEinstellungen).liga;
+  const ids = [ersteLiga?.partner, ersteLiga?.doppel].filter((x): x is string => Boolean(x));
+  const { data: andere } = ids.length
+    ? await supabase.from('turniere').select('id, status, einstellungen').in('id', ids)
+    : { data: [] as { id: string; status: Turnier['status']; einstellungen: unknown }[] };
+  const ligaVon = (x: { einstellungen: unknown }) => ((x.einstellungen ?? {}) as TurnierEinstellungen).liga;
+  const zweite = (andere ?? []).find((x) => x.id === ersteLiga?.partner && ligaVon(x)?.partner === erste.id) ?? null;
+  const doppel = (andere ?? []).find((x) => x.id === ersteLiga?.doppel && ligaVon(x)?.haupt === erste.id) ?? null;
+  const liste: SpieltagTeil[] = [{ nummer: 1, id: erste.id, status: erste.status, doppel: false }];
+  if (doppel) liste.push({ nummer: 2, id: doppel.id, status: doppel.status, doppel: true });
+  if (zweite) liste.push({ nummer: doppel ? 3 : 2, id: zweite.id, status: zweite.status, doppel: false });
+  return liste;
+}
+
 export default function LigaAnsicht({
   turnierId,
   zurueck,
@@ -100,8 +197,11 @@ export default function LigaAnsicht({
   const [personen, setPersonen] = useState<Person[]>([]);
   const [mannschaften, setMannschaften] = useState<Mannschaft[]>([]);
   const [kader, setKader] = useState<MannschaftSpieler[]>([]);
-  // Status der anderen Begegnung desselben Spieltags (null: gibt es noch nicht)
-  const [partnerStatus, setPartnerStatus] = useState<Turnier['status'] | null>(null);
+  // Alle Begegnungen des Spieltags in der angezeigten Reihenfolge (mit
+  // Doppel-Begegnung: 1., 2. = Doppel, 3.)
+  const [teile, setTeile] = useState<SpieltagTeil[]>([]);
+  // Doppel-Begegnung nachtraeglich hinzufuegen (Partienliste im Dialog)
+  const [doppelDialog, setDoppelDialog] = useState<DoppelZeile[] | null>(null);
   const [gastName, setGastName] = useState('');
   const [passwortFrage, setPasswortFrage] = useState<{ runde: 'hin' | 'rueck'; seite: 'heim' | 'gast' } | null>(null);
   const [passwort, setPasswort] = useState('');
@@ -113,7 +213,8 @@ export default function LigaAnsicht({
   const [importOffen, setImportOffen] = useState(false);
   // Halbe Aufstellung: solange nur eine Seite gewaehlt ist, gibt es noch keine
   // Partie in der Datenbank. Die Wahl haelt deshalb die Ansicht fest.
-  const [wahl, setWahl] = useState<Record<number, { heim?: string | null; gast?: string | null }>>({});
+  // Im Doppel zusaetzlich heim2/gast2, der zweite Spieler je Seite.
+  const [wahl, setWahl] = useState<Record<number, Wahl>>({});
   const [arbeitet, setArbeitet] = useState(false);
   const [fehler, setFehler] = useState<string | null>(null);
   const [meldung, setMeldung] = useState<string | null>(null);
@@ -140,22 +241,23 @@ export default function LigaAnsicht({
     // Die Datenbank ist massgeblich: halbe Aufstellung nur fuer Spiele, zu
     // denen es noch keine Partie gibt
     const geladeneLiga = (t.data?.einstellungen as TurnierEinstellungen | null)?.liga;
-    const halb: Record<number, { heim?: string | null; gast?: string | null }> = {};
+    const halb: Record<number, Wahl> = {};
     if (geladeneLiga) {
-      spielplan(geladeneLiga.ziele).forEach((s) => {
+      const plan = geladeneLiga.art === 'doppel' ? doppelSpielplan(geladeneLiga.doppelPlan ?? []) : spielplan(geladeneLiga.ziele);
+      plan.forEach((s) => {
         const gemerkt = geladeneLiga.aufstellung?.[String(s.nr)];
         const hatPartie = (p.data ?? []).some((x) => x.runde === (s.runde === 'hin' ? 1 : 2) && x.paarung === s.paarung);
-        if (gemerkt && !hatPartie) halb[s.nr] = { heim: gemerkt.heim ?? null, gast: gemerkt.gast ?? null };
+        if (gemerkt && !hatPartie) {
+          halb[s.nr] = {
+            heim: gemerkt.heim ?? null,
+            gast: gemerkt.gast ?? null,
+            ...(geladeneLiga.art === 'doppel' ? { heim2: gemerkt.heim2 ?? null, gast2: gemerkt.gast2 ?? null } : {})
+          };
+        }
       });
     }
     setWahl(halb);
-    const partnerId = geladeneLiga?.partner;
-    if (partnerId) {
-      const { data: partner } = await supabase.from('turniere').select('status').eq('id', partnerId).maybeSingle();
-      setPartnerStatus(partner?.status ?? null);
-    } else {
-      setPartnerStatus(null);
-    }
+    setTeile(t.data && geladeneLiga ? await spieltagTeileLaden(t.data) : []);
   }, [verein, turnierId]);
 
   useEffect(() => {
@@ -208,7 +310,14 @@ export default function LigaAnsicht({
   const einstellungen = (turnier?.einstellungen ?? {}) as TurnierEinstellungen;
   // Aeltere Spieltage kennen die Begegnungsnummer noch nicht
   const liga = einstellungen.liga ? { ...einstellungen.liga, begegnung: einstellungen.liga.begegnung ?? 1 } : undefined;
-  const spiele = useMemo(() => (liga ? spielplan(liga.ziele) : []), [liga]);
+  const istDoppel = liga?.art === 'doppel';
+  const spiele = useMemo(
+    () => (liga ? (liga.art === 'doppel' ? doppelSpielplan(liga.doppelPlan ?? []) : spielplan(liga.ziele)) : []),
+    [liga]
+  );
+  // Nummer im Umschalter (mit Doppel-Begegnung wird die gespeicherte 2. zur 3.)
+  const eigeneNummer = teile.find((x) => x.id === turnierId)?.nummer ?? (istDoppel ? 2 : (liga?.begegnung ?? 1));
+  const begegnungName = istDoppel ? `${eigeneNummer}. Begegnung (Doppel)` : `${eigeneNummer}. Begegnung`;
   // Welche Runden die Tablets sehen. Laufende Spieltage von vor dieser Regel
   // haben keinen Eintrag: dort gelten beide als gestartet.
   const gestartet: { hin?: boolean; rueck?: boolean } =
@@ -223,14 +332,22 @@ export default function LigaAnsicht({
   // Heim steht immer auf Seite A, so wie im Spielbericht des Verbands.
   // Unsere Mannschaft ist je nach Heimrecht die Heim- oder die Gastseite.
   const wirSindHeim = liga?.heim ?? true;
-  const heimSpieler = (s: LigaSpiel) => {
-    const gemerkt = wahl[s.nr]?.heim;
-    return gemerkt !== undefined ? gemerkt : partieVon(s)?.spieler_a ?? null;
+  // Spieler eines Platzes: halb gewaehlt (wahl) oder aus der Partie
+  const SPALTE: Record<Slot, 'spieler_a' | 'spieler_b' | 'partner_a' | 'partner_b'> = {
+    heim: 'spieler_a',
+    gast: 'spieler_b',
+    heim2: 'partner_a',
+    gast2: 'partner_b'
   };
-  const gastSpieler = (s: LigaSpiel) => {
-    const gemerkt = wahl[s.nr]?.gast;
-    return gemerkt !== undefined ? gemerkt : partieVon(s)?.spieler_b ?? null;
+  const spielerIn = (s: LigaSpiel, slot: Slot): string | null => {
+    const gemerkt = wahl[s.nr]?.[slot];
+    return gemerkt !== undefined ? gemerkt : partieVon(s)?.[SPALTE[slot]] ?? null;
   };
+  const heimSpieler = (s: LigaSpiel) => spielerIn(s, 'heim');
+  const gastSpieler = (s: LigaSpiel) => spielerIn(s, 'gast');
+  // Anzeige einer Seite, im Doppel "A / B"
+  const seitenName = (erster: string | null, zweiter: string | null) =>
+    zweiter ? `${anzeige(erster)} / ${anzeige(zweiter)}` : anzeige(erster);
   const unsererSpieler = (s: LigaSpiel) => (wirSindHeim ? heimSpieler(s) : gastSpieler(s));
   // Aufstellung einer Seite ueber alle acht Spiele, fuer die Auswahllisten
   const planVon = (seite: 'heim' | 'gast') => {
@@ -240,7 +357,14 @@ export default function LigaAnsicht({
   };
   // Nur anbieten, wer fuer dieses Spiel noch in Frage kommt; der schon
   // Eingetragene bleibt sichtbar, auch wenn er eigentlich nicht passt.
-  const moeglich = (liste: Person[], s: LigaSpiel, seite: 'heim' | 'gast', gewaehlt: string | null) => {
+  // Im Doppel gibt es keine Sperren ueber die Runde; nur der Partner auf
+  // derselben Seite faellt weg.
+  const moeglich = (liste: Person[], s: LigaSpiel, slot: Slot, gewaehlt: string | null) => {
+    if (istDoppel) {
+      const partner = spielerIn(s, slot === 'heim' ? 'heim2' : slot === 'heim2' ? 'heim' : slot === 'gast' ? 'gast2' : 'gast');
+      return liste.filter((p) => p.id === gewaehlt || p.id !== partner);
+    }
+    const seite = slot === 'heim' || slot === 'heim2' ? 'heim' : 'gast';
     const gesperrt = gesperrteSpieler(spiele, planVon(seite), s.nr);
     return liste.filter((p) => p.id === gewaehlt || !gesperrt.has(p.id));
   };
@@ -272,6 +396,13 @@ export default function LigaAnsicht({
 
   const fehlerAufstellung = useMemo(() => {
     if (spiele.length === 0) return [];
+    if (istDoppel) {
+      return spiele.flatMap((s) =>
+        (['heim', 'gast'] as const)
+          .map((seite) => doppelSeitePruefen(s.nr, spielerIn(s, seite), spielerIn(s, `${seite}2`), (id) => anzeige(id)))
+          .filter((x): x is string => x !== null)
+      );
+    }
     const plan: Record<number, string | null> = {};
     spiele.forEach((s) => (plan[s.nr] = unsererSpieler(s)));
     return aufstellungPruefen(spiele, plan, (id) => anzeige(id));
@@ -280,7 +411,8 @@ export default function LigaAnsicht({
 
   const hinweiseKader = useMemo(() => {
     const eigene = mannschaften.find((m) => m.id === liga?.mannschaft_id);
-    if (!eigene || spiele.length === 0) return [];
+    // Kaderregeln gelten fuer die Einzel-Begegnungen; das Doppel ist Spass
+    if (!eigene || spiele.length === 0 || istDoppel) return [];
     const derSaison = mannschaften.filter((m) => m.saison === eigene.saison);
     return kaderHinweise({
       mannschaft: { id: eigene.id, name: eigene.name, rang: eigene.rang },
@@ -315,8 +447,9 @@ export default function LigaAnsicht({
 
   // ---------- Aufstellung und Ergebnisse ----------
 
-  // Legt die Partie an, sobald beide Spieler feststehen, und aendert sie sonst
-  async function spielerSetzen(s: LigaSpiel, seite: 'heim' | 'gast', personId: string | null) {
+  // Legt die Partie an, sobald alle Spieler feststehen (im Doppel vier), und
+  // aendert sie sonst
+  async function spielerSetzen(s: LigaSpiel, slot: Slot, personId: string | null) {
     if (!turnier || !liga) return;
     const vorhanden = partieVon(s);
     if (vorhanden && (vorhanden.tisch_id || vorhanden.status === 'beendet')) {
@@ -326,25 +459,36 @@ export default function LigaAnsicht({
           : 'Die Partie läuft gerade an einem Tisch. Sie lässt sich erst ändern, wenn sie dort abgeschlossen oder abgebrochen ist.'
       );
     }
-    const heim = seite === 'heim' ? personId : heimSpieler(s);
-    const gast = seite === 'gast' ? personId : gastSpieler(s);
+    const neu: Wahl = {
+      heim: heimSpieler(s),
+      gast: gastSpieler(s),
+      ...(istDoppel ? { heim2: spielerIn(s, 'heim2'), gast2: spielerIn(s, 'gast2') } : {}),
+      [slot]: personId
+    };
     setFehler(null);
-    setWahl((bisher) => ({ ...bisher, [s.nr]: { heim, gast } }));
+    setWahl((bisher) => ({ ...bisher, [s.nr]: neu }));
 
-    if (!heim || !gast) {
-      // Ohne beide Spieler gibt es noch keine Partie; eine bestehende entfaellt.
-      // Die eine gewaehlte Seite wird am Spieltag gemerkt.
+    const plaetze = istDoppel ? [neu.heim, neu.gast, neu.heim2, neu.gast2] : [neu.heim, neu.gast];
+    if (plaetze.some((x) => !x)) {
+      // Ohne alle Spieler gibt es noch keine Partie; eine bestehende entfaellt.
+      // Die gewaehlten Plaetze werden am Spieltag gemerkt.
       if (vorhanden) await supabase.from('partien').delete().eq('id', vorhanden.id);
-      await halbeAufstellungMerken(s.nr, heim || gast ? { heim, gast } : null);
+      await halbeAufstellungMerken(s.nr, plaetze.some(Boolean) ? neu : null);
       await laden();
       return;
     }
-    const spieler_a = heim;
-    const spieler_b = gast;
+    const spieler_a = neu.heim as string;
+    const spieler_b = neu.gast as string;
     if (spieler_a === spieler_b) return setFehler('Ein Spieler kann nicht gegen sich selbst antreten.');
+    const partner = istDoppel ? { partner_a: neu.heim2 as string, partner_b: neu.gast2 as string } : {};
+    if (istDoppel && new Set(plaetze).size < 4) {
+      // Die halbe Wahl bleibt stehen, damit der Platz neu gewaehlt werden kann
+      await halbeAufstellungMerken(s.nr, neu);
+      return setFehler(`Doppel ${s.nr}: Jeder Spieler darf in einer Partie nur einmal stehen.`);
+    }
 
     if (vorhanden) {
-      const { error } = await supabase.from('partien').update({ spieler_a, spieler_b }).eq('id', vorhanden.id);
+      const { error } = await supabase.from('partien').update({ spieler_a, spieler_b, ...partner }).eq('id', vorhanden.id);
       if (error) return setFehler(error.message);
     } else {
       const { error } = await supabase.from('partien').insert({
@@ -357,22 +501,25 @@ export default function LigaAnsicht({
         paarung: s.paarung,
         spieler_a,
         spieler_b,
+        ...partner,
         race_to: s.ziel,
         vorgabe_a: 0,
         vorgabe_b: 0,
-        status: 'geplant'
+        status: 'geplant',
+        // Doppel zaehlen nie fuers Rating (die Datenbank prueft das auch)
+        ...(istDoppel ? { rating_werten: false } : {})
       });
       if (error) return setFehler(error.message);
     }
     await halbeAufstellungMerken(s.nr, null);
-    await teilnehmerPflegen([heim, gast]);
+    await teilnehmerPflegen(plaetze);
     await laden();
   }
 
   // Halbe Aufstellung in den Einstellungen des Spieltags ablegen (null: Eintrag
   // entfernen). Gelesen wird frisch aus der Datenbank, damit nichts anderes
   // in den Einstellungen ueberschrieben wird.
-  async function halbeAufstellungMerken(nr: number, eintrag: { heim: string | null; gast: string | null } | null) {
+  async function halbeAufstellungMerken(nr: number, eintrag: Wahl | null) {
     if (!turnier) return;
     const { data } = await supabase.from('turniere').select('einstellungen').eq('id', turnier.id).maybeSingle();
     const aktuell = (data?.einstellungen ?? {}) as TurnierEinstellungen;
@@ -391,7 +538,7 @@ export default function LigaAnsicht({
   }
 
   // Wer in der Begegnung spielt, steht auch in der Teilnehmerliste
-  async function teilnehmerPflegen(ids: (string | null)[]) {
+  async function teilnehmerPflegen(ids: (string | null | undefined)[]) {
     if (!turnier) return;
     const neue = ids.filter((id): id is string => Boolean(id) && !teilnehmer.some((t) => t.person_id === id));
     if (neue.length === 0) return;
@@ -453,7 +600,14 @@ export default function LigaAnsicht({
   // Anlegen des Spieltags; fehlt sie bei aelteren Spieltagen, wird sie hier
   // nachgeholt.
   async function begegnungOeffnen(nummer: 1 | 2) {
-    if (!turnier || !liga || nummer === liga.begegnung) return;
+    if (!turnier || !liga) return;
+    // Mit Doppel-Begegnung: direkt ueber die geladene Reihenfolge
+    if (teile.length > 0 && (istDoppel || teile.some((x) => x.doppel))) {
+      const ziel = teile.find((x) => !x.doppel && x.nummer === (nummer === 1 ? 1 : 3));
+      if (ziel && ziel.id !== turnier.id) oeffnen(ziel.id);
+      return;
+    }
+    if (nummer === liga.begegnung) return;
     // Nur einem Verweis folgen, dessen Turnier es noch gibt; sonst neu anlegen
     if (liga.partner) {
       const { data: vorhanden } = await supabase.from('turniere').select('id').eq('id', liga.partner).maybeSingle();
@@ -465,6 +619,38 @@ export default function LigaAnsicht({
     setArbeitet(false);
     if (neu.fehler !== null) return setFehler(neu.fehler);
     oeffnen(neu.id);
+  }
+
+  // Doppel-Begegnung nachtraeglich anlegen (Spass-Liga): nur, solange die
+  // spaetere Einzel-Begegnung noch nicht gestartet ist
+  const ersteBegegnung = teile.find((x) => x.nummer === 1 && !x.doppel) ?? null;
+  const spaetere = teile.find((x) => !x.doppel && x.nummer !== 1) ?? null;
+  const doppelMoeglich =
+    darfLeiten &&
+    liga?.liga === 'spass' &&
+    !teile.some((x) => x.doppel) &&
+    ersteBegegnung !== null &&
+    (spaetere === null || spaetere.status === 'geplant');
+  async function doppelHinzufuegen() {
+    if (!doppelDialog || !ersteBegegnung) return;
+    const geprueft = doppelPlanAusEingabe(doppelDialog);
+    if (geprueft.fehler !== null) return setFehler(geprueft.fehler);
+    setArbeitet(true);
+    // Die spaetere Begegnung koennte inzwischen gestartet sein
+    if (spaetere) {
+      const { data } = await supabase.from('turniere').select('status, einstellungen').eq('id', spaetere.id).maybeSingle();
+      const gestartetSchon = ((data?.einstellungen ?? {}) as TurnierEinstellungen).liga?.gestartet;
+      if (data && (data.status !== 'geplant' || gestartetSchon?.hin || gestartetSchon?.rueck)) {
+        setArbeitet(false);
+        return setFehler('Die nächste Begegnung ist schon gestartet. Eine Doppel-Begegnung lässt sich nicht mehr dazwischenschieben.');
+      }
+    }
+    const { data: erste } = await supabase.from('turniere').select('*').eq('id', ersteBegegnung.id).single();
+    const neu = erste ? await doppelBegegnungAnlegen(erste, geprueft.plan as DoppelPartie[]) : { id: null, fehler: '1. Begegnung nicht gefunden.' };
+    setArbeitet(false);
+    if (neu.fehler !== null) return setFehler(neu.fehler);
+    setDoppelDialog(null);
+    oeffnen(neu.id as string);
   }
 
   // Aufstellung einer Mannschaft verbergen oder wieder zeigen. Verbergen geht
@@ -508,7 +694,7 @@ export default function LigaAnsicht({
   // Live-Uebertragung und Chat gelten fuer den ganzen Spieltag: beide Begegnungen
   async function spieltagSetzen(aenderung: Pick<TurnierEinstellungen, 'live' | 'chat'>) {
     if (!turnier || !liga) return;
-    const ids = [turnier.id, ...(liga.partner ? [liga.partner] : [])];
+    const ids = [...new Set([turnier.id, ...(liga.partner ? [liga.partner] : []), ...teile.map((x) => x.id)])];
     const { data, error } = await supabase.from('turniere').select('id, einstellungen').in('id', ids);
     if (error) return setFehler(error.message);
     for (const t of data ?? []) {
@@ -531,10 +717,10 @@ export default function LigaAnsicht({
   // auch die andere Begegnung - abgeschlossen ist.
   async function abschliessen() {
     if (!turnier || !liga) return;
-    const name = `${liga.begegnung}. Begegnung`;
+    const name = begegnungName;
     if (punkte.offen > 0 && !(await fragen(`Noch ${punkte.offen} Partien ohne Ergebnis. ${name} trotzdem abschließen?`))) return;
-    // Zweite Begegnung noch nicht angelegt oder schon fertig: dann ist das hier der Schluss
-    const letzte = partnerStatus === null || partnerStatus === 'beendet';
+    // Andere Begegnungen noch nicht angelegt oder schon fertig: dann ist das hier der Schluss
+    const letzte = teile.filter((x) => x.id !== turnier.id).every((x) => x.status === 'beendet');
     const zusatz = letzte
       ? turnier.rating_werten
         ? '\nDamit ist der Spieltag komplett, das Rating wird neu berechnet.'
@@ -581,6 +767,18 @@ export default function LigaAnsicht({
   // Die Hinrunde setzt die Begegnung auf "laeuft" (Live, Chat, Tablets).
   async function rundeStarten(runde: 'hin' | 'rueck') {
     if (!turnier || !liga) return;
+    // Die Tablets zeigen immer nur eine laufende Begegnung
+    const laeuftNoch = teile.find((x) => x.id !== turnier.id && x.status === 'laeuft');
+    if (
+      runde === 'hin' &&
+      laeuftNoch &&
+      !(await fragen(
+        `Die ${laeuftNoch.nummer}. Begegnung${laeuftNoch.doppel ? ' (Doppel)' : ''} läuft noch. An den Tablets erscheint immer nur eine Begegnung. Trotzdem starten?`,
+        'Trotzdem starten'
+      ))
+    ) {
+      return;
+    }
     const neu = { ...einstellungen, liga: { ...liga, gestartet: { ...gestartet, [runde]: true } } };
     const { error } = await supabase
       .from('turniere')
@@ -589,7 +787,9 @@ export default function LigaAnsicht({
     if (error) return setFehler(error.message);
     if (runde === 'rueck') setHinFrei(false);
     setMeldung(
-      runde === 'hin'
+      istDoppel
+        ? 'Doppel gestartet. Die Partien stehen jetzt an den Tablets zur Auswahl.'
+        : runde === 'hin'
         ? 'Hinrunde gestartet. Ihre Partien stehen jetzt an den Tablets zur Auswahl.'
         : 'Rückrunde gestartet. Ihre Partien stehen jetzt an den Tablets zur Auswahl; die Hinrunde ist geschützt.'
     );
@@ -608,9 +808,11 @@ export default function LigaAnsicht({
     );
   async function rundeZuruecknehmen(runde: 'hin' | 'rueck') {
     if (!turnier || !liga) return;
-    const titel = runde === 'hin' ? 'Hinrunde' : 'Rückrunde';
+    const titel = istDoppel ? 'Doppel' : runde === 'hin' ? 'Hinrunde' : 'Rückrunde';
     const frage =
-      runde === 'hin'
+      istDoppel
+        ? 'Start des Doppels zurücknehmen?\nSeine Partien verschwinden wieder von den Tablets, die Begegnung steht wieder auf „in Vorbereitung“ (Live und Chat aus). Aufstellung bleibt.'
+        : runde === 'hin'
         ? 'Start der Hinrunde zurücknehmen?\nIhre Partien verschwinden wieder von den Tablets, die Begegnung steht wieder auf „in Vorbereitung“ (Live und Chat aus). Aufstellung bleibt.'
         : 'Start der Rückrunde zurücknehmen?\nIhre Partien verschwinden wieder von den Tablets. Aufstellung bleibt.';
     if (!(await fragen(frage, 'Zurücknehmen'))) return;
@@ -620,7 +822,7 @@ export default function LigaAnsicht({
       .update({ einstellungen: neu, ...(runde === 'hin' ? { status: 'geplant' as const } : {}) })
       .eq('id', turnier.id);
     if (error) return setFehler(error.message);
-    setMeldung(`Start der ${titel} zurückgenommen.`);
+    setMeldung(istDoppel ? 'Start des Doppels zurückgenommen.' : `Start der ${titel} zurückgenommen.`);
     await laden();
   }
 
@@ -648,7 +850,7 @@ export default function LigaAnsicht({
           `${turnier.rating_werten ? ' Das Vereins-Rating wird heute Nacht ohne sie neu berechnet.' : ''}\n\n`
         : '';
     const frage =
-      `${warnung}Inhalt der ${liga.begegnung}. Begegnung löschen? Aufstellung, Partien und Ergebnisse werden entfernt, bei 14.1 auch das Aufnahme-Protokoll. ` +
+      `${warnung}Inhalt der ${begegnungName} löschen? Aufstellung, Partien und Ergebnisse werden entfernt, bei 14.1 auch das Aufnahme-Protokoll. ` +
       'Die Begegnung bleibt bestehen und lässt sich danach neu ausfüllen.';
     if (!(await fragen(frage, 'Inhalt löschen'))) return;
     setArbeitet(true);
@@ -667,7 +869,7 @@ export default function LigaAnsicht({
       .eq('id', turnier.id);
     setArbeitet(false);
     if (error) return setFehler(error.message);
-    setMeldung(`Inhalt der ${liga.begegnung}. Begegnung gelöscht. Sie lässt sich jetzt neu ausfüllen.`);
+    setMeldung(`Inhalt der ${begegnungName} gelöscht. Sie lässt sich jetzt neu ausfüllen.`);
     await laden();
   }
 
@@ -676,32 +878,26 @@ export default function LigaAnsicht({
   // Anmeldungen loescht die Datenbank mit.
   async function spieltagLoeschen() {
     if (!turnier || !liga) return;
-    const andere = liga.partner
-      ? (await supabase.from('turniere').select('id, name').eq('id', liga.partner).maybeSingle()).data
-      : null;
-    const anderePartien = andere
-      ? (await supabase.from('partien').select('status, ergebnis_a, ergebnis_b').eq('turnier_id', andere.id)).data ?? []
-      : [];
-    if ([...partien, ...anderePartien].some((p) => p.status === 'laeuft')) {
+    // Alle Begegnungen des Spieltags, auch die Doppel-Begegnung
+    const ids = [...new Set([turnier.id, ...(liga.partner ? [liga.partner] : []), ...teile.map((x) => x.id)])];
+    const { data: alle } = await supabase.from('partien').select('turnier_id, status, ergebnis_a, ergebnis_b').in('turnier_id', ids);
+    if ((alle ?? []).some((p) => p.status === 'laeuft')) {
       return setFehler('An den Tablets laufen noch Spiele dieses Spieltags. Erst beenden oder abbrechen, dann löschen.');
     }
     const zeile = (name: string, liste: { ergebnis_a: number | null; ergebnis_b: number | null }[]) => {
       const mit = liste.filter((p) => p.ergebnis_a !== null || p.ergebnis_b !== null).length;
       return `• ${name}: ${liste.length} ${liste.length === 1 ? 'Partie' : 'Partien'}${mit > 0 ? `, davon ${mit} mit Ergebnis` : ''}`;
     };
-    const eigeneNr = liga.begegnung;
-    const zeilen = [zeile(`${eigeneNr}. Begegnung`, partien), andere ? zeile(`${eigeneNr === 1 ? 2 : 1}. Begegnung`, anderePartien) : null]
-      .filter(Boolean)
+    const reihe = teile.length > 0 ? teile : [{ nummer: eigeneNummer, id: turnier.id, status: turnier.status, doppel: istDoppel }];
+    const zeilen = reihe
+      .map((x) => zeile(`${x.nummer}. Begegnung${x.doppel ? ' (Doppel)' : ''}`, (alle ?? []).filter((p) => p.turnier_id === x.id)))
       .join('\n');
     const frage =
-      `Den ganzen Spieltag „${turnier.name.replace(/ · [12]\. Begegnung$/, '')}“ löschen? Das lässt sich nicht rückgängig machen.\n\n${zeilen}` +
+      `Den ganzen Spieltag „${turnier.name.replace(/ · ([12]\. Begegnung|Doppel)$/, '')}“ löschen? Das lässt sich nicht rückgängig machen.\n\n${zeilen}` +
       (turnier.rating_werten ? '\n\nDas Vereins-Rating wird heute Nacht ohne diese Partien neu berechnet.' : '');
     if (!(await fragen(frage, 'Spieltag löschen'))) return;
     setArbeitet(true);
-    const { error } = await supabase
-      .from('turniere')
-      .delete()
-      .in('id', andere ? [turnier.id, andere.id] : [turnier.id]);
+    const { error } = await supabase.from('turniere').delete().in('id', ids);
     setArbeitet(false);
     if (error) return setFehler(error.message);
     zurueck();
@@ -713,10 +909,26 @@ export default function LigaAnsicht({
   // Spaltenfolge wie im Spielbericht: erst Heim, dann Gast
   const heimMannschaft = wirSindHeim ? eigenerName : liga.gegner;
   const gastMannschaft = wirSindHeim ? liga.gegner : eigenerName;
-  const reihen: { runde: 'hin' | 'rueck'; titel: string }[] = [
-    { runde: 'hin', titel: 'Hinrunde' },
-    { runde: 'rueck', titel: 'Rückrunde' }
-  ];
+  const reihen: { runde: 'hin' | 'rueck'; titel: string }[] = istDoppel
+    ? [{ runde: 'hin', titel: 'Doppel' }]
+    : [
+        { runde: 'hin', titel: 'Hinrunde' },
+        { runde: 'rueck', titel: 'Rückrunde' }
+      ];
+  // Umschalter: alle Begegnungen des Spieltags; ohne geladene Reihenfolge die
+  // bisherigen zwei (die fehlende 2. legt begegnungOeffnen an)
+  const umschalter: { nummer: number; id: string | null; doppel: boolean; status: Turnier['status'] | null }[] =
+    teile.some((x) => x.doppel)
+      ? teile.map((x) => ({ nummer: x.nummer, id: x.id, doppel: x.doppel, status: x.status }))
+      : ([1, 2] as const).map((n) => {
+          const x = teile.find((y) => y.nummer === n);
+          return { nummer: n, id: x?.id ?? null, doppel: false, status: x?.status ?? null };
+        });
+  const zeitHinweis = istDoppel
+    ? 'im Doppel, Heimrecht wie in der 1. Begegnung'
+    : eigeneNummer === 1
+      ? 'zuerst gespielt'
+      : 'danach gespielt, mit getauschtem Heimrecht';
 
   return (
     <div className="einspaltig">
@@ -732,32 +944,59 @@ export default function LigaAnsicht({
             <div className="zeile">
               <span className="hinweis">Begegnung:</span>
               <span className="umschalter">
-                {([1, 2] as const).map((n) => (
-                  <button
-                    key={n}
-                    type="button"
-                    className={liga.begegnung === n ? 'aktiv' : ''}
-                    disabled={arbeitet}
-                    title={n === liga.begegnung ? `Die ${n}. Begegnung wird gerade angezeigt.` : `Die ${n}. Begegnung anzeigen.`}
-                    onClick={() => void begegnungOeffnen(n)}
-                  >
-                    {n}. Begegnung
-                    {(n === liga.begegnung ? turnier.status : partnerStatus) === 'beendet' ? ' ✓' : ''}
-                  </button>
-                ))}
+                {umschalter.map((u) => {
+                  const aktiv = u.id === turnier.id || (u.id === null && u.nummer === eigeneNummer);
+                  const titel = `${u.nummer}. Begegnung${u.doppel ? ' · Doppel' : ''}`;
+                  return (
+                    <button
+                      key={u.id ?? u.nummer}
+                      type="button"
+                      className={aktiv ? 'aktiv' : ''}
+                      disabled={arbeitet}
+                      title={aktiv ? `Die ${titel} wird gerade angezeigt.` : `Die ${titel} anzeigen.`}
+                      onClick={() => {
+                        if (aktiv) return;
+                        if (u.id) return oeffnen(u.id);
+                        void begegnungOeffnen(u.nummer === 1 ? 1 : 2);
+                      }}
+                    >
+                      {titel}
+                      {(aktiv ? turnier.status : u.status) === 'beendet' ? ' ✓' : ''}
+                    </button>
+                  );
+                })}
               </span>
-              <span className="hinweis">
-                {liga.begegnung === 1
-                  ? 'zuerst gespielt'
-                  : 'danach gespielt, mit getauschtem Heimrecht'}
-              </span>
+              <span className="hinweis">{zeitHinweis}</span>
+              {doppelMoeglich && (
+                <button
+                  type="button"
+                  className="klein"
+                  disabled={arbeitet}
+                  title="Eine Begegnung im Doppel zwischen der 1. und der nächsten Begegnung einschieben. Geht, solange die nächste Begegnung noch nicht gestartet ist."
+                  onClick={() => {
+                    setFehler(null);
+                    setDoppelDialog(DOPPEL_ZEILEN_STANDARD.map((z) => ({ ...z })));
+                  }}
+                >
+                  + Doppel-Begegnung
+                </button>
+              )}
             </div>
             <p className="hinweis">
-              {datumLang(turnier.datum)} · {eigenerName} gegen {liga.gegner} · {liga.heim ? 'Heimspiel' : 'Auswärtsspiel'} ·
-              14.1 {liga.ziele.punkte141} Punkte / {liga.ziele.aufnahmen141} Aufnahmen · 8-Ball {liga.ziele['8-ball']} ·
-              9-Ball {liga.ziele['9-ball']} · 10-Ball {liga.ziele['10-ball']} Gewinnsätze
+              {datumLang(turnier.datum)} · {eigenerName} gegen {liga.gegner} · {liga.heim ? 'Heimspiel' : 'Auswärtsspiel'} ·{' '}
+              {istDoppel
+                ? `${spiele.length} Doppel: ${spiele
+                    .map((s) => `${DISZIPLIN_KURZ[s.disziplin]} Race to ${s.ziel}`)
+                    .join(' · ')}`
+                : `14.1 ${liga.ziele.punkte141} Punkte / ${liga.ziele.aufnahmen141} Aufnahmen · 8-Ball ${liga.ziele['8-ball']} · 9-Ball ${liga.ziele['9-ball']} · 10-Ball ${liga.ziele['10-ball']} Gewinnsätze`}
             </p>
-            {!turnier.rating_werten && (
+            {istDoppel && (
+              <p className="hinweis">
+                Doppel zählen nicht fürs Rating und nicht in die Bilanz der Mannschaft. Partie- und Matchpunkte stehen nur
+                hier.
+              </p>
+            )}
+            {!turnier.rating_werten && !istDoppel && (
               <p className="hinweis">
                 Keine Partie dieses Spieltags zählt fürs Rating. Mit „Fürs Rating werten“ zählen die Partien, die rechts
                 angehakt sind.
@@ -767,12 +1006,12 @@ export default function LigaAnsicht({
           <div className="kopfrechts">
           <div className="knopfpaar kopfaktionen">
             <span className={`marke ${turnier.status === 'laeuft' ? 'livelaeuft' : ''}`}>{STATUS_TEXT[turnier.status]}</span>
-            {bearbeitbar && (
+            {bearbeitbar && !istDoppel && (
               <button type="button" title="Den Spielbericht des Verbands einlesen und die Ergebnisse in diese Begegnung übernehmen. Vorher zeigt eine Vorschau jede Partie." onClick={() => setImportOffen(true)}>
                 Spielbericht einlesen
               </button>
             )}
-            {bearbeitbar && (
+            {bearbeitbar && !istDoppel && (
               <button type="button" title={turnier.rating_werten ? 'Nimmt die Partien dieses Spieltags aus dem Vereins-Rating.' : 'Lässt die Pool-Partien dieses Spieltags ins Vereins-Rating eingehen.'} onClick={() => void ratingUmschalten()}>
                 {turnier.rating_werten ? 'Nicht fürs Rating werten' : 'Fürs Rating werten'}
               </button>
@@ -801,7 +1040,7 @@ export default function LigaAnsicht({
             {istAdmin && (
               <button
                 type="button"
-                title="Löscht den ganzen Spieltag: beide Begegnungen mit allen Partien und Ergebnissen. Vorher nennt eine Rückfrage, was verloren geht."
+                title="Löscht den ganzen Spieltag: alle Begegnungen mit allen Partien und Ergebnissen. Vorher nennt eine Rückfrage, was verloren geht."
                 className="gefahrknopf"
                 onClick={() => void spieltagLoeschen()}
                 disabled={arbeitet}
@@ -898,7 +1137,7 @@ export default function LigaAnsicht({
                   ) : (
                     <button
                       type="button"
-                      title={`Nimmt den Start der ${r.titel} zurück: Ihre Partien verschwinden wieder von den Tablets. Geht nur, solange keine Partie am Tisch liegt oder ein Ergebnis hat.`}
+                      title={`Nimmt den Start ${istDoppel ? 'des Doppels' : `der ${r.titel}`} zurück: Die Partien verschwinden wieder von den Tablets. Geht nur, solange keine Partie am Tisch liegt oder ein Ergebnis hat.`}
                       onClick={() => void rundeZuruecknehmen(r.runde)}
                     >
                       Start zurücknehmen
@@ -910,7 +1149,7 @@ export default function LigaAnsicht({
               (r.runde === 'hin' || gestartet.hin) && (
                 <button
                   type="button"
-                  title={`Gibt die Partien der ${r.titel} für die Tablets frei. Vorher lässt sich die Aufstellung in Ruhe eintragen; Ergebnisse von Hand gehen jederzeit.`}
+                  title={`Gibt die Partien ${istDoppel ? 'des Doppels' : `der ${r.titel}`} für die Tablets frei. Vorher lässt sich die Aufstellung in Ruhe eintragen; Ergebnisse von Hand gehen jederzeit.`}
                   onClick={() => void rundeStarten(r.runde)}
                 >
                   {r.titel} starten
@@ -950,6 +1189,16 @@ export default function LigaAnsicht({
                       gast={gastSpieler(s)}
                       heimWahl={moeglich(wirSindHeim ? eigeneMitglieder : gaeste, s, 'heim', heimSpieler(s))}
                       gastWahl={moeglich(wirSindHeim ? gaeste : eigeneMitglieder, s, 'gast', gastSpieler(s))}
+                      doppel={
+                        istDoppel
+                          ? {
+                              heim2: spielerIn(s, 'heim2'),
+                              gast2: spielerIn(s, 'gast2'),
+                              heimWahl2: moeglich(wirSindHeim ? eigeneMitglieder : gaeste, s, 'heim2', spielerIn(s, 'heim2')),
+                              gastWahl2: moeglich(wirSindHeim ? gaeste : eigeneMitglieder, s, 'gast2', spielerIn(s, 'gast2'))
+                            }
+                          : null
+                      }
                       heimVerdeckt={istVerdeckt(r.runde, 'heim')}
                       gastVerdeckt={istVerdeckt(r.runde, 'gast')}
                       anzeige={anzeige}
@@ -960,7 +1209,10 @@ export default function LigaAnsicht({
                       zuruecksetzen={p ? () => setRuecksetzPartie(p) : undefined}
                       laufend={(() => {
                         const t = p && p.status !== 'beendet' ? laufendeStaende.get(p.id) : undefined;
-                        const stand = t && p ? laufenderStand(t.zustand, t.aktualisiert, anzeige(p.spieler_a), anzeige(p.spieler_b)) : null;
+                        const stand =
+                          t && p
+                            ? laufenderStand(t.zustand, t.aktualisiert, seitenName(p.spieler_a, p.partner_a), seitenName(p.spieler_b, p.partner_b))
+                            : null;
                         return stand && t ? laufenderStandText(stand, tischNummern.get(t.tischId) ?? null) : null;
                       })()}
                       spieltagWertet={turnier.rating_werten}
@@ -1022,6 +1274,27 @@ export default function LigaAnsicht({
         </section>
       )}
       {rueckfrage}
+      {doppelDialog && (
+        <div className="dialoghintergrund" onClick={() => !arbeitet && setDoppelDialog(null)}>
+          <div className="dialog" onClick={(e) => e.stopPropagation()}>
+            <h2>Doppel-Begegnung hinzufügen</h2>
+            <p>
+              Sie wird als 2. Begegnung im Doppel gespielt, mit demselben Gegner und Heimrecht wie die 1. Begegnung. Die
+              bisherige 2. Begegnung wird zur 3. Doppel zählen nicht fürs Rating und nicht in die Bilanz der Mannschaft.
+            </p>
+            <DoppelPlanFelder zeilen={doppelDialog} aendern={setDoppelDialog} />
+            {fehler && <p className="fehler">{fehler}</p>}
+            <div className="zeile">
+              <button type="button" disabled={arbeitet} onClick={() => void doppelHinzufuegen()}>
+                Anlegen
+              </button>
+              <button type="button" disabled={arbeitet} onClick={() => setDoppelDialog(null)}>
+                Abbrechen
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {importOffen && (
         <SpielberichtImport
           turnier={turnier}
@@ -1039,7 +1312,7 @@ export default function LigaAnsicht({
         <ZuruecksetzenDialog
           partie={ruecksetzPartie}
           vereinId={verein.id}
-          paarung={`${anzeige(ruecksetzPartie.spieler_a)} – ${anzeige(ruecksetzPartie.spieler_b)}`}
+          paarung={`${seitenName(ruecksetzPartie.spieler_a, ruecksetzPartie.partner_a)} – ${seitenName(ruecksetzPartie.spieler_b, ruecksetzPartie.partner_b)}`}
           abbrechen={() => setRuecksetzPartie(null)}
           fertig={() => {
             setRuecksetzPartie(null);
@@ -1127,11 +1400,13 @@ function Spielzeile(props: {
   gast: string | null;
   heimWahl: Person[];
   gastWahl: Person[];
+  // Doppel: zweiter Spieler je Seite und seine Auswahl (sonst null)
+  doppel: { heim2: string | null; gast2: string | null; heimWahl2: Person[]; gastWahl2: Person[] } | null;
   heimVerdeckt: boolean;
   gastVerdeckt: boolean;
   anzeige: (id: string | null) => string;
   bearbeitbar: boolean;
-  spielerSetzen: (seite: 'heim' | 'gast', id: string | null) => void;
+  spielerSetzen: (slot: Slot, id: string | null) => void;
   ergebnisSetzen: (heim: number | null, gast: number | null) => void;
   wertungSetzen: (werten: boolean) => void;
   zuruecksetzen?: () => void;
@@ -1165,7 +1440,7 @@ function Spielzeile(props: {
   // Solange die Partie an einem Tisch laeuft, bleibt die Aufstellung stehen
   const festgezurrt = Boolean(partie && (partie.tisch_id || partie.status === 'beendet'));
 
-  const auswahl = (seite: 'heim' | 'gast', gewaehlt: string | null, liste: Person[], verborgen: boolean) =>
+  const auswahl = (seite: Slot, gewaehlt: string | null, liste: Person[], verborgen: boolean) =>
     verborgen ? (
       // Der Name steht bewusst nicht im Seitenquelltext
       <span className="verdeckt" title="Aufstellung verborgen">{gewaehlt ? 'verdeckt' : 'noch offen'}</span>
@@ -1200,9 +1475,31 @@ function Spielzeile(props: {
           {spiel.disziplin === '14-1' ? `${spiel.ziel} Pkt. / ${spiel.aufnahmen} Aufn.` : `${spiel.ziel} Gewinnsätze`}
         </small>
       </td>
-      <td>{auswahl('heim', props.heim, props.heimWahl, props.heimVerdeckt)}</td>
-      <td className="doppelpunkt">:</td>
-      <td>{auswahl('gast', props.gast, props.gastWahl, props.gastVerdeckt)}</td>
+      {props.doppel ? (
+        <>
+          <td>
+            <span className="doppelseite">
+              {auswahl('heim', props.heim, props.heimWahl, props.heimVerdeckt)}
+              <span className="und">&amp;</span>
+              {auswahl('heim2', props.doppel.heim2, props.doppel.heimWahl2, props.heimVerdeckt)}
+            </span>
+          </td>
+          <td className="doppelpunkt">:</td>
+          <td>
+            <span className="doppelseite">
+              {auswahl('gast', props.gast, props.gastWahl, props.gastVerdeckt)}
+              <span className="und">&amp;</span>
+              {auswahl('gast2', props.doppel.gast2, props.doppel.gastWahl2, props.gastVerdeckt)}
+            </span>
+          </td>
+        </>
+      ) : (
+        <>
+          <td>{auswahl('heim', props.heim, props.heimWahl, props.heimVerdeckt)}</td>
+          <td className="doppelpunkt">:</td>
+          <td>{auswahl('gast', props.gast, props.gastWahl, props.gastVerdeckt)}</td>
+        </>
+      )}
       <td className="rechts">
         {props.bearbeitbar && partie ? (
           <>
@@ -1236,7 +1533,11 @@ function Spielzeile(props: {
             </span>{' '}
           </>
         )}
-        {spiel.disziplin === '14-1' ? (
+        {props.doppel ? (
+          <span className="hinweis" title="Doppel gehen nie ins Rating ein">
+            Doppel: kein Rating
+          </span>
+        ) : spiel.disziplin === '14-1' ? (
           <span className="hinweis" title="14.1 wird auf Punkte gespielt und geht nie ins Rating ein">
             14.1: kein Rating
           </span>

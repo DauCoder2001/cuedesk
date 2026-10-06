@@ -3,7 +3,7 @@ import { supabase } from '../supabase';
 import { useSitzung } from '../sitzung';
 import { personName } from '../namen';
 import { useRueckfrage } from '../rueckfrage';
-import { LIGEN, wertung } from '../liga';
+import { LIGEN, istDoppelBegegnung, wertung } from '../liga';
 import { einsaetze, saisonAus, saisonBilanz, saisonListe, stammspielerHinweis } from '../mannschaften';
 import { vereinsEinstellungen } from '../vereinseinstellungen';
 import { Pflichthinweis, usePflicht } from '../pflicht';
@@ -81,9 +81,11 @@ export default function Mannschaften() {
     setMannschaften(m.data ?? []);
     setKader(k.data ?? []);
     setPersonen(p.data ?? []);
-    setSpieltage(t.data ?? []);
+    // Doppel-Begegnungen zaehlen nicht in Bilanz und Einsaetze der Mannschaft
+    const begegnungen = (t.data ?? []).filter((x) => !istDoppelBegegnung(x));
+    setSpieltage(begegnungen);
 
-    const ids = (t.data ?? []).map((x) => x.id);
+    const ids = begegnungen.map((x) => x.id);
     const pa = ids.length ? await supabase.from('partien').select('*').in('turnier_id', ids) : { data: [] as Partie[] };
     setPartien(pa.data ?? []);
   }, [verein]);

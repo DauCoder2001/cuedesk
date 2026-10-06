@@ -326,6 +326,9 @@ export type Partie = {
   tisch_id: string | null;
   spieler_a: string;
   spieler_b: string;
+  // Doppel (Stufe 30): zweiter Spieler je Seite, bei Einzelpartien leer
+  partner_a: string | null;
+  partner_b: string | null;
   race_to: number | null;
   vorgabe_a: number;
   vorgabe_b: number;

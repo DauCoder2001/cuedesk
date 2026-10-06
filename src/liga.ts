@@ -188,6 +188,71 @@ export function gesperrteSpieler(
   return gesperrt;
 }
 
+// ---------- Doppel-Begegnung (nur Spass-Liga) ----------
+// Zwischen 1. und 2. Begegnung kann ein Spass-Liga-Spieltag eine Begegnung im
+// Doppel haben: eigene Partienliste (Disziplin und Race to frei, kein 14.1),
+// je Seite zwei Spieler. Sie ist ein eigenes Turnier mit liga.art 'doppel',
+// das ueber liga.haupt auf die 1. Begegnung verweist; die 1. Begegnung kennt
+// sie ueber liga.doppel. Die Verbindung zwischen 1. und 2. Begegnung bleibt
+// davon unberuehrt. Angezeigt wird sie als "2. Begegnung · Doppel", die
+// gespeicherte 2. Begegnung dann als "3. Begegnung".
+
+export type DoppelDisziplin = '8-ball' | '9-ball' | '10-ball';
+export type DoppelPartie = { disziplin: DoppelDisziplin; ziel: number };
+
+// Spielplan der Doppel-Begegnung: eine Runde, Partien in der gewaehlten Folge
+export function doppelSpielplan(plan: DoppelPartie[]): LigaSpiel[] {
+  return plan.map((p, i) => ({
+    nr: i + 1,
+    runde: 'hin' as const,
+    paarung: i + 1,
+    disziplin: p.disziplin,
+    ziel: p.ziel,
+    aufnahmen: null
+  }));
+}
+
+// Eingabe der Partienliste (Race to als Text) pruefen und umwandeln
+export function doppelPlanAusEingabe(
+  zeilen: { disziplin: DoppelDisziplin; ziel: string }[]
+): { plan: DoppelPartie[]; fehler: null } | { plan: null; fehler: string } {
+  if (zeilen.length === 0) return { plan: null, fehler: 'Die Doppel-Begegnung braucht mindestens eine Partie.' };
+  if (zeilen.length > 12) return { plan: null, fehler: 'Höchstens 12 Doppel-Partien.' };
+  const plan = zeilen.map((z) => ({ disziplin: z.disziplin, ziel: Number(z.ziel) }));
+  if (plan.some((p) => !Number.isInteger(p.ziel) || p.ziel < 1 || p.ziel > 25)) {
+    return { plan: null, fehler: 'Race to der Doppel-Partien: ganze Zahlen zwischen 1 und 25.' };
+  }
+  return { plan, fehler: null };
+}
+
+// Eine Seite eines Doppels: zwei verschiedene Spieler. Wer in mehreren Doppeln
+// derselben Begegnung antritt, ist erlaubt.
+export function doppelSeitePruefen(
+  nr: number,
+  erster: string | null,
+  zweiter: string | null,
+  name: (id: string) => string
+): string | null {
+  if (erster && zweiter && erster === zweiter) return `Doppel ${nr}: ${name(erster)} steht zweimal auf derselben Seite.`;
+  return null;
+}
+
+export type LigaVerweis = {
+  begegnung?: 1 | 2;
+  partner?: string;
+  art?: 'doppel';
+  haupt?: string; // Doppel-Begegnung: die 1. Begegnung
+  doppel?: string; // 1. Begegnung: die Doppel-Begegnung
+};
+
+export function ligaVerweisVon(einstellungen: unknown): LigaVerweis | null {
+  return (einstellungen as { liga?: LigaVerweis } | null)?.liga ?? null;
+}
+
+export function istDoppelBegegnung(t: { einstellungen: unknown }): boolean {
+  return ligaVerweisVon(t.einstellungen)?.art === 'doppel';
+}
+
 // ---------- Spieltag aus zwei Begegnungen ----------
 // Ein Spieltag steht in der Datenbank als zwei Turniere, die sich ueber
 // einstellungen.liga.partner gegenseitig kennen. In Listen erscheint er als
@@ -195,8 +260,27 @@ export function gesperrteSpieler(
 
 export type SpieltagTeil = { id: string; status: TurnierStatus; einstellungen: unknown };
 
-function ligaVerweis(t: SpieltagTeil): { begegnung?: 1 | 2; partner?: string } | null {
-  return (t.einstellungen as { liga?: { begegnung?: 1 | 2; partner?: string } } | null)?.liga ?? null;
+const ligaVerweis = (t: SpieltagTeil) => ligaVerweisVon(t.einstellungen);
+
+// Die Doppel-Begegnung eines Spieltags, wenn sie in der Liste steht und
+// zurueckverweist (t ist die 1. oder 2. Begegnung)
+export function doppelVon<T extends SpieltagTeil>(t: T, turniere: T[]): T | null {
+  const verweis = ligaVerweis(t);
+  const erste = (verweis?.begegnung ?? 1) === 1 ? t : partnerVon(t, turniere);
+  const id = erste ? ligaVerweis(erste)?.doppel : undefined;
+  const d = id ? turniere.find((x) => x.id === id) : undefined;
+  return d && ligaVerweis(d)?.haupt === erste?.id ? d : null;
+}
+
+// Doppel-Begegnungen, deren 1. Begegnung in der Liste steht; sie bekommen
+// keine eigene Zeile.
+export function doppelBegegnungIds(turniere: SpieltagTeil[]): Set<string> {
+  const ids = new Set(turniere.map((t) => t.id));
+  return new Set(
+    turniere
+      .filter((t) => ligaVerweis(t)?.art === 'doppel' && ids.has(ligaVerweis(t)?.haupt ?? ''))
+      .map((t) => t.id)
+  );
 }
 
 // Die andere Begegnung, wenn sie in der Liste steht und zurueckverweist
@@ -216,10 +300,23 @@ export function zweiteBegegnungIds(turniere: SpieltagTeil[]): Set<string> {
 
 // Stand des ganzen Spieltags aus dem Stand beider Begegnungen. teilBeendet
 // nennt die Begegnung, die schon fertig ist, solange die andere noch aussteht.
+// Eine Doppel-Begegnung zaehlt mit: Laeuft sie, laeuft der Spieltag; ist sie
+// noch offen, ist er nicht fertig.
 export function spieltagStand(
   erste: TurnierStatus,
-  zweite: TurnierStatus | null
-): { status: TurnierStatus; teilBeendet: 1 | 2 | null } {
+  zweite: TurnierStatus | null,
+  doppel: TurnierStatus | null = null
+): { status: TurnierStatus; teilBeendet: 1 | 2 | 3 | null } {
+  if (doppel !== null) {
+    const ohne = spieltagStand(erste, zweite);
+    if (doppel === 'laeuft') return { status: 'laeuft', teilBeendet: null };
+    const doppelFertig = doppel === 'beendet' || doppel === 'abgebrochen';
+    if (ohne.status === 'beendet' || ohne.status === 'abgebrochen') {
+      return doppelFertig ? ohne : { status: 'geplant', teilBeendet: null };
+    }
+    // Mit Doppel-Begegnung heisst die gespeicherte 2. Begegnung "3."
+    return { ...ohne, teilBeendet: ohne.teilBeendet === 2 ? 3 : ohne.teilBeendet };
+  }
   if (zweite === null) return { status: erste, teilBeendet: null };
   if (erste === 'laeuft' || zweite === 'laeuft') return { status: 'laeuft', teilBeendet: null };
   const fertig = (s: TurnierStatus) => s === 'beendet' || s === 'abgebrochen';

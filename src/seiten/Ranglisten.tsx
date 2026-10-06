@@ -69,6 +69,7 @@ export default function Ranglisten() {
           .select('id, datum, disziplin, status, turnier_id, spieler_a, spieler_b, ergebnis_a, ergebnis_b, vorgabe_a, vorgabe_b, beendet')
           .eq('verein_id', verein.id)
           .neq('disziplin', '14-1')
+          .is('partner_a', null) // Doppel zaehlen in keiner Rangliste
           .eq('status', 'beendet')
           .gte('datum', ab),
         supabase

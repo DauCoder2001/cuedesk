@@ -458,6 +458,11 @@ h2 small.hinweis { font-weight: 400; font-size: 14px; margin-left: 6px; }
 .livekopf .marke { font-size: 12px; border: 1px solid var(--rand); border-radius: var(--radius); padding: 1px 6px; margin-left: 6px; white-space: nowrap; display: inline-block; }
 .livekopf .marke.warnmarke { border-color: transparent; align-self: flex-start; }
 .livefuss.ungespeichert { color: #7a4b00; }
+/* Liga: Doppel-Begegnung (zwei Spieler je Seite, Partienliste) */
+.doppelseite { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.doppelseite .und { color: var(--text-leise); font-size: 13px; }
+.doppelplan { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+.doppelplan .tabelle input.kurz { width: 64px; }
 .livefussknoepfe { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
 .livefussknoepfe > span { display: flex; gap: 6px; }
 .livekopf .marke.frei { background: #6c757d; border-color: #6c757d; color: #fff; }

@@ -5,6 +5,7 @@ import { KEIN_LIVE_TEXT, kachel, liveAktiv } from '../live';
 import { rundeText } from '../archiv';
 import { vereinsEinstellungen } from '../vereinseinstellungen';
 import { anzeigeWaehlen, chatAn, ligaStand, ortsTag, spiellage, tabellen } from '../zuschauen';
+import { istDoppelBegegnung } from '../liga';
 import { Tischkachel } from './Live';
 import type { ChatBeitrag, Partie, Person, Tisch, Turnier, TurnierTeilnehmer } from '../datenbank.types';
 
@@ -250,6 +251,9 @@ export default function Zuschauen({
   const heuteLage = spiellage(heutige, heute);
   const turnierName = (id: string | null) => turniere.find((t) => t.id === id)?.name ?? '';
   const ergebnis = (p: Partie) => `${p.ergebnis_a ?? 0}:${p.ergebnis_b ?? 0}`;
+  // "A – B", im Doppel "A / B – C / D"
+  const seite = (id: string, partner: string | null) => (partner ? `${name(id)} / ${name(partner)}` : name(id));
+  const paarung = (p: Partie) => `${seite(p.spieler_a, p.partner_a)} – ${seite(p.spieler_b, p.partner_b)}`;
 
   return (
     <div className="zuschauen">
@@ -312,7 +316,7 @@ export default function Zuschauen({
                     const s = ligaStand(b, partien, verein.name);
                     return (
                       <div key={b.id} className="zuschauenblock">
-                        <h3>{i + 1}. Begegnung{b.status === 'beendet' ? ' ✓' : b.status === 'laeuft' ? ' · läuft' : ''}</h3>
+                        <h3>{i + 1}. Begegnung{istDoppelBegegnung(b) ? ' · Doppel' : ''}{b.status === 'beendet' ? ' ✓' : b.status === 'laeuft' ? ' · läuft' : ''}</h3>
                         <div className="zuschauenliga">
                           <span>{s.heim}</span>
                           <strong>
@@ -364,7 +368,7 @@ export default function Zuschauen({
                       <div key={p.id} className="zuschauenspiel">
                         <span className="hinweis">{rundeText(p)}</span>
                         <span>
-                          {name(p.spieler_a)} – {name(p.spieler_b)}
+                          {paarung(p)}
                         </span>
                         <span>{p.status === 'beendet' ? `${ergebnis(p)} ✓` : p.status === 'laeuft' ? 'läuft' : ''}</span>
                       </div>
@@ -377,7 +381,7 @@ export default function Zuschauen({
                   {lage.laufend.map((p) => (
                     <div key={p.id} className="zuschauenspiel">
                       <span>
-                        {name(p.spieler_a)} – {name(p.spieler_b)}
+                        {paarung(p)}
                       </span>
                       <span>{tische.find((t) => t.id === p.tisch_id) ? `Tisch ${tische.find((t) => t.id === p.tisch_id)?.nummer}` : ''}</span>
                     </div>
@@ -390,7 +394,7 @@ export default function Zuschauen({
                   {lage.naechste.map((p) => (
                     <div key={p.id} className="zuschauenspiel">
                       <span>
-                        {name(p.spieler_a)} – {name(p.spieler_b)}
+                        {paarung(p)}
                       </span>
                     </div>
                   ))}
@@ -405,7 +409,7 @@ export default function Zuschauen({
               <div key={p.id} className="zuschauenspiel">
                 <span className="hinweis">{p.beendet ? uhrzeit(p.beendet) : ''}</span>
                 <span>
-                  {name(p.spieler_a)} – {name(p.spieler_b)}
+                  {paarung(p)}
                   {p.turnier_id && <small className="hinweis"> · {turnierName(p.turnier_id) || 'Turnier'}</small>}
                 </span>
                 <strong>{ergebnis(p)}</strong>

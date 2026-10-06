@@ -18,6 +18,10 @@ export type ArchivTurnier = {
   // Liga-Spieltag: Nummer dieser Begegnung und die andere Begegnung
   begegnung?: 1 | 2 | null;
   partner?: string | null;
+  // Doppel-Begegnung (Spass-Liga): sie selbst bzw. der Verweis darauf in der 1.
+  doppelArt?: boolean;
+  haupt?: string | null;
+  doppel?: string | null;
   // Alle Begegnungen dieser Zeile (Liga-Spieltag: beide); fehlt, dann nur id
   teile?: string[];
 };
@@ -31,6 +35,9 @@ export type ArchivPartie = {
   gruppe: string | null;
   spieler_a: string;
   spieler_b: string;
+  // Doppel: zweiter Spieler je Seite (fehlt oder leer bei Einzelpartien)
+  partner_a?: string | null;
+  partner_b?: string | null;
   ergebnis_a: number | null;
   ergebnis_b: number | null;
   vorgabe_a: number;
@@ -76,21 +83,29 @@ export function spieltageZusammenfassen(turniere: ArchivTurnier[]): ArchivTurnie
     const andere = t.modus === 'liga' && t.partner ? nachId.get(t.partner) : undefined;
     return andere && andere.partner === t.id ? andere : null;
   };
+  // Doppel-Begegnung der 1. Begegnung t, wenn beide aufeinander verweisen
+  const doppelVon = (t: ArchivTurnier) => {
+    const d = t.modus === 'liga' && t.doppel ? nachId.get(t.doppel) : undefined;
+    return d && d.doppelArt && d.haupt === t.id ? d : null;
+  };
+  const versteckteDoppel = new Set(
+    turniere.filter((t) => t.doppelArt && t.haupt && doppelVon(nachId.get(t.haupt) ?? t)?.id === t.id).map((t) => t.id)
+  );
   return turniere
-    .filter((t) => !(t.begegnung === 2 && partnerVon(t)))
+    .filter((t) => !(t.begegnung === 2 && partnerVon(t)) && !versteckteDoppel.has(t.id))
     .map((t) => {
-      const andere = partnerVon(t);
-      if (!andere) return t;
+      const andere = [partnerVon(t), doppelVon(t)].filter((x): x is ArchivTurnier => x !== null);
+      if (andere.length === 0) return t;
       const fertig = (s: TurnierStatus) => ARCHIV_STATUS.includes(s);
-      const status: TurnierStatus =
-        fertig(t.status) && fertig(andere.status)
-          ? t.status === 'beendet' || andere.status === 'beendet'
-            ? 'beendet'
-            : 'abgebrochen'
-          : fertig(t.status)
-            ? andere.status
-            : t.status;
-      return { ...t, status, teile: [t.id, andere.id] };
+      const alle = [t, ...andere];
+      // Archiviert erst, wenn alle Begegnungen fertig sind; sonst gilt der
+      // Stand der ersten, die noch nicht fertig ist
+      const status: TurnierStatus = alle.every((x) => fertig(x.status))
+        ? alle.some((x) => x.status === 'beendet')
+          ? 'beendet'
+          : 'abgebrochen'
+        : (alle.find((x) => !fertig(x.status)) as ArchivTurnier).status;
+      return { ...t, status, teile: alle.map((x) => x.id) };
     });
 }
 
@@ -128,7 +143,10 @@ export function saisonZeitraum(saison: string, beginn = 7): { von: string; bis: 
   return { von: `${jahr}-${monat}-01`, bis: ende.toISOString().slice(0, 10) };
 }
 
-const spielt = (p: ArchivPartie, person: string) => p.spieler_a === person || p.spieler_b === person;
+// Auch als Partner im Doppel
+const spielt = (p: ArchivPartie, person: string) =>
+  p.spieler_a === person || p.spieler_b === person || p.partner_a === person || p.partner_b === person;
+export const istDoppel = (p: { partner_a?: string | null }) => Boolean(p.partner_a);
 
 // Partien und Turniere, die zu den Filtern passen. Im Archiv stehen nur
 // beendete und abgebrochene Turniere und nur beendete Partien.
@@ -179,7 +197,7 @@ export function archivFiltern(
   const partienListe = partien
     .filter((p) => (p.turnier_id ? turnierIds.has(p.turnier_id) : f.art === '' || f.art === 'einzel'))
     .filter((p) => inSaison(p.datum) && (f.disziplin === 'alle' || p.disziplin === f.disziplin))
-    .filter((p) => (f.spieler ? spielt(p, f.spieler) : true) && (f.gegen ? spielt(p, f.gegen) : true))
+    .filter((p) => (f.spieler ? spielt(p, f.spieler) : true) && (f.gegen ? spielt(p, f.gegen) && !istDoppel(p) : true))
     .sort(neuesteZuerst);
 
   return { turniere: turnierListe, partien: partienListe };
@@ -224,7 +242,10 @@ export function platzText(
 ): string {
   if (t.modus === 'liga') {
     const teile = teileVon(t);
-    const eigene = partien.filter((p) => p.turnier_id !== null && teile.includes(p.turnier_id) && spielt(p, person));
+    // Doppel zaehlen in keiner Bilanz eines Spielers
+    const eigene = partien.filter(
+      (p) => p.turnier_id !== null && teile.includes(p.turnier_id) && !istDoppel(p) && spielt(p, person)
+    );
     if (eigene.length === 0) return '';
     const siege = eigene.filter((p) => siegerVon(p) === (p.spieler_a === person ? 'a' : 'b')).length;
     return `${siege}:${eigene.length - siege}`;
@@ -269,8 +290,9 @@ const leer = (): VergleichBilanz => ({ partien: 0, siegeA: 0, siegeB: 0, unentsc
 
 // Vergleich von a und b aus den Partien, in denen beide gegeneinander spielten
 export function direktvergleich(a: string, b: string, partien: ArchivPartie[], werte141: Werte141[] = []): Vergleich {
+  // Nur Einzelpartien: Im Doppel spielten sie nicht allein gegeneinander
   const begegnungen = partien
-    .filter((p) => (p.spieler_a === a && p.spieler_b === b) || (p.spieler_a === b && p.spieler_b === a))
+    .filter((p) => !istDoppel(p) && ((p.spieler_a === a && p.spieler_b === b) || (p.spieler_a === b && p.spieler_b === a)))
     .sort(neuesteZuerst);
   const kennzahlen = new Map(werte141.map((w) => [w.partie_id, w]));
   const gesamt = leer();

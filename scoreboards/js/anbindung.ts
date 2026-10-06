@@ -661,7 +661,7 @@ async function turnierLaden(): Promise<void> {
     v.supabase
       .from('partien')
       .select(
-        'id, spieler_a, spieler_b, race_to, vorgabe_a, vorgabe_b, ergebnis_a, ergebnis_b, status, tisch_id, runde, gruppe, phase, disziplin, begonnen'
+        'id, spieler_a, spieler_b, partner_a, partner_b, race_to, vorgabe_a, vorgabe_b, ergebnis_a, ergebnis_b, status, tisch_id, runde, gruppe, phase, disziplin, begonnen'
       )
       .eq('turnier_id', t.id)
       .order('runde')
@@ -874,13 +874,15 @@ export async function get(verweis: Verweis): Promise<{ val: () => unknown }> {
 
   const { data } = await v.supabase
     .from('partien')
-    .select('id, disziplin, ergebnis_a, ergebnis_b, beendet, spieler_a, spieler_b')
+    .select('id, disziplin, ergebnis_a, ergebnis_b, beendet, spieler_a, spieler_b, partner_a, partner_b')
     .eq('tisch_id', v.tischId)
     .in('status', ['beendet', 'abgebrochen'])
     .order('beendet', { ascending: false })
     .limit(10);
 
-  const ids = [...new Set((data ?? []).flatMap((p) => [p.spieler_a, p.spieler_b]))];
+  const ids = [
+    ...new Set((data ?? []).flatMap((p) => [p.spieler_a, p.spieler_b, p.partner_a, p.partner_b]).filter((x): x is string => Boolean(x)))
+  ];
   const { data: personen } = ids.length
     ? await v.supabase.from('personen').select('id, vorname, nachname, anzeigename').in('id', ids)
     : { data: [] };
@@ -896,8 +898,9 @@ export async function get(verweis: Verweis): Promise<{ val: () => unknown }> {
     ergebnis[p.id] = {
       table: tischNummer,
       gameType: p.disziplin === '14-1' ? '14.1' : 'pool',
-      player1: name(p.spieler_a),
-      player2: name(p.spieler_b),
+      // Doppel: "A / B" je Seite
+      player1: p.partner_a ? `${name(p.spieler_a)} / ${name(p.partner_a)}` : name(p.spieler_a),
+      player2: p.partner_b ? `${name(p.spieler_b)} / ${name(p.partner_b)}` : name(p.spieler_b),
       score1: p.ergebnis_a,
       score2: p.ergebnis_b,
       date: zeit.toLocaleDateString('de-DE'),

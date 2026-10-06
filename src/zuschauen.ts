@@ -6,7 +6,7 @@
 import { rangliste } from './turnier';
 import { gruppenRangliste } from './gruppen';
 import { KO_GRUPPEN, standardGruppenzahl } from './ko';
-import { partnerVon, wertung } from './liga';
+import { doppelVon, partnerVon, wertung } from './liga';
 import type { RanglistenPartie } from './turnier';
 import type { Partie, Turnier, TurnierTeilnehmer } from './datenbank.types';
 
@@ -15,7 +15,15 @@ type Einstellungen = {
   handReihenfolge?: Record<string, number[]>;
   chat?: boolean;
   live?: boolean; // fehlt = an (Stufe 25)
-  liga?: { begegnung?: 1 | 2; partner?: string; heim?: boolean; eigene?: string; gegner?: string };
+  liga?: {
+    begegnung?: 1 | 2;
+    partner?: string;
+    heim?: boolean;
+    eigene?: string;
+    gegner?: string;
+    art?: 'doppel';
+    haupt?: string;
+  };
 };
 const einstellungenVon = (t: Turnier) => (t.einstellungen ?? {}) as Einstellungen;
 
@@ -41,10 +49,18 @@ export function anzeigeWaehlen(turniere: Turnier[], jetzt = Date.now()): Anzeige
   const turnier = laufend[0] ?? kuerzlich[0];
   if (!turnier) return null;
   if (turnier.modus !== 'liga') return { turnier, begegnungen: [turnier], chatTurnier: turnier };
-  const partner = partnerVon(turnier, turniere);
-  const beide = partner ? [turnier, partner] : [turnier];
-  beide.sort((a, b) => (einstellungenVon(a).liga?.begegnung ?? 1) - (einstellungenVon(b).liga?.begegnung ?? 1));
-  return { turnier, begegnungen: beide, chatTurnier: beide[0] };
+  // Laeuft die Doppel-Begegnung, gehoert sie zum Spieltag ihrer 1. Begegnung
+  const haupt = einstellungenVon(turnier).liga?.art === 'doppel'
+    ? turniere.find((t) => t.id === einstellungenVon(turnier).liga?.haupt) ?? null
+    : null;
+  const basis = haupt ?? turnier;
+  const partner = partnerVon(basis, turniere);
+  const doppel = doppelVon(basis, turniere);
+  const alle = [basis, ...(partner ? [partner] : []), ...(doppel ? [doppel] : [])];
+  // Reihenfolge wie gespielt: 1., Doppel, 2. (gespeichert)
+  const rang = (t: Turnier) => (einstellungenVon(t).liga?.art === 'doppel' ? 1.5 : einstellungenVon(t).liga?.begegnung ?? 1);
+  alle.sort((a, b) => rang(a) - rang(b));
+  return { turnier, begegnungen: alle, chatTurnier: alle[0] };
 }
 
 // Chat nur mit Live-Uebertragung (Stufe 29); "chat" bleibt gespeichert und gilt

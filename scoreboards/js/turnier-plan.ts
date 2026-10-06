@@ -11,6 +11,9 @@ export type PlanPartie = {
   id: string;
   spieler_a: string;
   spieler_b: string;
+  // Doppel (Liga, Doppel-Begegnung): zweiter Spieler je Seite
+  partner_a?: string | null;
+  partner_b?: string | null;
   race_to: number | null;
   vorgabe_a: number;
   vorgabe_b: number;
@@ -160,12 +163,15 @@ export function tabletSpielplan(
   // Reihenfolge wie im Spielplan (Runde, dann Paarung) - die Auswahl am
   // Tablet zeigt die Spiele in dieser Reihenfolge.
   for (const p of partien) {
-    const a = name(p.spieler_a);
-    const b = name(p.spieler_b);
-    const eindeutig = ohneZusatz(a) !== ohneZusatz(b);
+    // Im Doppel steht je Seite "A / B"; der Vereinszusatz faellt je Name weg
+    const seite = (erster: string, zweiter: string | null | undefined, kurz: boolean) => {
+      const n = (id: string) => (kurz ? ohneZusatz(name(id)) : name(id));
+      return zweiter ? `${n(erster)} / ${n(zweiter)}` : n(erster);
+    };
+    const eindeutig = seite(p.spieler_a, p.partner_a, true) !== seite(p.spieler_b, p.partner_b, true);
     plan[p.id] = {
-      player1: eindeutig ? ohneZusatz(a) : a,
-      player2: eindeutig ? ohneZusatz(b) : b,
+      player1: seite(p.spieler_a, p.partner_a, eindeutig),
+      player2: seite(p.spieler_b, p.partner_b, eindeutig),
       status: planStatus(p),
       table: p.tisch_id ? tischNummer(p.tisch_id) : null,
       startedAt: p.begonnen ? Date.parse(p.begonnen) : null,

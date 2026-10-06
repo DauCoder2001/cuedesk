@@ -34,12 +34,21 @@ Ein Liga-Spieltag besteht immer aus zwei Begegnungen gegen dieselbe Mannschaft, 
 - **Live an** / **Live aus** im Kopf gilt für beide Begegnungen: Bei Live an sehen Mitglieder und Fernseher die Spielstände, solange der Spieltag läuft. Darunter schaltet **Chat an** / **Chat aus** den Chat für beide Begegnungen (nur, wenn der Verein den Chat eingeschaltet hat). Bei **Live aus** gibt es keinen Chat; nach **Live an** ist er wieder so wie vorher.
 - **Fürs Rating werten** entscheidet, ob die Partien dieses Spieltags ins Vereins-Rating eingehen. 14.1 zählt nie.
 
+## Doppel-Begegnung (Spaß-Liga)
+
+In der Spaß-Liga kann zwischen 1. und 2. Begegnung eine Begegnung im Doppel gespielt werden. Sie heißt dann **2. Begegnung · Doppel**, die bisherige 2. Begegnung wird zur **3. Begegnung**.
+
+- Beim Anlegen **mit Doppel-Begegnung** ankreuzen und die Partien festlegen: je Partie Disziplin (8-, 9- oder 10-Ball) und **Race to**, mit **+ Partie** weitere. Nachträglich geht das über **+ Doppel-Begegnung** neben dem Umschalter, solange die nächste Begegnung noch nicht gestartet ist.
+- Gegner und Heimrecht sind wie in der 1. Begegnung. Je Seite stehen zwei Spieler („&“); ein Spieler darf in mehreren Doppeln antreten, nur nicht zweimal in derselben Partie.
+- **Doppel starten** gibt die Partien für die Tablets frei; dort steht „Frank F. / Volker B.“ gegen die beiden Gegner. Die Tablets zeigen immer nur eine laufende Begegnung; läuft die vorige noch, fragt CueDesk vor dem Start nach.
+- Partie- und Matchpunkte stehen nur in der Doppel-Begegnung. Doppel zählen nicht fürs Rating, nicht in die Bilanz und Einsätze der Mannschaft und nicht in Statistik und Ranglisten. Im Archiv stehen sie mit der Marke **Doppel**.
+
 ## 5. Abschließen
 
-**Begegnung abschließen** sperrt die Ergebnisse dieser Begegnung. Das Rating wird erst neu berechnet, wenn beide Begegnungen abgeschlossen sind.
+**Begegnung abschließen** sperrt die Ergebnisse dieser Begegnung. Das Rating wird erst neu berechnet, wenn alle Begegnungen des Spieltags abgeschlossen sind.
 
 ## Korrigieren und löschen
 
 - **Zurücksetzen** am Ende einer Partiezeile stellt die Partie wieder auf offen: Der Tisch wird frei, das Ergebnis und bei 14.1 das Aufnahme-Protokoll gelöscht, und das Tablet zeigt sie wieder in der Spielauswahl. Dafür braucht es das Schutzwort des Vereins.
 - **Inhalt löschen** leert die angezeigte Begegnung: Aufstellung, Partien und Ergebnisse sind weg, die Begegnung bleibt und lässt sich neu ausfüllen. Stehen schon Ergebnisse drin, fragt CueDesk vorher.
-- **Spieltag löschen** entfernt beide Begegnungen komplett (nur Vereins-Administrator).
+- **Spieltag löschen** entfernt alle Begegnungen komplett, auch eine Doppel-Begegnung (nur Vereins-Administrator).

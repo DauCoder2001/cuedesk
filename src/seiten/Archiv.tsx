@@ -131,7 +131,10 @@ export default function Archiv() {
             teilnehmerzahl: t.teilnehmerzahl,
             art: e.art ?? null,
             begegnung: e.liga?.begegnung ?? null,
-            partner: e.liga?.partner ?? null
+            partner: e.liga?.partner ?? null,
+            doppelArt: e.liga?.art === 'doppel',
+            haupt: e.liga?.haupt ?? null,
+            doppel: e.liga?.doppel ?? null
           };
         });
         // Liga-Spieltag: eine Zeile fuer beide Begegnungen
@@ -172,7 +175,7 @@ export default function Archiv() {
         const zeilen = await alleZeilen((von, bis) => {
           let abfrage = supabase
             .from('partien')
-            .select('id, turnier_id, disziplin, datum, phase, gruppe, spieler_a, spieler_b, ergebnis_a, ergebnis_b, vorgabe_a, vorgabe_b, beendet, begonnen, tisch_id')
+            .select('id, turnier_id, disziplin, datum, phase, gruppe, spieler_a, spieler_b, partner_a, partner_b, ergebnis_a, ergebnis_b, vorgabe_a, vorgabe_b, beendet, begonnen, tisch_id')
             .eq('verein_id', verein.id)
             .eq('status', 'beendet');
           if (zeitraum) abfrage = abfrage.gte('datum', zeitraum.von).lte('datum', zeitraum.bis);
@@ -260,6 +263,8 @@ export default function Archiv() {
     partien.forEach((p) => {
       beteiligt.add(p.spieler_a);
       beteiligt.add(p.spieler_b);
+      if (p.partner_a) beteiligt.add(p.partner_a);
+      if (p.partner_b) beteiligt.add(p.partner_b);
     });
     [spieler, gegen].forEach((id) => id && beteiligt.add(id));
     return personen
@@ -274,7 +279,7 @@ export default function Archiv() {
     t.teilnehmerzahl ??
     (t.modus === 'liga'
       ? new Set(
-          partien.filter((p) => p.turnier_id !== null && teileVon(t).includes(p.turnier_id)).flatMap((p) => [p.spieler_a, p.spieler_b])
+          partien.filter((p) => p.turnier_id !== null && teileVon(t).includes(p.turnier_id)).flatMap((p) => [p.spieler_a, p.spieler_b, p.partner_a, p.partner_b].filter((x): x is string => Boolean(x)))
         ).size
       : teilnahmen.filter((x) => x.turnier_id === t.id).length);
   const siegerName = (t: ArchivTurnier) => {
@@ -636,10 +641,17 @@ export default function Archiv() {
                     <td>{datumKurz(p.datum)}</td>
                     <td>{p.turnier_id ? turnierNamen.get(p.turnier_id) ?? '–' : 'Einzelspiel'}</td>
                     <td>{p.turnier_id ? rundeText(p) : '–'}</td>
-                    <td>{DISZIPLIN_TEXT[p.disziplin]}</td>
-                    <td className={sieger === 'a' ? 'sieger' : ''}>{name(p.spieler_a)}</td>
+                    <td>
+                      {DISZIPLIN_TEXT[p.disziplin]}
+                      {p.partner_a && <span className="marke">Doppel</span>}
+                    </td>
+                    <td className={sieger === 'a' ? 'sieger' : ''}>
+                      {p.partner_a ? `${name(p.spieler_a)} / ${name(p.partner_a)}` : name(p.spieler_a)}
+                    </td>
                     <td className="mittig">{paar(p.ergebnis_a ?? 0, p.ergebnis_b ?? 0)}</td>
-                    <td className={sieger === 'b' ? 'sieger' : ''}>{name(p.spieler_b)}</td>
+                    <td className={sieger === 'b' ? 'sieger' : ''}>
+                      {p.partner_b ? `${name(p.spieler_b)} / ${name(p.partner_b)}` : name(p.spieler_b)}
+                    </td>
                     <td className="rechts">{p.vorgabe_a || p.vorgabe_b ? paar(p.vorgabe_a, p.vorgabe_b) : '–'}</td>
                     <td className="rechts">
                       {p.disziplin === '14-1' && (
