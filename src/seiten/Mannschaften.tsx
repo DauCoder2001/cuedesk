@@ -675,11 +675,16 @@ export default function Mannschaften() {
                   {eigeneSpieltage.map((t, i) => {
                     const liga = (t.einstellungen as TurnierEinstellungen)?.liga;
                     const e = ergebnisse[i];
+                    // Mit Doppel-Begegnung heisst die gespeicherte 2. Begegnung "3." (wie im Spieltag);
+                    // ob es eine gibt, steht in der 1. Begegnung
+                    const erste = spieltage.find((x) => x.id === liga?.partner);
+                    const mitDoppel = Boolean((erste?.einstellungen as TurnierEinstellungen | null)?.liga?.doppel);
                     return (
                       <tr key={t.id}>
                         <td>{DATUM(t.datum)}</td>
                         <td>
-                          {liga?.spieltag}. Spieltag{liga?.begegnung === 2 ? ', 2. Begegnung' : ''}
+                          {liga?.spieltag}. Spieltag
+                          {liga?.begegnung === 2 ? `, ${mitDoppel ? 3 : 2}. Begegnung` : ''}
                         </td>
                         <td>{liga?.gegner}</td>
                         <td>{liga?.heim ? 'zu Hause' : 'auswärts'}</td>
