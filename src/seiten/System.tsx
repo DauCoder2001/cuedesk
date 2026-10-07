@@ -394,14 +394,7 @@ export default function System() {
             <span>Race to</span>
             <input inputMode="numeric" required value={f.raceTo} onChange={(e) => setze({ raceTo: e.target.value })} />
           </label>
-          <label className="feld">
-            <span>Disziplin</span>
-            <select value={f.disziplin} onChange={(e) => setze({ disziplin: e.target.value as Disziplin })}>
-              <option value="8-ball">8-Ball</option>
-              <option value="9-ball">9-Ball</option>
-              <option value="10-ball">10-Ball</option>
-            </select>
-          </label>
+          {/* Modus vor Disziplin, wie im Formular "Neues Turnier" */}
           <label className="feld l">
             <span>Modus</span>
             <select value={f.modus} onChange={(e) => setze({ modus: e.target.value as TurnierModus })}>
@@ -409,6 +402,14 @@ export default function System() {
               <option value="zwei-gruppen">Zwei Gruppen mit Platzierungsduellen</option>
               <option value="gruppen-ko">Gruppen mit KO-Runde</option>
               <option value="liga">Liga-Spieltag (Begegnung)</option>
+            </select>
+          </label>
+          <label className="feld">
+            <span>Disziplin</span>
+            <select value={f.disziplin} onChange={(e) => setze({ disziplin: e.target.value as Disziplin })}>
+              <option value="8-ball">8-Ball</option>
+              <option value="9-ball">9-Ball</option>
+              <option value="10-ball">10-Ball</option>
             </select>
           </label>
           <label className="feld">

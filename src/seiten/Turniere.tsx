@@ -557,6 +557,17 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
                   </select>
                 </label>
               )}
+              {/* Erst der Modus: Er entscheidet, ob es eine Disziplin gibt (Liga: je Partie) */}
+              <label className="feld l">
+                <span>Modus</span>
+                <select value={modus} onChange={(e) => setModus(e.target.value as TurnierModus | 'offen')}>
+                  <option value="einzelgruppe">Einzelgruppe (jeder gegen jeden)</option>
+                  <option value="zwei-gruppen">Zwei Gruppen mit Platzierungsduellen</option>
+                  <option value="gruppen-ko">Gruppen mit KO-Runde</option>
+                  <option value="offen">{MODUS_OFFEN_TEXT} (nach Teilnehmerzahl)</option>
+                  {!bearbeitet && <option value="liga">Liga-Spieltag (Begegnung)</option>}
+                </select>
+              </label>
               {modus !== 'liga' && (
               <label className="feld">
                 <span>Disziplin</span>
@@ -570,16 +581,6 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
                 </select>
               </label>
               )}
-              <label className="feld l">
-                <span>Modus</span>
-                <select value={modus} onChange={(e) => setModus(e.target.value as TurnierModus | 'offen')}>
-                  <option value="einzelgruppe">Einzelgruppe (jeder gegen jeden)</option>
-                  <option value="zwei-gruppen">Zwei Gruppen mit Platzierungsduellen</option>
-                  <option value="gruppen-ko">Gruppen mit KO-Runde</option>
-                  <option value="offen">{MODUS_OFFEN_TEXT} (nach Teilnehmerzahl)</option>
-                  {!bearbeitet && <option value="liga">Liga-Spieltag (Begegnung)</option>}
-                </select>
-              </label>
               {modus === 'liga' && (
                 <>
                   <label className="feld">
