@@ -320,7 +320,7 @@ export default function System() {
   }
 
 
-  // Speichern und Verwerfen oben neben "System" und unten nach den Vorgaben
+  // Speichern und Verwerfen in der Kopfleiste, die beim Scrollen oben stehen bleibt
   const speicherLeiste = (
         <div className="knopfpaar rechts">
           <Pflichthinweis hinweis={vereinPflicht.hinweis} />
@@ -335,7 +335,8 @@ export default function System() {
 
   return (
     <div className="einspaltig">
-      <section className="block">
+      {/* Kopf mit Speichern, Verwerfen und den Meldungen bleibt beim Scrollen sichtbar */}
+      <section className="block festerkopf">
         <div className="bearbeitenkopf">
           <h2>System</h2>
           {speicherLeiste}
@@ -561,8 +562,6 @@ export default function System() {
           </span>
         </label>
       </section>
-
-      {speicherLeiste}
       </div>
 
       <section className="block" ref={schutzPflicht.bereich}>

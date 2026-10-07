@@ -300,6 +300,11 @@ ul.schlicht { list-style: none; padding: 0; margin: 0; display: flex; flex-direc
   padding: 14px 16px; display: flex; flex-direction: column; gap: 20px;
 }
 .block { display: flex; flex-direction: column; gap: 10px; }
+/* Kopf eines langen Formulars (Seite "System"): bleibt mit Speichern und Meldungen oben stehen */
+.einspaltig > .block.festerkopf {
+  position: sticky; top: 0; z-index: 5; background: var(--flaeche);
+  margin: -14px -16px 0; padding: 14px 16px 10px; border-bottom: 1px solid var(--rand);
+}
 
 .tabelle { width: 100%; border-collapse: collapse; font-size: 15px; }
 .tabelle th { text-align: left; font-weight: 400; font-size: 13px; color: var(--text-leise); padding: 4px 6px 4px 0; }
