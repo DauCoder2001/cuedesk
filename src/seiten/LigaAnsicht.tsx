@@ -434,6 +434,15 @@ export default function LigaAnsicht({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mannschaften, kader, spiele, partien, wahl, anzeige, liga?.mannschaft_id, wirSindHeim]);
 
+  // Kader der gewaehlten Mannschaft: steht in den eigenen Auswahllisten oben,
+  // alle anderen Mitglieder darunter (Aushilfe bleibt moeglich)
+  const kaderGruppe = useMemo(() => {
+    const eigene = mannschaften.find((m) => m.id === liga?.mannschaft_id);
+    if (!eigene) return null;
+    const ids = new Set(kader.filter((k) => k.mannschaft_id === eigene.id).map((k) => k.person_id));
+    return ids.size > 0 ? { name: eigene.name, ids } : null;
+  }, [mannschaften, kader, liga?.mannschaft_id]);
+
   if (!verein) return null;
   if (!turnier || !liga) {
     return (
@@ -1334,6 +1343,8 @@ export default function LigaAnsicht({
                             }
                           : null
                       }
+                      kaderGruppe={kaderGruppe}
+                      eigeneSeite={wirSindHeim ? 'heim' : 'gast'}
                       heimVerdeckt={istVerdeckt(r.runde, 'heim')}
                       gastVerdeckt={istVerdeckt(r.runde, 'gast')}
                       anzeige={anzeige}
@@ -1559,6 +1570,8 @@ function Spielzeile(props: {
   gastWahl: Person[];
   // Doppel: zweiter Spieler je Seite und seine Auswahl (sonst null)
   doppel: { heim2: string | null; gast2: string | null; heimWahl2: Person[]; gastWahl2: Person[] } | null;
+  kaderGruppe: { name: string; ids: Set<string> } | null; // Kader der eigenen Mannschaft, oben in der Liste
+  eigeneSeite: 'heim' | 'gast';
   heimVerdeckt: boolean;
   gastVerdeckt: boolean;
   anzeige: (id: string | null) => string;
@@ -1606,11 +1619,24 @@ function Spielzeile(props: {
         <option value="">– offen –</option>
         {/* Doppel: der zweite Platz darf leer bleiben (Geist, z. B. bei ungerader Spielerzahl) */}
         {(seite === 'heim2' || seite === 'gast2') && <option value={GEIST}>– Geist –</option>}
-        {liste.map((p) => (
-          <option key={p.id} value={p.id}>
-            {p.anzeigename || personName(p)}
-          </option>
-        ))}
+        {(() => {
+          const option = (p: Person) => (
+            <option key={p.id} value={p.id}>
+              {p.anzeigename || personName(p)}
+            </option>
+          );
+          const gruppe = props.kaderGruppe;
+          const eigene = seite.startsWith(props.eigeneSeite);
+          const imKader = gruppe && eigene ? liste.filter((p) => gruppe.ids.has(p.id)) : [];
+          if (!gruppe || imKader.length === 0) return liste.map(option);
+          const rest = liste.filter((p) => !gruppe.ids.has(p.id));
+          return (
+            <>
+              <optgroup label={`Kader ${gruppe.name}`}>{imKader.map(option)}</optgroup>
+              {rest.length > 0 && <optgroup label="weitere Mitglieder">{rest.map(option)}</optgroup>}
+            </>
+          );
+        })()}
       </select>
     ) : (
       <span>{props.anzeige(gewaehlt) || '–'}</span>
