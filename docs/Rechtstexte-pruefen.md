@@ -53,8 +53,8 @@ Die Liste hat vier Teile:
 | Nr. | Punkt | Wo es steht | Was zu tun ist |
 |---|---|---|---|
 | S1 | Zwei-Faktor-Anmeldung bei allen Dienstleistern | AVV Anlage 1 | Bei Supabase, IONOS, GitHub und Google einschalten, sonst stimmt die Zusage nicht. |
-| S2 | Hosting der Webseite: GitHub Pages oder IONOS | Datenschutzerklärung (GitHub), AVV Anlage 2 (IONOS), Verzeichnis A1 | Entscheiden; danach alle drei Stellen gleichziehen. |
-| S3 | Ablage der wöchentlichen Sicherung | Datenschutzerklärung (GitHub), Verzeichnis B, offene Punkte | Entweder GitHub in AVV Anlage 2 aufnehmen oder die Sicherung zu IONOS umziehen. |
+| S2 | Hosting der Webseite: GitHub Pages oder IONOS | Datenschutzerklärung (GitHub), AVV Anlage 2 (IONOS), Verzeichnis A1 | Entschieden 07.10.2026: GitHub Pages bleibt. Alle drei Stellen gleichziehen (Claude, steht in `Vor-dem-Livegang.md`). |
+| S3 | Ablage der wöchentlichen Sicherung | Datenschutzerklärung (GitHub), Verzeichnis B, offene Punkte | Entschieden 07.10.2026: bleibt verschlüsselt bei GitHub; GitHub in AVV Anlage 2 aufnehmen (Claude). |
 | S4 | Verträge mit den Dienstleistern | Datenschutzerklärung, AVV Anlage 2, Verzeichnis | DPA bei Supabase (Dashboard) und AVV bei IONOS (Kundenkonto) abschließen und ablegen. |
 | S5 | Löschfrist der Server-Protokolle | Verzeichnis A1: „nach den Fristen des Hosters [prüfen]“ | Frist beim gewählten Hoster nachsehen und eintragen. |
 
