@@ -112,6 +112,9 @@ export default function TurnierAnsicht({
   const [ratings, setRatings] = useState<Map<string, { wert: number; quelle: RatingQuelle }>>(new Map());
   const [tische, setTische] = useState<Map<string, number>>(new Map());
   const [fehler, setFehler] = useState<string | null>(null);
+  // Stellen in der festen Leiste fuer Knoepfe und Meldung der Ausschreibung
+  const [ausschreibungZiel, setAusschreibungZiel] = useState<HTMLSpanElement | null>(null);
+  const [meldungsZiel, setMeldungsZiel] = useState<HTMLDivElement | null>(null);
   const [meldung, setMeldung] = useState<string | null>(null);
   const [arbeitet, setArbeitet] = useState(false);
   const [festDisziplin, setFestDisziplin] = useState<'' | '8-ball' | '9-ball' | '10-ball'>('');
@@ -1626,13 +1629,69 @@ export default function TurnierAnsicht({
 
   return (
     <div className="einspaltig">
+      {/* Feste Leiste: Name, Stand und Knoepfe bleiben beim Scrollen oben; dazu
+          Verwerfen/Speichern der Ausschreibung (AusschreibungBlock setzt sie per
+          Portal in ausschreibungZiel) und die Meldungen */}
+      <section className="block festerkopf">
+        <button type="button" title={`Zurück zur Seite „${zurueckText}“`} className="zurueck" onClick={zurueck}>
+          ← {zurueckText}
+        </button>
+        <div className="bearbeitenkopf kopf-umbruch">
+          <h2>
+            {turnier.name}{' '}
+            <span className={`marke ${turnier.status === 'laeuft' ? 'livelaeuft' : ''}`}>{STATUS_TEXT[turnier.status]}</span>
+          </h2>
+          <div className="knopfpaar">
+            <span className="knopfpaar" ref={setAusschreibungZiel} />
+            {aendern && bearbeitbar && turnier.status === 'geplant' && (
+              <button
+                type="button"
+                title="Name, Datum, Disziplin, Modus, Race to, Vorgabe, Serie und Rating ändern. Geht bis zur Auslosung."
+                onClick={() => {
+                  void (async () => {
+                    if (await wechsel()) aendern();
+                  })();
+                }}
+              >
+                Ändern
+              </button>
+            )}
+            {bearbeitbar && turnier.status === 'laeuft' && (
+              <button type="button" title={einstellungen.pausiert ? 'An den Tablets lassen sich wieder neue Spiele starten.' : 'An den Tablets lässt sich kein neues Spiel starten, laufende Spiele gehen weiter.'} onClick={() => void einstellungenSetzen({ pausiert: !einstellungen.pausiert })}>
+                {einstellungen.pausiert ? 'Fortsetzen' : 'Pausieren'}
+              </button>
+            )}
+            {turnier.quelle !== 'import' && turnier.status !== 'geplant' && (
+              <button type="button" title="Erstellt den Turnierbericht als PDF zum Drucken oder Weitergeben." onClick={berichtErzeugen}>
+                Bericht (PDF)
+              </button>
+            )}
+            {bearbeitbar && turnier.status === 'laeuft' && (
+              <button type="button" title="Beendet das Turnier und sperrt die Ergebnisse. Zählt es fürs Rating, wird das Rating neu berechnet." onClick={() => void abschliessen()} disabled={arbeitet}>
+                Abschließen
+              </button>
+            )}
+            {istAdmin && turnier.status === 'beendet' && turnier.quelle !== 'import' && (
+              <button type="button" title="Öffnet das Turnier wieder, damit sich Ergebnisse ändern lassen." onClick={() => void wiederOeffnen()}>
+                Wieder öffnen
+              </button>
+            )}
+            {/* In Vorbereitung darf die Turnierleitung loeschen, danach nur der Vereins-Admin */}
+            {(turnier.status === 'geplant' ? bearbeitbar : istAdmin) && (
+              <button type="button" title="Löscht das Turnier mit allen Partien. Vorher kommt eine Rückfrage." className="gefahrknopf" onClick={() => void loeschen()}>
+                Turnier löschen
+              </button>
+            )}
+          </div>
+        </div>
+        <div ref={setMeldungsZiel} />
+        {fehler && <p className="fehler">{fehler}</p>}
+        {meldung && <p className="meldung">{meldung}</p>}
+      </section>
+
       <section className="block">
         <div className="bearbeitenkopf">
           <div>
-            <button type="button" title={`Zurück zur Seite „${zurueckText}“`} className="zurueck" onClick={zurueck}>
-              ← {zurueckText}
-            </button>
-            <h2>{turnier.name}</h2>
             {darfLeiten && (turnierarten.length > 0 || einstellungen.art) ? (
               <label className="artwahl" title="Die Turnierart ändern. Gespielt und gewertet wird wie bisher.">
                 <span className="hinweis">Turnierart</span>
@@ -1713,48 +1772,6 @@ export default function TurnierAnsicht({
             )}
           </div>
           <div className="kopfrechts">
-          <div className="knopfpaar">
-            <span className={`marke ${turnier.status === 'laeuft' ? 'livelaeuft' : ''}`}>{STATUS_TEXT[turnier.status]}</span>
-            {aendern && bearbeitbar && turnier.status === 'geplant' && (
-              <button
-                type="button"
-                title="Name, Datum, Disziplin, Modus, Race to, Vorgabe, Serie und Rating ändern. Geht bis zur Auslosung."
-                onClick={() => {
-                  void (async () => {
-                    if (await wechsel()) aendern();
-                  })();
-                }}
-              >
-                Ändern
-              </button>
-            )}
-            {bearbeitbar && turnier.status === 'laeuft' && (
-              <button type="button" title={einstellungen.pausiert ? 'An den Tablets lassen sich wieder neue Spiele starten.' : 'An den Tablets lässt sich kein neues Spiel starten, laufende Spiele gehen weiter.'} onClick={() => void einstellungenSetzen({ pausiert: !einstellungen.pausiert })}>
-                {einstellungen.pausiert ? 'Fortsetzen' : 'Pausieren'}
-              </button>
-            )}
-            {turnier.quelle !== 'import' && turnier.status !== 'geplant' && (
-              <button type="button" title="Erstellt den Turnierbericht als PDF zum Drucken oder Weitergeben." onClick={berichtErzeugen}>
-                Bericht (PDF)
-              </button>
-            )}
-            {bearbeitbar && turnier.status === 'laeuft' && (
-              <button type="button" title="Beendet das Turnier und sperrt die Ergebnisse. Zählt es fürs Rating, wird das Rating neu berechnet." onClick={() => void abschliessen()} disabled={arbeitet}>
-                Abschließen
-              </button>
-            )}
-            {istAdmin && turnier.status === 'beendet' && turnier.quelle !== 'import' && (
-              <button type="button" title="Öffnet das Turnier wieder, damit sich Ergebnisse ändern lassen." onClick={() => void wiederOeffnen()}>
-                Wieder öffnen
-              </button>
-            )}
-            {/* In Vorbereitung darf die Turnierleitung loeschen, danach nur der Vereins-Admin */}
-            {(turnier.status === 'geplant' ? bearbeitbar : istAdmin) && (
-              <button type="button" title="Löscht das Turnier mit allen Partien. Vorher kommt eine Rückfrage." className="gefahrknopf" onClick={() => void loeschen()}>
-                Turnier löschen
-              </button>
-            )}
-          </div>
           {bearbeitbar && turnier.quelle !== 'import' && turnier.status !== 'beendet' && (
             <LiveSchalter an={einstellungen.live !== false} schalten={(an) => void einstellungenSetzen({ live: an })} />
           )}
@@ -1802,12 +1819,12 @@ export default function TurnierAnsicht({
             )}
           </div>
         )}
-        {fehler && <p className="fehler">{fehler}</p>}
-        {meldung && <p className="meldung">{meldung}</p>}
       </section>
 
       {darfLeiten && turnier.status === 'geplant' && turnier.quelle !== 'import' && (
         <AusschreibungBlock
+          knopfZiel={ausschreibungZiel}
+          meldungsZiel={meldungsZiel}
           daten={{
             verein: verein?.name ?? '',
             name: turnier.name,

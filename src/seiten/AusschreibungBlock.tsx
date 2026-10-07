@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { herunterladen } from '../pdf';
 import {
   alsEingabe,
@@ -19,12 +20,18 @@ export default function AusschreibungBlock({
   daten,
   link,
   gespeichert,
-  speichern
+  speichern,
+  knopfZiel = null,
+  meldungsZiel = null
 }: {
   daten: Omit<AusschreibungDaten, 'ausschreibung' | 'link'>;
   link: string; // Anmeldelink zu diesem Turnier
   gespeichert: Ausschreibung;
   speichern: (a: Ausschreibung) => Promise<boolean>;
+  // Feste Leiste der Turnieransicht: dort erscheinen Verwerfen/Speichern und
+  // die Meldung, damit sie beim Scrollen sichtbar bleiben (sonst hier im Block)
+  knopfZiel?: HTMLElement | null;
+  meldungsZiel?: HTMLElement | null;
 }) {
   const [entwurf, setEntwurf] = useState<Ausschreibung>(gespeichert);
   const [meldung, setMeldung] = useState<string | null>(null);
@@ -60,6 +67,18 @@ export default function AusschreibungBlock({
     });
   }
 
+  const knoepfe = (
+    <span className="knopfpaar">
+      <span className="hinweis">Ausschreibung geändert</span>
+      <button type="button" title="Die Angaben der Ausschreibung verwerfen" onClick={() => setEntwurf(gespeichert)}>
+        Verwerfen
+      </button>
+      <button type="button" title="Die Angaben der Ausschreibung speichern" onClick={() => void sichern()}>
+        Speichern
+      </button>
+    </span>
+  );
+
   return (
     <section className="block">
       <div className="bearbeitenkopf">
@@ -69,16 +88,7 @@ export default function AusschreibungBlock({
             Angaben für die Einladung zum Turnier. Daraus entstehen der Text zum Teilen und ein Aushang zum Eintragen.
           </p>
         </div>
-        {geaendert && (
-          <div className="knopfpaar">
-            <button type="button" title="Die Angaben verwerfen" onClick={() => setEntwurf(gespeichert)}>
-              Verwerfen
-            </button>
-            <button type="button" title="Die Angaben der Ausschreibung speichern" onClick={() => void sichern()}>
-              Speichern
-            </button>
-          </div>
-        )}
+        {geaendert && !knopfZiel && knoepfe}
       </div>
       <div className="felder">
         <label className="feld">
@@ -112,9 +122,12 @@ export default function AusschreibungBlock({
             onChange={(e) => setEntwurf({ ...entwurf, hoechstens: e.target.value ? Number(e.target.value) : undefined })}
           />
         </label>
+        {/* Mehrzeilig: Zeilenumbrueche gehen in den Text zum Teilen und in den Aushang */}
         <label className="feld ganzebreite">
           <span>Hinweis</span>
-          <input
+          <textarea
+            className="hinweisfeld"
+            rows={3}
             value={entwurf.hinweis ?? ''}
             placeholder="z. B. Bitte 15 Minuten vorher da sein."
             onChange={(e) => setEntwurf({ ...entwurf, hinweis: e.target.value || undefined })}
@@ -138,7 +151,9 @@ export default function AusschreibungBlock({
         </span>
       </label>
 
-      {meldung && <p className="meldung">{meldung}</p>}
+      {meldung && !meldungsZiel && <p className="meldung">{meldung}</p>}
+      {geaendert && knopfZiel && createPortal(knoepfe, knopfZiel)}
+      {meldung && meldungsZiel && createPortal(<p className="meldung">{meldung}</p>, meldungsZiel)}
       <pre className="teiltext" title="So sieht der Text zum Teilen aus">{text}</pre>
       <TeilenKnoepfe text={text} betreff={`Ausschreibung: ${daten.name}`}>
         <button

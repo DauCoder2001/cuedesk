@@ -73,6 +73,7 @@ button:disabled { cursor: default; color: var(--text-leise); }
 .felder.paarfelder > .feld:not(.ganzebreite) { grid-column: auto; }
 .rechtsseite .knopfpaar { margin-top: 8px; }
 .feld textarea { width: 100%; font: inherit; font-size: 15px; color: var(--text); border: 1px solid var(--rand); border-radius: var(--radius); padding: 7px 10px; resize: vertical; }
+.feld textarea.hinweisfeld { max-width: 760px; }
 /* Kontaktformular: Feld fuer Programme, fuer Menschen unsichtbar */
 .spamfalle { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
 .rechtskurz { background: var(--flaeche-2); border-radius: var(--radius); padding: 10px 14px; }
