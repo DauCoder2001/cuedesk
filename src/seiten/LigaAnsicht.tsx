@@ -1402,7 +1402,7 @@ export default function LigaAnsicht({
       {bearbeitbar && (
         <section className="block">
           <h2>Gegnerische Spieler</h2>
-          <div className="zeile">
+          <div className="zeile raster">
             <input
               placeholder="Vor- und Nachname"
               value={gastName}

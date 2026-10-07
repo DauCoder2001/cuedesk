@@ -1988,7 +1988,7 @@ export default function TurnierAnsicht({
 
           {bearbeitbar && (
             <>
-              <div className="zeile">
+              <div className="zeile raster">
                 <input placeholder="Mitglied suchen" value={suche} onChange={(e) => setSuche(e.target.value)} />
               </div>
               {vorschlaege.length > 0 && (
@@ -2001,7 +2001,7 @@ export default function TurnierAnsicht({
                   ))}
                 </div>
               )}
-              <div className="zeile">
+              <div className="zeile raster">
                 <input placeholder="Neuer Gast: Vor- und Nachname" value={gastName} onChange={(e) => setGastName(e.target.value)} />
                 <button type="button" title="Legt den Namen als Gast an und nimmt ihn in die Teilnehmerliste auf." onClick={() => void gastAnlegen()}>
                   Gast hinzufügen
