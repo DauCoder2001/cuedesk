@@ -534,7 +534,35 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
 
         {formular && (
           <div className="kasten" ref={pflicht.bereich}>
-            <div className="feldkopf">{bearbeitet ? `Turnier ändern: ${bearbeitet.name}` : 'Neues Turnier'}</div>
+            {/* Feste Leiste: Anlegen bzw. Speichern, Abbrechen und Fehler bleiben beim Scrollen oben */}
+            <div className="festeleiste">
+              <div className="bearbeitenkopf">
+                <strong>{bearbeitet ? `Turnier ändern: ${bearbeitet.name}` : 'Neues Turnier'}</strong>
+                <div className="knopfpaar">
+                  <Pflichthinweis hinweis={pflicht.hinweis} />
+                  <button
+                    type="button"
+                    title={bearbeitet ? 'Ohne Speichern zurück zum Turnier' : 'Ohne Anlegen schließen'}
+                    onClick={() => {
+                      pflicht.zuruecksetzen();
+                      setFehler(null);
+                      if (bearbeitet) aendernBeenden(bearbeitet);
+                      else setFormular(false);
+                    }}
+                  >
+                    Abbrechen
+                  </button>
+                  <button
+                    type="button"
+                    title={bearbeitet ? 'Die Änderungen speichern und zurück zum Turnier' : 'Legt das Turnier mit diesen Angaben an.'}
+                    onClick={() => void anlegen()}
+                  >
+                    {bearbeitet ? 'Speichern' : 'Anlegen'}
+                  </button>
+                </div>
+              </div>
+              {fehler && <p className="fehler">{fehler}</p>}
+            </div>
             <div className="felder">
               <label className="feld l">
                 <span>Name</span>
@@ -768,31 +796,11 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
                 </span>
               </label>
             )}
-            <div className="knopfpaar">
-              <button
-                type="button"
-                title={bearbeitet ? 'Die Änderungen speichern und zurück zum Turnier' : 'Legt das Turnier mit diesen Angaben an.'}
-                onClick={() => void anlegen()}
-              >
-                {bearbeitet ? 'Speichern' : 'Anlegen'}
-              </button>
-              <button
-                type="button"
-                title={bearbeitet ? 'Ohne Speichern zurück zum Turnier' : 'Ohne Anlegen schließen'}
-                onClick={() => {
-                  pflicht.zuruecksetzen();
-                  if (bearbeitet) aendernBeenden(bearbeitet);
-                  else setFormular(false);
-                }}
-              >
-                Abbrechen
-              </button>
-              <Pflichthinweis hinweis={pflicht.hinweis} />
-            </div>
           </div>
         )}
 
-        {fehler && <p className="fehler">{fehler}</p>}
+        {/* Bei offenem Formular steht der Fehler in dessen fester Leiste */}
+        {fehler && !formular && <p className="fehler">{fehler}</p>}
         {rueckfrage}
 
         {artenInListe.length > 0 && (

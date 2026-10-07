@@ -407,7 +407,8 @@ export default function Personen({ kontoOeffnen }: { kontoOeffnen?: (kontoId: st
           </>
         ) : (
           <>
-            <div className="bearbeitenkopf">
+            {/* Name und Speichern bleiben beim Scrollen oben stehen */}
+            <div className="bearbeitenkopf festeleiste">
               <h2>
                 {entwurf.id
                   ? `${entwurf.vorname} ${entwurf.nachname}`.trim()

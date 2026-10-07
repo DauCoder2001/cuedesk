@@ -164,7 +164,9 @@ ul.schlicht { list-style: none; padding: 0; margin: 0; display: flex; flex-direc
 .zweispaltig {
   display: grid; grid-template-columns: minmax(0, 280px) minmax(0, 1fr);
   background: var(--flaeche); border: 1px solid var(--rand); border-radius: 0 0 12px 12px;
-  overflow: hidden;
+  /* clip statt hidden: schneidet die Ecken ab, ohne einen eigenen Scrollbereich
+     zu bilden - sonst bliebe eine feste Leiste (.festeleiste) nicht stehen */
+  overflow: clip;
 }
 
 .liste { border-right: 1px solid var(--rand); display: flex; flex-direction: column; }
@@ -300,6 +302,14 @@ ul.schlicht { list-style: none; padding: 0; margin: 0; display: flex; flex-direc
   padding: 14px 16px; display: flex; flex-direction: column; gap: 20px;
 }
 .block { display: flex; flex-direction: column; gap: 10px; }
+/* Feste Leiste in langen Formularen (Neues Turnier, Spieler): bleibt beim Scrollen
+   mit Speichern und Fehlern oben stehen; Hintergrund wie der umgebende Kasten */
+.festeleiste { position: sticky; top: 0; z-index: 5; }
+.kasten > .festeleiste {
+  background: var(--flaeche-2); margin: -10px -12px 0; padding: 10px 12px 8px;
+  border-bottom: 1px solid var(--rand); display: flex; flex-direction: column; gap: 6px;
+}
+.bearbeiten > .festeleiste { background: var(--flaeche); margin: -14px -16px 0; padding: 14px 16px 10px; border-bottom: 1px solid var(--rand); }
 /* Kopf eines langen Formulars (Seite "System"): bleibt mit Speichern und Meldungen oben stehen */
 .einspaltig > .block.festerkopf {
   position: sticky; top: 0; z-index: 5; background: var(--flaeche);
