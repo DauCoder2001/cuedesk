@@ -12,7 +12,8 @@ import {
 } from '../src/liga';
 import { archivFiltern, direktvergleich, platzText, spieltageZusammenfassen } from '../src/archiv';
 import { saisonUeberblick } from '../src/saison-ueberblick';
-import { anzeigeWaehlen } from '../src/zuschauen';
+import { anzeigeWaehlen, paarungText } from '../src/zuschauen';
+import { kachel } from '../src/live';
 import { tabletSpielplan } from '../scoreboards/js/turnier-plan';
 import type { ArchivPartie, ArchivTurnier } from '../src/archiv';
 import type { Turnier } from '../src/datenbank.types';
@@ -229,6 +230,39 @@ describe('Doppel im Archiv und in Auswertungen', () => {
     const u = saisonUeberblick(partien, () => true);
     expect(u.spiele).toBe(3);
     expect(u.aktivster).toEqual({ id: 'frank', spiele: 1, siege: 1 });
+  });
+});
+
+describe('Anzeige auf Live und Zuschauen', () => {
+  const namen: Record<string, string> = {
+    v: 'Volker B.',
+    m: 'Matthias N.',
+    mb: 'Marcel B. (Bassum)',
+    mm: 'Maxim M. (Bassum)',
+    z: 'Zeki (Bassum)',
+    z2: 'Zeki (Achim)'
+  };
+  const n = (id: string) => namen[id];
+
+  test('Paarung ohne Vereinszusatz, Doppel mit Schraegstrich, Geist ohne Partner', () => {
+    expect(paarungText({ spieler_a: 'v', partner_a: 'm', spieler_b: 'mb', partner_b: 'mm' }, n)).toBe(
+      'Volker B. / Matthias N. – Marcel B. / Maxim M.'
+    );
+    expect(paarungText({ spieler_a: 'v', partner_a: null, spieler_b: 'mb', partner_b: 'mm' }, n)).toBe(
+      'Volker B. – Marcel B. / Maxim M.'
+    );
+    // waeren beide Seiten gleich, bleibt der Zusatz
+    expect(paarungText({ spieler_a: 'z', partner_a: null, spieler_b: 'z2', partner_b: null }, n)).toBe(
+      'Zeki (Bassum) – Zeki (Achim)'
+    );
+  });
+
+  test('Kachel kennt die Disziplin der Liga-Partie, sonst keine', () => {
+    const frisch = new Date().toISOString();
+    const liga = kachel({ gameType: 'pool', score1: 1, score2: 0, player1: 'A', discipline: '8-Ball', tournamentMatchId: 'x' }, frisch);
+    expect(liga.art === 'pool' && liga.disziplin).toBe('8-Ball');
+    const frei = kachel({ gameType: 'pool', score1: 1, score2: 0, player1: 'A', disziplin: '9-ball' }, frisch);
+    expect(frei.art === 'pool' && frei.disziplin).toBeNull();
   });
 });
 

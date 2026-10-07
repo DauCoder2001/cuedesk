@@ -4,7 +4,7 @@ import { useSitzung } from '../sitzung';
 import { KEIN_LIVE_TEXT, kachel, liveAktiv } from '../live';
 import { rundeText } from '../archiv';
 import { vereinsEinstellungen } from '../vereinseinstellungen';
-import { anzeigeWaehlen, chatAn, ligaStand, ortsTag, spiellage, tabellen } from '../zuschauen';
+import { anzeigeWaehlen, chatAn, ligaStand, ortsTag, paarungText, spiellage, tabellen } from '../zuschauen';
 import { istDoppelBegegnung } from '../liga';
 import { Tischkachel } from './Live';
 import type { ChatBeitrag, Partie, Person, Tisch, Turnier, TurnierTeilnehmer } from '../datenbank.types';
@@ -251,9 +251,8 @@ export default function Zuschauen({
   const heuteLage = spiellage(heutige, heute);
   const turnierName = (id: string | null) => turniere.find((t) => t.id === id)?.name ?? '';
   const ergebnis = (p: Partie) => `${p.ergebnis_a ?? 0}:${p.ergebnis_b ?? 0}`;
-  // "A – B", im Doppel "A / B – C / D"
-  const seite = (id: string, partner: string | null) => (partner ? `${name(id)} / ${name(partner)}` : name(id));
-  const paarung = (p: Partie) => `${seite(p.spieler_a, p.partner_a)} – ${seite(p.spieler_b, p.partner_b)}`;
+  // "A – B", im Doppel "A / B – C / D", ohne Vereinszusatz wie am Tablet
+  const paarung = (p: Partie) => paarungText(p, name);
 
   return (
     <div className="zuschauen">
@@ -298,6 +297,11 @@ export default function Zuschauen({
                 laedtNeu={false}
                 tabletAus={false}
                 turnierLaeuft={turniere.some((t) => t.status === 'laeuft')}
+                turnierDisziplin={(() => {
+                  // Disziplin eines laufenden Turniers; Liga-Partien bringen ihre eigene mit
+                  const t = turniere.find((x) => x.status === 'laeuft' && x.modus !== 'liga');
+                  return t ? ({ '8-ball': '8-Ball', '9-ball': '9-Ball', '10-ball': '10-Ball' } as Record<string, string>)[t.disziplin] ?? null : null;
+                })()}
               />
             ))}
           </div>

@@ -147,6 +147,22 @@ export function ligaStand(begegnung: Turnier, partien: Partie[], vereinName: str
 
 // ---------- Spiele ----------
 
+// Paarung fuer die Spiellisten, wie am Tablet: ohne Vereinszusatz
+// ("Marcel B. (Bassum)" -> "Marcel B."), im Doppel "A / B". Waeren beide
+// Seiten danach gleich, bleibt der Zusatz stehen.
+const ohneZusatz = (text: string) => text.replace(/\s*\([^()]*\)\s*$/, '').trim() || text;
+export function paarungText(
+  p: Pick<Partie, 'spieler_a' | 'spieler_b' | 'partner_a' | 'partner_b'>,
+  name: (id: string) => string
+): string {
+  const seite = (erster: string, zweiter: string | null, kurz: boolean) => {
+    const n = (id: string) => (kurz ? ohneZusatz(name(id)) : name(id));
+    return zweiter ? `${n(erster)} / ${n(zweiter)}` : n(erster);
+  };
+  const kurz = seite(p.spieler_a, p.partner_a, true) !== seite(p.spieler_b, p.partner_b, true);
+  return `${seite(p.spieler_a, p.partner_a, kurz)} – ${seite(p.spieler_b, p.partner_b, kurz)}`;
+}
+
 export type Spiellage = {
   laufend: Partie[];
   naechste: Partie[]; // bis zu drei offene Spiele in Planreihenfolge

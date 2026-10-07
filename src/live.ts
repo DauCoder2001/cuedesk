@@ -34,11 +34,19 @@ export type Kachel =
       stand2: number;
       raceTo: number | null;
       turnierspiel: boolean; // Partie aus dem laufenden Turnier (sonst freies Spiel)
+      disziplin: string | null; // "8-Ball" usw., soweit das Board sie kennt (sonst "Pool")
       hinweis: string; // Anstoss bzw. wer am Tisch ist
       ziel: string | null; // nur 14.1
     };
 
 const zahl = (w: unknown) => (typeof w === 'number' && Number.isFinite(w) ? w : 0);
+
+// Disziplin aus dem Stand: Liga-Partien bringen sie als "discipline" mit
+// ("8-Ball"). Freie Spiele kennen sie erst beim Speichern ("disziplin" ist nur
+// die Vorauswahl vom letzten Spiel), dann bleibt es bei "Pool".
+function disziplinVon(z: Record<string, unknown>): string | null {
+  return typeof z.discipline === 'string' && z.discipline.trim() ? z.discipline : null;
+}
 const text = (w: unknown, ersatz: string) => (typeof w === 'string' && w.trim() ? w : ersatz);
 
 export function kachel(zustand: unknown, aktualisiert: string | null, jetzt = Date.now()): Kachel {
@@ -74,6 +82,7 @@ export function kachel(zustand: unknown, aktualisiert: string | null, jetzt = Da
       stand2,
       raceTo: null,
       turnierspiel: Boolean(z.tournamentMatchId),
+      disziplin: '14.1',
       hinweis: z.locked ? 'Spiel beendet' : `Am Tisch: ${amTisch}`,
       ziel: `Ziel ${zahl(z.target)}${zielAufn > 0 ? ` / ${zielAufn} Aufn.` : ''} · Aufnahme ${aufnahme}`
     };
@@ -95,6 +104,7 @@ export function kachel(zustand: unknown, aktualisiert: string | null, jetzt = Da
     stand2,
     raceTo,
     turnierspiel: Boolean(z.tournamentMatchId),
+    disziplin: disziplinVon(z),
     hinweis: ende ? 'Spiel beendet' : `Nächster Anstoß: ${anstoss}`,
     ziel: null
   };

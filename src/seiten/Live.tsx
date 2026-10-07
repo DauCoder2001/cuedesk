@@ -15,6 +15,8 @@ type Stand = { zustand: unknown; aktualisiert: string };
 // Eine Bitte ums Neuladen gilt nach fuenf Minuten als erledigt - falls die
 // Quittung des Tablets einmal nicht ankommt, haengt die Anzeige nicht fest.
 const BITTE_GILT_MS = 5 * 60 * 1000;
+
+const DISZIPLIN_TEXT: Record<string, string> = { '8-ball': '8-Ball', '9-ball': '9-Ball', '10-ball': '10-Ball', '14-1': '14.1' };
 const offeneBitte = (zeitpunkt: string | null) =>
   Boolean(zeitpunkt) && Date.now() - Date.parse(zeitpunkt as string) < BITTE_GILT_MS;
 
@@ -36,6 +38,7 @@ export default function Live() {
   const [, setTakt] = useState(0);
   const [liveAn, setLiveAn] = useState<boolean | null>(null); // null: noch nicht geladen
   const [turnierLaeuft, setTurnierLaeuft] = useState(false); // fuer die Marke "Freies Spiel"
+  const [turnierDisziplin, setTurnierDisziplin] = useState<string | null>(null); // fuer Turnierspiele ohne eigene Disziplin
   // Liegengebliebener, nie gespeicherter Stand: ohne Tablet speichern oder verwerfen
   const [offenFrage, setOffenFrage] = useState<{
     tisch: Tisch;
@@ -55,7 +58,7 @@ export default function Live() {
     const staendeLaden = async () => {
       const [standAntwort, turnierAntwort] = await Promise.all([
         supabase.from('live_stand').select('tisch_id, zustand, aktualisiert').eq('verein_id', verein.id),
-        supabase.from('turniere').select('status, einstellungen').eq('verein_id', verein.id).eq('status', 'laeuft')
+        supabase.from('turniere').select('status, einstellungen, disziplin, modus').eq('verein_id', verein.id).eq('status', 'laeuft')
       ]);
       if (vorbei) return;
       const neu: Record<string, Stand> = {};
@@ -65,6 +68,9 @@ export default function Live() {
       setStaende(neu);
       setLiveAn(liveAktiv(turnierAntwort.data ?? []));
       setTurnierLaeuft((turnierAntwort.data ?? []).length > 0);
+      // Disziplin eines laufenden Turniers (nicht Liga: dort steht sie je Partie im Stand)
+      const turnier = (turnierAntwort.data ?? []).find((t) => t.modus !== 'liga' && t.disziplin !== 'multi-ball');
+      setTurnierDisziplin(turnier ? DISZIPLIN_TEXT[turnier.disziplin] ?? null : null);
     };
 
     (async () => {
@@ -171,6 +177,7 @@ export default function Live() {
               tisch={tisch}
               k={k}
               turnierLaeuft={turnierLaeuft}
+              turnierDisziplin={turnierDisziplin}
               tischform
               tabletAus={amTisch.length > 0 && !online}
               neuLaden={
@@ -394,6 +401,7 @@ export function Tischkachel({
   tabletAus,
   turnierLaeuft,
   tischform = false,
+  turnierDisziplin = null,
   ungespeichertSeit = null,
   ungespeichert = null
 }: {
@@ -404,6 +412,7 @@ export function Tischkachel({
   tabletAus: boolean;
   turnierLaeuft: boolean; // dann bekommt ein Spiel ohne Turnierpartie die Marke "Freies Spiel" (wie am TV)
   tischform?: boolean; // Kachel als Billardtisch zeichnen (Seite Live)
+  turnierDisziplin?: string | null; // Disziplin des laufenden Turniers, wenn der Stand keine eigene hat
   ungespeichertSeit?: string | null; // liegengebliebener Stand, Ergebnis nie gespeichert (nur Turnierleitung)
   ungespeichert?: { speichern: (() => void) | null; verwerfen: () => void } | null; // Knoepfe dazu
 }) {
@@ -449,7 +458,7 @@ export function Tischkachel({
       <div className="livekopf">
         <span>
           {titel}
-          <span className="marke">{k.art === '14.1' ? '14.1' : 'Pool'}</span>
+          <span className="marke">{k.disziplin ?? (k.turnierspiel ? turnierDisziplin : null) ?? 'Pool'}</span>
           {k.raceTo !== null && <span className="marke">Race to {k.raceTo}</span>}
           {turnierLaeuft && !k.turnierspiel && <span className="marke frei">Freies Spiel</span>}
         </span>
