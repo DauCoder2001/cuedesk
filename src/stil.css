@@ -545,8 +545,11 @@ button.aktivmarke { color: var(--gut); border-color: var(--gut); }
 .zuschauenblock { border-top: 1px solid var(--rand); padding: 10px 0; }
 .zuschauenblock .tabelle { font-size: 16px; }
 .zuschauenspiel { display: flex; justify-content: space-between; gap: 10px; padding: 4px 0; }
-.zuschauenliga { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
-.zuschauenliga strong { font-size: 24px; white-space: nowrap; }
+/* Drei Spalten, die Seiten gleich breit: der Stand steht bei allen Begegnungen
+   genau in der Mitte, egal wie lang die Mannschaftsnamen sind */
+.zuschauenliga { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 10px; }
+.zuschauenliga > span:last-child { text-align: right; }
+.zuschauenliga strong { font-size: 24px; white-space: nowrap; text-align: center; }
 .zuschauenchat .chatbeitrag { border: 1px solid var(--rand); border-radius: var(--radius); padding: 6px 10px; margin-bottom: 8px; }
 .zuschauenchat .chatbeitrag.eigener { background: var(--akzent-hell); }
 .chatkopf { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 14px; color: var(--text-leise); }
