@@ -40,14 +40,21 @@ In der Spaß-Liga kann zwischen 1. und 2. Begegnung eine Begegnung im Doppel ges
 
 - Beim Anlegen **mit Doppel-Begegnung** ankreuzen und die Partien festlegen: je Partie Disziplin (8-, 9- oder 10-Ball) und **Race to**, mit **+ Partie** weitere. Nachträglich geht das über **+ Doppel-Begegnung** neben dem Umschalter, solange die nächste Begegnung noch nicht gestartet ist.
 - Gegner und Heimrecht sind wie in der 1. Begegnung. Je Seite stehen zwei Spieler („&“); ein Spieler darf in mehreren Doppeln antreten, nur nicht zweimal in derselben Partie. Fehlt ein Spieler (ungerade Zahl, alle Tische belegt), wählst du im zweiten Platz **– Geist –**: Die Seite spielt dann allein, am Tablet steht nur ihr einer Name. Geist geht auf beiden Seiten und in mehreren Doppeln.
-- **Doppel starten** gibt die Partien für die Tablets frei; dort steht „Frank F. / Volker B.“ gegen die beiden Gegner. Die Tablets zeigen immer nur eine laufende Begegnung; läuft die vorige noch, fragt CueDesk vor dem Start nach.
+- **Doppel starten** gibt die Partien für die Tablets frei; dort steht „Frank F. / Volker B.“ gegen die beiden Gegner. Die Tablets zeigen immer nur eine laufende Begegnung. Ist die vorige fertig gespielt, aber noch nicht abgeschlossen, bietet CueDesk **Abschließen und starten** an; sind dort noch Partien offen, fragt es nach (**Trotzdem starten**).
 - **Partien ändern** im Kopf der Doppel-Begegnung öffnet die Partienliste: Disziplin, Race to, Reihenfolge, Partien dazu oder weg. Aufstellungen bleiben bei ihrer Partie. Partien mit Ergebnis behalten Disziplin und Race to und lassen sich nicht entfernen; was gerade am Tisch läuft, bleibt unverändert.
 - **Doppel-Begegnung entfernen** (nur Vereins-Administrator) löscht nur die Doppel-Begegnung mit ihren Partien; die 3. Begegnung heißt danach wieder 2. Begegnung.
-- Partie- und Matchpunkte stehen nur in der Doppel-Begegnung. Doppel zählen nicht fürs Rating, nicht in die Bilanz und Einsätze der Mannschaft und nicht in Statistik und Ranglisten. Im Archiv stehen sie mit der Marke **Doppel**.
+- Partie- und Matchpunkte der Doppel-Begegnung stehen in ihrem Kopf und zählen zum Ergebnis des Spieltags (siehe unten). Doppel zählen nicht fürs Rating, nicht in die Bilanz und Einsätze der Mannschaft und nicht in Statistik und Ranglisten. Im Archiv stehen sie mit der Marke **Doppel**.
 
 ## 5. Abschließen
 
-**Begegnung abschließen** sperrt die Ergebnisse dieser Begegnung. Das Rating wird erst neu berechnet, wenn alle Begegnungen des Spieltags abgeschlossen sind.
+**Begegnung abschließen** sperrt die Ergebnisse dieser Begegnung. Sind alle Partien gespielt, ist der Knopf gelb markiert. Das Rating wird erst neu berechnet, wenn alle Begegnungen des Spieltags abgeschlossen sind.
+
+## Ergebnis des Spieltags
+
+- **Matchpunkte je Begegnung:** Wer mehr Partien gewinnt, bekommt 3 : 0, bei Gleichstand (z. B. 4 : 4, im Doppel 2 : 2) gibt es 1 : 1.
+- **Spieltag gesamt** im Kopf (ab zwei Begegnungen) zählt Partie- und Matchpunkte aller Begegnungen zusammen, immer aus Sicht der Heimmannschaft der 1. Begegnung; die Rückbegegnung wird dafür umgedreht. Beispiel: 2 : 6 (0 : 3), Doppel 2 : 2 (1 : 1), Rückbegegnung 4 : 4 (1 : 1) ergibt **8 : 12** Partiepunkte und **2 : 5** Matchpunkte. Eine Begegnung zählt bei den Matchpunkten erst, wenn alle ihre Partien entschieden sind; bis dahin steht dort „Zwischenstand“.
+- **Spielbericht als PDF** in derselben Kachel lädt den ganzen Spieltag als PDF herunter: Gesamtstand, Übersicht je Begegnung und alle Partien mit Aufstellung und Ergebnis – zum Drucken oder Weiterschicken.
+- Auf der Seite **Zuschauen** und auf dem **öffentlichen Link** steht dasselbe oben im Reiter **Turnier** als „Ergebnis des Spieltags“.
 
 ## Korrigieren und löschen
 
