@@ -412,6 +412,29 @@ export type RatingPartie = {
   racks_b: number;
 };
 
+// Oeffentlicher Live-Link eines Turniers (Stufe 32)
+export type OeffentlicherLink = {
+  turnier_id: string;
+  verein_id: string;
+  schluessel: string;
+  gueltig_bis: string;
+  erstellt_von: string | null;
+  erstellt_am: string;
+};
+
+// Antwort von oeffentliche_ansicht: Personen-IDs sind je Link pseudonymisiert,
+// Turniere und Partien nur mit den Feldern fuer die Zuschauerseite
+export type OeffentlicheAnsicht = {
+  verein: string;
+  gueltig_bis: string;
+  turniere: Pick<Turnier, 'id' | 'name' | 'datum' | 'disziplin' | 'modus' | 'status' | 'erstellt_am' | 'beendet_am' | 'einstellungen'>[];
+  partien: Omit<Partie, 'verein_id' | 'datum' | 'rating_werten' | 'rating_grund' | 'eingetragen_von'>[];
+  teilnehmer: Pick<TurnierTeilnehmer, 'turnier_id' | 'person_id' | 'startnummer' | 'gruppe'>[];
+  namen: Record<string, string>;
+  tische: Pick<Tisch, 'id' | 'nummer' | 'bezeichnung'>[];
+  staende: { tisch_id: string; aktualisiert: string; zustand: unknown }[];
+};
+
 type Tabelle<Zeile, Neu = Partial<Zeile>, Aenderung = Partial<Zeile>> = {
   Row: Zeile;
   Insert: Neu;
@@ -442,6 +465,10 @@ export type Database = {
       turnier_anmeldungen: Tabelle<TurnierAnmeldung, Partial<TurnierAnmeldung> & Pick<TurnierAnmeldung, 'turnier_id' | 'person_id' | 'verein_id'>>;
       partien: Tabelle<Partie, Partial<Partie> & Pick<Partie, 'verein_id' | 'datum' | 'spieler_a' | 'spieler_b'>>;
       live_stand: Tabelle<LiveStand, Partial<LiveStand> & Pick<LiveStand, 'tisch_id' | 'verein_id'>>;
+      oeffentliche_links: Tabelle<
+        OeffentlicherLink,
+        Pick<OeffentlicherLink, 'turnier_id' | 'verein_id' | 'schluessel' | 'gueltig_bis'>
+      >;
       partien_141: Tabelle<Partie141, Partial<Partie141> & Pick<Partie141, 'partie_id' | 'verein_id'>>;
       aufnahmen_141: Tabelle<Aufnahme141, Omit<Aufnahme141, 'id'>>;
       rating_einstellungen: Tabelle<RatingEinstellungen, Partial<RatingEinstellungen> & Pick<RatingEinstellungen, 'verein_id'>>;
@@ -458,6 +485,7 @@ export type Database = {
     Views: { rating_partien: Tabelle<RatingPartie, never, never> };
     Functions: {
       ist_systemadmin: { Args: Record<string, never>; Returns: boolean };
+      oeffentliche_ansicht: { Args: { p_schluessel: string }; Returns: OeffentlicheAnsicht | null };
       hat_rolle: { Args: { p_verein: string; p_rollen: Rolle[] }; Returns: boolean };
       ist_im_verein: { Args: { p_verein: string }; Returns: boolean };
       darf_einladen: { Args: { p_verein: string }; Returns: boolean };

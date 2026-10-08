@@ -1,12 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from '../supabase';
 import { useSitzung } from '../sitzung';
-import { KEIN_LIVE_TEXT, kachel, liveAktiv } from '../live';
-import { rundeText } from '../archiv';
 import { vereinsEinstellungen } from '../vereinseinstellungen';
-import { anzeigeWaehlen, chatAn, ligaStand, ortsTag, paarungText, spiellage, tabellen } from '../zuschauen';
-import { istDoppelBegegnung } from '../liga';
-import { Tischkachel } from './Live';
+import { anzeigeWaehlen, chatAn } from '../zuschauen';
+import { TischeTeil, TurnierTeil } from './ZuschauenTeile';
+import type { Stand } from './ZuschauenTeile';
 import type { ChatBeitrag, Partie, Person, Tisch, Turnier, TurnierTeilnehmer } from '../datenbank.types';
 
 // Zuschauerseite fuer die Mitglieder des Vereins, fuers Handy gebaut: Tische
@@ -14,7 +12,6 @@ import type { ChatBeitrag, Partie, Person, Tisch, Turnier, TurnierTeilnehmer } f
 // in src/zuschauen.ts.
 
 type Ansicht = 'tische' | 'turnier' | 'chat';
-type Stand = { zustand: unknown; aktualisiert: string };
 
 const CHAT_LAENGE = 300;
 const uhrzeit = (iso: string) => new Date(iso).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
@@ -246,13 +243,6 @@ export default function Zuschauen({
 
   if (!verein) return <p className="hinweis">Kein Verein zugeordnet.</p>;
 
-  const heute = ortsTag(new Date().toISOString());
-  const lage = spiellage(partien, heute);
-  const heuteLage = spiellage(heutige, heute);
-  const turnierName = (id: string | null) => turniere.find((t) => t.id === id)?.name ?? '';
-  const ergebnis = (p: Partie) => `${p.ergebnis_a ?? 0}:${p.ergebnis_b ?? 0}`;
-  // "A – B", im Doppel "A / B – C / D", ohne Vereinszusatz wie am Tablet
-  const paarung = (p: Partie) => paarungText(p, name);
 
   return (
     <div className="zuschauen">
@@ -282,145 +272,19 @@ export default function Zuschauen({
       </span>
       {fehler && <p className="fehler">{fehler}</p>}
 
-      {ansicht === 'tische' && (
-        <section>
-          {tische.length === 0 && <p className="hinweis">Es ist noch kein Tisch angelegt.</p>}
-          {/* Auch fuer die Leitung: die Seite zeigt, was Mitglieder sehen */}
-          {!liveAktiv(turniere) && <p className="hinweis">{KEIN_LIVE_TEXT}</p>}
-          <div className="zuschauentische">
-            {liveAktiv(turniere) && tische.map((tisch) => (
-              <Tischkachel
-                key={tisch.id}
-                tisch={tisch}
-                k={kachel(staende[tisch.id]?.zustand ?? null, staende[tisch.id]?.aktualisiert ?? null)}
-                neuLaden={null}
-                laedtNeu={false}
-                tabletAus={false}
-                turnierLaeuft={turniere.some((t) => t.status === 'laeuft')}
-                turnierDisziplin={(() => {
-                  // Disziplin eines laufenden Turniers; Liga-Partien bringen ihre eigene mit
-                  const t = turniere.find((x) => x.status === 'laeuft' && x.modus !== 'liga');
-                  return t ? ({ '8-ball': '8-Ball', '9-ball': '9-Ball', '10-ball': '10-Ball' } as Record<string, string>)[t.disziplin] ?? null : null;
-                })()}
-              />
-            ))}
-          </div>
-        </section>
-      )}
+      {ansicht === 'tische' && <TischeTeil tische={tische} staende={staende} turniere={turniere} />}
 
       {ansicht === 'turnier' && (
-        <section>
-          {!anzeige ? (
-            <p className="hinweis">Gerade läuft kein Turnier.</p>
-          ) : (
-            <>
-              <h2>{anzeige.begegnungen[0].name}</h2>
-              {anzeige.turnier.modus === 'liga'
-                ? anzeige.begegnungen.map((b, i) => {
-                    const s = ligaStand(b, partien, verein.name);
-                    return (
-                      <div key={b.id} className="zuschauenblock">
-                        <h3>{i + 1}. Begegnung{istDoppelBegegnung(b) ? ' · Doppel' : ''}{b.status === 'beendet' ? ' ✓' : b.status === 'laeuft' ? ' · läuft' : ''}</h3>
-                        <div className="zuschauenliga">
-                          <span>{s.heim}</span>
-                          <strong>
-                            {s.partiepunkte[0]} : {s.partiepunkte[1]}
-                          </strong>
-                          <span>{s.gast}</span>
-                        </div>
-                        <p className="hinweis">
-                          Partiepunkte
-                          {s.matchpunkte ? ` · Matchpunkte ${s.matchpunkte[0]} : ${s.matchpunkte[1]}` : ''}
-                        </p>
-                      </div>
-                    );
-                  })
-                : tabellen(anzeige.turnier, teilnehmer, partien).map((tab) => (
-                    <div key={tab.gruppe ?? 'alle'} className="zuschauenblock">
-                      {tab.gruppe && <h3>Gruppe {tab.gruppe}</h3>}
-                      <table className="tabelle">
-                        <thead>
-                          <tr>
-                            <th></th>
-                            <th>Name</th>
-                            <th className="rechts" title="Spiele">Sp</th>
-                            <th className="rechts" title="Siege">S</th>
-                            <th className="rechts" title="Satzdifferenz">Diff</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {tab.zeilen.map((z, i) => (
-                            <tr key={z.personId}>
-                              <td>{i + 1}</td>
-                              <td>{name(z.personId)}</td>
-                              <td className="rechts">{z.spiele}</td>
-                              <td className="rechts">{z.siege}</td>
-                              <td className="rechts">{z.diff > 0 ? `+${z.diff}` : z.diff}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  ))}
-              {partien.some((p) => p.phase === 'ko') && (
-                <div className="zuschauenblock">
-                  <h3>KO-Runde</h3>
-                  {partien
-                    .filter((p) => p.phase === 'ko')
-                    .sort((a, b) => (a.runde ?? 0) - (b.runde ?? 0) || (a.paarung ?? 0) - (b.paarung ?? 0))
-                    .map((p) => (
-                      <div key={p.id} className="zuschauenspiel">
-                        <span className="hinweis">{rundeText(p)}</span>
-                        <span>
-                          {paarung(p)}
-                        </span>
-                        <span>{p.status === 'beendet' ? `${ergebnis(p)} ✓` : p.status === 'laeuft' ? 'läuft' : ''}</span>
-                      </div>
-                    ))}
-                </div>
-              )}
-              {lage.laufend.length > 0 && (
-                <div className="zuschauenblock">
-                  <h3>Läuft gerade</h3>
-                  {lage.laufend.map((p) => (
-                    <div key={p.id} className="zuschauenspiel">
-                      <span>
-                        {paarung(p)}
-                      </span>
-                      <span>{tische.find((t) => t.id === p.tisch_id) ? `Tisch ${tische.find((t) => t.id === p.tisch_id)?.nummer}` : ''}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-              {lage.naechste.length > 0 && (
-                <div className="zuschauenblock">
-                  <h3>Als Nächstes</h3>
-                  {lage.naechste.map((p) => (
-                    <div key={p.id} className="zuschauenspiel">
-                      <span>
-                        {paarung(p)}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </>
-          )}
-          <div className="zuschauenblock">
-            <h3>Heute beendet</h3>
-            {heuteLage.heute.length === 0 && <p className="hinweis">Heute ist noch keine Partie zu Ende gegangen.</p>}
-            {heuteLage.heute.map((p) => (
-              <div key={p.id} className="zuschauenspiel">
-                <span className="hinweis">{p.beendet ? uhrzeit(p.beendet) : ''}</span>
-                <span>
-                  {paarung(p)}
-                  {p.turnier_id && <small className="hinweis"> · {turnierName(p.turnier_id) || 'Turnier'}</small>}
-                </span>
-                <strong>{ergebnis(p)}</strong>
-              </div>
-            ))}
-          </div>
-        </section>
+        <TurnierTeil
+          anzeige={anzeige}
+          partien={partien}
+          teilnehmer={teilnehmer}
+          tische={tische}
+          heutige={heutige}
+          turniere={turniere}
+          vereinName={verein.name}
+          name={name}
+        />
       )}
 
       {ansicht === 'chat' && mitChat && chatTurnier && (

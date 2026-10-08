@@ -23,6 +23,7 @@ import { STATUS_TEXT } from './Turniere';
 import SpielberichtImport from './SpielberichtImport';
 import LiveSchalter from './LiveSchalter';
 import ChatSchalter from './ChatSchalter';
+import OeffentlicherLink from './OeffentlicherLink';
 import { vereinsEinstellungen } from '../vereinseinstellungen';
 import ZuruecksetzenDialog from './ZuruecksetzenDialog';
 import { useLaufendeStaende } from '../laufende-staende';
@@ -1201,6 +1202,14 @@ export default function LigaAnsicht({
               an={einstellungen.chat === true}
               gesperrt={einstellungen.live === false}
               schalten={(an) => void spieltagSetzen({ chat: an })}
+            />
+          )}
+          {bearbeitbar && turnier.status !== 'beendet' && liga && (
+            // Der Link haengt an der 1. Begegnung und zeigt den ganzen Spieltag
+            <OeffentlicherLink
+              turnierId={(liga.art === 'doppel' ? liga.haupt : (liga.begegnung ?? 1) === 1 ? turnier.id : liga.partner) ?? turnier.id}
+              vereinId={turnier.verein_id}
+              turnierDatum={turnier.datum}
             />
           )}
           </div>

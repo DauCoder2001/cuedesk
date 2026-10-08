@@ -392,7 +392,7 @@ function Tischrahmen() {
   );
 }
 
-// Auch auf der Zuschauerseite (Zuschauen.tsx), dort ohne Knoepfe und ohne Tischform
+// Auch auf der Zuschauerseite und dem oeffentlichen Live-Link (ZuschauenTeile.tsx), dort ohne Knoepfe
 export function Tischkachel({
   tisch,
   k,
@@ -403,7 +403,8 @@ export function Tischkachel({
   tischform = false,
   turnierDisziplin = null,
   ungespeichertSeit = null,
-  ungespeichert = null
+  ungespeichert = null,
+  protokollLink = true
 }: {
   tisch: Tisch;
   k: Kachel;
@@ -411,10 +412,11 @@ export function Tischkachel({
   laedtNeu: boolean;
   tabletAus: boolean;
   turnierLaeuft: boolean; // dann bekommt ein Spiel ohne Turnierpartie die Marke "Freies Spiel" (wie am TV)
-  tischform?: boolean; // Kachel als Billardtisch zeichnen (Seite Live)
+  tischform?: boolean; // Kachel als Billardtisch zeichnen (Live und Zuschauen)
   turnierDisziplin?: string | null; // Disziplin des laufenden Turniers, wenn der Stand keine eigene hat
   ungespeichertSeit?: string | null; // liegengebliebener Stand, Ergebnis nie gespeichert (nur Turnierleitung)
   ungespeichert?: { speichern: (() => void) | null; verwerfen: () => void } | null; // Knoepfe dazu
+  protokollLink?: boolean; // "Protokoll live" bei 14.1; nicht auf dem oeffentlichen Live-Link
 }) {
   const klasse = tischform ? 'livekachel tischform' : 'livekachel';
   const rahmen = tischform && <Tischrahmen />;
@@ -483,7 +485,7 @@ export function Tischkachel({
       <div className="livefuss">
         {k.hinweis}
         {k.ziel ? ` · ${k.ziel}` : ''}
-        {k.art === '14.1' && (
+        {k.art === '14.1' && protokollLink && (
           <>
             {' · '}
             <a

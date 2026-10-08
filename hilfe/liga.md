@@ -31,7 +31,7 @@ Ein Liga-Spieltag besteht immer aus zwei Begegnungen gegen dieselbe Mannschaft, 
 - Mit dem Start der Rückrunde ist die **Hinrunde geschützt**: Ergebnisse, Aufstellung, Rating-Haken und **Zurücksetzen** sind dort gesperrt; Ergebnisse von den Tablets kommen weiter an. **Schutz aufheben** über der Hinrunde fragt nach dem Schutzwort des Vereins und gibt die Hinrunde nur in diesem Fenster frei, bis du die Seite verlässt oder **Schutz einschalten** klickst.
 - Die Ergebnisse kommen von den Tablets oder werden in der Tabelle eingetragen, von Hand auch für eine noch nicht gestartete Runde.
 - **Spielbericht einlesen** übernimmt die Ergebnisse aus dem Spielbericht des Verbands; vorher zeigt CueDesk, was sich ändert.
-- **Live an** / **Live aus** im Kopf gilt für beide Begegnungen: Bei Live an sehen Mitglieder und Fernseher die Spielstände, solange der Spieltag läuft. Darunter schaltet **Chat an** / **Chat aus** den Chat für beide Begegnungen (nur, wenn der Verein den Chat eingeschaltet hat). Bei **Live aus** gibt es keinen Chat; nach **Live an** ist er wieder so wie vorher.
+- **Live an** / **Live aus** im Kopf gilt für beide Begegnungen: Bei Live an sehen Mitglieder und Fernseher die Spielstände, solange der Spieltag läuft. Darunter schaltet **Chat an** / **Chat aus** den Chat für beide Begegnungen (nur, wenn der Verein den Chat eingeschaltet hat). Bei **Live aus** gibt es keinen Chat; nach **Live an** ist er wieder so wie vorher. **Öffentlicher Link** darunter gibt den ganzen Spieltag als Link ohne Anmeldung frei (wie beim Turnier, siehe dort).
 - **Fürs Rating werten** entscheidet, ob die Partien dieses Spieltags ins Vereins-Rating eingehen. 14.1 zählt nie.
 
 ## Doppel-Begegnung (Spaß-Liga)

@@ -12,6 +12,7 @@ import AusschreibungBlock from './AusschreibungBlock';
 import AuslosungTeilen from './AuslosungTeilen';
 import LiveSchalter from './LiveSchalter';
 import ChatSchalter from './ChatSchalter';
+import OeffentlicherLink from './OeffentlicherLink';
 import Platz from './Platz';
 import { diffText, LEERE_BILANZ, turnierBilanz } from '../turnier-bilanz';
 import ZuruecksetzenDialog from './ZuruecksetzenDialog';
@@ -1781,6 +1782,9 @@ export default function TurnierAnsicht({
               gesperrt={einstellungen.live === false}
               schalten={(an) => void einstellungenSetzen({ chat: an })}
             />
+          )}
+          {bearbeitbar && turnier.quelle !== 'import' && turnier.status !== 'beendet' && (
+            <OeffentlicherLink turnierId={turnier.id} vereinId={turnier.verein_id} turnierDatum={turnier.datum} />
           )}
           </div>
         </div>

@@ -57,6 +57,7 @@ Die Liste hat vier Teile:
 | S3 | Ablage der wöchentlichen Sicherung | Datenschutzerklärung (GitHub), Verzeichnis B, offene Punkte | Entschieden 07.10.2026: bleibt verschlüsselt bei GitHub; GitHub in AVV Anlage 2 aufnehmen (Claude). |
 | S4 | Verträge mit den Dienstleistern | Datenschutzerklärung, AVV Anlage 2, Verzeichnis | DPA bei Supabase (Dashboard) und AVV bei IONOS (Kundenkonto) abschließen und ablegen. |
 | S5 | Löschfrist der Server-Protokolle | Verzeichnis A1: „nach den Fristen des Hosters [prüfen]“ | Frist beim gewählten Hoster nachsehen und eintragen. |
+| S6 | Öffentlicher Live-Link (Stufe 32, 08.10.2026) | Datenschutzerklärung, Verzeichnis (neue Tätigkeit), Hilfe Turnier | Neue Verarbeitung aufnehmen: Spielstände, Spielplan und Namen („Vorname N.“ mit Einwilligung, sonst Kürzel) sind für jeden mit dem Link sichtbar, befristet je Turnier. Hinweis für Vereine: Teilnehmer vorab informieren, z. B. in der Ausschreibung. Text zeigen, dann einarbeiten (Claude). |
 
 ## 3. Widersprüche zwischen den Texten
 
