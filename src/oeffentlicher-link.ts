@@ -37,3 +37,8 @@ export function tagVon(iso: string): string {
 }
 
 export const istAbgelaufen = (gueltigBis: string, jetzt = Date.now()) => Date.parse(gueltigBis) <= jetzt;
+
+// Hat die Anfrage den Browser gar nicht verlassen (kein Netz, Werbe- oder
+// Tracking-Blocker)? So melden es Chrome/Edge, Firefox und Safari.
+export const istVerbindungsfehler = (meldung: string | null) =>
+  Boolean(meldung) && /failed to fetch|networkerror|load failed|network request failed/i.test(meldung as string);

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { istAbgelaufen, linkAdresse, neuerSchluessel, standardGueltigBis, tagVon, tagesende } from '../src/oeffentlicher-link';
+import { istAbgelaufen, istVerbindungsfehler, linkAdresse, neuerSchluessel, standardGueltigBis, tagVon, tagesende } from '../src/oeffentlicher-link';
 
 describe('Oeffentlicher Live-Link', () => {
   test('Schluessel: 32 Zeichen, nur URL-sichere Zeichen', () => {
@@ -22,6 +22,14 @@ describe('Oeffentlicher Live-Link', () => {
     expect(standardGueltigBis('2026-11-15', jetzt)).toBe('2026-11-15');
     expect(standardGueltigBis('2026-10-08', jetzt)).toBe('2026-10-08');
     expect(standardGueltigBis('2026-09-01', jetzt)).toBe('2026-10-08');
+  });
+
+  test('Verbindungsfehler erkennen (Blocker, kein Netz)', () => {
+    expect(istVerbindungsfehler('TypeError: Failed to fetch')).toBe(true);
+    expect(istVerbindungsfehler('TypeError: NetworkError when attempting to fetch resource.')).toBe(true);
+    expect(istVerbindungsfehler('TypeError: Load failed')).toBe(true);
+    expect(istVerbindungsfehler('permission denied for function oeffentliche_ansicht')).toBe(false);
+    expect(istVerbindungsfehler(null)).toBe(false);
   });
 
   test('Tagesende und zurueck', () => {

@@ -2,6 +2,7 @@ import { StrictMode, useCallback, useEffect, useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { supabase } from './supabase';
 import { anzeigeWaehlen } from './zuschauen';
+import { istVerbindungsfehler } from './oeffentlicher-link';
 import { TischeTeil, TurnierTeil } from './seiten/ZuschauenTeile';
 import type { Stand } from './seiten/ZuschauenTeile';
 import type { OeffentlicheAnsicht, Partie, Tisch, Turnier, TurnierTeilnehmer } from './datenbank.types';
@@ -72,6 +73,13 @@ function LiveOeffentlich() {
           {zustand === 'fehler'
             ? 'Die Spielstände sind gerade nicht erreichbar. Bitte später noch einmal versuchen.'
             : 'Dieser Link ist ungültig oder abgelaufen.'}
+          {zustand === 'fehler' && istVerbindungsfehler(fehlerText) && (
+            <>
+              <br />
+              Blockiert eine Browser-Erweiterung (Werbe- oder Tracking-Blocker) die Verbindung? Dann die Seite dort
+              erlauben oder einen anderen Browser nehmen.
+            </>
+          )}
           {zustand === 'fehler' && fehlerText && (
             <>
               <br />
