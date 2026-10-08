@@ -9,7 +9,7 @@
 // Ausspielziele stammen aus den Ausschreibungen "OH Ausschreibung V2 ...
 // 2026-27"; 14.1 wird auf Punkte mit Aufnahmenbegrenzung gespielt.
 
-import type { TurnierStatus } from './datenbank.types';
+import type { PartieStatus, TurnierStatus } from './datenbank.types';
 
 export type LigaKennung = 'kreisklasse' | 'kreisliga' | 'bezirksliga' | 'landesliga' | 'spass';
 
@@ -295,6 +295,12 @@ export function ligaVerweisVon(einstellungen: unknown): LigaVerweis | null {
 
 export function istDoppelBegegnung(t: { einstellungen: unknown }): boolean {
   return ligaVerweisVon(t.einstellungen)?.art === 'doppel';
+}
+
+// Ist eine Begegnung fertig gespielt? Alle Partien beendet - keine offen,
+// keine mehr am Tisch. Dann steht nur noch "Begegnung abschliessen" aus.
+export function fertigGespielt(partien: { status: PartieStatus }[]): boolean {
+  return partien.length > 0 && partien.every((p) => p.status === 'beendet');
 }
 
 // ---------- Spieltag aus zwei Begegnungen ----------

@@ -6,6 +6,7 @@ import {
   doppelSeitePruefen,
   doppelSpielplan,
   doppelVon,
+  fertigGespielt,
   istDoppelBegegnung,
   spieltagStand,
   zweiteBegegnungIds
@@ -296,5 +297,14 @@ describe('Zuschauen: laufende Doppel-Begegnung', () => {
     expect(anzeige?.turnier.id).toBe('d');
     expect(anzeige?.begegnungen.map((x) => x.id)).toEqual(['b1', 'd', 'b2']);
     expect(anzeige?.chatTurnier.id).toBe('b1');
+  });
+});
+
+describe('Begegnung fertig gespielt', () => {
+  test('alle Partien beendet: fertig; offen, am Tisch oder leer: nicht', () => {
+    expect(fertigGespielt([{ status: 'beendet' }, { status: 'beendet' }])).toBe(true);
+    expect(fertigGespielt([{ status: 'beendet' }, { status: 'laeuft' }])).toBe(false);
+    expect(fertigGespielt([{ status: 'beendet' }, { status: 'geplant' }])).toBe(false);
+    expect(fertigGespielt([])).toBe(false);
   });
 });

@@ -532,6 +532,9 @@ tr.gespielt .zahlfeld { color: var(--text); }
 .oeffentlichhinweis { max-width: 560px; margin: 32px auto; padding: 0 16px; text-align: center; }
 .oeffentlichfuss { margin-top: 24px; text-align: center; font-size: 13px; }
 .zuschauenkopf .hinweis { font-size: 13px; white-space: nowrap; }
+/* Liga: "Begegnung abschließen", wenn alle Partien gespielt sind */
+button.faellig { background: #fff36b; border-color: #d9c400; color: #3d3500; }
+button.faellig:hover:not(:disabled) { background: #ffeb3b; }
 /* Knopf "Öffentlicher Link" im Turnierkopf, wenn ein gueltiger Link besteht */
 button.aktivmarke { color: var(--gut); border-color: var(--gut); }
 .zuschauenwahl button { flex: 1; font-size: 16px; padding: 9px 6px; }

@@ -10,6 +10,7 @@ import {
   doppelPlanAusEingabe,
   doppelSeitePruefen,
   doppelSpielplan,
+  fertigGespielt,
   gesperrteSpieler,
   spielplan,
   wertung
@@ -886,17 +887,31 @@ export default function LigaAnsicht({
   // Die Hinrunde setzt die Begegnung auf "laeuft" (Live, Chat, Tablets).
   async function rundeStarten(runde: 'hin' | 'rueck') {
     if (!turnier || !liga) return;
-    // Die Tablets zeigen immer nur eine laufende Begegnung
+    // Die Tablets zeigen immer nur eine laufende Begegnung. Ist die andere
+    // schon fertig gespielt, nur noch nicht abgeschlossen: gleich mit abschliessen.
     const laeuftNoch = teile.find((x) => x.id !== turnier.id && x.status === 'laeuft');
-    if (
-      runde === 'hin' &&
-      laeuftNoch &&
-      !(await fragen(
-        `Die ${laeuftNoch.nummer}. Begegnung${laeuftNoch.doppel ? ' (Doppel)' : ''} läuft noch. An den Tablets erscheint immer nur eine Begegnung. Trotzdem starten?`,
-        'Trotzdem starten'
-      ))
-    ) {
-      return;
+    if (runde === 'hin' && laeuftNoch) {
+      const andere = `${laeuftNoch.nummer}. Begegnung${laeuftNoch.doppel ? ' (Doppel)' : ''}`;
+      const { data: ihrePartien } = await supabase.from('partien').select('status').eq('turnier_id', laeuftNoch.id);
+      if (fertigGespielt(ihrePartien ?? [])) {
+        if (
+          !(await fragen(
+            `Die ${andere} ist fertig gespielt, aber noch nicht abgeschlossen.\n${andere} abschließen und ${istDoppel ? 'Doppel' : 'Hinrunde'} starten?`,
+            'Abschließen und starten'
+          ))
+        ) {
+          return;
+        }
+        const { error: abschlussFehler } = await supabase.from('turniere').update({ status: 'beendet' }).eq('id', laeuftNoch.id);
+        if (abschlussFehler) return setFehler(abschlussFehler.message);
+      } else if (
+        !(await fragen(
+          `Die ${andere} läuft noch. An den Tablets erscheint immer nur eine Begegnung. Trotzdem starten?`,
+          'Trotzdem starten'
+        ))
+      ) {
+        return;
+      }
     }
     const neu = { ...einstellungen, liga: { ...liga, gestartet: { ...gestartet, [runde]: true } } };
     const { error } = await supabase
@@ -1151,7 +1166,14 @@ export default function LigaAnsicht({
               </button>
             )}
             {bearbeitbar && (
-              <button type="button" title="Beendet diese Begegnung und sperrt ihre Ergebnisse. Ist die andere Begegnung schon abgeschlossen, wird das Rating sofort neu berechnet." onClick={() => void abschliessen()} disabled={arbeitet}>
+              <button
+                type="button"
+                // Gelb, sobald alle Partien gespielt sind: nur das Abschliessen fehlt noch
+                className={turnier.status === 'laeuft' && fertigGespielt(partien) ? 'faellig' : undefined}
+                title="Beendet diese Begegnung und sperrt ihre Ergebnisse. Ist die andere Begegnung schon abgeschlossen, wird das Rating sofort neu berechnet."
+                onClick={() => void abschliessen()}
+                disabled={arbeitet}
+              >
                 Begegnung abschließen
               </button>
             )}
