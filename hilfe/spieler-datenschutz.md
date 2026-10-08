@@ -17,7 +17,8 @@ Der **Rating-Startwert** hilft bei neuen Spielern, die schon gut spielen; sonst 
 
 ## Namensanzeige
 
-- Auf öffentlichen Seiten, etwa dem **öffentlichen Live-Link** eines Turniers, steht ein Spieler nur mit Einwilligung als „Vorname N.“, sonst mit seinem **Kürzel**. Ist das Feld Kürzel leer, bilden es die Anfangsbuchstaben von Vor- und Nachname.
+- Auf öffentlichen Seiten, etwa dem **öffentlichen Live-Link** eines Turniers, steht ein Spieler nur mit Einwilligung mit Namen: mit seinem **Anzeigenamen** ohne Vereinszusatz („Kura (Bassum)“ → „Kura“), ohne Anzeigenamen als „Vorname N.“. Ohne Einwilligung steht dort sein **Kürzel**; ist das Feld leer, bilden es die Anfangsbuchstaben von Vor- und Nachname.
+- Den Anzeigenamen deshalb so wählen, wie der Spieler öffentlich heißen soll – ein voller Name im Anzeigenamen erscheint auch öffentlich voll.
 - Liegt die Einwilligung schriftlich vor, unter **Einwilligungen** auf **Schriftliche Einwilligung erfassen** klicken – auch bei Gästen anderer Vereine. Den Nachweis bewahrt der Verein auf. Mitglieder mit Konto können unter **Mein Konto** selbst zustimmen.
 - Steht dort „übernommen, ohne Nachweis“, stammt der Haken aus der Zeit vor den Einwilligungen. Er gilt auf öffentlichen Seiten erst, wenn ihr die Einwilligung erfasst; sonst den Widerruf erfassen.
 

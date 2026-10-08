@@ -108,8 +108,9 @@ export default function OeffentlicherLink({
             <h3>Öffentlicher Live-Link</h3>
             <p className="hinweis">
               Wer den Link hat, sieht ohne Anmeldung die Tische und den Spielplan dieses Turniers, beim Liga-Spieltag alle
-              Begegnungen. Kein Chat, keine anderen Turniere. Namen erscheinen als „Vorname N.“, wenn eine Einwilligung zur
-              Namensanzeige erfasst ist (Spieler → Einwilligungen), sonst nur als Kürzel.
+              Begegnungen. Kein Chat, keine anderen Turniere. Mit erfasster Einwilligung zur Namensanzeige (Spieler →
+              Einwilligungen) erscheint der Anzeigename ohne Vereinszusatz, sonst „Vorname N.“; ohne Einwilligung nur das
+              Kürzel.
             </p>
 
             {link && (
