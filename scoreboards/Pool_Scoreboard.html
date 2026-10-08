@@ -111,7 +111,7 @@ body {
   justify-content: space-between;
   align-items: center;
   padding: 1vmin 4vmin;
-  font-size: 6.9vmin;
+  font-size: 7.5vmin;   /* Namen, gleich gross wie beim 14.1 */
   font-weight: bold;
   position: relative;
   z-index: 5;
@@ -128,7 +128,7 @@ body {
 /* feste Zeilenhoehe: der Stiftknopf bleibt auf gleicher Hoehe, auch wenn ein
    Name verkleinert wurde */
 #p1, #p2 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-           height: 8vmin; line-height: 8vmin; }
+           height: 9vmin; line-height: 9vmin; }   /* 9 statt 8: Unterlaengen bei 7,5vmin */
 
 .player-left { color: red; }
 .player-right { color: blue; }
@@ -649,7 +649,7 @@ button:disabled { opacity: 0.4; }
      Stiftknoepfe auf einer Linie. Gemessen wird der Textknoten (Range), nicht der
      Kasten des <div> - der ist durch .player-box immer volle Haelftenbreite. */
   function namenEinpassen() {
-    const basis = 6.9, min = 4;                          // vmin, basis = Wert aus #players
+    const basis = 7.5, min = 4;                          // vmin, basis = Wert aus #players
     const vmin = Math.min(innerWidth, innerHeight) / 100;
     ["p1", "p2"].forEach(id => {
       const el = document.getElementById(id);
