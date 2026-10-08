@@ -61,7 +61,6 @@ export function TurnierTeil({
   teilnehmer,
   tische,
   heutige,
-  turniere,
   vereinName,
   name
 }: {
@@ -69,15 +68,13 @@ export function TurnierTeil({
   partien: Partie[]; // der gezeigten Begegnungen bzw. des Turniers
   teilnehmer: TurnierTeilnehmer[];
   tische: Tisch[];
-  heutige: Partie[]; // Quelle fuer "Heute beendet"
-  turniere: Turnier[];
+  heutige: Partie[]; // Quelle fuer "Heute beendet" (nur Paarung und Ergebnis)
   vereinName: string;
   name: (id: string) => string;
 }) {
   const heute = ortsTag(new Date().toISOString());
   const lage = spiellage(partien, heute);
   const heuteLage = spiellage(heutige, heute);
-  const turnierName = (id: string | null) => turniere.find((t) => t.id === id)?.name ?? '';
   const ergebnis = (p: Partie) => `${p.ergebnis_a ?? 0}:${p.ergebnis_b ?? 0}`;
   // "A – B", im Doppel "A / B – C / D", ohne Vereinszusatz wie am Tablet
   const paarung = (p: Partie) => paarungText(p, name);
@@ -181,10 +178,7 @@ export function TurnierTeil({
         {heuteLage.heute.map((p) => (
           <div key={p.id} className="zuschauenspiel">
             <span className="hinweis">{p.beendet ? uhrzeit(p.beendet) : ''}</span>
-            <span>
-              {paarung(p)}
-              {p.turnier_id && <small className="hinweis"> · {turnierName(p.turnier_id) || 'Turnier'}</small>}
-            </span>
+            <span>{paarung(p)}</span>
             <strong>{ergebnis(p)}</strong>
           </div>
         ))}

@@ -116,7 +116,6 @@ function LiveOeffentlich() {
           teilnehmer={teilnehmer}
           tische={tische}
           heutige={partien}
-          turniere={turniere}
           vereinName={daten.verein}
           name={name}
         />

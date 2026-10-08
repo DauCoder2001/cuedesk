@@ -281,7 +281,6 @@ export default function Zuschauen({
           teilnehmer={teilnehmer}
           tische={tische}
           heutige={heutige}
-          turniere={turniere}
           vereinName={verein.name}
           name={name}
         />
