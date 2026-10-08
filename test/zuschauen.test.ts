@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { anzeigeWaehlen, chatAn, ligaStand, ortsTag, spiellage, tabellen } from '../src/zuschauen';
+import { anzeigeWaehlen, chatAn, ligaStand, ortsTag, spieltagGesamt, spiellage, tabellen } from '../src/zuschauen';
 import type { Partie, Turnier, TurnierTeilnehmer } from '../src/datenbank.types';
 
 const turnier = (id: string, weiteres: Partial<Turnier> = {}): Turnier => ({
@@ -129,6 +129,42 @@ describe('Liga-Stand', () => {
   test('alle Partien entschieden', () => {
     const p = [partie('x', 'y', 5, 2), partie('x', 'y', 5, 1, { paarung: 2 })];
     expect(ligaStand(b, p, 'Verein').matchpunkte).toEqual([3, 0]);
+  });
+});
+
+describe('Ergebnis des Spieltags', () => {
+  // Wie TEST01: 1. Begegnung 2:6, Doppel 2:2, 3. Begegnung (Bassum Heim) 4:4
+  const liga = (weiteres: Record<string, unknown>) => ({ liga: { eigene: 'B&W Verden 1', gegner: 'Schießbude Bassum', ...weiteres } });
+  const b1 = turnier('b1', { modus: 'liga', einstellungen: liga({ heim: true }) });
+  const d = turnier('d', { modus: 'liga', einstellungen: liga({ heim: true, art: 'doppel' }) });
+  const b3 = turnier('b3', { modus: 'liga', einstellungen: liga({ heim: false }) });
+  const reihe = (tid: string, siegeA: number, siegeB: number) => [
+    ...Array.from({ length: siegeA }, (_, i) => partie('x', 'y', 4, 1, { turnier_id: tid, paarung: i + 1 })),
+    ...Array.from({ length: siegeB }, (_, i) => partie('x', 'y', 1, 4, { turnier_id: tid, paarung: siegeA + i + 1 }))
+  ];
+
+  test('Summe der Begegnungen aus Sicht der Heimmannschaft der 1. Begegnung', () => {
+    // 3. Begegnung: Bassum Heim gewinnt 4 Partien (Seite A), B&W 4 (Seite B)
+    const p = [...reihe('b1', 2, 6), ...reihe('d', 2, 2), ...reihe('b3', 4, 4)];
+    const g = spieltagGesamt([b1, d, b3], p, 'Verein');
+    expect(g).toMatchObject({ links: 'B&W Verden 1', rechts: 'Schießbude Bassum', partiepunkte: [8, 12], matchpunkte: [2, 5], fertig: true });
+    expect(g?.teile.map((t) => [t.titel, t.partiepunkte, t.matchpunkte])).toEqual([
+      ['1. Begegnung', [2, 6], [0, 3]],
+      ['2. Begegnung · Doppel', [2, 2], [1, 1]],
+      ['3. Begegnung', [4, 4], [1, 1]]
+    ]);
+  });
+
+  test('Rueckbegegnung wird umgedreht, offene Begegnung zaehlt noch keine Matchpunkte', () => {
+    // 3. Begegnung: Bassum (Heim, Seite A) gewinnt 3, B&W 1, eine Partie offen
+    const p = [...reihe('b1', 5, 3), ...reihe('b3', 3, 1), partie('x', 'y', null, null, { turnier_id: 'b3', paarung: 9, status: 'geplant' })];
+    const g = spieltagGesamt([b1, b3], p, 'Verein');
+    expect(g?.teile[1]).toMatchObject({ partiepunkte: [1, 3], matchpunkte: null });
+    expect(g).toMatchObject({ partiepunkte: [6, 6], matchpunkte: [3, 0], fertig: false });
+  });
+
+  test('eine Begegnung allein: keine Gesamtuebersicht', () => {
+    expect(spieltagGesamt([b1], [], 'Verein')).toBeNull();
   });
 });
 

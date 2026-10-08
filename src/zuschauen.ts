@@ -6,7 +6,7 @@
 import { rangliste } from './turnier';
 import { gruppenRangliste } from './gruppen';
 import { KO_GRUPPEN, standardGruppenzahl } from './ko';
-import { doppelVon, partnerVon, wertung } from './liga';
+import { doppelVon, istDoppelBegegnung, partnerVon, wertung } from './liga';
 import type { RanglistenPartie } from './turnier';
 import type { Partie, Turnier, TurnierTeilnehmer } from './datenbank.types';
 
@@ -142,6 +142,57 @@ export function ligaStand(begegnung: Turnier, partien: Partie[], vereinName: str
     gast: wirHeim ? gegner : eigene,
     partiepunkte: w.partiepunkte,
     matchpunkte: w.entschieden && partien.some((p) => p.turnier_id === begegnung.id) ? w.matchpunkte : null
+  };
+}
+
+// Ergebnis des ganzen Spieltags (ab zwei Begegnungen): Partiepunkte und
+// Matchpunkte aller Begegnungen zusammengezaehlt, immer aus Sicht der
+// Heimmannschaft der 1. Begegnung (Rueckbegegnung umgedreht). Matchpunkte
+// zaehlen erst, wenn eine Begegnung entschieden ist; vorher Zwischenstand.
+export type SpieltagTeilStand = {
+  id: string;
+  titel: string; // "1. Begegnung", "2. Begegnung · Doppel"
+  status: Turnier['status'];
+  partiepunkte: [number, number];
+  matchpunkte: [number, number] | null;
+};
+export type SpieltagGesamt = {
+  links: string;
+  rechts: string;
+  partiepunkte: [number, number];
+  matchpunkte: [number, number];
+  teile: SpieltagTeilStand[];
+  fertig: boolean; // alle Begegnungen entschieden
+};
+
+export function spieltagGesamt(begegnungen: Turnier[], partien: Partie[], vereinName: string): SpieltagGesamt | null {
+  if (begegnungen.length < 2) return null;
+  const wirHeim = (t: Turnier) => einstellungenVon(t).liga?.heim ?? true;
+  const bezug = ligaStand(begegnungen[0], partien, vereinName);
+  const umdrehen = (x: [number, number]): [number, number] => [x[1], x[0]];
+  const teile = begegnungen.map((b, i): SpieltagTeilStand => {
+    const s = ligaStand(b, partien, vereinName);
+    const gleich = wirHeim(b) === wirHeim(begegnungen[0]);
+    return {
+      id: b.id,
+      titel: `${i + 1}. Begegnung${istDoppelBegegnung(b) ? ' · Doppel' : ''}`,
+      status: b.status,
+      partiepunkte: gleich ? s.partiepunkte : umdrehen(s.partiepunkte),
+      matchpunkte: s.matchpunkte ? (gleich ? s.matchpunkte : umdrehen(s.matchpunkte)) : null
+    };
+  });
+  const summe = (f: (t: SpieltagTeilStand) => [number, number] | null): [number, number] =>
+    teile.reduce<[number, number]>((acc, t) => {
+      const w = f(t);
+      return w ? [acc[0] + w[0], acc[1] + w[1]] : acc;
+    }, [0, 0]);
+  return {
+    links: bezug.heim,
+    rechts: bezug.gast,
+    partiepunkte: summe((t) => t.partiepunkte),
+    matchpunkte: summe((t) => t.matchpunkte),
+    teile,
+    fertig: teile.every((t) => t.matchpunkte !== null)
   };
 }
 

@@ -30,6 +30,9 @@ import ZuruecksetzenDialog from './ZuruecksetzenDialog';
 import { useLaufendeStaende } from '../laufende-staende';
 import { laufenderStand, laufenderStandText } from '../live';
 import { zuruecksetzbar } from '../partie-zuruecksetzen';
+import { spieltagGesamt } from '../zuschauen';
+import { spieltagBerichtDaten, spieltagBerichtDateiname, spieltagBerichtPdf } from '../spieltagbericht';
+import { herunterladen } from '../pdf';
 import type { LigaSpiel } from '../liga';
 import type { TurnierEinstellungen } from './Turniere';
 import type { Mannschaft, MannschaftSpieler, Partie, Person, Turnier, TurnierTeilnehmer } from '../datenbank.types';
@@ -293,6 +296,34 @@ export default function LigaAnsicht({
     };
   }, [turnierId]);
 
+  // Alle Begegnungen des Spieltags mit ihren Partien, fuer "Spieltag gesamt"
+  // und den Spielbericht als PDF. Die angezeigte Begegnung kommt live aus
+  // turnier/partien, die anderen werden hier gelesen.
+  const [spieltag, setSpieltag] = useState<{ turniere: Turnier[]; partien: Partie[] } | null>(null);
+  const teileIds = teile.map((x) => x.id).join(',');
+  useEffect(() => {
+    if (teile.length < 2) {
+      setSpieltag(null);
+      return;
+    }
+    let vorbei = false;
+    void (async () => {
+      const ids = teileIds.split(',');
+      const [t, p] = await Promise.all([
+        supabase.from('turniere').select('*').in('id', ids),
+        supabase.from('partien').select('*').in('turnier_id', ids.filter((id) => id !== turnierId))
+      ]);
+      if (vorbei) return;
+      const geordnet = ids.map((id) => (t.data ?? []).find((x) => x.id === id)).filter((x): x is Turnier => Boolean(x));
+      setSpieltag({ turniere: geordnet, partien: p.data ?? [] });
+    })();
+    return () => {
+      vorbei = true;
+    };
+    // teile.length steckt in teileIds
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [teileIds, turnierId, turnier?.status]);
+
   // Laufender Stand am Tisch neben dem (noch leeren) Ergebnis
   const laufendeStaende = useLaufendeStaende(verein?.id);
   const [tischNummern, setTischNummern] = useState<Map<string, number>>(new Map());
@@ -393,6 +424,31 @@ export default function LigaAnsicht({
     [spiele, partieVon]
   );
   const punkte = useMemo(() => wertung(ergebnisse), [ergebnisse]);
+
+  // Spieltag gesamt (ab zwei Begegnungen), aus Sicht der Heimmannschaft der 1. Begegnung
+  const spieltagTurniere = useMemo(
+    () => (spieltag ? spieltag.turniere.map((x) => (x.id === turnierId && turnier ? turnier : x)) : []),
+    [spieltag, turnier, turnierId]
+  );
+  const spieltagPartien = useMemo(() => (spieltag ? [...spieltag.partien, ...partien] : []), [spieltag, partien]);
+  const gesamt = useMemo(
+    () => (spieltag && verein ? spieltagGesamt(spieltagTurniere, spieltagPartien, verein.name) : null),
+    [spieltag, verein, spieltagTurniere, spieltagPartien]
+  );
+
+  function spielberichtPdf() {
+    if (!turnier || !verein) return;
+    const tag = new Date(`${turnier.datum}T12:00:00`).toLocaleDateString('de-DE', {
+      weekday: 'short',
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+    const kopf = `${tag} · ${verein.name} · erstellt am ${new Date().toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' })}`;
+    const daten = spieltagBerichtDaten(spieltagTurniere, spieltagPartien, verein.name, anzeige, kopf);
+    if (!daten) return;
+    herunterladen(spieltagBerichtPdf(daten), spieltagBerichtDateiname(daten.titel, turnier.datum));
+  }
 
   const eigeneMitglieder = useMemo(
     () =>
@@ -1262,6 +1318,26 @@ export default function LigaAnsicht({
             </small>
             <small className="hinweis">Sieg 3 : 0 · Unentschieden 1 : 1 · Niederlage 0 : 3</small>
           </div>
+          {gesamt && (
+            <div title="Alle Begegnungen des Spieltags zusammengezählt, aus Sicht der Heimmannschaft der 1. Begegnung. Matchpunkte zählen, sobald eine Begegnung entschieden ist.">
+              <span>Spieltag gesamt</span>
+              <strong>
+                {gesamt.partiepunkte[0]} : {gesamt.partiepunkte[1]}
+              </strong>
+              <small>
+                Partiepunkte · Matchpunkte {gesamt.matchpunkte[0]} : {gesamt.matchpunkte[1]}
+                {gesamt.fertig ? ' · endgültig' : ' · Zwischenstand'}
+              </small>
+              <small className="hinweis">
+                {gesamt.links} gegen {gesamt.rechts}
+              </small>
+              <span>
+                <button type="button" className="klein" title="Alle Begegnungen mit Aufstellung und Ergebnis als PDF, zum Drucken oder Weiterschicken" onClick={spielberichtPdf}>
+                  Spielbericht als PDF
+                </button>
+              </span>
+            </div>
+          )}
         </div>
         {/* Hinweise zur Aufstellung nur, solange die Begegnung offen ist */}
         {turnier.status !== 'beendet' && fehlerAufstellung.length > 0 && (

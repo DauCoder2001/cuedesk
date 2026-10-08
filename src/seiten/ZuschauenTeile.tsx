@@ -1,10 +1,47 @@
 import { KEIN_LIVE_TEXT, kachel, liveAktiv } from '../live';
 import { rundeText } from '../archiv';
-import { ligaStand, ortsTag, paarungText, spiellage, tabellen } from '../zuschauen';
+import { ligaStand, ortsTag, paarungText, spieltagGesamt, spiellage, tabellen } from '../zuschauen';
 import { istDoppelBegegnung } from '../liga';
 import { Tischkachel } from './Live';
-import type { Anzeige } from '../zuschauen';
+import type { Anzeige, SpieltagGesamt } from '../zuschauen';
 import type { Partie, Tisch, Turnier, TurnierTeilnehmer } from '../datenbank.types';
+
+// Ergebnis des ganzen Liga-Spieltags: Gesamtstand und je Begegnung eine Zeile,
+// alles aus Sicht der Heimmannschaft der 1. Begegnung
+function SpieltagBlock({ gesamt }: { gesamt: SpieltagGesamt }) {
+  const zustand = (s: string) => (s === 'beendet' ? ' ✓' : s === 'laeuft' ? ' · läuft' : '');
+  return (
+    <div className="zuschauenblock">
+      <h3>{gesamt.fertig ? 'Ergebnis des Spieltags' : 'Spieltag · Zwischenstand'}</h3>
+      <div className="zuschauenliga">
+        <span>{gesamt.links}</span>
+        <strong>
+          {gesamt.partiepunkte[0]} : {gesamt.partiepunkte[1]}
+        </strong>
+        <span>{gesamt.rechts}</span>
+      </div>
+      <p className="hinweis zuschauenmitte">
+        Partiepunkte · Matchpunkte {gesamt.matchpunkte[0]} : {gesamt.matchpunkte[1]}
+      </p>
+      <table className="spieltagteile">
+        <tbody>
+          {gesamt.teile.map((t) => (
+            <tr key={t.id}>
+              <td>
+                {t.titel}
+                {zustand(t.status)}
+              </td>
+              <td className="teilstand">
+                {t.partiepunkte[0]} : {t.partiepunkte[1]}
+              </td>
+              <td className="teilmp hinweis">{t.matchpunkte ? `${t.matchpunkte[0]} : ${t.matchpunkte[1]}` : ''}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
 
 // Die beiden Reiter "Tische" und "Turnier" der Zuschauerseite. Genutzt von
 // der Mitgliederseite (Zuschauen.tsx) und vom oeffentlichen Live-Link
@@ -79,6 +116,7 @@ export function TurnierTeil({
   // "A – B", im Doppel "A / B – C / D", ohne Vereinszusatz wie am Tablet
   const paarung = (p: Partie) => paarungText(p, name);
   const tischNummer = (id: string | null) => tische.find((t) => t.id === id)?.nummer;
+  const gesamt = anzeige?.turnier.modus === 'liga' ? spieltagGesamt(anzeige.begegnungen, partien, vereinName) : null;
 
   return (
     <section>
@@ -87,7 +125,9 @@ export function TurnierTeil({
       ) : (
         <>
           <h2>{anzeige.begegnungen[0].name}</h2>
-          {anzeige.turnier.modus === 'liga'
+          {anzeige.turnier.modus === 'liga' && gesamt ? (
+            <SpieltagBlock gesamt={gesamt} />
+          ) : anzeige.turnier.modus === 'liga'
             ? anzeige.begegnungen.map((b, i) => {
                 const s = ligaStand(b, partien, vereinName);
                 return (

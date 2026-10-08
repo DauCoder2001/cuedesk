@@ -550,6 +550,12 @@ button.aktivmarke { color: var(--gut); border-color: var(--gut); }
 .zuschauenliga { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 10px; }
 .zuschauenliga > span:last-child { text-align: right; }
 .zuschauenliga strong { font-size: 24px; white-space: nowrap; text-align: center; }
+.zuschauenmitte { text-align: center; }
+/* Ergebnis des Spieltags: je Begegnung Partie- und Matchpunkte */
+.spieltagteile { width: 100%; border-collapse: collapse; font-size: 15px; }
+.spieltagteile td { padding: 5px 2px; border-top: 1px solid var(--rand); }
+.spieltagteile td.teilstand { text-align: center; white-space: nowrap; font-weight: 600; }
+.spieltagteile td.teilmp { text-align: right; white-space: nowrap; }
 .zuschauenchat .chatbeitrag { border: 1px solid var(--rand); border-radius: var(--radius); padding: 6px 10px; margin-bottom: 8px; }
 .zuschauenchat .chatbeitrag.eigener { background: var(--akzent-hell); }
 .chatkopf { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 14px; color: var(--text-leise); }
