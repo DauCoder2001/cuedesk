@@ -111,6 +111,7 @@
       <span><b style="color:#1133cc;">V</b> Verschossen</span>
       <span><b>HS</b> = Höchstserie <span class="pz-hs">(gelb markiert)</span></span>
       <span><b style="color:#1f3b73;">▶</b> laufende Aufnahme</span>
+      <span><b>*</b> Rack mit Null-Kugel, alle 15 neu</span>
       <span id="log-time"></span>
     </div>
   </div>
@@ -189,6 +190,12 @@
   }
   setInterval(zeigeSpielzeit, 30000);   // Minuten-Koernung, 30 s genuegen
 
+  // Punkte-Spalte: Slash-Notation je Rack, Racks mit Null-Kugel (alle 15 neu) mit Stern.
+  function segText(segs, voll, einzeln) {
+    if (!segs || segs.length < 2) return einzeln;
+    return segs.map((v, i) => v + ((voll || []).includes(i) ? "*" : "")).join("/");
+  }
+
   function render(s) {
     letzterStand = s;
     zeigeSpielzeit();
@@ -226,7 +233,7 @@
       const lp = s.turn;
       const run = num(lp === 1 ? s.run1 : s.run2);
       const rp = Array.isArray(s.rackPts) ? s.rackPts : [];
-      const live = { segs: rp.concat(run - rp.reduce((a, b) => a + b, 0)), total: num(lp === 1 ? s.s1 : s.s2) };
+      const live = { segs: rp.concat(run - rp.reduce((a, b) => a + b, 0)), voll: Array.isArray(s.rackVoll) ? s.rackVoll : [], total: num(lp === 1 ? s.s1 : s.s2) };
       const ln = (lp === 1 ? c1 : c2) + 1;
       if (lp === 1) rowAt(ln).live1 = live; else rowAt(ln).live2 = live;
     }
@@ -240,7 +247,7 @@
         const fcls = (e.kind === "foul3") ? "pz-f3" : ((e.kind === "foul" || e.kind === "break") ? "pz-f" : "");
         const pktcls = isFoul ? fcls : "";
         const hs = (e.pkt === high && e.pkt > 0) ? " pz-hs" : "";
-        const val = (e.segs && e.segs.length > 1) ? e.segs.join("/") : e.pkt;
+        const val = segText(e.segs, e.voll, e.pkt);
         // F-Spalte: S = Sicherheit (gruen), V = verschossen (blau), sonst das Foul-Zeichen (rot).
         let markTxt = e.mark || "";
         let markCls = fcls;
@@ -251,7 +258,7 @@
                '<td class="pz-tot">' + e.total + '</td>';
       }
       if (live) {
-        const lval = (live.segs && live.segs.length > 1) ? live.segs.join("/") : live.segs[0];
+        const lval = segText(live.segs, live.voll, live.segs[0]);
         return '<td class="' + (bl + " pz-livecell pz-liveno").trim() + '">▶</td>' +
                '<td class="pz-livecell">' + lval + '</td>' +
                '<td class="pz-tot pz-livecell">' + live.total + '</td>';

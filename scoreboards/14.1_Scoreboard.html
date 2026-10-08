@@ -322,6 +322,9 @@
       #fdfdf2 82%, #fdfdf2 100%);
   }
 
+  /* Null-Kugel: "kein Ball mehr auf dem Tisch" (alle 15 neu aufbauen).
+     Magenta kommt im Kugelsatz nicht vor; links abgesetzt von den Restkugeln. */
+  .b0  { --c: #e0218a; margin-right: calc(var(--bs) * 0.6); }
   /* Poolfarben (an echte Kugelfarben angelehnt) */
   .b1  { --c: #f6c411; }
   .b2  { --c: #1958a8; }
@@ -706,6 +709,7 @@
       <span><b style="color:#1133cc;">V</b> Verschossen</span>
       <span><b>HS</b> = Höchstserie <span class="pz-hs">(gelb markiert)</span></span>
       <span><b style="color:#1f3b73;">▶</b> laufende Aufnahme</span>
+      <span><b>*</b> Rack mit Null-Kugel, alle 15 neu</span>
       <span id="log-time"></span>
     </div>
   </div>
@@ -721,6 +725,7 @@
     <div id="help-body">
       <h3>Punkte zählen</h3>
       <p>Tippe die Kugel mit der Zahl, <b>wie viele Kugeln noch auf dem Tisch liegen</b>. Beispiel: vom vollen Tisch (15) auf die <b>10</b> getippt = <b>5 Punkte</b>. In der selben Aufnahme kannst du mehrmals tippen.</p>
+      <p>Liegen nur noch wenige Kugeln, erscheint links die pinke <b>Null-Kugel</b>: Tippe sie, wenn mit einem Stoß <b>alle restlichen Kugeln</b> gefallen sind – auch die 15. Kugel. Jede Kugel zählt einen Punkt, danach werden <b>alle 15 Kugeln</b> neu aufgebaut; im Protokoll steht dieses Rack mit <b>*</b>.</p>
       <h3>Aufnahme beenden</h3>
       <ul>
         <li><b>➜ Verschossen</b> – regelgerechter Fehlversuch ohne Strafe; der Gegner kommt an die Aufnahme.</li>
@@ -922,6 +927,8 @@
     run1: 0,
     run2: 0,
     rackPts: [],          // gelochte Baelle je Rack der laufenden Aufnahme (Slash-Notation)
+    rackVoll: [],         // Indizes in rackPts, deren Rack mit der Null-Kugel endete (alle 15 neu)
+    alle15: false,        // Hinweis "Alle 15 Kugeln aufbauen" bis zur naechsten Aktion
     high1: 0,
     high2: 0,
     inn1: 0,
@@ -1102,6 +1109,7 @@
      =========================== */
   function pushHistory() {
     history.push(JSON.stringify(state));
+    state.alle15 = false;   // jede neue Aktion loescht den Aufbau-Hinweis (Undo bringt ihn zurueck)
   }
 
   // Speichert die Daten nun sofort in der Cloud (mit eigener Geraete-Kennung)
@@ -1133,7 +1141,7 @@
       logEntry(pEnd, runEnd, 0, "", "end");            // leere F-Spalte
       flushRebuilds();
       if (pEnd === 1) state.inn1++; else state.inn2++; // kein nextTurnInternal: kein Zugwechsel
-      state.run1 = 0; state.run2 = 0; state.rackPts = [];
+      state.run1 = 0; state.run2 = 0; state.rackPts = []; state.rackVoll = [];
     }
 
     state.locked = true;
@@ -1165,7 +1173,9 @@
     else         { if (pkt > state.high2) state.high2 = pkt; }
     const rp = state.rackPts || [];
     const segs = rp.concat(balls - rp.reduce((a, b) => a + b, 0));   // Punkte je Rack (letztes = offener Rest)
-    state.log.push({ t: "inn", p: p, balls: balls, pkt: pkt, total: total, mark: mark || "", kind: kind || "run", segs: segs, z: Date.now() });
+    const eintrag = { t: "inn", p: p, balls: balls, pkt: pkt, total: total, mark: mark || "", kind: kind || "run", segs: segs, z: Date.now() };
+    if (state.rackVoll && state.rackVoll.length) eintrag.voll = state.rackVoll.slice();   // Racks mit Null-Kugel (Stern)
+    state.log.push(eintrag);
   }
 
   // Haengt faellige Rack-Trennzeilen NACH der ausloesenden Aufnahme an.
@@ -1196,7 +1206,7 @@
     if (state.turn === 1) state.inn1++; else state.inn2++;
     state.run1 = 0;
     state.run2 = 0;
-    state.rackPts = [];
+    state.rackPts = []; state.rackVoll = [];
     state.turn = (state.turn === 1 ? 2 : 1);
   }
 
@@ -1218,11 +1228,16 @@
     // dadurch entfaellt der Rack-Neuaufbau unten von selbst (Spiel ist ohnehin aus).
     state.ballsLeft -= gained;   // legal versenkte Kugel bricht die Foulserie (4.11) -> Warnung weg
     if (state.ballsLeft <= 1) {            // nur der Break-Ball liegt noch -> die 14 wieder aufbauen (4.4/4.2)
+      // Null-Kugel: auch der Break-Ball ist gefallen -> alle 15 neu aufbauen.
+      // Fuer die Zaehlung gleich (wieder 15 auf dem Tisch), nur Hinweis und Protokoll-Stern.
+      const voll = state.ballsLeft === 0;
       state.ballsLeft = 15;
       state.pendingRebuilds++;
       if (!state.rackPts) state.rackPts = [];
+      if (!state.rackVoll) state.rackVoll = [];
       const runNow = (state.turn === 1 ? state.run1 : state.run2);
       state.rackPts.push(runNow - state.rackPts.reduce((a, b) => a + b, 0));   // abgeraeumtes Rack schliessen (Slash-Segment)
+      if (voll) { state.rackVoll.push(state.rackPts.length - 1); state.alle15 = true; }
     }
     save();
   }
@@ -1262,7 +1277,7 @@
       rebuildFull();
       flushRebuilds();
       if (p === 1) state.inn1++; else state.inn2++;     // Aufnahme des Foulenden endet
-      state.run1 = 0; state.run2 = 0; state.rackPts = [];
+      state.run1 = 0; state.run2 = 0; state.rackPts = []; state.rackVoll = [];
       // 4.11: der Verursacher stoesst neu an - nicht zwingend Rot
       state.turn = p; state.phase = "break"; state.breaker = p;
     } else {
@@ -1314,7 +1329,7 @@
     } else {
       flushRebuilds();
       if (p === 1) state.inn1++; else state.inn2++;   // Aufnahme des Anstossenden endet
-      state.run1 = 0; state.run2 = 0; state.rackPts = [];
+      state.run1 = 0; state.run2 = 0; state.rackPts = []; state.rackVoll = [];
       // Wiederholung durch denselben Spieler, der das Eroeffnungsfoul begangen hat
       state.turn = p; state.breaker = p; state.phase = "break";
     }
@@ -1429,7 +1444,7 @@
     state.consec2 = 0;
     state.turn = 1;
     state.ballsLeft = 15;     // Bälle wieder vollständig aufbauen
-    state.rackPts = [];       // aus der Offline-Fassung: sonst schleppt das neue Spiel Rack-Reste mit
+    state.rackPts = []; state.rackVoll = [];       // aus der Offline-Fassung: sonst schleppt das neue Spiel Rack-Reste mit
     history = [];             // aus der Offline-Fassung: Rueckgaengig darf nicht ins alte Spiel springen
     state.rackNo = 1;
     state.pendingRebuilds = 0;
@@ -1494,7 +1509,9 @@
     const container = document.getElementById("balls");
     container.innerHTML = "";
 
-    for (let i = 1; i <= 15; i++) {
+    // Null-Kugel ab 4 Restkugeln: "alle Kugeln gefallen, auch die 15." (gilt ab 2 Kugeln)
+    const mitNull = !state.locked && state.ballsLeft <= 4;
+    for (let i = mitNull ? 0 : 1; i <= 15; i++) {
       if (i > state.ballsLeft) continue;
 
       const b = document.createElement("button");
@@ -1583,6 +1600,9 @@
     } else if (inBreak) {
       status.textContent = "🎱 Eröffnungsstoß: " + activeName;
       status.style.color = (state.turn === 1 ? "#cc0000" : "#1133cc");
+    } else if (state.alle15) {
+      status.textContent = "🎱 Alle 15 Kugeln aufbauen – " + activeName + " bleibt an der Aufnahme";
+      status.style.color = "#c2186f";
     } else {
       status.textContent = "🎱 An der Aufnahme: " + activeName;
       status.style.color = (state.turn === 1 ? "#cc0000" : "#1133cc");
@@ -1671,6 +1691,12 @@
   // Aufnahmen paaren: n-te Aufnahme von Rot + n-te von Blau in EINE Zeile "Aufn. n".
   // Die laufende (noch nicht beendete) Aufnahme kommt in die Zeile des Spielers am Tisch.
   // Quelle fuer das grosse Protokoll UND das Mini-Protokoll.
+  // Punkte-Spalte: Slash-Notation je Rack, Racks mit Null-Kugel (alle 15 neu) mit Stern.
+  function segText(segs, voll, einzeln) {
+    if (!segs || segs.length < 2) return einzeln;
+    return segs.map((v, i) => v + ((voll || []).includes(i) ? "*" : "")).join("/");
+  }
+
   function pairInnings() {
     const paired = [];
     const rowAt = (n) => paired[n] || (paired[n] = { n: n, p1: null, p2: null, live1: null, live2: null });
@@ -1683,7 +1709,7 @@
       const lp = state.turn;
       const run = (lp === 1 ? state.run1 : state.run2);
       const rp = state.rackPts || [];
-      const live = { segs: rp.concat(run - rp.reduce((a, b) => a + b, 0)), total: (lp === 1 ? state.s1 : state.s2) };
+      const live = { segs: rp.concat(run - rp.reduce((a, b) => a + b, 0)), voll: state.rackVoll || [], total: (lp === 1 ? state.s1 : state.s2) };
       const ln = (lp === 1 ? c1 : c2) + 1;
       if (lp === 1) rowAt(ln).live1 = live; else rowAt(ln).live2 = live;
     }
@@ -1698,11 +1724,11 @@
       const cls = (e.kind === "foul3") ? "pz-f3" : isFoul ? "pz-f"
                 : (e.kind === "safety") ? "pz-s" : (e.kind === "run") ? "pz-v" : "";
       const mark = (e.kind === "safety") ? "S" : (e.kind === "run") ? "V" : (e.mark || "");
-      const val = (e.segs && e.segs.length > 1) ? e.segs.join("/") : e.pkt;
+      const val = segText(e.segs, e.voll, e.pkt);
       return '<td class="' + cls + '">' + (mark ? mark + " " : "") + val + '</td>';
     }
     if (live) {
-      const v = (live.segs && live.segs.length > 1) ? live.segs.join("/") : live.segs[0];
+      const v = segText(live.segs, live.voll, live.segs[0]);
       return '<td class="ml-live">▶ ' + v + '</td>';
     }
     return '<td></td>';
@@ -1761,7 +1787,7 @@
         const fcls = (e.kind === "foul3") ? "pz-f3" : ((e.kind === "foul" || e.kind === "break") ? "pz-f" : "");
         const pktcls = isFoul ? fcls : "";
         const hs = (e.pkt === high && e.pkt > 0) ? " pz-hs" : "";
-        const val = (e.segs && e.segs.length > 1) ? e.segs.join("/") : e.pkt;
+        const val = segText(e.segs, e.voll, e.pkt);
         // F-Spalte: S = Sicherheit (gruen), V = verschossen (blau), sonst das Foul-Zeichen (rot).
         let markTxt = e.mark || "";
         let markCls = fcls;
@@ -1772,7 +1798,7 @@
                '<td class="pz-tot">' + e.total + '</td>';
       }
       if (live) {
-        const lval = (live.segs && live.segs.length > 1) ? live.segs.join("/") : live.segs[0];
+        const lval = segText(live.segs, live.voll, live.segs[0]);
         return '<td class="' + (bl + " pz-livecell pz-liveno").trim() + '">▶</td>' +
                '<td class="pz-livecell">' + lval + '</td>' +
                '<td class="pz-tot pz-livecell">' + live.total + '</td>';
@@ -1855,7 +1881,7 @@
      TURNIER-AWARENESS + ECHTZEIT-LISTENER (14.1)
      =========================== */
   function freshState141() {
-    return { player1:"Spieler 1", player2:"Spieler 2", player1Id:null, player2Id:null, s1:0, s2:0, run1:0, run2:0, rackPts:[],
+    return { player1:"Spieler 1", player2:"Spieler 2", player1Id:null, player2Id:null, s1:0, s2:0, run1:0, run2:0, rackPts:[], rackVoll:[], alle15:false,
              high1:0, high2:0, inn1:0, inn2:0, consec1:0, consec2:0, target:60, targetInn:20, turn:1,
              ballsLeft:15, rackNo:1, pendingRebuilds:0, phase:"break", breaker:1,
              locked:false, winnerText:"", log:[], gameType:"14.1",
