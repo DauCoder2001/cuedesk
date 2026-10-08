@@ -15,6 +15,12 @@ Auf der Seite **Spieler** führt ihr alle Spieler des Vereins: Mitglieder, Gäst
 
 Der **Rating-Startwert** hilft bei neuen Spielern, die schon gut spielen; sonst beginnen sie beim Vereinsschnitt.
 
+## Namensanzeige
+
+- Auf öffentlichen Seiten, etwa dem **öffentlichen Live-Link** eines Turniers, steht ein Spieler nur mit Einwilligung als „Vorname N.“, sonst mit seinem **Kürzel**. Ist das Feld Kürzel leer, bilden es die Anfangsbuchstaben von Vor- und Nachname.
+- Liegt die Einwilligung schriftlich vor, unter **Einwilligungen** auf **Schriftliche Einwilligung erfassen** klicken – auch bei Gästen anderer Vereine. Den Nachweis bewahrt der Verein auf. Mitglieder mit Konto können unter **Mein Konto** selbst zustimmen.
+- Steht dort „übernommen, ohne Nachweis“, stammt der Haken aus der Zeit vor den Einwilligungen. Er gilt auf öffentlichen Seiten erst, wenn ihr die Einwilligung erfasst; sonst den Widerruf erfassen.
+
 ## Minderjährige
 
 - Den Haken **Minderjährig** setzen.

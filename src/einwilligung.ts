@@ -9,11 +9,12 @@ import type { Einwilligung, EinwilligungArt, EinwilligungWeg } from './datenbank
 // die Fassung, der jemand selbst zugestimmt hat.
 export const NAMENSANZEIGE_FASSUNG = 'N1 vom 29.09.2026';
 
-// Die Namensanzeige betrifft nur eine oeffentliche Seite. Die gibt es nicht
-// (Entscheidung 30.09.2026), deshalb ist sie in "Mein Konto" und auf der
-// Seite "Spieler" ausgeblendet. Tabelle und Verlauf bleiben; true blendet
-// alles wieder ein. Die Einwilligung fuer Konten Minderjaehriger gilt weiter.
-export const NAMENSANZEIGE_AKTIV = false;
+// Die Namensanzeige betrifft die oeffentlichen Seiten. Vom 30.09.2026 an gab
+// es keine und sie war ausgeblendet; seit dem oeffentlichen Live-Link
+// (Stufe 32, 08.10.2026) wieder an: in "Mein Konto" und auf der Seite
+// "Spieler". Der Link zeigt den Namen nur mit Nachweis (selbst, schriftlich,
+// Erziehungsberechtigte), alte uebernommene Haken gelten dort nicht.
+export const NAMENSANZEIGE_AKTIV = true;
 export const NAMENSANZEIGE_TEXT =
   'Ich bin einverstanden, dass mein Name in öffentlichen Ansichten von CueDesk erscheint, zum Beispiel auf einer ' +
   'Zuschauerseite oder bei Ergebnissen und Ranglisten, die ohne Anmeldung sichtbar sind. Ohne Einwilligung steht dort ' +
