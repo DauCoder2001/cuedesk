@@ -156,6 +156,10 @@
 
   /* Name: konstantes Padding, damit die Aktiv-Markierung die Hoehe nicht aendert */
   #p1, #p2 { padding: 0.3vmin 1vmin; }        /* Hoehe konstant halten */
+  /* Namen 25 % groesser als der Block (7,5 statt 6 vmin). Zu lange Namen
+     verkleinert namenEinpassen() bis auf 6 vmin, erst danach brechen sie um. */
+  #p1, #p2 { font-size: 7.5vmin; white-space: nowrap; }
+  #p1.umbruch, #p2.umbruch { white-space: normal; }
   .player-hl.active { background: var(--active); }
 
   /* Name + Stift in einer Zeile */
@@ -1512,9 +1516,40 @@
     return { text: "", warn: false };
   }
 
+  // Spielernamen in ihre Haelfte einpassen: Grundgroesse 7,5 vmin, bei zu
+  // langen Namen kleiner bis 6 vmin (80 %). Reicht auch das nicht, darf der
+  // Name umbrechen wie frueher.
+  let namenSchluessel = "";
+  function namenEinpassen() {
+    const schluessel = state.player1 + "|" + state.player2 + "|" + innerWidth + "x" + innerHeight;
+    if (schluessel === namenSchluessel) return;
+    namenSchluessel = schluessel;
+    for (const nr of [1, 2]) {
+      const name = document.getElementById("p" + nr);
+      const hl = document.getElementById("hl" + nr);
+      const knopf = document.getElementById("editP" + nr + "Btn");
+      const box = hl.parentElement;
+      name.style.fontSize = "";
+      name.classList.remove("umbruch");
+      const hlStil = getComputedStyle(hl);
+      const zeile = getComputedStyle(name.parentElement);
+      const platz = box.clientWidth
+        - parseFloat(hlStil.paddingLeft) - parseFloat(hlStil.paddingRight)
+        - knopf.offsetWidth - (parseFloat(zeile.columnGap) || 0);
+      const breite = name.scrollWidth;
+      if (breite <= platz) continue;
+      const basis = parseFloat(getComputedStyle(name).fontSize);
+      const groesse = Math.max(basis * 0.8, Math.floor(basis * platz / breite));
+      name.style.fontSize = groesse + "px";
+      if (name.scrollWidth > platz) name.classList.add("umbruch");
+    }
+  }
+  addEventListener("resize", () => namenEinpassen());
+
   function render() {
     document.getElementById("p1").textContent = state.player1;
     document.getElementById("p2").textContent = state.player2;
+    namenEinpassen();
     document.getElementById("s1").textContent = state.s1;
     document.getElementById("s2").textContent = state.s2;
     document.getElementById("run1").textContent = state.run1;
