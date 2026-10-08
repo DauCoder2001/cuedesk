@@ -21,6 +21,9 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { leisteZeigen } from './hinweisleiste';
 import { VERALTET_NACH_MS } from '../../src/live';
+import { spieltagGesamt } from '../../src/zuschauen';
+import type { SpieltagGesamt } from '../../src/zuschauen';
+import type { Partie, Turnier } from '../../src/datenbank.types';
 
 type Beobachter = (schnappschuss: { val: () => unknown }) => void;
 type Verweis = { pfad: string };
@@ -420,6 +423,7 @@ export function onValue(verweis: Verweis, cb: Beobachter): () => void {
     verweis.pfad === 'tournament/active' ||
     verweis.pfad === 'tournament/active/status' ||
     verweis.pfad === 'tournament/tvView' ||
+    verweis.pfad === 'tournament/spieltag' ||
     verweis.pfad === 'tournament_archive'
   ) {
     if (verbindung) void turnierBeobachten(verweis.pfad);
@@ -632,6 +636,7 @@ async function archivZustand(a: NonNullable<typeof archiv>): Promise<unknown> {
 let aktuellesTurnier: TabletTurnier | null = null;
 let tvAnsicht: string | null = null; // tournament/tvView
 let tvArchiv: Record<string, TvErgebnis> | null = null; // tournament_archive
+let tvSpieltag: TvSpieltag | null = null; // tournament/spieltag (Liga, TV "Spieltag-Ergebnis")
 let turnierLaeuftSchon = false;
 let turnierZeitgeber: number | null = null;
 
@@ -654,6 +659,7 @@ async function turnierLaden(): Promise<void> {
     aktuellesTurnier = null;
     tvAnsicht = null;
     tvArchiv = null;
+    tvSpieltag = null;
     return;
   }
 
@@ -726,6 +732,36 @@ async function turnierLaden(): Promise<void> {
       name
     )
   };
+  tvSpieltag = t.modus === 'liga' ? await spieltagLaden(v, t) : null;
+}
+
+// Liga-Spieltag fuer die TV-Anzeige "Spieltag-Ergebnis": alle Begegnungen
+// (1., Doppel, 2.) mit Gesamtstand, gerechnet wie auf Zuschauen
+// (src/zuschauen.ts). Ab zwei Begegnungen, sonst null.
+export type TvSpieltag = { titel: string; datum: string; gesamt: SpieltagGesamt };
+
+async function spieltagLaden(v: Verbindung, t: { id: string; einstellungen: unknown }): Promise<TvSpieltag | null> {
+  type Liga = { art?: string; haupt?: string; begegnung?: number; partner?: string; doppel?: string };
+  const ligaVon = (e: unknown) => ((e ?? {}) as { liga?: Liga }).liga ?? {};
+  const liga = ligaVon(t.einstellungen);
+  const ersteId = liga.art === 'doppel' ? liga.haupt : (liga.begegnung ?? 1) === 1 ? t.id : liga.partner;
+  if (!ersteId) return null;
+  const { data: erste } = await v.supabase.from('turniere').select('*').eq('id', ersteId).maybeSingle();
+  if (!erste) return null;
+  const el = ligaVon(erste.einstellungen);
+  const ids = [el.doppel, el.partner].filter((x): x is string => Boolean(x));
+  const andere: Turnier[] = ids.length ? ((await v.supabase.from('turniere').select('*').in('id', ids)).data ?? []) : [];
+  // Nur Verweise, die zurueckzeigen (wie spieltagTeileLaden in LigaAnsicht.tsx)
+  const doppel = andere.find((x) => x.id === el.doppel && ligaVon(x.einstellungen).haupt === erste.id);
+  const zweite = andere.find((x) => x.id === el.partner && ligaVon(x.einstellungen).partner === erste.id);
+  const begegnungen = [erste as Turnier, ...(doppel ? [doppel] : []), ...(zweite ? [zweite] : [])];
+  if (begegnungen.length < 2) return null;
+  const { data: partien } = await v.supabase
+    .from('partien')
+    .select('*')
+    .in('turnier_id', begegnungen.map((b) => b.id));
+  const gesamt = spieltagGesamt(begegnungen, (partien ?? []) as Partie[], '');
+  return gesamt ? { titel: (erste as Turnier).name, datum: (erste as Turnier).datum, gesamt } : null;
 }
 
 async function turnierAuffrischen() {
@@ -734,6 +770,7 @@ async function turnierAuffrischen() {
   melden('tournament/active/status', aktuellesTurnier ? 'running' : null);
   melden('tournament/tvView', tvAnsicht);
   melden('tournament_archive', tvArchiv);
+  melden('tournament/spieltag', tvSpieltag);
 }
 
 // Welcher Wert gehoert zu welchem Turnier-Pfad
@@ -741,6 +778,7 @@ function turnierWert(pfad: string): unknown {
   if (pfad === 'tournament/active') return aktuellesTurnier;
   if (pfad === 'tournament/active/status') return aktuellesTurnier ? 'running' : null;
   if (pfad === 'tournament/tvView') return tvAnsicht;
+  if (pfad === 'tournament/spieltag') return tvSpieltag;
   return tvArchiv;
 }
 

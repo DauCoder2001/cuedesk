@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CueDesk – Spieltag-Ergebnis</title>
+  <link rel="icon" type="image/svg+xml" href="./img/favicon.svg">
+  <!-- Liga-Spieltag am Fernseher ("TV zeigt: Spieltag-Ergebnis"): Gesamtstand
+       aller Begegnungen und je Begegnung eine Zeile. Gerechnet wie auf der
+       Zuschauerseite (src/zuschauen.ts, spieltagGesamt), geliefert von der
+       Anbindung unter tournament/spieltag. Stil wie tv-Turnier-Ergebnis. -->
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; background: #111; color: #fff; margin: 0; height: 100vh; overflow: hidden; }
+    /* Auto-Fit: der Inhalt in #tv-stage wird per JS passend auf den Bildschirm skaliert */
+    #tv-viewport { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }
+    #tv-stage { width: 100vw; padding: 4vh 6vw; transform-origin: center center; }
+    .tv-title { text-align: center; color: #888; font-size: 3.5vh; margin: 0 0 1vh; font-weight: bold; text-transform: uppercase; letter-spacing: 2px; }
+    .tv-title .highlight { color: #38bdf8; }
+    .tv-sub { text-align: center; color: #aaa; font-size: 2.6vh; margin-bottom: 5vh; }
+    .gesamt { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 4vw; }
+    .gesamt .name { font-size: 5vh; font-weight: bold; }
+    .gesamt .links { text-align: right; }
+    .gesamt .zahl { font-size: 13vh; font-weight: bold; color: #38bdf8; white-space: nowrap; line-height: 1; }
+    .mp { text-align: center; color: #ccc; font-size: 3vh; margin-top: 2vh; }
+    .mp b { color: #fff; }
+    .sieger { text-align: center; color: #facc15; font-size: 3.4vh; font-weight: bold; margin: 1.5vh 0 6vh; }
+    .sieger.offen { color: #aaa; }
+    table { width: 100%; border-collapse: collapse; }
+    th { background: #1f3b73; color: #fff; font-size: 2vh; text-transform: uppercase; letter-spacing: 1px; padding: 1.2vh 2vw; text-align: center; }
+    th.left, td.left { text-align: left; }
+    td { padding: 2vh 2vw; font-size: 3.4vh; border-bottom: 1px solid #2a2a2a; text-align: center; }
+    tr:nth-child(even) td { background: #191919; }
+    td.pp { font-weight: bold; color: #38bdf8; width: 22%; }
+    td.mpz { color: #ccc; width: 22%; }
+    td .lauf { color: #22c55e; font-size: 2.4vh; margin-left: 1vw; }
+    .empty { text-align: center; color: #666; font-size: 4vh; margin-top: 18vh; }
+  </style>
+</head>
+<body>
+
+  <div id="tv-viewport"><div id="tv-stage">
+    <div class="tv-title">🏆 Ergebnis des <span class="highlight">Spieltags</span></div>
+    <div class="tv-sub" id="sub"></div>
+    <div id="content"></div>
+    <div class="empty" id="empty" style="display:none;">Noch kein Spieltag-Ergebnis vorhanden.</div>
+  </div></div>
+
+  <script type="module">
+    import { db, ref, onValue, starten } from "./js/anbindung.ts";
+    import { keepScreenAwake } from "./js/wake-lock.js";
+    import { startTvAutofit } from "./js/tv-autofit.js";
+
+    await starten();
+
+    // Namen kommen aus CueDesk - nie als HTML einsetzen
+    const esc = (t) => String(t == null ? '' : t).replace(/[&<>"]/g, (c) =>
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+    keepScreenAwake();   // Bildschirm im Kiosk-Betrieb anhalten (Anzeige ohne Interaktion)
+
+    // Auto-Fit + Overscan wie auf den anderen TV-Seiten
+    let overscanPct = 3;
+    const refit = startTvAutofit(document.getElementById('tv-stage'), () => overscanPct);
+    onValue(ref(db, 'system/tvSettings'), (snap) => {
+      const p = snap.val() && Number(snap.val().overscanPct);
+      overscanPct = Number.isFinite(p) ? p : 3;
+      refit();
+    });
+
+    // Umschaltung am Turnierbildschirm ("TV zeigt")
+    const PAGE_FOR = { auslosung: 'tv-Auslosung.html', live: 'tv.html', results: 'tv-Turnier-Ergebnis.html', spieltag: 'tv-Spieltag.html' };
+    onValue(ref(db, 'tournament/tvView'), (snap) => {
+      const target = PAGE_FOR[snap.val()] || 'tv.html';
+      if (target !== 'tv-Spieltag.html') window.location.href = target;
+    });
+
+    const subEl = document.getElementById('sub');
+    const contentEl = document.getElementById('content');
+    const emptyEl = document.getElementById('empty');
+    const paar = (x) => (x ? x[0] + ' : ' + x[1] : '–');
+
+    onValue(ref(db, 'tournament/spieltag'), (snap) => {
+      const s = snap.val();
+      if (!s || !s.gesamt) {
+        subEl.textContent = '';
+        contentEl.innerHTML = '';
+        emptyEl.style.display = 'block';
+        refit();
+        return;
+      }
+      emptyEl.style.display = 'none';
+      const g = s.gesamt;
+      const datum = s.datum ? new Date(s.datum + 'T12:00:00').toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' }) : '';
+      subEl.textContent = [s.titel, datum].filter(Boolean).join(' · ');
+
+      // Sieger nach den Matchpunkten; vor dem Ende Zwischenstand
+      const sieger = !g.fertig
+        ? '<div class="sieger offen">Zwischenstand</div>'
+        : g.matchpunkte[0] > g.matchpunkte[1]
+          ? '<div class="sieger">Sieg ' + esc(g.links) + '</div>'
+          : g.matchpunkte[1] > g.matchpunkte[0]
+            ? '<div class="sieger">Sieg ' + esc(g.rechts) + '</div>'
+            : '<div class="sieger">Unentschieden</div>';
+
+      const zeilen = g.teile.map((t) =>
+        '<tr><td class="left">' + esc(t.titel) + (t.status === 'laeuft' ? '<span class="lauf">● läuft</span>' : '') + '</td>'
+        + '<td class="pp">' + paar(t.partiepunkte) + '</td>'
+        + '<td class="mpz">' + paar(t.matchpunkte) + '</td></tr>'
+      ).join('');
+
+      contentEl.innerHTML =
+        '<div class="gesamt"><span class="name links">' + esc(g.links) + '</span>'
+        + '<span class="zahl">' + paar(g.partiepunkte) + '</span>'
+        + '<span class="name">' + esc(g.rechts) + '</span></div>'
+        + '<div class="mp">Partiepunkte · Matchpunkte <b>' + paar(g.matchpunkte) + '</b></div>'
+        + sieger
+        + '<table><thead><tr><th class="left">Begegnung</th><th>Partiepunkte</th><th>Matchpunkte</th></tr></thead>'
+        + '<tbody>' + zeilen + '</tbody></table>';
+      refit();
+    });
+  </script>
+
+</body>
+</html>

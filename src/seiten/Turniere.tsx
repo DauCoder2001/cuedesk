@@ -113,7 +113,7 @@ export type TurnierEinstellungen = {
   modusOffen?: boolean;
   chat?: boolean; // Chat fuer Zuschauer (nur wenn der Verein ihn eingeschaltet hat)
   live?: boolean; // Live-Uebertragung, solange das Turnier laeuft (fehlt: an; Stufe 25)
-  tvAnsicht?: 'auslosung' | 'live' | 'results'; // was die Fernseher zeigen
+  tvAnsicht?: 'auslosung' | 'live' | 'results' | 'spieltag'; // was die Fernseher zeigen (spieltag: Liga, alle Begegnungen)
   beginn?: string; // erstes Ergebnis (Zeitprognose)
   ausschreibung?: Ausschreibung; // Einladung zum Turnier (src/ausschreibung.ts)
 };

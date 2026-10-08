@@ -55,6 +55,7 @@ In der Spaß-Liga kann zwischen 1. und 2. Begegnung eine Begegnung im Doppel ges
 - **Spieltag gesamt** im Kopf (ab zwei Begegnungen) zählt Partie- und Matchpunkte aller Begegnungen zusammen, immer aus Sicht der Heimmannschaft der 1. Begegnung; die Rückbegegnung wird dafür umgedreht. Beispiel: 2 : 6 (0 : 3), Doppel 2 : 2 (1 : 1), Rückbegegnung 4 : 4 (1 : 1) ergibt **8 : 12** Partiepunkte und **2 : 5** Matchpunkte. Eine Begegnung zählt bei den Matchpunkten erst, wenn alle ihre Partien entschieden sind; bis dahin steht dort „Zwischenstand“.
 - **Spielbericht als PDF** in derselben Kachel lädt den ganzen Spieltag als PDF herunter: Gesamtstand, Übersicht je Begegnung und alle Partien mit Aufstellung und Ergebnis – zum Drucken oder Weiterschicken.
 - Auf der Seite **Zuschauen** und auf dem **öffentlichen Link** steht dasselbe oben im Reiter **Turnier** als „Ergebnis des Spieltags“.
+- **Fernseher:** Im Kopf schaltet **TV: Live-Tische** / **TV: Spieltag-Ergebnis** um, was die Fernseher zeigen; das gilt für alle Begegnungen. Das Spieltag-Ergebnis zeigt groß den Gesamtstand, die Matchpunkte, den Sieger (vorher „Zwischenstand“) und je Begegnung eine Zeile. Beim Abschließen der letzten Begegnung stellt CueDesk die Fernseher von selbst auf das Spieltag-Ergebnis um.
 
 ## Korrigieren und löschen
 

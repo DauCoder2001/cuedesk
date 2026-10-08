@@ -867,8 +867,8 @@ export default function LigaAnsicht({
     await verdeckenSetzen(runde, seite, false);
   }
 
-  // Live-Uebertragung und Chat gelten fuer den ganzen Spieltag: beide Begegnungen
-  async function spieltagSetzen(aenderung: Pick<TurnierEinstellungen, 'live' | 'chat'>) {
+  // Live-Uebertragung, Chat und TV-Anzeige gelten fuer den ganzen Spieltag: alle Begegnungen
+  async function spieltagSetzen(aenderung: Pick<TurnierEinstellungen, 'live' | 'chat' | 'tvAnsicht'>) {
     if (!turnier || !liga) return;
     const ids = [...new Set([turnier.id, ...(liga.partner ? [liga.partner] : []), ...teile.map((x) => x.id)])];
     const { data, error } = await supabase.from('turniere').select('id, einstellungen').in('id', ids);
@@ -911,6 +911,8 @@ export default function LigaAnsicht({
       setArbeitet(false);
       return setFehler(error.message);
     }
+    // Letzte Begegnung eines Spieltags mit mehreren: Fernseher zeigt das Ergebnis
+    if (letzte && teile.length >= 2) await spieltagSetzen({ tvAnsicht: 'spieltag' });
     if (!letzte) {
       setArbeitet(false);
       setMeldung(
@@ -1289,6 +1291,27 @@ export default function LigaAnsicht({
               vereinId={turnier.verein_id}
               turnierDatum={turnier.datum}
             />
+          )}
+          {darfLeiten && teile.length >= 2 && turnier.status !== 'geplant' && (
+            // Was die Fernseher zeigen, fuer alle Begegnungen; nach dem Abschluss
+            // der letzten Begegnung stellt CueDesk selbst auf das Ergebnis um
+            <span className="umschalter" title="Legt fest, was die TV-Anzeige zeigt">
+              {(
+                [
+                  ['live', 'TV: Live-Tische'],
+                  ['spieltag', 'TV: Spieltag-Ergebnis']
+                ] as const
+              ).map(([wert, name]) => (
+                <button
+                  key={wert}
+                  type="button"
+                  className={(einstellungen.tvAnsicht === 'spieltag' ? 'spieltag' : 'live') === wert ? 'aktiv' : ''}
+                  onClick={() => void spieltagSetzen({ tvAnsicht: wert })}
+                >
+                  {name}
+                </button>
+              ))}
+            </span>
           )}
           </div>
         </div>

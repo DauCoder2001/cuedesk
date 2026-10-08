@@ -86,7 +86,7 @@
 
     // CueDesk: Umschaltung am Turnierbildschirm ("TV zeigt"). Die Seiten liegen
     // bei CueDesk alle im Ordner scoreboards.
-    const PAGE_FOR = { auslosung: 'tv-Auslosung.html', live: 'tv.html', results: 'tv-Turnier-Ergebnis.html' };
+    const PAGE_FOR = { auslosung: 'tv-Auslosung.html', live: 'tv.html', results: 'tv-Turnier-Ergebnis.html', spieltag: 'tv-Spieltag.html' };
     onValue(ref(db, 'tournament/tvView'), (snap) => {
       const target = PAGE_FOR[snap.val()] || 'tv.html';
       if (target !== 'tv-Auslosung.html') window.location.href = target;
