@@ -888,7 +888,8 @@
   // Die Regeln des Boards (getestet in test/board-regeln.test.ts)
   import {
     freiesSpielLaeuft, offeneSpiele, wartetText, zeige141Auswahl, spielBeanspruchen, spielZuruecklegen,
-    ergebnisSchonEingetragen, ohneSpielParameter, siegerText, haengendeSpiele, hat141Partien
+    ergebnisSchonEingetragen, ohneSpielParameter, siegerText, haengendeSpiele, hat141Partien,
+    wechselRueckfrage
   } from "./js/board-regeln.ts";
   import { startIdleRedirect } from "./js/idle-timeout.js";
   import { keepScreenAwake } from "./js/wake-lock.js";
@@ -1931,6 +1932,19 @@
     document.getElementById('btn-abort-141').style.display = imTurnier ? 'inline-block' : 'none';
   }
 
+  // Wechsel von einem laufenden 8/9/10-Spiel auf dieses Board: erst nachfragen
+  // (wechselRueckfrage), sonst waere der Pool-Stand ohne Warnung weg.
+  let wechselOk = false, wechselOffen = false;
+  async function wechselFragen(frage) {
+    if (wechselOffen) return;
+    wechselOffen = true;
+    const ok = await confirmModal(frage, { ok: "Wechseln", abbrechen: "Zurück zum 8/9/10-Board", vorsicht: true });
+    wechselOffen = false;
+    if (!ok) { window.location.href = 'Pool_Scoreboard.html?table=' + tableId; return; }
+    wechselOk = true;
+    syncFromTable();
+  }
+
   // Verarbeitet den aktuellen Tisch-Stand. 14.1 wird direkt gespielt; ein laufendes
   // Turnier-Match (Pool) auf diesem Tisch wird geschuetzt, nicht ueberschrieben.
   function syncFromTable() {
@@ -1956,7 +1970,10 @@
             allow);
           return;
         }
-        // Spieler hat 14.1 gewaehlt -> Tisch auf 14.1 umstellen (Namen uebernehmen)
+        // Spieler hat 14.1 gewaehlt -> Tisch auf 14.1 umstellen (Namen uebernehmen).
+        // Laeuft dort ein angefangenes 8/9/10-Spiel, erst nachfragen.
+        const frage = wechselOk ? null : wechselRueckfrage(data, '14.1', tableId);
+        if (frage) { wechselFragen(frage); return; }
         state = freshState141();
         state.player1 = data.player1 || "Spieler 1";
         state.player2 = data.player2 || "Spieler 2";

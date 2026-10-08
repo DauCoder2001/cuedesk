@@ -21,6 +21,7 @@ import {
   spielBeanspruchen,
   spielZuruecklegen,
   wartetText,
+  wechselRueckfrage,
   zeige141Auswahl,
   zielErreicht
 } from '../scoreboards/js/board-regeln';
@@ -78,6 +79,36 @@ describe('Haengende Spiele', () => {
     expect(fremdesTurnierspiel({ gameType: 'pool', tournamentMatchId: 'p2' }, 'pool')).toBe(false);
     expect(fremdesTurnierspiel({ gameType: '14.1', s1: 5 }, 'pool')).toBe(false);
     expect(fremdesTurnierspiel(null, 'pool')).toBe(false);
+  });
+});
+
+describe('Wechsel der Spielart', () => {
+  const stand141 = { gameType: '14.1', player1: 'Tom', player2: 'Tim', s1: 11, s2: 8, inn1: 1, inn2: 0, log: [{}] };
+  const standPool = { gameType: 'pool', player1: 'Tom', player2: 'Tim', score1: 3, score2: 2, raceTo: 5 };
+
+  test('laufendes 14.1-Spiel: Pool-Board fragt nach', () => {
+    const frage = wechselRueckfrage(stand141, 'pool', '1');
+    expect(frage).toContain('An Tisch 1 läuft ein 14.1-Spiel');
+    expect(frage).toContain('Tom 11 : 8 Tim (1 Aufnahme)');
+    expect(frage).toContain('geht dabei verloren');
+  });
+
+  test('laufendes 8/9/10-Spiel: 14.1-Board fragt nach', () => {
+    expect(wechselRueckfrage(standPool, '14.1', '2')).toContain('Tom 3 : 2 Tim');
+  });
+
+  test('leer, nur Namen, beendet oder Turnier: keine Rueckfrage', () => {
+    expect(wechselRueckfrage(null, 'pool', '1')).toBeNull();
+    expect(wechselRueckfrage({ gameType: '14.1', player1: 'Tom', s1: 0, s2: 0, log: [] }, 'pool', '1')).toBeNull();
+    expect(wechselRueckfrage({ ...stand141, locked: true }, 'pool', '1')).toBeNull();
+    expect(wechselRueckfrage({ ...stand141, tournamentMatchId: 'm1' }, 'pool', '1')).toBeNull();
+    expect(wechselRueckfrage({ ...standPool, score1: 0, score2: 0 }, '14.1', '1')).toBeNull();
+    expect(wechselRueckfrage({ ...standPool, score1: 5 }, '14.1', '1')).toBeNull();
+  });
+
+  test('gleiche Spielart: keine Rueckfrage', () => {
+    expect(wechselRueckfrage(stand141, '14.1', '1')).toBeNull();
+    expect(wechselRueckfrage(standPool, 'pool', '1')).toBeNull();
   });
 });
 

@@ -49,21 +49,26 @@
   };
 
   // Ja/Nein-Abfrage (Ersatz fuer confirm) -> Promise<boolean>
-  window.confirmModal = function (msg) {
+  // opts (optional): { ok: 'Text', abbrechen: 'Text', vorsicht: true }.
+  // vorsicht: Fokus auf Abbrechen, Enter bestaetigt nicht (Daten gehen verloren).
+  window.confirmModal = function (msg, opts) {
+    opts = opts || {};
     return new Promise((resolve) => {
       const ov = buildOverlay(TITLE +
         '<div class="app-dlg-msg"></div>' +
         '<div class="app-dlg-actions">' +
-        '<button type="button" class="app-dlg-cancel">Abbrechen</button>' +
-        '<button type="button" class="app-dlg-ok">OK</button></div>');
+        '<button type="button" class="app-dlg-cancel"></button>' +
+        '<button type="button" class="app-dlg-ok"></button></div>');
       ov.querySelector('.app-dlg-msg').textContent = String(msg == null ? '' : msg);
+      ov.querySelector('.app-dlg-cancel').textContent = opts.abbrechen || 'Abbrechen';
+      ov.querySelector('.app-dlg-ok').textContent = opts.ok || 'OK';
       const done = (val) => { ov.remove(); document.removeEventListener('keydown', onKey); resolve(val); };
-      function onKey(e) { if (e.key === 'Escape') done(false); else if (e.key === 'Enter') done(true); }
+      function onKey(e) { if (e.key === 'Escape') done(false); else if (e.key === 'Enter' && !opts.vorsicht) done(true); }
       ov.querySelector('.app-dlg-ok').addEventListener('click', () => done(true));
       ov.querySelector('.app-dlg-cancel').addEventListener('click', () => done(false));
       ov.addEventListener('click', (e) => { if (e.target === ov) done(false); });
       document.addEventListener('keydown', onKey);
-      ov.querySelector('.app-dlg-ok').focus();
+      ov.querySelector(opts.vorsicht ? '.app-dlg-cancel' : '.app-dlg-ok').focus();
     });
   };
 

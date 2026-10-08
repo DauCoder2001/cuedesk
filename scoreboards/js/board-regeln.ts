@@ -38,12 +38,51 @@ export type TischStand = {
   startedAt?: number | null;
   score1?: number; // Pool
   score2?: number;
+  raceTo?: number;
   s1?: number; // 14.1
   s2?: number;
+  inn1?: number;
+  inn2?: number;
+  locked?: boolean;
   log?: unknown[];
 } | null | undefined;
 
 const istFreilos = (name: unknown) => String(name).includes('FREILOS');
+
+// ---------- Wechsel der Spielart ----------
+
+// Oeffnet man am selben Tablet das andere Board, ersetzt es den Stand am Tisch.
+// Liegt dort ein freies, angefangenes und nicht beendetes Spiel der anderen Art,
+// liefert die Funktion die Rueckfrage, sonst null (leer, beendet oder nur
+// Namen: ohne Nachfrage ersetzen wie bisher). Turnierspiele schuetzen die
+// Boards schon vorher. "art" ist das Board, das gerade startet.
+export function wechselRueckfrage(d: TischStand, art: BoardArt, tisch: string): string | null {
+  if (!d || d.tournamentMatchId) return null;
+  const n = (v: unknown) => (typeof v === 'number' ? v : 0);
+  const p1 = d.player1 || 'Spieler 1';
+  const p2 = d.player2 || 'Spieler 2';
+  if (art === 'pool') {
+    if (d.gameType !== '14.1' || d.locked) return null;
+    const aufnahmen = n(d.inn1) + n(d.inn2);
+    const angefangen =
+      n(d.s1) !== 0 || n(d.s2) !== 0 || aufnahmen > 0 || (Array.isArray(d.log) && d.log.length > 0);
+    if (!angefangen) return null;
+    const aufn = aufnahmen === 1 ? '1 Aufnahme' : `${aufnahmen} Aufnahmen`;
+    return (
+      `An Tisch ${tisch} läuft ein 14.1-Spiel:\n${p1} ${n(d.s1)} : ${n(d.s2)} ${p2} (${aufn})\n\n` +
+      'Auf 8/9/10-Ball wechseln? Der 14.1-Spielstand geht dabei verloren.'
+    );
+  }
+  if (d.gameType !== 'pool') return null;
+  const s1 = n(d.score1);
+  const s2 = n(d.score2);
+  if (s1 === 0 && s2 === 0) return null;
+  if (n(d.raceTo) > 0 && Math.max(s1, s2) >= n(d.raceTo)) return null; // Race erreicht = beendet
+  return (
+    `An Tisch ${tisch} läuft ein 8/9/10-Ball-Spiel:\n${p1} ${s1} : ${s2} ${p2}\n\n` +
+    'Auf 14.1 wechseln? Der 8/9/10-Ball-Spielstand geht dabei verloren.'
+  );
+}
 
 // ---------- Freies Spiel ----------
 

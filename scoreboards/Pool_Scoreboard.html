@@ -553,7 +553,7 @@ button:disabled { opacity: 0.4; }
     freiesSpielLaeuft, offeneSpiele, wartetText, filterNamen, poolAuswahl, poolModus,
     spielBeanspruchen, spielZuruecklegen, spielAbschliessen, freilosAbschliessen, freilosWertung,
     ergebnisSchonEingetragen, ohneSpielParameter, ausspielziel, zielErreicht, koFortschreibung, siegerText,
-    haengendeSpiele, fremdesTurnierspiel
+    haengendeSpiele, fremdesTurnierspiel, wechselRueckfrage
   } from "./js/board-regeln.ts";
   import { startIdleRedirect } from "./js/idle-timeout.js";
   import { keepScreenAwake } from "./js/wake-lock.js";
@@ -877,8 +877,22 @@ async function newGame() {
 /* ===========================
      START / ECHTZEIT-LISTENER (POOL)
      =========================== */
-  onValue(dbRef, (snapshot) => {
-    const data = snapshot.val();
+  onValue(dbRef, (snapshot) => tischStand(snapshot.val()));
+
+  // Wechsel von einem laufenden 14.1-Spiel auf dieses Board: erst nachfragen
+  // (wechselRueckfrage), sonst waere der 14.1-Stand ohne Warnung weg.
+  let wechselOk = false, wechselOffen = false;
+  async function wechselFragen(frage) {
+    if (wechselOffen) return;
+    wechselOffen = true;
+    const ok = await confirmModal(frage, { ok: "Wechseln", abbrechen: "Zurück zum 14.1-Board", vorsicht: true });
+    wechselOffen = false;
+    if (!ok) { window.location.href = '14.1_Scoreboard.html?table=' + tableId; return; }
+    wechselOk = true;
+    tischStand(tableData);
+  }
+
+  function tischStand(data) {
     tableData = data;
     if (yielded) { applyMode(); return; }   // Tisch abgegeben -> nichts mehr schreiben
     if (data) {
@@ -919,6 +933,8 @@ async function newGame() {
           return;
         }
         // wrongType ohne fremdes Geraet -> erstmalige Uebernahme (frisch von der Startseite)
+        const frage = wechselOk ? null : wechselRueckfrage(data, 'pool', tableId);
+        if (frage) { render(); wechselFragen(frage); return; }
         state.player1 = data.player1 || "Spieler 1";
         state.player2 = data.player2 || "Spieler 2";
         state.gameType = "pool";
@@ -945,7 +961,7 @@ async function newGame() {
       }
     }
     applyMode();
-  });
+  }
 
   /* ===========================
      TURNIERMODUS (Stufe 2)
