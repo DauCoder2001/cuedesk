@@ -22,11 +22,17 @@ function LiveOeffentlich() {
   const [zustand, setZustand] = useState<'laedt' | 'da' | 'ungueltig' | 'fehler'>('laedt');
   const [stand, setStand] = useState<Date | null>(null);
   const [ansicht, setAnsicht] = useState<Ansicht>('tische');
+  const [fehlerText, setFehlerText] = useState<string | null>(null);
 
   const laden = useCallback(async () => {
     if (schluessel.length < 32) return setZustand('ungueltig');
     const { data, error } = await supabase.rpc('oeffentliche_ansicht', { p_schluessel: schluessel });
-    if (error) return setZustand((z) => (z === 'da' ? z : 'fehler')); // kurzer Aussetzer: alten Stand zeigen
+    if (error) {
+      // kurzer Aussetzer: alten Stand zeigen; die Meldung hilft bei der Fehlersuche
+      setFehlerText(error.message || String(error));
+      return setZustand((z) => (z === 'da' ? z : 'fehler'));
+    }
+    setFehlerText(null);
     if (!data) return setZustand('ungueltig');
     setDaten(data);
     setZustand('da');
@@ -66,6 +72,12 @@ function LiveOeffentlich() {
           {zustand === 'fehler'
             ? 'Die Spielstände sind gerade nicht erreichbar. Bitte später noch einmal versuchen.'
             : 'Dieser Link ist ungültig oder abgelaufen.'}
+          {zustand === 'fehler' && fehlerText && (
+            <>
+              <br />
+              <small>({fehlerText})</small>
+            </>
+          )}
         </p>
         <Fuss />
       </div>
