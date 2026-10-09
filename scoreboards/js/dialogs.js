@@ -34,6 +34,21 @@
 
   const TITLE = '<div class="app-dlg-title">🎱 Billard-Turnier</div>';
 
+  // Tab bleibt im Dialog: vom letzten Element zurueck zum ersten und umgekehrt.
+  // Enter fangen die Dialoge bewusst nicht ab - es drueckt den Knopf mit dem
+  // Fokus. Frueher bestaetigte Enter immer, auch mit Fokus auf "Abbrechen".
+  function fokusHalten(ov, e) {
+    if (e.key !== 'Tab') return;
+    const ziele = [...ov.querySelectorAll('button, input')].filter((el) => !el.disabled);
+    if (ziele.length === 0) return;
+    const erstes = ziele[0], letztes = ziele[ziele.length - 1];
+    const aktiv = document.activeElement;
+    if (!ov.contains(aktiv) || (e.shiftKey && aktiv === erstes) || (!e.shiftKey && aktiv === letztes)) {
+      e.preventDefault();
+      (e.shiftKey ? letztes : erstes).focus();
+    }
+  }
+
   // Hinweis (Ersatz fuer alert) – nicht blockierend
   window.alert = function (msg) {
     const ov = buildOverlay(TITLE +
@@ -41,7 +56,7 @@
       '<div class="app-dlg-actions"><button type="button" class="app-dlg-ok">OK</button></div>');
     ov.querySelector('.app-dlg-msg').textContent = String(msg == null ? '' : msg);
     const close = () => { ov.remove(); document.removeEventListener('keydown', onKey); };
-    function onKey(e) { if (e.key === 'Escape' || e.key === 'Enter') close(); }
+    function onKey(e) { if (e.key === 'Escape') close(); else fokusHalten(ov, e); }
     ov.querySelector('.app-dlg-ok').addEventListener('click', close);
     ov.addEventListener('click', (e) => { if (e.target === ov) close(); });
     document.addEventListener('keydown', onKey);
@@ -50,7 +65,7 @@
 
   // Ja/Nein-Abfrage (Ersatz fuer confirm) -> Promise<boolean>
   // opts (optional): { ok: 'Text', abbrechen: 'Text', vorsicht: true }.
-  // vorsicht: Fokus auf Abbrechen, Enter bestaetigt nicht (Daten gehen verloren).
+  // vorsicht: Fokus startet auf Abbrechen (Daten gehen verloren).
   window.confirmModal = function (msg, opts) {
     opts = opts || {};
     return new Promise((resolve) => {
@@ -63,7 +78,7 @@
       ov.querySelector('.app-dlg-cancel').textContent = opts.abbrechen || 'Abbrechen';
       ov.querySelector('.app-dlg-ok').textContent = opts.ok || 'OK';
       const done = (val) => { ov.remove(); document.removeEventListener('keydown', onKey); resolve(val); };
-      function onKey(e) { if (e.key === 'Escape') done(false); else if (e.key === 'Enter' && !opts.vorsicht) done(true); }
+      function onKey(e) { if (e.key === 'Escape') done(false); else fokusHalten(ov, e); }
       ov.querySelector('.app-dlg-ok').addEventListener('click', () => done(true));
       ov.querySelector('.app-dlg-cancel').addEventListener('click', () => done(false));
       ov.addEventListener('click', (e) => { if (e.target === ov) done(false); });
@@ -96,7 +111,7 @@
         });
       }
       const done = (val) => { ov.remove(); document.removeEventListener('keydown', onKey); resolve(val); };
-      function onKey(e) { if (e.key === 'Escape') done(null); }
+      function onKey(e) { if (e.key === 'Escape') done(null); else fokusHalten(ov, e); }
       ov.querySelector('.app-dlg-ok').addEventListener('click', () => done(inp.value));
       ov.querySelector('.app-dlg-cancel').addEventListener('click', () => done(null));
       inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); done(inp.value); } });
