@@ -84,8 +84,8 @@ Alle Kennzahlen kommen aus Funktionen, die nur zählen – keine Namen, keine Er
 
 ## Phase 4 · Livegang cuedesk.de
 
-- Produktions-Projekt bei Supabase (Pro-Tarif empfohlen: tägliche Sicherung, kein Pausieren), Migrationen aus diesem Repository einspielen.
-- Domain www.cuedesk.de auf die Veröffentlichung zeigen lassen.
+- Produktions-Projekt bei Supabase, Migrationen aus diesem Repository einspielen. Entscheidung 09.10.2026: zunächst kostenloser Tarif, Anwendung unter `app.cuedesk.de`; Ablauf in `docs/Produktion-einrichten.md`.
+- Domain cuedesk.de und Subdomains: siehe Vor-dem-Livegang.md, Abschnitt Betrieb.
 - Eigener E-Mail-Absender für Anmeldelinks.
 - Zwei-Faktor-Anmeldung für Super-Admins.
 - Impressum, Datenschutzerklärung, Vertrag zur Auftragsverarbeitung (Art. 28 DSGVO) mit jedem Verein – rechtlich prüfen lassen.
