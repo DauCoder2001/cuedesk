@@ -6,6 +6,7 @@ import { schutzwortPruefen } from '../schutzwort';
 import { datumText } from '../auskunft';
 import type { Kachel, PoolDisziplin } from '../live';
 import type { Geraet, Tisch } from '../datenbank.types';
+import { Modal } from '../modal';
 
 // Live-Tische: eine Kachel je aktivem Tisch, aktualisiert sich bei jedem
 // Stoss am Tablet (Realtime auf live_stand). Sichtbar fuer alle Mitglieder.
@@ -208,80 +209,76 @@ export default function Live() {
         </div>
       </section>
       {frage && (
-        <div className="dialoghintergrund" onClick={() => setFrage(null)}>
-          <div className="dialog" onClick={(e) => e.stopPropagation()}>
-            <h2>Tablet neu laden</h2>
-            <p>
-              Das Tablet an Tisch {frage.nummer} lädt die Seite neu. Ein laufendes Spiel bleibt erhalten, es kommt
-              danach aus der Cloud zurück. Bis zu 30 Sekunden kann es dauern.
-            </p>
-            <div className="zeile">
-              <input
-                type="password"
-                placeholder="Passwort"
-                value={wort}
-                autoFocus
-                onChange={(e) => setWort(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && void neuLadenAusloesen()}
-              />
-              <button type="button" title="Lädt das Tablet an diesem Tisch neu. Der Spielstand bleibt erhalten." onClick={() => void neuLadenAusloesen()}>
-                Neu laden
+        <Modal abbrechen={() => setFrage(null)}>
+          <h2>Tablet neu laden</h2>
+          <p>
+            Das Tablet an Tisch {frage.nummer} lädt die Seite neu. Ein laufendes Spiel bleibt erhalten, es kommt
+            danach aus der Cloud zurück. Bis zu 30 Sekunden kann es dauern.
+          </p>
+          <div className="zeile">
+            <input
+              type="password"
+              placeholder="Passwort"
+              value={wort}
+              autoFocus
+              onChange={(e) => setWort(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && void neuLadenAusloesen()}
+            />
+            <button type="button" title="Lädt das Tablet an diesem Tisch neu. Der Spielstand bleibt erhalten." onClick={() => void neuLadenAusloesen()}>
+              Neu laden
+            </button>
+          </div>
+          <button type="button" onClick={() => setFrage(null)}>
+            Abbrechen
+          </button>
+        </Modal>
+      )}
+      {offenFrage && (
+        <Modal abbrechen={() => !arbeitet && setOffenFrage(null)}>
+          <h2>{offenFrage.art === 'speichern' ? 'Ergebnis speichern' : 'Stand verwerfen'}</h2>
+          <p>
+            Tisch {offenFrage.tisch.nummer}: {offenFrage.k.spieler1} {offenFrage.k.stand1} : {offenFrage.k.stand2}{' '}
+            {offenFrage.k.spieler2}
+            {offenFrage.k.raceTo !== null ? `, Race to ${offenFrage.k.raceTo}` : ''}, Stand vom{' '}
+            {datumText(offenFrage.stand.aktualisiert, true)} Uhr.
+          </p>
+          {offenFrage.art === 'speichern' ? (
+            <>
+              <p>
+                Gespeichert wird als Einzelspiel{offenFrage.k.laeuft ? ', abgebrochen, weil das Race nicht erreicht ist' : ''}.
+                Für das Rating zählt es nicht. Danach ist der Tisch frei.
+              </p>
+              <div className="felder">
+                <label className="feld s">
+                  <span>Disziplin</span>
+                  <select value={disziplin} onChange={(e) => setDisziplin(e.target.value as PoolDisziplin | '')}>
+                    <option value="">bitte wählen</option>
+                    <option value="8-ball">8-Ball</option>
+                    <option value="9-ball">9-Ball</option>
+                    <option value="10-ball">10-Ball</option>
+                  </select>
+                </label>
+              </div>
+            </>
+          ) : (
+            <p>Der Stand wird gelöscht und nicht gespeichert. Danach ist der Tisch frei.</p>
+          )}
+          {fehler && <p className="fehler">{fehler}</p>}
+          <div className="zeile">
+            {offenFrage.art === 'speichern' ? (
+              <button type="button" disabled={arbeitet || !disziplin} onClick={() => void offenErledigen()}>
+                Speichern
               </button>
-            </div>
-            <button type="button" onClick={() => setFrage(null)}>
+            ) : (
+              <button type="button" className="gefahrknopf" disabled={arbeitet} onClick={() => void offenErledigen()}>
+                Verwerfen
+              </button>
+            )}
+            <button type="button" disabled={arbeitet} onClick={() => setOffenFrage(null)}>
               Abbrechen
             </button>
           </div>
-        </div>
-      )}
-      {offenFrage && (
-        <div className="dialoghintergrund" onClick={() => !arbeitet && setOffenFrage(null)}>
-          <div className="dialog" onClick={(e) => e.stopPropagation()}>
-            <h2>{offenFrage.art === 'speichern' ? 'Ergebnis speichern' : 'Stand verwerfen'}</h2>
-            <p>
-              Tisch {offenFrage.tisch.nummer}: {offenFrage.k.spieler1} {offenFrage.k.stand1} : {offenFrage.k.stand2}{' '}
-              {offenFrage.k.spieler2}
-              {offenFrage.k.raceTo !== null ? `, Race to ${offenFrage.k.raceTo}` : ''}, Stand vom{' '}
-              {datumText(offenFrage.stand.aktualisiert, true)} Uhr.
-            </p>
-            {offenFrage.art === 'speichern' ? (
-              <>
-                <p>
-                  Gespeichert wird als Einzelspiel{offenFrage.k.laeuft ? ', abgebrochen, weil das Race nicht erreicht ist' : ''}.
-                  Für das Rating zählt es nicht. Danach ist der Tisch frei.
-                </p>
-                <div className="felder">
-                  <label className="feld s">
-                    <span>Disziplin</span>
-                    <select value={disziplin} onChange={(e) => setDisziplin(e.target.value as PoolDisziplin | '')}>
-                      <option value="">bitte wählen</option>
-                      <option value="8-ball">8-Ball</option>
-                      <option value="9-ball">9-Ball</option>
-                      <option value="10-ball">10-Ball</option>
-                    </select>
-                  </label>
-                </div>
-              </>
-            ) : (
-              <p>Der Stand wird gelöscht und nicht gespeichert. Danach ist der Tisch frei.</p>
-            )}
-            {fehler && <p className="fehler">{fehler}</p>}
-            <div className="zeile">
-              {offenFrage.art === 'speichern' ? (
-                <button type="button" disabled={arbeitet || !disziplin} onClick={() => void offenErledigen()}>
-                  Speichern
-                </button>
-              ) : (
-                <button type="button" className="gefahrknopf" disabled={arbeitet} onClick={() => void offenErledigen()}>
-                  Verwerfen
-                </button>
-              )}
-              <button type="button" disabled={arbeitet} onClick={() => setOffenFrage(null)}>
-                Abbrechen
-              </button>
-            </div>
-          </div>
-        </div>
+        </Modal>
       )}
     </div>
   );

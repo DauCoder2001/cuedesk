@@ -4,6 +4,7 @@ import { useRueckfrage } from '../rueckfrage';
 import { Pflichthinweis, usePflicht } from '../pflicht';
 import { istAbgelaufen, linkAdresse, neuerSchluessel, standardGueltigBis, tagVon, tagesende } from '../oeffentlicher-link';
 import type { OeffentlicherLink as Link } from '../datenbank.types';
+import { Modal } from '../modal';
 
 // Knopf "Öffentlicher Link" im Kopf von Turnier und Liga-Spieltag (Stufe 32)
 // mit Dialog: Link fuer Zuschauer ohne Anmeldung erzeugen, kopieren, Ablauf
@@ -103,59 +104,57 @@ export default function OeffentlicherLink({
       </button>
 
       {offen && (
-        <div className="dialoghintergrund" onClick={() => !arbeitet && setOffen(false)}>
-          <div className="dialog" ref={pflicht.bereich} onClick={(e) => e.stopPropagation()}>
-            <h3>Öffentlicher Live-Link</h3>
-            <p className="hinweis">
-              Wer den Link hat, sieht ohne Anmeldung die Tische und den Spielplan dieses Turniers, beim Liga-Spieltag alle
-              Begegnungen. Kein Chat, keine anderen Turniere. Mit erfasster Einwilligung zur Namensanzeige (Spieler →
-              Einwilligungen) erscheint der Anzeigename ohne Vereinszusatz, sonst „Vorname N.“; ohne Einwilligung nur das
-              Kürzel.
-            </p>
+        <Modal abbrechen={() => !arbeitet && setOffen(false)} bereich={pflicht.bereich}>
+          <h3>Öffentlicher Live-Link</h3>
+          <p className="hinweis">
+            Wer den Link hat, sieht ohne Anmeldung die Tische und den Spielplan dieses Turniers, beim Liga-Spieltag alle
+            Begegnungen. Kein Chat, keine anderen Turniere. Mit erfasster Einwilligung zur Namensanzeige (Spieler →
+            Einwilligungen) erscheint der Anzeigename ohne Vereinszusatz, sonst „Vorname N.“; ohne Einwilligung nur das
+            Kürzel.
+          </p>
 
-            {link && (
-              <div className="zeile raster">
-                <input readOnly value={adresse} aria-label="Link" onFocus={(e) => e.currentTarget.select()} />
-                <button type="button" onClick={() => void kopieren()}>
-                  {kopiert ? 'Kopiert' : 'Kopieren'}
-                </button>
-              </div>
-            )}
-            {link && abgelaufen && <p className="fehler">Der Link ist abgelaufen. Mit einem neuen Datum gilt er wieder.</p>}
-
-            <div className="felder">
-              <label className="feld">
-                <span>Gültig bis einschließlich</span>
-                <input type="date" required value={tag} onChange={(e) => setTag(e.target.value)} />
-              </label>
-            </div>
-
-            {fehler && <p className="fehler">{fehler}</p>}
-            <div className="zeile">
-              <Pflichthinweis hinweis={pflicht.hinweis} />
-              {!link ? (
-                <button type="button" disabled={arbeitet} onClick={() => void speichern(true)}>
-                  Link erzeugen
-                </button>
-              ) : (
-                <>
-                  <button type="button" disabled={arbeitet || tag === tagVon(link.gueltig_bis)} onClick={() => void speichern(false)}>
-                    Datum speichern
-                  </button>
-                  <button type="button" disabled={arbeitet} onClick={() => void speichern(true)}>
-                    Neuer Link
-                  </button>
-                  <button type="button" className="gefahrknopf" disabled={arbeitet} onClick={() => void loeschen()}>
-                    Link löschen
-                  </button>
-                </>
-              )}
-              <button type="button" disabled={arbeitet} onClick={() => setOffen(false)}>
-                Schließen
+          {link && (
+            <div className="zeile raster">
+              <input readOnly value={adresse} aria-label="Link" onFocus={(e) => e.currentTarget.select()} />
+              <button type="button" onClick={() => void kopieren()}>
+                {kopiert ? 'Kopiert' : 'Kopieren'}
               </button>
             </div>
+          )}
+          {link && abgelaufen && <p className="fehler">Der Link ist abgelaufen. Mit einem neuen Datum gilt er wieder.</p>}
+
+          <div className="felder">
+            <label className="feld">
+              <span>Gültig bis einschließlich</span>
+              <input type="date" required value={tag} onChange={(e) => setTag(e.target.value)} />
+            </label>
           </div>
-        </div>
+
+          {fehler && <p className="fehler">{fehler}</p>}
+          <div className="zeile">
+            <Pflichthinweis hinweis={pflicht.hinweis} />
+            {!link ? (
+              <button type="button" disabled={arbeitet} onClick={() => void speichern(true)}>
+                Link erzeugen
+              </button>
+            ) : (
+              <>
+                <button type="button" disabled={arbeitet || tag === tagVon(link.gueltig_bis)} onClick={() => void speichern(false)}>
+                  Datum speichern
+                </button>
+                <button type="button" disabled={arbeitet} onClick={() => void speichern(true)}>
+                  Neuer Link
+                </button>
+                <button type="button" className="gefahrknopf" disabled={arbeitet} onClick={() => void loeschen()}>
+                  Link löschen
+                </button>
+              </>
+            )}
+            <button type="button" disabled={arbeitet} onClick={() => setOffen(false)}>
+              Schließen
+            </button>
+          </div>
+        </Modal>
       )}
       {rueckfrage}
     </>

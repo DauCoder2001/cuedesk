@@ -363,7 +363,6 @@ ul.schlicht { list-style: none; padding: 0; margin: 0; display: flex; flex-direc
 .kennzahlen small { display: block; font-size: 12px; color: var(--text-leise); }
 
 .verdeckt { filter: blur(5px); user-select: none; color: var(--text-leise); }
-.dialog.breit { max-width: 820px; width: 92vw; max-height: 86vh; overflow-y: auto; }
 .tabelle td.mittig { text-align: center; }
 /* Doppelpunkt zwischen den Spielern: links steht schon der Rand der Nachbarzelle */
 .tabelle .doppelpunkt { width: 1.5em; padding: 0 6px 0 0; text-align: center; }
@@ -513,12 +512,13 @@ tr.gespielt td { color: var(--text-leise); }
 tr.gespielt .zahlfeld { color: var(--text); }
 .marke.stichkampf { color: #854f0b; border-color: #e8cfa3; }
 .gefahrknopf { color: var(--fehler); border-color: #e7bcbc; white-space: nowrap; }
-.dialoghintergrund { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.35); display: grid; place-items: center; padding: 16px; z-index: 50; }
-/* Rueckfragen (src/rueckfrage.tsx, src/ungespeichert.tsx): natives <dialog> in der obersten
-   Ebene; der Rahmen ist unsichtbar, das Aussehen kommt vom inneren .dialog */
-.rueckfragedialog { padding: 0; border: none; background: transparent; width: calc(100% - 32px); max-width: 520px; max-height: none; overflow: visible; color: inherit; }
-.rueckfragedialog::backdrop { background: rgba(0, 0, 0, 0.35); }
-.dialog { background: var(--flaeche); border-radius: 12px; padding: 18px; width: 100%; max-width: 520px; max-height: 80vh; overflow: auto; display: flex; flex-direction: column; gap: 12px; }
+/* Alle Dialoge (src/modal.tsx): natives <dialog> in der obersten Ebene; der Rahmen ist
+   unsichtbar und bestimmt nur die Breite, das Aussehen kommt vom inneren .dialog */
+.modal { padding: 0; border: none; background: transparent; width: calc(100% - 32px); max-width: 520px; max-height: none; overflow: visible; color: inherit; }
+.modal.breit { max-width: 820px; }
+.modal::backdrop { background: rgba(0, 0, 0, 0.35); }
+.dialog { background: var(--flaeche); border-radius: 12px; padding: 18px; width: 100%; max-height: 80vh; overflow: auto; display: flex; flex-direction: column; gap: 12px; }
+.modal.breit > .dialog { max-height: 86vh; }
 .umschalter { display: inline-flex; border: 1px solid var(--rand); border-radius: var(--radius); overflow: hidden; }
 .umschalter button { border: none; border-right: 1px solid var(--rand); border-radius: 0; font-size: 13px; padding: 5px 10px; }
 .umschalter button:last-child { border-right: none; }

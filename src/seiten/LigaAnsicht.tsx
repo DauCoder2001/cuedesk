@@ -36,6 +36,7 @@ import { herunterladen } from '../pdf';
 import type { LigaSpiel } from '../liga';
 import type { TurnierEinstellungen } from './Turniere';
 import type { Mannschaft, MannschaftSpieler, Partie, Person, Turnier, TurnierTeilnehmer } from '../datenbank.types';
+import { Modal } from '../modal';
 
 // Ein Liga-Spieltag (Begegnung): Aufstellung, acht Einzelpartien, Partie- und
 // Matchpunkte, Abschluss. Die Regeln stehen in src/liga.ts, die Ergebnisse in
@@ -1550,46 +1551,42 @@ export default function LigaAnsicht({
         </section>
       )}
       {doppelDialog && (
-        <div className="dialoghintergrund" onClick={() => !arbeitet && setDoppelDialog(null)}>
-          <div className="dialog" onClick={(e) => e.stopPropagation()}>
-            <h2>Doppel-Begegnung hinzufügen</h2>
-            <p>
-              Sie wird als 2. Begegnung im Doppel gespielt, mit demselben Gegner und Heimrecht wie die 1. Begegnung. Die
-              bisherige 2. Begegnung wird zur 3. Doppel zählen nicht fürs Rating und nicht in die Bilanz der Mannschaft.
-            </p>
-            <DoppelPlanFelder zeilen={doppelDialog} aendern={setDoppelDialog} />
-            {fehler && <p className="fehler">{fehler}</p>}
-            <div className="zeile">
-              <button type="button" disabled={arbeitet} onClick={() => void doppelHinzufuegen()}>
-                Anlegen
-              </button>
-              <button type="button" disabled={arbeitet} onClick={() => setDoppelDialog(null)}>
-                Abbrechen
-              </button>
-            </div>
+        <Modal abbrechen={() => !arbeitet && setDoppelDialog(null)}>
+          <h2>Doppel-Begegnung hinzufügen</h2>
+          <p>
+            Sie wird als 2. Begegnung im Doppel gespielt, mit demselben Gegner und Heimrecht wie die 1. Begegnung. Die
+            bisherige 2. Begegnung wird zur 3. Doppel zählen nicht fürs Rating und nicht in die Bilanz der Mannschaft.
+          </p>
+          <DoppelPlanFelder zeilen={doppelDialog} aendern={setDoppelDialog} />
+          {fehler && <p className="fehler">{fehler}</p>}
+          <div className="zeile">
+            <button type="button" disabled={arbeitet} onClick={() => void doppelHinzufuegen()}>
+              Anlegen
+            </button>
+            <button type="button" disabled={arbeitet} onClick={() => setDoppelDialog(null)}>
+              Abbrechen
+            </button>
           </div>
-        </div>
+        </Modal>
       )}
       {planDialog && (
-        <div className="dialoghintergrund" onClick={() => !arbeitet && setPlanDialog(null)}>
-          <div className="dialog" onClick={(e) => e.stopPropagation()}>
-            <h2>Doppel-Partien ändern</h2>
-            <p>
-              Aufstellungen bleiben bei ihrer Partie, auch wenn sich die Reihenfolge ändert. Partien mit Ergebnis behalten
-              Disziplin und Race to und lassen sich nicht entfernen.
-            </p>
-            <DoppelPlanFelder zeilen={planDialog} aendern={setPlanDialog} />
-            {fehler && <p className="fehler">{fehler}</p>}
-            <div className="zeile">
-              <button type="button" disabled={arbeitet} onClick={() => void planSpeichern()}>
-                Speichern
-              </button>
-              <button type="button" disabled={arbeitet} onClick={() => setPlanDialog(null)}>
-                Abbrechen
-              </button>
-            </div>
+        <Modal abbrechen={() => !arbeitet && setPlanDialog(null)}>
+          <h2>Doppel-Partien ändern</h2>
+          <p>
+            Aufstellungen bleiben bei ihrer Partie, auch wenn sich die Reihenfolge ändert. Partien mit Ergebnis behalten
+            Disziplin und Race to und lassen sich nicht entfernen.
+          </p>
+          <DoppelPlanFelder zeilen={planDialog} aendern={setPlanDialog} />
+          {fehler && <p className="fehler">{fehler}</p>}
+          <div className="zeile">
+            <button type="button" disabled={arbeitet} onClick={() => void planSpeichern()}>
+              Speichern
+            </button>
+            <button type="button" disabled={arbeitet} onClick={() => setPlanDialog(null)}>
+              Abbrechen
+            </button>
           </div>
-        </div>
+        </Modal>
       )}
       {importOffen && (
         <SpielberichtImport
@@ -1617,71 +1614,67 @@ export default function LigaAnsicht({
         />
       )}
       {schutzFrage && (
-        <div className="dialoghintergrund" onClick={() => setSchutzFrage(false)}>
-          <div className="dialog" onClick={(e) => e.stopPropagation()}>
-            <h2>Schutz der Hinrunde aufheben</h2>
-            <p>
-              Danach lassen sich Ergebnisse, Aufstellung und Rating-Haken der Hinrunde wieder ändern. Das gilt nur hier und
-              bis du die Seite verlässt.
-            </p>
-            <div className="zeile">
-              <input
-                type="password"
-                placeholder="Passwort"
-                value={passwort}
-                autoFocus
-                onChange={(e) => setPasswort(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && void schutzAufheben()}
-              />
-              <button type="button" title="Mit dem Passwort den Schutz der Hinrunde aufheben" onClick={() => void schutzAufheben()}>
-                Aufheben
-              </button>
-            </div>
-            {fehler && <p className="fehler">{fehler}</p>}
-            <button
-              type="button"
-              onClick={() => {
-                setSchutzFrage(false);
-                setPasswort('');
-              }}
-            >
-              Abbrechen
+        <Modal abbrechen={() => setSchutzFrage(false)}>
+          <h2>Schutz der Hinrunde aufheben</h2>
+          <p>
+            Danach lassen sich Ergebnisse, Aufstellung und Rating-Haken der Hinrunde wieder ändern. Das gilt nur hier und
+            bis du die Seite verlässt.
+          </p>
+          <div className="zeile">
+            <input
+              type="password"
+              placeholder="Passwort"
+              value={passwort}
+              autoFocus
+              onChange={(e) => setPasswort(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && void schutzAufheben()}
+            />
+            <button type="button" title="Mit dem Passwort den Schutz der Hinrunde aufheben" onClick={() => void schutzAufheben()}>
+              Aufheben
             </button>
           </div>
-        </div>
+          {fehler && <p className="fehler">{fehler}</p>}
+          <button
+            type="button"
+            onClick={() => {
+              setSchutzFrage(false);
+              setPasswort('');
+            }}
+          >
+            Abbrechen
+          </button>
+        </Modal>
       )}
       {passwortFrage && (
-        <div className="dialoghintergrund" onClick={() => setPasswortFrage(null)}>
-          <div className="dialog" onClick={(e) => e.stopPropagation()}>
-            <h2>Aufstellung zeigen</h2>
-            <p>
-              Aufstellung von {passwortFrage.seite === 'heim' ? heimMannschaft : gastMannschaft} in der{' '}
-              {passwortFrage.runde === 'hin' ? 'Hinrunde' : 'Rückrunde'} sichtbar machen.
-            </p>
-            <div className="zeile">
-              <input
-                type="password"
-                placeholder="Passwort"
-                value={passwort}
-                autoFocus
-                onChange={(e) => setPasswort(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && void passwortPruefen()}
-              />
-              <button type="button" title="Mit dem Passwort die verborgene Aufstellung sichtbar machen" onClick={() => void passwortPruefen()}>
-                Zeigen
-              </button>
-            </div>
-            <button
-              type="button"
-              onClick={() => {
-                setPasswortFrage(null);
-                setPasswort('');
-              }}
-            >
-              Abbrechen
+        <Modal abbrechen={() => setPasswortFrage(null)}>
+          <h2>Aufstellung zeigen</h2>
+          <p>
+            Aufstellung von {passwortFrage.seite === 'heim' ? heimMannschaft : gastMannschaft} in der{' '}
+            {passwortFrage.runde === 'hin' ? 'Hinrunde' : 'Rückrunde'} sichtbar machen.
+          </p>
+          <div className="zeile">
+            <input
+              type="password"
+              placeholder="Passwort"
+              value={passwort}
+              autoFocus
+              onChange={(e) => setPasswort(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && void passwortPruefen()}
+            />
+            <button type="button" title="Mit dem Passwort die verborgene Aufstellung sichtbar machen" onClick={() => void passwortPruefen()}>
+              Zeigen
             </button>
           </div>
-        </div>
+          <button
+            type="button"
+            onClick={() => {
+              setPasswortFrage(null);
+              setPasswort('');
+            }}
+          >
+            Abbrechen
+          </button>
+        </Modal>
       )}
       {/* Zuletzt: Rueckfragen liegen ueber jedem anderen Dialog (z. B. "Partien aendern") */}
       {rueckfrage}

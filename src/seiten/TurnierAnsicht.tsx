@@ -57,6 +57,7 @@ import { DISZIPLIN_TEXT, MODUS_TEXT, STATUS_TEXT } from './Turniere';
 import type { TurnierEinstellungen } from './Turniere';
 import type { Partie, Person, RatingQuelle, Turnier, TurnierAnmeldung, TurnierTeilnehmer } from '../datenbank.types';
 import { anmeldeLink, anmeldestand } from '../ausschreibung';
+import { Modal } from '../modal';
 
 // Ein Turnier im Modus Einzelgruppe, Zwei Gruppen oder Gruppen mit KO:
 // Teilnehmer, Auslosung, Spielplan, Tabellen, bei zwei Gruppen die
@@ -2534,137 +2535,131 @@ export default function TurnierAnsicht({
 
       {rueckfrage}
       {nachtrag && (
-        <div className="dialoghintergrund" onClick={() => setNachtrag(null)}>
-          <div className="dialog" onClick={(e) => e.stopPropagation()}>
-            <h2>Spieler nachtragen</h2>
-            {mitKo && nachtragZiele.length > 1 && (
-              <div className="zeile">
-                <label>
-                  Gruppe mit Freilos{' '}
-                  <select value={nachtrag.ziel} onChange={(e) => setNachtrag({ ...nachtrag, ziel: e.target.value })}>
-                    {nachtragZiele.map((g) => (
-                      <option key={g} value={g}>
-                        {g}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-            )}
-            {nachtrag.ziel && (zwei || nachtragZiele.length === 1) && (
-              <p className="hinweis">Der Nachzügler kommt in Gruppe {nachtrag.ziel}.</p>
-            )}
+        <Modal abbrechen={() => setNachtrag(null)}>
+          <h2>Spieler nachtragen</h2>
+          {mitKo && nachtragZiele.length > 1 && (
             <div className="zeile">
-              <input
-                placeholder="Mitglied suchen"
-                value={nachtrag.suche}
-                onChange={(e) => setNachtrag({ ...nachtrag, suche: e.target.value })}
-              />
+              <label>
+                Gruppe mit Freilos{' '}
+                <select value={nachtrag.ziel} onChange={(e) => setNachtrag({ ...nachtrag, ziel: e.target.value })}>
+                  {nachtragZiele.map((g) => (
+                    <option key={g} value={g}>
+                      {g}
+                    </option>
+                  ))}
+                </select>
+              </label>
             </div>
-            {nachtragVorschlaege.length > 0 && (
-              <div className="filterzeile">
-                {nachtragVorschlaege.map((x) => (
-                  <button
-                    key={x.id}
-                    type="button"
-                    className="chip"
-                    disabled={arbeitet}
-                    title="Diesen Spieler nachtragen"
-                    onClick={() => {
-                      const ziel = nachtrag.ziel;
-                      setNachtrag(null);
-                      void nachtragen(x.id, ziel);
-                    }}
-                  >
-                    + {personName(x)}
-                    {x.status === 'gast' ? ' (Gast)' : ''}
-                  </button>
-                ))}
-              </div>
-            )}
-            <div className="zeile">
-              <input
-                placeholder="Neuer Gast: Vor- und Nachname"
-                value={nachtrag.gast}
-                onChange={(e) => setNachtrag({ ...nachtrag, gast: e.target.value })}
-              />
-              <button
-                type="button"
-                disabled={arbeitet}
-                title="Legt den Namen als Gast an und trägt ihn nach."
-                onClick={async () => {
-                  const { gast, ziel } = nachtrag;
-                  const id = await gastErzeugen(gast);
-                  if (!id) return;
-                  setNachtrag(null);
-                  await nachtragen(id, ziel, gast.trim().replace(/\s+/g, ' '));
-                }}
-              >
-                Gast nachtragen
-              </button>
+          )}
+          {nachtrag.ziel && (zwei || nachtragZiele.length === 1) && (
+            <p className="hinweis">Der Nachzügler kommt in Gruppe {nachtrag.ziel}.</p>
+          )}
+          <div className="zeile">
+            <input
+              placeholder="Mitglied suchen"
+              value={nachtrag.suche}
+              onChange={(e) => setNachtrag({ ...nachtrag, suche: e.target.value })}
+            />
+          </div>
+          {nachtragVorschlaege.length > 0 && (
+            <div className="filterzeile">
+              {nachtragVorschlaege.map((x) => (
+                <button
+                  key={x.id}
+                  type="button"
+                  className="chip"
+                  disabled={arbeitet}
+                  title="Diesen Spieler nachtragen"
+                  onClick={() => {
+                    const ziel = nachtrag.ziel;
+                    setNachtrag(null);
+                    void nachtragen(x.id, ziel);
+                  }}
+                >
+                  + {personName(x)}
+                  {x.status === 'gast' ? ' (Gast)' : ''}
+                </button>
+              ))}
             </div>
-            <p className="hinweis">Bereits eingetragene Ergebnisse bleiben erhalten. Gäste starten mit 500.</p>
-            <button type="button" onClick={() => setNachtrag(null)}>
-              Abbrechen
+          )}
+          <div className="zeile">
+            <input
+              placeholder="Neuer Gast: Vor- und Nachname"
+              value={nachtrag.gast}
+              onChange={(e) => setNachtrag({ ...nachtrag, gast: e.target.value })}
+            />
+            <button
+              type="button"
+              disabled={arbeitet}
+              title="Legt den Namen als Gast an und trägt ihn nach."
+              onClick={async () => {
+                const { gast, ziel } = nachtrag;
+                const id = await gastErzeugen(gast);
+                if (!id) return;
+                setNachtrag(null);
+                await nachtragen(id, ziel, gast.trim().replace(/\s+/g, ' '));
+              }}
+            >
+              Gast nachtragen
             </button>
           </div>
-        </div>
+          <p className="hinweis">Bereits eingetragene Ergebnisse bleiben erhalten. Gäste starten mit 500.</p>
+          <button type="button" onClick={() => setNachtrag(null)}>
+            Abbrechen
+          </button>
+        </Modal>
       )}
       {tausch && (
-        <div className="dialoghintergrund" onClick={() => setTausch(null)}>
-          <div className="dialog" onClick={(e) => e.stopPropagation()}>
-            <h2>Gruppe tauschen</h2>
-            <p>
-              <strong>{anzeige(tausch.raus)}</strong> soll in Gruppe {tausch.nach}. Wer wechselt dafür nach Gruppe{' '}
-              {tausch.von}?
-            </p>
-            <div className="knopfpaar">
-              {aufstellung
-                .filter((t) => t.gruppe === tausch.nach)
-                .map((t) => (
-                  <button key={t.person_id} type="button" title={`${anzeige(t.person_id)} wechselt dafür nach Gruppe ${tausch.von}`} disabled={arbeitet} onClick={() => void gruppeTauschen(tausch.raus, t.person_id)}>
-                    {anzeige(t.person_id)}
-                  </button>
-                ))}
-            </div>
-            <p className="hinweis">Die Gruppenstärken bleiben gleich, beide übernehmen den Platz des anderen im Spielplan.</p>
-            <button type="button" onClick={() => setTausch(null)}>
-              Abbrechen
-            </button>
+        <Modal abbrechen={() => setTausch(null)}>
+          <h2>Gruppe tauschen</h2>
+          <p>
+            <strong>{anzeige(tausch.raus)}</strong> soll in Gruppe {tausch.nach}. Wer wechselt dafür nach Gruppe{' '}
+            {tausch.von}?
+          </p>
+          <div className="knopfpaar">
+            {aufstellung
+              .filter((t) => t.gruppe === tausch.nach)
+              .map((t) => (
+                <button key={t.person_id} type="button" title={`${anzeige(t.person_id)} wechselt dafür nach Gruppe ${tausch.von}`} disabled={arbeitet} onClick={() => void gruppeTauschen(tausch.raus, t.person_id)}>
+                  {anzeige(t.person_id)}
+                </button>
+              ))}
           </div>
-        </div>
+          <p className="hinweis">Die Gruppenstärken bleiben gleich, beide übernehmen den Platz des anderen im Spielplan.</p>
+          <button type="button" onClick={() => setTausch(null)}>
+            Abbrechen
+          </button>
+        </Modal>
       )}
       {verlauf && (
-        <div className="dialoghintergrund" onClick={() => setVerlauf(null)}>
-          <div className="dialog" onClick={(e) => e.stopPropagation()}>
-            <h2>
-              Verlauf: {anzeige(verlauf.partie.spieler_a)} – {anzeige(verlauf.partie.spieler_b)}
-            </h2>
-            <table className="tabelle">
-              <tbody>
-                {verlauf.zeilen.map((z, i) => (
-                  <tr key={i}>
-                    <td>{zeitText(z.zeitpunkt)}</td>
-                    <td className="rechts">
-                      {z.nachher?.ergebnis_a ?? '–'} : {z.nachher?.ergebnis_b ?? '–'}
-                    </td>
-                    <td className="rechts">
-                      {i > 0 && bearbeitbar && (
-                        <button type="button" title="Setzt das Ergebnis auf diesen Stand zurück." onClick={() => void standWiederherstellen(verlauf.partie, z)}>
-                          Wiederherstellen
-                        </button>
-                      )}
-                      {i === 0 && <span className="hinweis">aktuell</span>}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            <button type="button" onClick={() => setVerlauf(null)}>
-              Schließen
-            </button>
-          </div>
-        </div>
+        <Modal abbrechen={() => setVerlauf(null)}>
+          <h2>
+            Verlauf: {anzeige(verlauf.partie.spieler_a)} – {anzeige(verlauf.partie.spieler_b)}
+          </h2>
+          <table className="tabelle">
+            <tbody>
+              {verlauf.zeilen.map((z, i) => (
+                <tr key={i}>
+                  <td>{zeitText(z.zeitpunkt)}</td>
+                  <td className="rechts">
+                    {z.nachher?.ergebnis_a ?? '–'} : {z.nachher?.ergebnis_b ?? '–'}
+                  </td>
+                  <td className="rechts">
+                    {i > 0 && bearbeitbar && (
+                      <button type="button" title="Setzt das Ergebnis auf diesen Stand zurück." onClick={() => void standWiederherstellen(verlauf.partie, z)}>
+                        Wiederherstellen
+                      </button>
+                    )}
+                    {i === 0 && <span className="hinweis">aktuell</span>}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <button type="button" onClick={() => setVerlauf(null)}>
+            Schließen
+          </button>
+        </Modal>
       )}
     </div>
   );

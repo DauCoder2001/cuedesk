@@ -9,6 +9,7 @@ import { useUngespeichert, weichtAb } from '../ungespeichert';
 import AuskunftKnoepfe from './AuskunftKnoepfe';
 import { EinwilligungLeitung } from './Einwilligungen';
 import { rollenText } from '../rollen';
+import { Modal } from '../modal';
 
 type Entwurf = Omit<Person, 'id' | 'erstellt_am' | 'geaendert_am'> & { id: string | null };
 type EntwurfIntern = Omit<PersonIntern, 'person_id' | 'verein_id'>;
@@ -614,37 +615,35 @@ export default function Personen({ kontoOeffnen }: { kontoOeffnen?: (kontoId: st
       </section>
       {rueckfrage}
       {kontoFrage && (
-        <div className="dialoghintergrund" onClick={() => kontoFrage.antwort(null)}>
-          <div className="dialog" onClick={(e) => e.stopPropagation()}>
-            <h2>
-              {kontoFrage.name} auf „{STATUS_TEXT[kontoFrage.status]}“ stellen?
-            </h2>
-            <p>
-              Das Konto {kontoFrage.konto.email} hat {rollenText(kontoFrage.konto.rollen)}.
-              {darfAnonymisieren
-                ? ' Soll es den Zugang behalten?'
-                : ' Den Zugang kann der Vereins-Administrator unter „Konten und Rollen“ entziehen.'}
-            </p>
-            <div className="knopfpaar">
-              <button type="button" title="Status speichern, das Konto behält seine Rollen" onClick={() => kontoFrage.antwort('behalten')}>
-                {darfAnonymisieren ? 'Behalten' : 'Speichern'}
+        <Modal abbrechen={() => kontoFrage.antwort(null)}>
+          <h2>
+            {kontoFrage.name} auf „{STATUS_TEXT[kontoFrage.status]}“ stellen?
+          </h2>
+          <p>
+            Das Konto {kontoFrage.konto.email} hat {rollenText(kontoFrage.konto.rollen)}.
+            {darfAnonymisieren
+              ? ' Soll es den Zugang behalten?'
+              : ' Den Zugang kann der Vereins-Administrator unter „Konten und Rollen“ entziehen.'}
+          </p>
+          <div className="knopfpaar">
+            <button type="button" title="Status speichern, das Konto behält seine Rollen" onClick={() => kontoFrage.antwort('behalten')}>
+              {darfAnonymisieren ? 'Behalten' : 'Speichern'}
+            </button>
+            {darfAnonymisieren && (
+              <button
+                type="button"
+                className="gefahrknopf"
+                title="Status speichern und alle Rollen dieses Kontos im Verein entfernen. Spieler und Ergebnisse bleiben."
+                onClick={() => kontoFrage.antwort('entziehen')}
+              >
+                Zugang entziehen
               </button>
-              {darfAnonymisieren && (
-                <button
-                  type="button"
-                  className="gefahrknopf"
-                  title="Status speichern und alle Rollen dieses Kontos im Verein entfernen. Spieler und Ergebnisse bleiben."
-                  onClick={() => kontoFrage.antwort('entziehen')}
-                >
-                  Zugang entziehen
-                </button>
-              )}
-              <button type="button" onClick={() => kontoFrage.antwort(null)}>
-                Abbrechen
-              </button>
-            </div>
+            )}
+            <button type="button" onClick={() => kontoFrage.antwort(null)}>
+              Abbrechen
+            </button>
           </div>
-        </div>
+        </Modal>
       )}
     </div>
   );

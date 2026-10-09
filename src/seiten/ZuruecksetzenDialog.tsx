@@ -3,6 +3,7 @@ import { supabase } from '../supabase';
 import { schutzwortPruefen } from '../schutzwort';
 import { partieZuruecksetzen } from '../partie-zuruecksetzen';
 import type { Partie } from '../datenbank.types';
+import { Modal } from '../modal';
 
 // Rueckfrage mit Schutzwort, bevor eine Partie zurueck auf "offen" geht.
 // Das Schutzwort haelt den schnellen Griff daneben auf, wie bei
@@ -45,37 +46,35 @@ export default function ZuruecksetzenDialog(props: {
   }
 
   return (
-    <div className="dialoghintergrund" onClick={props.abbrechen}>
-      <div className="dialog" onClick={(e) => e.stopPropagation()}>
-        <h2>Partie zurücksetzen</h2>
-        <p>
-          {props.paarung}
-          {mitErgebnis
-            ? `: Das Ergebnis ${p.ergebnis_a} : ${p.ergebnis_b} wird verworfen.`
-            : p.tisch_id
-              ? ` läuft an ${tisch !== null ? `Tisch ${tisch}` : 'einem Tisch'}. Der Spielstand am Tisch wird verworfen, das Tablet zeigt wieder die Spielauswahl.`
-              : ' wird wieder offen gestellt.'}
-          {p.disziplin === '14-1' ? ' Das Aufnahme-Protokoll wird gelöscht.' : ''} Danach steht die Partie wieder in der
-          Spielauswahl am Tablet.
-        </p>
-        <div className="zeile">
-          <input
-            type="password"
-            placeholder="Passwort"
-            value={wort}
-            autoFocus
-            onChange={(e) => setWort(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && void zuruecksetzen()}
-          />
-          <button type="button" title="Mit dem Passwort die Partie zurück auf offen stellen" onClick={() => void zuruecksetzen()}>
-            Zurücksetzen
-          </button>
-        </div>
-        {fehler && <p className="fehler">{fehler}</p>}
-        <button type="button" onClick={props.abbrechen}>
-          Abbrechen
+    <Modal abbrechen={props.abbrechen}>
+      <h2>Partie zurücksetzen</h2>
+      <p>
+        {props.paarung}
+        {mitErgebnis
+          ? `: Das Ergebnis ${p.ergebnis_a} : ${p.ergebnis_b} wird verworfen.`
+          : p.tisch_id
+            ? ` läuft an ${tisch !== null ? `Tisch ${tisch}` : 'einem Tisch'}. Der Spielstand am Tisch wird verworfen, das Tablet zeigt wieder die Spielauswahl.`
+            : ' wird wieder offen gestellt.'}
+        {p.disziplin === '14-1' ? ' Das Aufnahme-Protokoll wird gelöscht.' : ''} Danach steht die Partie wieder in der
+        Spielauswahl am Tablet.
+      </p>
+      <div className="zeile">
+        <input
+          type="password"
+          placeholder="Passwort"
+          value={wort}
+          autoFocus
+          onChange={(e) => setWort(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && void zuruecksetzen()}
+        />
+        <button type="button" title="Mit dem Passwort die Partie zurück auf offen stellen" onClick={() => void zuruecksetzen()}>
+          Zurücksetzen
         </button>
       </div>
-    </div>
+      {fehler && <p className="fehler">{fehler}</p>}
+      <button type="button" onClick={props.abbrechen}>
+        Abbrechen
+      </button>
+    </Modal>
   );
 }

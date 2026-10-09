@@ -6,6 +6,7 @@ import { spielplan } from '../liga';
 import type { BerichtPartie, Spielbericht } from '../spielbericht';
 import type { Ausspielziele } from '../liga';
 import type { Partie, Person, Turnier } from '../datenbank.types';
+import { Modal } from '../modal';
 
 // Spielbericht des Verbands einlesen: Adresse eingeben, Vorschau ansehen,
 // dann übernehmen. Geholt wird die Seite von der Serverfunktion
@@ -214,102 +215,100 @@ export default function SpielberichtImport({
   }
 
   return (
-    <div className="dialoghintergrund" onClick={schliessen}>
-      <div className="dialog breit" onClick={(e) => e.stopPropagation()}>
-        <h2>Spielbericht einlesen</h2>
-        <p className="hinweis">
-          Adresse des Berichts von billard-niedersachsen.de einfügen. Es wird nur gelesen; gespeichert wird erst mit
-          „Übernehmen“.
-        </p>
-        <div className="zeile">
-          <input
-            value={adresse}
-            placeholder="z. B. https://billard-niedersachsen.de/sb_spielbericht.php?p=..."
-            onChange={(e) => setAdresse(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && void lesen()}
-            style={{ flex: '1 1 320px' }}
-          />
-          <button type="button" title="Den Spielbericht lesen und als Vorschau zeigen. Gespeichert wird noch nichts." onClick={() => void lesen()} disabled={arbeitet}>
-            Lesen
-          </button>
-        </div>
-        {fehler && <p className="fehler">{fehler}</p>}
-        {meldung && <p className="meldung">{meldung}</p>}
-
-        {bericht && (
-          <>
-            <p className="hinweis">
-              {bericht.heimMannschaft} gegen {bericht.gastMannschaft}
-              {bericht.datum ? ` · ${new Date(`${bericht.datum}T12:00:00`).toLocaleDateString('de-DE')}` : ''}
-              {bericht.endstand ? ` · Endstand ${bericht.endstand[0]} : ${bericht.endstand[1]}` : ''}
-            </p>
-            {seiteVertauscht && (
-              <div className="pausehinweis">
-                <strong>Prüfen:</strong> Im Bericht steht auf unserer Seite „
-                {liga.heim ? bericht.heimMannschaft : bericht.gastMannschaft}“. Stimmt das Heimrecht dieses Spieltags?
-              </div>
-            )}
-            <table className="tabelle kompakt">
-              <thead>
-                <tr>
-                  <th>Nr.</th>
-                  <th>Disziplin</th>
-                  <th>{liga.eigene}</th>
-                  <th>{liga.gegner}</th>
-                  <th>Ergebnis</th>
-                </tr>
-              </thead>
-              <tbody>
-                {zeilen.map((z) => (
-                  <tr key={z.partie.nr}>
-                    <td>{z.partie.nr}</td>
-                    <td>{DISZIPLIN_TEXT[z.partie.disziplin]}</td>
-                    <td>
-                      <div>{z.unser || <span className="hinweis">offen</span>}</div>
-                      {z.unser && (
-                        <select
-                          value={z.unsererId ?? ''}
-                          onChange={(e) => setZuordnung({ ...zuordnung, [z.partie.nr]: e.target.value })}
-                        >
-                          <option value="">– nicht übernehmen –</option>
-                          {mitglieder.map((m) => (
-                            <option key={m.id} value={m.id}>
-                              {personName(m)}
-                            </option>
-                          ))}
-                        </select>
-                      )}
-                    </td>
-                    <td>
-                      {z.gegner || <span className="hinweis">offen</span>}
-                      {z.gegner && !z.gegnerId && <span className="hinweis"> · wird als Gast angelegt</span>}
-                    </td>
-                    <td>
-                      {z.partie.ergebnis ? `${z.partie.ergebnis[0]} : ${z.partie.ergebnis[1]}` : '–'}
-                      {z.partie.aufnahmen ? <span className="hinweis"> · {z.partie.aufnahmen} Aufn.</span> : null}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            <p className="hinweis">
-              Übernommen werden nur Partien, bei denen unser Spieler erkannt wurde. Vorhandene Partien dieses Spieltags
-              werden überschrieben.
-            </p>
-          </>
-        )}
-
-        <div className="knopfpaar">
-          {bericht && (
-            <button type="button" title="Schreibt die ausgewählten Partien in die Begegnung." onClick={() => void uebernehmen()} disabled={arbeitet}>
-              Übernehmen
-            </button>
-          )}
-          <button type="button" onClick={schliessen}>
-            Schließen
-          </button>
-        </div>
+    <Modal abbrechen={schliessen} breit>
+      <h2>Spielbericht einlesen</h2>
+      <p className="hinweis">
+        Adresse des Berichts von billard-niedersachsen.de einfügen. Es wird nur gelesen; gespeichert wird erst mit
+        „Übernehmen“.
+      </p>
+      <div className="zeile">
+        <input
+          value={adresse}
+          placeholder="z. B. https://billard-niedersachsen.de/sb_spielbericht.php?p=..."
+          onChange={(e) => setAdresse(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && void lesen()}
+          style={{ flex: '1 1 320px' }}
+        />
+        <button type="button" title="Den Spielbericht lesen und als Vorschau zeigen. Gespeichert wird noch nichts." onClick={() => void lesen()} disabled={arbeitet}>
+          Lesen
+        </button>
       </div>
-    </div>
+      {fehler && <p className="fehler">{fehler}</p>}
+      {meldung && <p className="meldung">{meldung}</p>}
+
+      {bericht && (
+        <>
+          <p className="hinweis">
+            {bericht.heimMannschaft} gegen {bericht.gastMannschaft}
+            {bericht.datum ? ` · ${new Date(`${bericht.datum}T12:00:00`).toLocaleDateString('de-DE')}` : ''}
+            {bericht.endstand ? ` · Endstand ${bericht.endstand[0]} : ${bericht.endstand[1]}` : ''}
+          </p>
+          {seiteVertauscht && (
+            <div className="pausehinweis">
+              <strong>Prüfen:</strong> Im Bericht steht auf unserer Seite „
+              {liga.heim ? bericht.heimMannschaft : bericht.gastMannschaft}“. Stimmt das Heimrecht dieses Spieltags?
+            </div>
+          )}
+          <table className="tabelle kompakt">
+            <thead>
+              <tr>
+                <th>Nr.</th>
+                <th>Disziplin</th>
+                <th>{liga.eigene}</th>
+                <th>{liga.gegner}</th>
+                <th>Ergebnis</th>
+              </tr>
+            </thead>
+            <tbody>
+              {zeilen.map((z) => (
+                <tr key={z.partie.nr}>
+                  <td>{z.partie.nr}</td>
+                  <td>{DISZIPLIN_TEXT[z.partie.disziplin]}</td>
+                  <td>
+                    <div>{z.unser || <span className="hinweis">offen</span>}</div>
+                    {z.unser && (
+                      <select
+                        value={z.unsererId ?? ''}
+                        onChange={(e) => setZuordnung({ ...zuordnung, [z.partie.nr]: e.target.value })}
+                      >
+                        <option value="">– nicht übernehmen –</option>
+                        {mitglieder.map((m) => (
+                          <option key={m.id} value={m.id}>
+                            {personName(m)}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </td>
+                  <td>
+                    {z.gegner || <span className="hinweis">offen</span>}
+                    {z.gegner && !z.gegnerId && <span className="hinweis"> · wird als Gast angelegt</span>}
+                  </td>
+                  <td>
+                    {z.partie.ergebnis ? `${z.partie.ergebnis[0]} : ${z.partie.ergebnis[1]}` : '–'}
+                    {z.partie.aufnahmen ? <span className="hinweis"> · {z.partie.aufnahmen} Aufn.</span> : null}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p className="hinweis">
+            Übernommen werden nur Partien, bei denen unser Spieler erkannt wurde. Vorhandene Partien dieses Spieltags
+            werden überschrieben.
+          </p>
+        </>
+      )}
+
+      <div className="knopfpaar">
+        {bericht && (
+          <button type="button" title="Schreibt die ausgewählten Partien in die Begegnung." onClick={() => void uebernehmen()} disabled={arbeitet}>
+            Übernehmen
+          </button>
+        )}
+        <button type="button" onClick={schliessen}>
+          Schließen
+        </button>
+      </div>
+    </Modal>
   );
 }

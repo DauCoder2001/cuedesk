@@ -7,7 +7,7 @@
 // Browser selbst.
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import { RueckfrageDialog } from './rueckfrage';
+import { Modal } from './modal';
 
 type Eintrag = { beschreibung: string; speichern: () => Promise<unknown> };
 type Wahl = 'speichern' | 'verwerfen' | 'zurueck';
@@ -77,7 +77,7 @@ export function UngespeichertBereich({ children }: { children: ReactNode }) {
     <Kontext.Provider value={{ melden, wechselErlaubt }}>
       {children}
       {frage && (
-        <RueckfrageDialog abbrechen={() => waehlen('zurueck')}>
+        <Modal abbrechen={() => waehlen('zurueck')}>
           <p style={{ margin: 0, whiteSpace: 'pre-line' }}>{frage}</p>
           <div className="knopfpaar">
             <button type="button" autoFocus title="Erst speichern, dann weiter" onClick={() => waehlen('speichern')}>
@@ -90,7 +90,7 @@ export function UngespeichertBereich({ children }: { children: ReactNode }) {
               Zurück
             </button>
           </div>
-        </RueckfrageDialog>
+        </Modal>
       )}
     </Kontext.Provider>
   );
