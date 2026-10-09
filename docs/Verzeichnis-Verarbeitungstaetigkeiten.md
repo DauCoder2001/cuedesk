@@ -29,9 +29,9 @@ Die Ausnahme für Betriebe unter 250 Beschäftigten (Art. 30 Abs. 5) greift nich
 | Rechtsgrundlage | Art. 6 Abs. 1 lit. f DSGVO |
 | Betroffene | Besucher der Webseite |
 | Daten | IP-Adresse, Zeitpunkt, aufgerufene Adresse, Browserkennung (Server-Protokolle) |
-| Empfänger | IONOS SE (Hosting) [prüfen: heute noch GitHub Pages, Umzug offen] |
-| Drittland | nein, nach dem Umzug zu IONOS |
-| Löschfrist | nach den Fristen des Hosters [prüfen] |
+| Empfänger | GitHub, Inc. (GitHub Pages) liefert Webseite und Anwendung aus; die Daten der Vereine laufen direkt zwischen Browser und Supabase und berühren GitHub nicht |
+| Drittland | GitHub, Inc.: USA; EU-US Data Privacy Framework [prüfen] |
+| Löschfrist | nach den Fristen von GitHub [prüfen] |
 
 ### A2 Benutzerkonten und Anmeldung
 
@@ -91,9 +91,9 @@ Die Ausnahme für Betriebe unter 250 Beschäftigten (Art. 30 Abs. 5) greift nich
 | Chat | nur wenn der Verein ihn einschaltet (Seite „System“) und das Turnier ihn vorsieht: Name, Text (höchstens 300 Zeichen), Turnier, Zeitpunkt; lesen nur Mitglieder mit Konto; löschen Verfasser und Turnierleitung; gelöscht 1 Tag nach Turnierende (Cron-Job `fristen-loeschen`) |
 | Öffentlicher Live-Link | nur wenn die Turnierleitung ihn für ein Turnier oder einen Liga-Spieltag freigibt: Spielstände, Spielplan, Ergebnisse dieses Turniers für jeden mit dem Link, ohne Anmeldung; Namen nur mit nachgewiesener Einwilligung (Anzeigename ohne Vereinszusatz oder „Vorname N.“), sonst Kürzel; befristet bis zum eingestellten Tag, jederzeit zu beenden; Daten nur über die Funktion `oeffentliche_ansicht` |
 | Nicht erfasst | Anschrift, Geburtsdatum, Bankdaten, besondere Kategorien (Art. 9) |
-| Unterauftragsverarbeiter | Supabase, Inc. (Datenbank, Frankfurt); IONOS SE (Hosting, Mail) |
-| Drittland | Supabase, Inc.: USA, Daten in Frankfurt; DPA und Standardvertragsklauseln [prüfen] |
-| Sicherung | wöchentlich, AES-256 verschlüsselt, 12 Wochen [prüfen: liegt heute bei GitHub, siehe unten] |
+| Unterauftragsverarbeiter | Supabase, Inc. (Datenbank, Frankfurt); IONOS SE (Domain, Postfach, Versand der Anmelde-Mails); GitHub, Inc. (nur Ablage der verschlüsselten Sicherung) |
+| Drittland | Supabase, Inc.: USA, Daten in Frankfurt; DPA und Standardvertragsklauseln [prüfen]. GitHub, Inc.: USA, nur verschlüsselte Sicherung; DPA und Data Privacy Framework [prüfen] |
+| Sicherung | wöchentlich, vor der Ablage AES-256 verschlüsselt, in einem privaten GitHub-Repository, 12 Wochen; der Schlüssel liegt nicht bei GitHub |
 | Löschung | Änderungsprotokoll 2 Jahre; Personen auf Wunsch anonymisiert; ganzer Verein 30 Tage nach Ende, in Sicherungen spätestens 12 Wochen später |
 
 ## Technische und organisatorische Maßnahmen
@@ -102,6 +102,5 @@ Siehe Anlage 1 in `auftragsverarbeitung.html`.
 
 ## Offene Punkte
 
-- **Sicherung:** Die wöchentliche Sicherung (`.github/workflows/sicherung.yml`) liegt heute verschlüsselt in einem GitHub-Repository. GitHub steht nicht in der Liste der Unterauftragsverarbeiter. Entweder GitHub aufnehmen (AVV Anlage 2, Datenschutzerklärung) oder die Sicherung zu IONOS umziehen.
-- **Hosting:** Die Webseite liegt heute noch bei GitHub Pages. Nach dem Umzug zu IONOS die Datenschutzerklärung anpassen (dort steht noch GitHub).
-- **Verträge mit Dienstleistern:** DPA bei Supabase im Dashboard abschließen, AVV bei IONOS im Kundenkonto abschließen.
+- **Hosting und Sicherung:** entschieden am 07.10.2026, GitHub Pages und verschlüsselte Sicherung bei GitHub bleiben (AVV Anlage 2, Datenschutzerklärung und dieses Verzeichnis nachgezogen am 09.10.2026).
+- **Verträge mit Dienstleistern:** DPA bei Supabase im Dashboard abschließen, AVV bei IONOS im Kundenkonto abschließen, DPA mit GitHub prüfen bzw. abschließen.

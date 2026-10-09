@@ -36,7 +36,7 @@ Die Liste hat vier Teile:
 | Nr. | Abschnitt | Text (gekürzt) | Frage |
 |---|---|---|---|
 | D1 | Dienstleister, Supabase | „Die Daten liegen auf Servern in Frankfurt am Main. Da das Unternehmen in den USA sitzt, ist ein Zugriff von dort nicht ausgeschlossen; Grundlage sind der Vertrag zur Auftragsverarbeitung und die Standardvertragsklauseln der EU-Kommission.“ | Wie A5. |
-| D2 | Dienstleister, GitHub | „Bereitstellung der Webseite und Ablage der wöchentlichen Sicherung. Die Sicherung ist verschlüsselt, bevor sie GitHub erreicht; GitHub kann sie nicht lesen. Grundlage für die Webseite ist das EU-US Data Privacy Framework.“ | Ist GitHub zertifiziert und die Grundlage richtig? (Entfällt, wenn Webseite und Sicherung zu IONOS ziehen, siehe S2.) |
+| D2 | Dienstleister, GitHub | „Bereitstellung der Webseite und Ablage der wöchentlichen Sicherung. Die Sicherung ist verschlüsselt, bevor sie GitHub erreicht; GitHub kann sie nicht lesen. Grundlage für die Webseite ist das EU-US Data Privacy Framework.“ | Ist GitHub zertifiziert und die Grundlage richtig? Gilt ebenso für AVV Anlage 2 (GitHub, nur verschlüsselte Sicherung: DPA von GitHub und Data Privacy Framework). |
 | D3 | Dienstleister, Google | „Postfach kontakt.cuedesk@gmail.com für Kontaktanfragen. Grundlage ist das EU-US Data Privacy Framework.“ | Grundlage richtig? Ist ein privates Gmail-Postfach für Anfragen zu Daten von Vereinen vertretbar? |
 | D4 | 5. Öffentlicher Live-Link | „Wer diesen Link hat, sieht ohne Anmeldung die Spielstände an den Tischen und den Spielplan mit Ergebnissen dieses einen Turniers … Der Verein informiert die Teilnehmer vorab, zum Beispiel in der Ausschreibung. Rechtsgrundlage ist das berechtigte Interesse des Vereins, seinen Spielbetrieb zu zeigen (Art. 6 Abs. 1 lit. f DSGVO).“ Namen nur mit Einwilligung, sonst Kürzel. | Trägt lit. f die Veröffentlichung von Spielständen und Ergebnissen mit Kürzeln, und reicht die Information vorab in der Ausschreibung? Braucht es einen Hinweis auf das Widerspruchsrecht (Art. 21) an dieser Stelle? |
 
@@ -54,17 +54,15 @@ Die Liste hat vier Teile:
 | Nr. | Punkt | Wo es steht | Was zu tun ist |
 |---|---|---|---|
 | S1 | Zwei-Faktor-Anmeldung bei allen Dienstleistern | AVV Anlage 1 | Bei Supabase, IONOS, GitHub und Google einschalten, sonst stimmt die Zusage nicht. |
-| S2 | Hosting der Webseite: GitHub Pages oder IONOS | Datenschutzerklärung (GitHub), AVV Anlage 2 (IONOS), Verzeichnis A1 | Entschieden 07.10.2026: GitHub Pages bleibt. Alle drei Stellen gleichziehen (Claude, steht in `Vor-dem-Livegang.md`). |
-| S3 | Ablage der wöchentlichen Sicherung | Datenschutzerklärung (GitHub), Verzeichnis B, offene Punkte | Entschieden 07.10.2026: bleibt verschlüsselt bei GitHub; GitHub in AVV Anlage 2 aufnehmen (Claude). |
-| S4 | Verträge mit den Dienstleistern | Datenschutzerklärung, AVV Anlage 2, Verzeichnis | DPA bei Supabase (Dashboard) und AVV bei IONOS (Kundenkonto) abschließen und ablegen. |
+| S2 | Hosting der Webseite: GitHub Pages oder IONOS | Datenschutzerklärung (GitHub), AVV Anlage 2 (IONOS), Verzeichnis A1 | Entschieden 07.10.2026: GitHub Pages bleibt. **Erledigt 09.10.2026:** AVV Anlage 2 (IONOS ohne Hosting), Verzeichnis A1 (Empfänger GitHub) gleichgezogen; die Datenschutzerklärung stimmte schon. |
+| S3 | Ablage der wöchentlichen Sicherung | Datenschutzerklärung (GitHub), Verzeichnis B, offene Punkte | Entschieden 07.10.2026: bleibt verschlüsselt bei GitHub. **Erledigt 09.10.2026:** GitHub in AVV Anlage 2 und Verzeichnis B aufgenommen. |
+| S4 | Verträge mit den Dienstleistern | Datenschutzerklärung, AVV Anlage 2, Verzeichnis | DPA bei Supabase (Dashboard) und AVV bei IONOS (Kundenkonto) abschließen, DPA mit GitHub prüfen bzw. abschließen, alles ablegen. |
 | S5 | Löschfrist der Server-Protokolle | Verzeichnis A1: „nach den Fristen des Hosters [prüfen]“ | Frist beim gewählten Hoster nachsehen und eintragen. |
 | S6 | Öffentlicher Live-Link (Stufe 32, 08.10.2026) | Datenschutzerklärung, Verzeichnis (neue Tätigkeit), Hilfe Turnier | **Erledigt 09.10.2026:** Datenschutzerklärung Abschnitt 5 („Öffentlicher Live-Link“, „Namensanzeige“, Minderjährige) und 8 (Speicherdauer), Verzeichnis Teil B, Hilfe Turnier (Teilnehmer vorab informieren); Frage dazu unter D4. Ursprünglicher Auftrag: Neue Verarbeitung aufnehmen: Spielstände, Spielplan und Namen („Vorname N.“ mit Einwilligung, sonst Kürzel) sind für jeden mit dem Link sichtbar, befristet je Turnier. Hinweis für Vereine: Teilnehmer vorab informieren, z. B. in der Ausschreibung. Den am 30.09.2026 ersetzten Absatz zur Einwilligung in die Namensanzeige wieder aufnehmen (Namen nur mit nachgewiesener Einwilligung, sonst Kürzel). Text zeigen, dann einarbeiten (Claude). |
 
 ## 3. Widersprüche zwischen den Texten
 
-- **Webseite:** Die Datenschutzerklärung nennt GitHub als Ort der Webseite, AVV Anlage 2 nennt IONOS („Hosting der Webseite“). Nur eines davon stimmt (S2).
-- **Sicherung:** Die Datenschutzerklärung nennt GitHub als Ablage der Sicherung, in AVV Anlage 2 fehlt GitHub. Für die Vereine ist GitHub damit ein nicht genehmigter Unterauftragsverarbeiter (S3).
-- **IONOS:** In der Datenschutzerklärung macht IONOS nur Domain, Postfach und Mailversand, in AVV Anlage 2 auch das Hosting. Gleichziehen nach der Entscheidung zu S2.
+Behoben am 09.10.2026 (S2, S3): Webseite bei GitHub Pages, IONOS nur Domain, Postfach und Mailversand, GitHub als Unterauftragsverarbeiter für die verschlüsselte Sicherung, in Datenschutzerklärung, AVV Anlage 2 und Verzeichnis einheitlich. Zurzeit keine bekannten Widersprüche.
 
 ## 4. Datum „Stand“
 
