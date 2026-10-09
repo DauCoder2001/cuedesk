@@ -61,6 +61,10 @@ type SpieltagTeil = { nummer: 1 | 2 | 3; id: string; status: Turnier['status']; 
 const datumLang = (iso: string) =>
   new Date(`${iso}T12:00:00`).toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' });
 
+// Name des Spieltags, wie er beim Anlegen vergeben wurde: ohne den Zusatz,
+// den die weiteren Begegnungen tragen ("… · 2. Begegnung", "… · Doppel")
+const spieltagName = (name: string) => name.replace(/ · ([12]\. Begegnung|Doppel)$/, '');
+
 // Die andere Begegnung eines Spieltags anlegen: gleicher Tag, gleicher
 // Gegner, getauschtes Heimrecht, leere Aufstellung. Danach verweisen beide
 // ueber liga.partner aufeinander.
@@ -1086,7 +1090,7 @@ export default function LigaAnsicht({
       .map((x) => zeile(`${x.nummer}. Begegnung${x.doppel ? ' (Doppel)' : ''}`, (alle ?? []).filter((p) => p.turnier_id === x.id)))
       .join('\n');
     const frage =
-      `Den ganzen Spieltag „${turnier.name.replace(/ · ([12]\. Begegnung|Doppel)$/, '')}“ löschen? Das lässt sich nicht rückgängig machen.\n\n${zeilen}` +
+      `Den ganzen Spieltag „${spieltagName(turnier.name)}“ löschen? Das lässt sich nicht rückgängig machen.\n\n${zeilen}` +
       (turnier.rating_werten ? '\n\nDas Vereins-Rating wird heute Nacht ohne diese Partien neu berechnet.' : '');
     if (!(await fragen(frage, 'Spieltag löschen', { schutzwort: verein.id }))) return;
     setArbeitet(true);
@@ -1131,9 +1135,7 @@ export default function LigaAnsicht({
             <button type="button" title={`Zurück zur Seite „${zurueckText}“`} className="zurueck" onClick={zurueck}>
               ← {zurueckText}
             </button>
-            <h2>
-              {LIGEN[liga.liga].name} · {liga.spieltag}. Spieltag
-            </h2>
+            <h2>{spieltagName(turnier.name)}</h2>
             <div className="zeile">
               <span className="hinweis">Begegnung:</span>
               <span className="umschalter">
@@ -1176,7 +1178,7 @@ export default function LigaAnsicht({
               )}
             </div>
             <p className="hinweis">
-              {datumLang(turnier.datum)} · {eigenerName} gegen {liga.gegner} · {liga.heim ? 'Heimspiel' : 'Auswärtsspiel'} ·{' '}
+              {LIGEN[liga.liga].name} · {liga.spieltag}. Spieltag · {datumLang(turnier.datum)} · {eigenerName} gegen {liga.gegner} · {liga.heim ? 'Heimspiel' : 'Auswärtsspiel'} ·{' '}
               {istDoppel
                 ? `${spiele.length} Doppel: ${spiele
                     .map((s) => `${DISZIPLIN_KURZ[s.disziplin]} Race to ${s.ziel}`)

@@ -15,7 +15,7 @@ Ein Liga-Spieltag besteht immer aus zwei Begegnungen gegen dieselbe Mannschaft, 
 ## 2. Spieltag anlegen
 
 1. Reiter **Turniere**, **Neues Turnier**, Modus **Liga-Spieltag (Begegnung)**.
-2. Liga, Spieltag, **Heimspiel** oder **Auswärtsspiel**, eigene Mannschaft und Gegner eintragen.
+2. **Name**, Liga, Spieltag, **Heimspiel** oder **Auswärtsspiel**, eigene Mannschaft und Gegner eintragen. Der Name steht in der Turnierliste, als Überschrift des Spieltags, auf dem Spielbericht und am Fernseher; Liga und Spieltag stehen darunter in der Infozeile.
 3. **Anlegen**. Beide Begegnungen entstehen sofort.
 
 ## 3. Aufstellung
