@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 
 // Eigene Rueckfrage statt window.confirm: gleicher Stil wie die Anwendung.
@@ -28,22 +28,55 @@ export function useRueckfrage(): [ReactNode, (text: string, ja?: string) => Prom
   };
 
   const element = offen ? (
-    // Eigene Ebene: Eine Rueckfrage liegt immer ueber einem offenen Dialog,
-    // egal wo sie im Seitenaufbau steht
-    <div className="dialoghintergrund rueckfrageebene" onClick={() => schliessen(false)}>
-      <div className="dialog" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
-        <p style={{ margin: 0, whiteSpace: 'pre-line' }}>{offen.text}</p>
-        <div className="knopfpaar">
-          <button type="button" autoFocus onClick={() => schliessen(true)}>
-            {offen.ja}
-          </button>
-          <button type="button" onClick={() => schliessen(false)}>
-            Abbrechen
-          </button>
-        </div>
+    <RueckfrageDialog abbrechen={() => schliessen(false)}>
+      <p style={{ margin: 0, whiteSpace: 'pre-line' }}>{offen.text}</p>
+      <div className="knopfpaar">
+        <button type="button" autoFocus onClick={() => schliessen(true)}>
+          {offen.ja}
+        </button>
+        <button type="button" onClick={() => schliessen(false)}>
+          Abbrechen
+        </button>
       </div>
-    </div>
+    </RueckfrageDialog>
   ) : null;
 
   return [element, fragen];
+}
+
+// Modaler Rahmen fuer Rueckfragen (auch src/ungespeichert.tsx). Das native
+// <dialog> mit showModal() liegt in der obersten Ebene ueber jedem anderen
+// Dialog, haelt den Fokus fest, sperrt die Seite dahinter und schliesst mit
+// Escape. Klick neben den Dialog zaehlt als Abbrechen. Beim Schliessen kehrt
+// der Fokus zum Ausloeser zurueck.
+export function RueckfrageDialog({ abbrechen, children }: { abbrechen: () => void; children: ReactNode }) {
+  const ref = useRef<HTMLDialogElement>(null);
+
+  // Layout-Effekt: oeffnen vor dem ersten Bild, schliessen bevor React das
+  // Element entfernt - nur close() gibt den Fokus an den Ausloeser zurueck
+  useLayoutEffect(() => {
+    const dialog = ref.current;
+    if (!dialog) return;
+    const vorher = document.activeElement;
+    if (!dialog.open) dialog.showModal();
+    return () => {
+      dialog.close();
+      if (vorher instanceof HTMLElement && vorher.isConnected) vorher.focus();
+    };
+  }, []);
+
+  return (
+    <dialog
+      ref={ref}
+      className="rueckfragedialog"
+      onCancel={(e) => {
+        // Escape: Der Aufrufer schliesst ueber seinen Zustand
+        e.preventDefault();
+        abbrechen();
+      }}
+      onClick={(e) => e.target === e.currentTarget && abbrechen()}
+    >
+      <div className="dialog">{children}</div>
+    </dialog>
+  );
 }
