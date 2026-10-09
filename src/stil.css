@@ -428,6 +428,10 @@ h2 small.hinweis { font-weight: 400; font-size: 14px; margin-left: 6px; }
 .serientabelle .punkte { left: 230px; width: 70px; min-width: 70px; }
 .serientabelle .turnier { min-width: 90px; }
 .serientabelle th.platzhalter { color: var(--text-leise); font-weight: normal; }
+/* Seite System, Rating-Rechenwerte: Name, Wert, Erklaerung */
+.ratingwerte td { vertical-align: top; }
+.ratingwerte td:first-child, .ratingwerte .wert { white-space: nowrap; }
+.ratingwerte .wert { font-weight: 600; }
 .rollbereich thead th { position: sticky; top: 0; background: var(--flaeche); z-index: 1; }
 
 .spielwahl { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin-top: 8px; }

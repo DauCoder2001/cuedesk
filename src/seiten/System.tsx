@@ -14,6 +14,7 @@ import { AngabenFelder, WebAdresseFeld, angabenAus } from '../vereinsangaben';
 import type { Vereinsangaben } from '../vereinsangaben';
 import { homepageLink } from '../mandanten';
 import { useUngespeichert, weichtAb } from '../ungespeichert';
+import { STANDARD_EINSTELLUNGEN } from '../rating';
 
 // Seite "System": Einstellungen des Vereins, nur fuer den Vereins-Administrator.
 // Verein (Name, Kuerzel, Logo), Vorgaben fuer neue Turniere und Liga-Spieltage,
@@ -33,6 +34,33 @@ type RatingWerte = {
   gewicht: number;
   staerke_prozent: number;
 };
+
+// Ohne gespeicherte Rating-Einstellungen gelten diese Werte (src/rating.ts,
+// Vorgabe-Ausgleich aus src/vorgabe.ts)
+const RATING_STANDARD: RatingWerte = {
+  vereinsschnitt: STANDARD_EINSTELLUNGEN.vereinsschnitt,
+  zeitraum_monate: STANDARD_EINSTELLUNGEN.zeitraum,
+  mindest_racks: STANDARD_EINSTELLUNGEN.mindestRacks,
+  rueckgriff_monate: STANDARD_EINSTELLUNGEN.rueckgriff,
+  gewicht: STANDARD_EINSTELLUNGEN.gewicht,
+  staerke_prozent: 75
+};
+
+// Die Rechenwerte mit einer Zeile Erklaerung, wie im Abschnitt "Rating-Rechenwerte"
+function ratingZeilen(r: RatingWerte): [string, string, string][] {
+  return [
+    ['Vereinsschnitt', String(r.vereinsschnitt), 'Startwert für Spieler, die noch keine Partien haben.'],
+    ['Zeitraum', `${r.zeitraum_monate} Monate`, 'Gerechnet wird mit den Partien dieses Zeitraums.'],
+    ['Mindest-Racks', String(r.mindest_racks), 'Ab so vielen Racks gilt ein Rating als „eigene Daten“, darunter als „vorläufig“.'],
+    [
+      'Rückgriff höchstens',
+      `${r.rueckgriff_monate} Monate`,
+      'Reichen die Racks im Zeitraum nicht, kommen ältere Partien dazu, aber nicht älter als das.'
+    ],
+    ['Gewicht', String(r.gewicht), 'Gedachte Racks auf Höhe des Startwerts. Sie bremsen große Sprünge bei wenigen Partien.'],
+    ['Ausgleich der Vorgabe', `${r.staerke_prozent} %`, 'So viel vom Rating-Unterschied gleicht die Vorgabe aus; der Stärkere bleibt Favorit.']
+  ];
+}
 
 // Formularstand: Zahlen als Text, damit man sie frei tippen kann
 type Formular = {
@@ -664,22 +692,25 @@ export default function System() {
       <section className="block">
         <h2>Rating-Rechenwerte</h2>
         <p className="hinweis">
-          Nur zur Ansicht. Eine Änderung würde alle Ratings verschieben, und die Rating-Erklärung stimmte nicht mehr.
+          Mit diesen Werten rechnet CueDesk das Vereins-Rating. Sie lassen sich hier nicht ändern: Jede Änderung würde alle
+          Ratings verschieben, und das PDF „Ausführlich erklärt“ auf der Seite Rating stimmte nicht mehr.
         </p>
-        {rating ? (
-          <table className="tabelle kompakt">
-            <tbody>
-              <tr><td>Vereinsschnitt</td><td className="rechts">{rating.vereinsschnitt}</td></tr>
-              <tr><td>Zeitraum</td><td className="rechts">{rating.zeitraum_monate} Monate</td></tr>
-              <tr><td>Mindest-Racks für „eigene Daten“</td><td className="rechts">{rating.mindest_racks}</td></tr>
-              <tr><td>Rückgriff höchstens</td><td className="rechts">{rating.rueckgriff_monate} Monate</td></tr>
-              <tr><td>Gewicht (gedachte Racks)</td><td className="rechts">{rating.gewicht}</td></tr>
-              <tr><td>Ausgleich der Vorgabe</td><td className="rechts">{rating.staerke_prozent} %</td></tr>
-            </tbody>
-          </table>
-        ) : (
-          <p className="hinweis">Es sind noch keine Rating-Einstellungen gespeichert; es gelten die Standardwerte (500, 12, 100, 36, 30, 75 %).</p>
-        )}
+        <table className="tabelle kompakt ratingwerte">
+          <tbody>
+            {ratingZeilen(rating ?? RATING_STANDARD).map(([name, wert, bedeutung]) => (
+              <tr key={name}>
+                <td>{name}</td>
+                <td className="rechts wert">{wert}</td>
+                <td className="hinweis">{bedeutung}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <p className="hinweis">
+          {rating && (Object.keys(RATING_STANDARD) as (keyof RatingWerte)[]).some((k) => rating[k] !== RATING_STANDARD[k])
+            ? 'Für deinen Verein gelten eigene Werte, die von den Standardwerten abweichen.'
+            : 'Für deinen Verein gelten die Standardwerte.'}
+        </p>
       </section>
     </div>
   );
