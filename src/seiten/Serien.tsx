@@ -32,6 +32,10 @@ type Formular = {
 const DATUM = (iso: string) =>
   new Date(`${iso}T12:00:00`).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
+// Gehoert das Turnier zur gewaehlten Serie? Ohne gewaehlte Serie (noch keine
+// angelegt) gehoert keines dazu, auch nicht die Turniere ohne Serie.
+const gehoertZu = (t: Turnier, serieId: string | null) => serieId !== null && t.serie_id === serieId;
+
 export default function Serien() {
   const { verein, darf } = useSitzung();
   const darfVerwalten = darf('vereinsadmin', 'sportwart');
@@ -79,7 +83,7 @@ export default function Serien() {
       supabase.from('personen').select('*').eq('verein_id', verein.id)
     ]);
     // Gewertet werden nur beendete Turniere, laufende haben noch keine Endplaetze
-    const ids = (turnierdaten ?? []).filter((t) => t.serie_id === gewaehlt && t.status === 'beendet').map((t) => t.id);
+    const ids = (turnierdaten ?? []).filter((t) => gehoertZu(t, gewaehlt) && t.status === 'beendet').map((t) => t.id);
     const { data: teilnahmedaten } = ids.length
       ? await supabase.from('turnier_teilnehmer').select('turnier_id, person_id, endplatz').in('turnier_id', ids)
       : { data: [] as Teilnahme[] };
@@ -100,10 +104,10 @@ export default function Serien() {
 
   const serie = serien.find((eintrag) => eintrag.id === gewaehlt) ?? null;
   const turniere = useMemo(
-    () => alleTurniere.filter((t) => t.serie_id === gewaehlt && t.status === 'beendet'),
+    () => alleTurniere.filter((t) => gehoertZu(t, gewaehlt) && t.status === 'beendet'),
     [alleTurniere, gewaehlt]
   );
-  const offeneTurniere = alleTurniere.filter((t) => t.serie_id === gewaehlt && t.status !== 'beendet');
+  const offeneTurniere = alleTurniere.filter((t) => gehoertZu(t, gewaehlt) && t.status !== 'beendet');
 
   const wertung = useMemo(() => {
     if (!serie) return [];
@@ -378,6 +382,8 @@ export default function Serien() {
                     <small title={turnier.name}>{turnier.name.length > 12 ? `${turnier.name.slice(0, 12)}…` : turnier.name}</small>
                   </th>
                 ))}
+                {/* Platzhalter, solange kein Turnier gewertet ist */}
+                {turniere.length === 0 && <th className="turnier platzhalter">Datum</th>}
               </tr>
             </thead>
             <tbody>
@@ -404,8 +410,12 @@ export default function Serien() {
               ))}
               {wertung.length === 0 && (
                 <tr>
-                  <td colSpan={turniere.length + 3} className="hinweis">
-                    Für diese Serie liegen noch keine Platzierungen vor.
+                  <td colSpan={Math.max(turniere.length, 1) + 3} className="hinweis">
+                    {serie
+                      ? 'Für diese Serie liegen noch keine Platzierungen vor.'
+                      : darfVerwalten
+                        ? 'Noch keine Wertung. Lege mit „Neue Serie“ eine Serie an und ordne ihr Turniere zu.'
+                        : 'Noch keine Wertung.'}
                   </td>
                 </tr>
               )}
@@ -431,7 +441,7 @@ export default function Serien() {
           <table className="tabelle kompakt">
             <tbody>
               {alleTurniere
-                .filter((t) => t.serie_id === gewaehlt)
+                .filter((t) => gehoertZu(t, gewaehlt))
                 .map((t) => (
                   <tr key={t.id}>
                     <td style={{ width: '110px' }}>{DATUM(t.datum)}</td>

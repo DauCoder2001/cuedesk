@@ -427,6 +427,7 @@ h2 small.hinweis { font-weight: 400; font-size: 14px; margin-left: 6px; }
 .serientabelle .name { left: 50px; width: 180px; min-width: 180px; max-width: 180px; overflow: hidden; text-overflow: ellipsis; }
 .serientabelle .punkte { left: 230px; width: 70px; min-width: 70px; }
 .serientabelle .turnier { min-width: 90px; }
+.serientabelle th.platzhalter { color: var(--text-leise); font-weight: normal; }
 .rollbereich thead th { position: sticky; top: 0; background: var(--flaeche); z-index: 1; }
 
 .spielwahl { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin-top: 8px; }
