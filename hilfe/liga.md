@@ -42,7 +42,7 @@ In der Spaß-Liga kann zwischen 1. und 2. Begegnung eine Begegnung im Doppel ges
 - Gegner und Heimrecht sind wie in der 1. Begegnung. Je Seite stehen zwei Spieler („&“); ein Spieler darf in mehreren Doppeln antreten, nur nicht zweimal in derselben Partie. Fehlt ein Spieler (ungerade Zahl, alle Tische belegt), wählst du im zweiten Platz **– Geist –**: Die Seite spielt dann allein, am Tablet steht nur ihr einer Name. Geist geht auf beiden Seiten und in mehreren Doppeln.
 - **Doppel starten** gibt die Partien für die Tablets frei; dort steht „Frank F. / Volker B.“ gegen die beiden Gegner. Die Tablets zeigen immer nur eine laufende Begegnung. Ist die vorige fertig gespielt, aber noch nicht abgeschlossen, bietet CueDesk **Abschließen und starten** an; sind dort noch Partien offen, fragt es nach (**Trotzdem starten**).
 - **Partien ändern** im Kopf der Doppel-Begegnung öffnet die Partienliste: Disziplin, Race to, Reihenfolge, Partien dazu oder weg. Aufstellungen bleiben bei ihrer Partie. Partien mit Ergebnis behalten Disziplin und Race to und lassen sich nicht entfernen; was gerade am Tisch läuft, bleibt unverändert.
-- **Doppel-Begegnung entfernen** (nur Vereins-Administrator) löscht nur die Doppel-Begegnung mit ihren Partien; die 3. Begegnung heißt danach wieder 2. Begegnung.
+- **Doppel-Begegnung entfernen** (nur Vereins-Administrator, mit dem Schutzwort des Vereins) löscht nur die Doppel-Begegnung mit ihren Partien; die 3. Begegnung heißt danach wieder 2. Begegnung.
 - Partie- und Matchpunkte der Doppel-Begegnung stehen in ihrem Kopf und zählen zum Ergebnis des Spieltags (siehe unten). Doppel zählen nicht fürs Rating, nicht in die Bilanz und Einsätze der Mannschaft und nicht in Statistik und Ranglisten. Im Archiv stehen sie mit der Marke **Doppel**.
 
 ## 5. Abschließen
@@ -60,5 +60,6 @@ In der Spaß-Liga kann zwischen 1. und 2. Begegnung eine Begegnung im Doppel ges
 ## Korrigieren und löschen
 
 - **Zurücksetzen** am Ende einer Partiezeile stellt die Partie wieder auf offen: Der Tisch wird frei, das Ergebnis und bei 14.1 das Aufnahme-Protokoll gelöscht, und das Tablet zeigt sie wieder in der Spielauswahl. Dafür braucht es das Schutzwort des Vereins.
-- **Inhalt löschen** leert die angezeigte Begegnung: Aufstellung, Partien und Ergebnisse sind weg, die Begegnung bleibt und lässt sich neu ausfüllen. Stehen schon Ergebnisse drin, fragt CueDesk vorher.
+- **Inhalt löschen** leert die angezeigte Begegnung: Aufstellung, Partien und Ergebnisse sind weg, die Begegnung bleibt und lässt sich neu ausfüllen. Stehen schon Ergebnisse drin, warnt die Rückfrage davor.
 - **Spieltag löschen** entfernt alle Begegnungen komplett, auch eine Doppel-Begegnung (nur Vereins-Administrator).
+- Beide Knöpfe brauchen das Schutzwort des Vereins: Die Rückfrage hat dafür ein Passwortfeld und löscht erst, wenn das Wort stimmt.

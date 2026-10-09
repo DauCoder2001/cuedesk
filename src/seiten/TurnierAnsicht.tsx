@@ -1518,12 +1518,12 @@ export default function TurnierAnsicht({
   }
 
   async function loeschen() {
-    if (!turnier) return;
+    if (!turnier || !verein) return;
     const zusatz =
       partien.length > 0
         ? `\n\n${partien.length} Partien gehen mit verloren.${turnier.rating_werten ? ' Danach das Rating neu berechnen.' : ''}`
         : '';
-    if (!(await fragen(`„${turnier.name}“ mit allen Teilnehmern und Partien löschen?${zusatz}`, 'Löschen'))) return;
+    if (!(await fragen(`„${turnier.name}“ mit allen Teilnehmern und Partien löschen?${zusatz}`, 'Löschen', { schutzwort: verein.id }))) return;
     const { error } = await supabase.from('turniere').delete().eq('id', turnier.id);
     if (error) return setFehler(error.message);
     zurueck();
@@ -1680,7 +1680,7 @@ export default function TurnierAnsicht({
             )}
             {/* In Vorbereitung darf die Turnierleitung loeschen, danach nur der Vereins-Admin */}
             {(turnier.status === 'geplant' ? bearbeitbar : istAdmin) && (
-              <button type="button" title="Löscht das Turnier mit allen Partien. Vorher kommt eine Rückfrage." className="gefahrknopf" onClick={() => void loeschen()}>
+              <button type="button" title="Löscht das Turnier mit allen Partien. Vorher kommt eine Rückfrage mit dem Schutzwort." className="gefahrknopf" onClick={() => void loeschen()}>
                 Turnier löschen
               </button>
             )}

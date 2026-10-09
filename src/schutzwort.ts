@@ -1,5 +1,6 @@
 // Ein einfaches Wort schuetzt die Stellen, die am Tisch niemand versehentlich
-// ausloesen soll: die verdeckte Aufstellung und das Neuladen eines Tablets.
+// ausloesen soll: die verdeckte Aufstellung, das Neuladen eines Tablets, das
+// Zuruecksetzen einer Partie und das Loeschen von Turnieren und Spieltagen.
 // Es haelt keinen Angreifer auf, nur den schnellen Griff daneben.
 //
 // Das Wort steht nicht im Programm, sondern in der Datenbank (Seite "System").

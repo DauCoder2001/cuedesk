@@ -20,7 +20,7 @@ Beim ersten Aufruf erscheint **Bevor es losgeht**. Lies die **Nutzungsbedingunge
 
 ## 3. Schutzwort
 
-Das **Schutzwort** schützt Dinge, die nicht jeder am Tablet auslösen soll, etwa das Neuladen eines Tablets oder das Zeigen einer verborgenen Liga-Aufstellung. Unter **Schutzwort** ein neues eintragen, **Noch einmal** wiederholen und speichern. Gib es nur der Turnierleitung.
+Das **Schutzwort** schützt Dinge, die nicht jeder am Tablet auslösen soll, etwa das Neuladen eines Tablets, das Zeigen einer verborgenen Liga-Aufstellung oder das Löschen von Turnieren und Spieltagen. Unter **Schutzwort** ein neues eintragen, **Noch einmal** wiederholen und speichern. Gib es nur der Turnierleitung.
 
 ## 4. Konten einladen (Konten und Rollen)
 

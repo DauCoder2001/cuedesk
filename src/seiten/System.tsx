@@ -315,7 +315,7 @@ export default function System() {
     setWort('');
     setWortWieder('');
     setFehler(null);
-    setMeldung('Schutzwort geändert. Es gilt ab sofort für „Tablet neu laden“, „Aufstellung zeigen“ und „Zurücksetzen“ einer Partie.');
+    setMeldung('Schutzwort geändert. Es gilt ab sofort für „Tablet neu laden“, „Aufstellung zeigen“, „Zurücksetzen“ einer Partie und das Löschen von Turnieren und Spieltagen.');
     return true;
   }
 
@@ -568,8 +568,8 @@ export default function System() {
       <section className="block" ref={schutzPflicht.bereich}>
         <h2>Schutzwort</h2>
         <p className="hinweis">
-          Gilt für „Tablet neu laden“ in der Live-Übersicht, „Aufstellung zeigen“ beim Liga-Spieltag und „Zurücksetzen“ einer
-          Partie im Spielplan. Das aktuelle Wort
+          Gilt für „Tablet neu laden“ in der Live-Übersicht, „Aufstellung zeigen“ beim Liga-Spieltag, „Zurücksetzen“ einer
+          Partie im Spielplan und das Löschen von Turnieren und Spieltagen. Das aktuelle Wort
           wird nirgends angezeigt; ohne eigenes Wort gilt „8-Ball“.
         </p>
         <div className="felder">

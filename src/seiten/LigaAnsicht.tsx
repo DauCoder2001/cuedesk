@@ -801,7 +801,7 @@ export default function LigaAnsicht({
   // Doppel-Begegnung entfernen (nur Vereins-Administrator): mit allen Partien;
   // die 1. Begegnung verliert den Verweis, die 3. heisst wieder 2.
   async function doppelEntfernen() {
-    if (!turnier || !liga || !istDoppel) return;
+    if (!turnier || !liga || !istDoppel || !verein) return;
     if (partien.some((p) => p.status === 'laeuft' || p.tisch_id)) {
       return setFehler('An den Tablets laufen noch Doppel. Erst beenden oder abbrechen, dann entfernen.');
     }
@@ -810,7 +810,7 @@ export default function LigaAnsicht({
       'Doppel-Begegnung entfernen? Das lässt sich nicht rückgängig machen.\n\n' +
       `${partien.length} ${partien.length === 1 ? 'Partie' : 'Partien'}${mitErgebnis > 0 ? `, davon ${mitErgebnis} mit Ergebnis,` : ''} ${partien.length === 1 ? 'geht' : 'gehen'} verloren. ` +
       'Die bisherige 3. Begegnung heißt danach wieder 2. Begegnung.';
-    if (!(await fragen(frage, 'Entfernen'))) return;
+    if (!(await fragen(frage, 'Entfernen', { schutzwort: verein.id }))) return;
     setArbeitet(true);
     const { error } = await supabase.from('turniere').delete().eq('id', turnier.id);
     if (error) {
@@ -1030,7 +1030,7 @@ export default function LigaAnsicht({
   // 14.1-Protokoll. Die Begegnung selbst bleibt bestehen (die andere Begegnung
   // verweist auf sie) und laesst sich danach neu ausfuellen.
   async function inhaltLoeschen() {
-    if (!turnier || !liga) return;
+    if (!turnier || !liga || !verein) return;
     if (partien.some((p) => p.status === 'laeuft')) {
       return setFehler('An den Tablets laufen noch Spiele dieser Begegnung. Erst beenden oder abbrechen, dann den Inhalt löschen.');
     }
@@ -1045,7 +1045,7 @@ export default function LigaAnsicht({
     const frage =
       `${warnung}Inhalt der ${begegnungName} löschen? Aufstellung, Partien und Ergebnisse werden entfernt, bei 14.1 auch das Aufnahme-Protokoll. ` +
       'Die Begegnung bleibt bestehen und lässt sich danach neu ausfüllen.';
-    if (!(await fragen(frage, 'Inhalt löschen'))) return;
+    if (!(await fragen(frage, 'Inhalt löschen', { schutzwort: verein.id }))) return;
     setArbeitet(true);
     // 14.1-Kennzahlen und Aufnahme-Protokoll loescht die Datenbank mit den Partien
     for (const tabelle of ['partien', 'turnier_teilnehmer'] as const) {
@@ -1070,7 +1070,7 @@ export default function LigaAnsicht({
   // (nur Vereins-Administrator). Partien, 14.1-Protokoll, Teilnehmer und
   // Anmeldungen loescht die Datenbank mit.
   async function spieltagLoeschen() {
-    if (!turnier || !liga) return;
+    if (!turnier || !liga || !verein) return;
     // Alle Begegnungen des Spieltags, auch die Doppel-Begegnung
     const ids = [...new Set([turnier.id, ...(liga.partner ? [liga.partner] : []), ...teile.map((x) => x.id)])];
     const { data: alle } = await supabase.from('partien').select('turnier_id, status, ergebnis_a, ergebnis_b').in('turnier_id', ids);
@@ -1088,7 +1088,7 @@ export default function LigaAnsicht({
     const frage =
       `Den ganzen Spieltag „${turnier.name.replace(/ · ([12]\. Begegnung|Doppel)$/, '')}“ löschen? Das lässt sich nicht rückgängig machen.\n\n${zeilen}` +
       (turnier.rating_werten ? '\n\nDas Vereins-Rating wird heute Nacht ohne diese Partien neu berechnet.' : '');
-    if (!(await fragen(frage, 'Spieltag löschen'))) return;
+    if (!(await fragen(frage, 'Spieltag löschen', { schutzwort: verein.id }))) return;
     setArbeitet(true);
     const { error } = await supabase.from('turniere').delete().in('id', ids);
     setArbeitet(false);
@@ -1244,7 +1244,7 @@ export default function LigaAnsicht({
             {istAdmin && (
               <button
                 type="button"
-                title="Löscht Aufstellung, Partien und Ergebnisse dieser Begegnung; die Begegnung bleibt bestehen und lässt sich neu ausfüllen. Stehen schon Ergebnisse drin, kommt vorher eine Warnung."
+                title="Löscht Aufstellung, Partien und Ergebnisse dieser Begegnung; die Begegnung bleibt bestehen und lässt sich neu ausfüllen. Braucht das Schutzwort; stehen schon Ergebnisse drin, warnt die Rückfrage."
                 className="gefahrknopf"
                 onClick={() => void inhaltLoeschen()}
                 disabled={arbeitet}
@@ -1255,7 +1255,7 @@ export default function LigaAnsicht({
             {istAdmin && istDoppel && (
               <button
                 type="button"
-                title="Entfernt nur diese Doppel-Begegnung mit ihren Partien. Die anderen Begegnungen bleiben; die 3. heißt danach wieder 2."
+                title="Entfernt nur diese Doppel-Begegnung mit ihren Partien. Die anderen Begegnungen bleiben; die 3. heißt danach wieder 2. Braucht das Schutzwort."
                 className="gefahrknopf"
                 onClick={() => void doppelEntfernen()}
                 disabled={arbeitet}
@@ -1266,7 +1266,7 @@ export default function LigaAnsicht({
             {istAdmin && (
               <button
                 type="button"
-                title="Löscht den ganzen Spieltag: alle Begegnungen mit allen Partien und Ergebnissen. Vorher nennt eine Rückfrage, was verloren geht."
+                title="Löscht den ganzen Spieltag: alle Begegnungen mit allen Partien und Ergebnissen. Vorher nennt eine Rückfrage, was verloren geht; sie braucht das Schutzwort."
                 className="gefahrknopf"
                 onClick={() => void spieltagLoeschen()}
                 disabled={arbeitet}
