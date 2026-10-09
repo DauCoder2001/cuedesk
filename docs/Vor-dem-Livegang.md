@@ -1,6 +1,6 @@
 # Vor dem Livegang
 
-Stand: 08.10.2026 · Sammelliste von Matthias und Claude
+Stand: 09.10.2026 · Sammelliste von Matthias und Claude
 
 Der Livegang auf www.cuedesk.de (Phase 4 in Mandanten.md) kommt erst, wenn die Punkte hier erledigt oder bewusst zurückgestellt sind. Was fachlich fehlt, steht zusätzlich in Funktionsvergleich.md.
 
@@ -55,7 +55,7 @@ Entwürfe kann Claude schreiben. Sie ersetzen keine Rechtsberatung und müssen v
 
 | Punkt | Status | Stand und Vorschlag |
 |---|---|---|
-| Produktions-Projekt bei Supabase | offen | Pro-Tarif empfohlen: tägliche Sicherung, kein Pausieren. Richtet Matthias ein, Claude spielt nach Freigabe die Migrationen ein. |
+| Produktions-Projekt bei Supabase | offen | Pro-Tarif empfohlen: tägliche Sicherung, kein Pausieren. Richtet Matthias ein, Claude spielt nach Freigabe die Migrationen ein. **Entscheidung 09.10.2026:** Vereine starten in der Produktion leer und werden dort neu eingerichtet; die Testdaten bleiben in der Test-DB, damit sie Rating, Archiv und Statistik nicht verfälschen. Echte Altdaten aus Turnier light kommen über „Altdaten übernehmen“. Kein Livegang eines Vereins innerhalb der Test-DB. |
 | Domain cuedesk.de und Subdomains | offen | Vorschlag vom 08.10.2026 (**Variante A**, noch nicht entschieden): `cuedesk.de` = Homepage (was CueDesk ist, Impressum, Datenschutz; eigenes kleines Repo), `app.cuedesk.de` = Anwendung **mit** Scoreboards und TV (wie heute unter `/scoreboards/`; nicht trennen, sonst gehen Kopplung und gemeinsame Anmeldung der Tablets verloren), `score.cuedesk.de` = nur Weiterleitung auf `app.cuedesk.de/scoreboards/`, `training.cuedesk.de` = Trainings-App (eigenes Repo). Je Subdomain ein Repo bzw. eine Weiterleitung bei IONOS, alles kostenlos über GitHub Pages; Hauptdomain per A-Einträge, Subdomains per CNAME, Weiterleitungen temporär (302). Beim Umzug: neu anmelden, Tablets neu koppeln, neue Adressen in Supabase als erlaubte Weiterleitungen eintragen, `VITE_BASIS` und `veroeffentlichen.yml` anpassen, Rechtstexte nachziehen. Bei IONOS angelegt (noch nicht verwendet): `app`, `buw-live`, `score`, `test`, `training`. |
 | Trainings-App und CueDesk-Konto | offen | Wunsch: Trainings-App mit denselben Zugangsdaten wie CueDesk. Gleiche Konten gehen über Subdomains hinweg (Anmeldung je Subdomain einmal); eine gemeinsame Sitzung bräuchte ein Cookie für `.cuedesk.de`. **Offene Frage an Matthias:** Wofür braucht die Trainings-App das Konto? 1) nur Zugangsschutz, Daten bleiben im Browser; 2) Trainingsdaten je Person in Supabase (neue Tabellen, Rechtstexte); 3) Verbindung zu CueDesk (Mitglied, Verein, Rating). Vorsicht: Die Daten der Trainings-App liegen im Browser je Adresse; vor einem Umzug auf `training.cuedesk.de` exportieren und danach importieren. |
 | Eigener E-Mail-Absender für Anmeldelinks | teilweise | IONOS-Postfach der Domain läuft schon in der Test-Datenbank. |
