@@ -1,6 +1,6 @@
 # Rechtstexte: Stellen zum Prüfen
 
-Stand der Liste: 07.10.2026 · Grundlage für die rechtliche Prüfung vor dem Livegang
+Stand der Liste: 09.10.2026 · Grundlage für die rechtliche Prüfung vor dem Livegang
 
 Betroffen sind die öffentlichen Seiten `impressum.html`, `datenschutz.html`, `nutzungsbedingungen.html` und `auftragsverarbeitung.html` sowie das interne `docs/Verzeichnis-Verarbeitungstaetigkeiten.md`. Betreiber ist eine Privatperson (Matthias Haas), CueDesk ist für Vereine unentgeltlich.
 
@@ -38,6 +38,7 @@ Die Liste hat vier Teile:
 | D1 | Dienstleister, Supabase | „Die Daten liegen auf Servern in Frankfurt am Main. Da das Unternehmen in den USA sitzt, ist ein Zugriff von dort nicht ausgeschlossen; Grundlage sind der Vertrag zur Auftragsverarbeitung und die Standardvertragsklauseln der EU-Kommission.“ | Wie A5. |
 | D2 | Dienstleister, GitHub | „Bereitstellung der Webseite und Ablage der wöchentlichen Sicherung. Die Sicherung ist verschlüsselt, bevor sie GitHub erreicht; GitHub kann sie nicht lesen. Grundlage für die Webseite ist das EU-US Data Privacy Framework.“ | Ist GitHub zertifiziert und die Grundlage richtig? (Entfällt, wenn Webseite und Sicherung zu IONOS ziehen, siehe S2.) |
 | D3 | Dienstleister, Google | „Postfach kontakt.cuedesk@gmail.com für Kontaktanfragen. Grundlage ist das EU-US Data Privacy Framework.“ | Grundlage richtig? Ist ein privates Gmail-Postfach für Anfragen zu Daten von Vereinen vertretbar? |
+| D4 | 5. Öffentlicher Live-Link | „Wer diesen Link hat, sieht ohne Anmeldung die Spielstände an den Tischen und den Spielplan mit Ergebnissen dieses einen Turniers … Der Verein informiert die Teilnehmer vorab, zum Beispiel in der Ausschreibung. Rechtsgrundlage ist das berechtigte Interesse des Vereins, seinen Spielbetrieb zu zeigen (Art. 6 Abs. 1 lit. f DSGVO).“ Namen nur mit Einwilligung, sonst Kürzel. | Trägt lit. f die Veröffentlichung von Spielständen und Ergebnissen mit Kürzeln, und reicht die Information vorab in der Ausschreibung? Braucht es einen Hinweis auf das Widerspruchsrecht (Art. 21) an dieser Stelle? |
 
 ### Verzeichnis der Verarbeitungstätigkeiten (intern)
 
@@ -57,7 +58,7 @@ Die Liste hat vier Teile:
 | S3 | Ablage der wöchentlichen Sicherung | Datenschutzerklärung (GitHub), Verzeichnis B, offene Punkte | Entschieden 07.10.2026: bleibt verschlüsselt bei GitHub; GitHub in AVV Anlage 2 aufnehmen (Claude). |
 | S4 | Verträge mit den Dienstleistern | Datenschutzerklärung, AVV Anlage 2, Verzeichnis | DPA bei Supabase (Dashboard) und AVV bei IONOS (Kundenkonto) abschließen und ablegen. |
 | S5 | Löschfrist der Server-Protokolle | Verzeichnis A1: „nach den Fristen des Hosters [prüfen]“ | Frist beim gewählten Hoster nachsehen und eintragen. |
-| S6 | Öffentlicher Live-Link (Stufe 32, 08.10.2026) | Datenschutzerklärung, Verzeichnis (neue Tätigkeit), Hilfe Turnier | Neue Verarbeitung aufnehmen: Spielstände, Spielplan und Namen („Vorname N.“ mit Einwilligung, sonst Kürzel) sind für jeden mit dem Link sichtbar, befristet je Turnier. Hinweis für Vereine: Teilnehmer vorab informieren, z. B. in der Ausschreibung. Den am 30.09.2026 ersetzten Absatz zur Einwilligung in die Namensanzeige wieder aufnehmen (Namen nur mit nachgewiesener Einwilligung, sonst Kürzel). Text zeigen, dann einarbeiten (Claude). |
+| S6 | Öffentlicher Live-Link (Stufe 32, 08.10.2026) | Datenschutzerklärung, Verzeichnis (neue Tätigkeit), Hilfe Turnier | **Erledigt 09.10.2026:** Datenschutzerklärung Abschnitt 5 („Öffentlicher Live-Link“, „Namensanzeige“, Minderjährige) und 8 (Speicherdauer), Verzeichnis Teil B, Hilfe Turnier (Teilnehmer vorab informieren); Frage dazu unter D4. Ursprünglicher Auftrag: Neue Verarbeitung aufnehmen: Spielstände, Spielplan und Namen („Vorname N.“ mit Einwilligung, sonst Kürzel) sind für jeden mit dem Link sichtbar, befristet je Turnier. Hinweis für Vereine: Teilnehmer vorab informieren, z. B. in der Ausschreibung. Den am 30.09.2026 ersetzten Absatz zur Einwilligung in die Namensanzeige wieder aufnehmen (Namen nur mit nachgewiesener Einwilligung, sonst Kürzel). Text zeigen, dann einarbeiten (Claude). |
 
 ## 3. Widersprüche zwischen den Texten
 
