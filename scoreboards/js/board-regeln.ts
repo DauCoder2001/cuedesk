@@ -336,6 +336,20 @@ export function zielErreicht(ziel: number, stand1: number, stand2: number): bool
   return ziel > 0 && (stand1 >= ziel || stand2 >= ziel);
 }
 
+// Fernseher: Ist das Spiel am Tisch zu Ende? null = laeuft noch, 1 oder 2 =
+// Sieger, 0 = beendet ohne Sieger (14.1 mit Gleichstand). Pool endet mit dem
+// erreichten Race (dieselbe Regel wie am Board), 14.1 mit dem gesperrten Board.
+export function tischEnde(t: TischStand): 0 | 1 | 2 | null {
+  if (!t) return null;
+  const sieger = (a: number, b: number) => (a > b ? 1 : b > a ? 2 : 0);
+  if (t.gameType === 'pool') {
+    const s1 = Number(t.score1) || 0;
+    const s2 = Number(t.score2) || 0;
+    return zielErreicht(Number(t.raceTo) || 0, s1, s2) ? sieger(s1, s2) : null;
+  }
+  return t.locked ? sieger(Number(t.s1) || 0, Number(t.s2) || 0) : null;
+}
+
 // Freilos: der echte Spieler gewinnt kampflos Race-to:0
 export function freilosWertung(m: BoardSpiel, raceTo: number): { spieler: string; score1: number; score2: number } {
   const links = istFreilos(m.player1);

@@ -23,6 +23,7 @@ import {
   wartetText,
   wechselRueckfrage,
   zeige141Auswahl,
+  tischEnde,
   zielErreicht
 } from '../scoreboards/js/board-regeln';
 import type { BoardSpiel, BoardTurnier } from '../scoreboards/js/board-regeln';
@@ -320,6 +321,19 @@ describe('Ergebnisse', () => {
     expect(zielErreicht(4, 4, 2)).toBe(true);
     expect(zielErreicht(4, 3, 3)).toBe(false);
     expect(zielErreicht(0, 9, 0)).toBe(false); // freies Spiel ohne Ziel
+  });
+
+  test('Fernseher: Spielende und Sieger am Tisch', () => {
+    // Pool: Race to 4 erreicht -> Sieger, sonst laeuft es noch
+    expect(tischEnde({ gameType: 'pool', score1: 2, score2: 4, raceTo: 4 })).toBe(2);
+    expect(tischEnde({ gameType: 'pool', score1: 4, score2: 1, raceTo: 4 })).toBe(1);
+    expect(tischEnde({ gameType: 'pool', score1: 3, score2: 3, raceTo: 4 })).toBeNull();
+    expect(tischEnde({ gameType: 'pool', score1: 9, score2: 0 })).toBeNull(); // freies Spiel ohne Ziel
+    // 14.1: zu Ende, wenn das Board gesperrt ist; Gleichstand ohne Sieger
+    expect(tischEnde({ gameType: '14.1', s1: 60, s2: 41, locked: true })).toBe(1);
+    expect(tischEnde({ gameType: '14.1', s1: 30, s2: 30, locked: true })).toBe(0);
+    expect(tischEnde({ gameType: '14.1', s1: 59, s2: 41 })).toBeNull();
+    expect(tischEnde(null)).toBeNull();
   });
 
   test('KO: Sieger und Verlierer ins Folgespiel', () => {

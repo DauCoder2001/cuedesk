@@ -107,6 +107,7 @@
     // CueDesk: Anbindung mit denselben Funktionen wie frueher Firebase. Das
     // Fernsehgeraet ist wie ein Tablet gekoppelt, nur ohne Tisch.
     import { db, ref, onValue, starten, tischNummern } from "./js/anbindung.ts";
+    import { tischEnde } from "./js/board-regeln.ts";
     import { keepScreenAwake } from "./js/wake-lock.js";
     import { startTvAutofit } from "./js/tv-autofit.js";
 
@@ -172,7 +173,11 @@
         
         if (tableData) {
           const isPool = tableData.gameType === "pool";
-          
+          // CueDesk: nach dem Ende statt Anstoss bzw. "Am Tisch" der Sieger
+          const ende = tischEnde(tableData);
+          const endeText = ende === null ? '' : ende === 0 ? 'Spiel beendet'
+            : `Spiel beendet · Sieg <strong style="color:${ende === 1 ? '#ff4444' : '#4488ff'}">${esc(ende === 1 ? tableData.player1 : tableData.player2)}</strong>`;
+
           if (isPool) {
             // ==========================================
             // DARSTELLUNG FÜR 8-/9-/10-BALL (POOL)
@@ -196,7 +201,7 @@
                 <div class="p2">${esc(tableData.player2 || "Spieler 2")}</div>
               </div>
               <div class="stats">
-                Nächster Anstoß: <strong style="color:${breakColor}">${esc(nextBreakName)}</strong>
+                ${endeText || `Nächster Anstoß: <strong style="color:${breakColor}">${esc(nextBreakName)}</strong>`}
               </div>
             `;
           } else {
@@ -222,7 +227,7 @@
                 <div class="p2">${esc(tableData.player2 || "Spieler 2")}</div>
               </div>
               <div class="stats">
-                Am Tisch: <strong style="color:${activeColor}">${esc(activePlayer)}</strong> &nbsp;|&nbsp;
+                ${endeText || `Am Tisch: <strong style="color:${activeColor}">${esc(activePlayer)}</strong>`} &nbsp;|&nbsp;
                 Ziel: ${tableData.target || 40} Pkt. / ${tableData.targetInn || 20} Aufn. &nbsp;|&nbsp;
                 Aufnahme: ${maxInn}
               </div>
