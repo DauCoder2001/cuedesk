@@ -580,6 +580,10 @@
     #log-head-actions { display: none; }
     #log-scroll { overflow: visible; max-height: none; }
   }
+  /* Start-Hinweis beim Wechsel mit einem Spiel aus dem Pool-Board (js/start-hinweis.js) */
+  #start-hinweis { position: fixed; inset: 0; z-index: 125; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2vmin; background: #f4f6fa; color: #1f3b73; text-align: center; padding: 4vmin; }
+  .start-hinweis-titel { font-size: 6vmin; font-weight: bold; }
+  .start-hinweis-text { font-size: 4vmin; color: #555; }
 </style>
   <link rel="icon" type="image/svg+xml" href="./img/favicon.svg">
   <!-- Eigene Dialoge (alert, confirmModal, promptModal). Als Modul eingebunden, damit
@@ -588,6 +592,18 @@
 </head>
 
 <body>
+<script>
+  // Mit einem Spiel aus dem Pool-Board gekommen (?spiel=): sofort "Spiel wird
+  // gestartet" zeigen, noch bevor das Board laedt. Entfernt wird der Hinweis in
+  // js/start-hinweis.js, sobald das Spiel am Tisch steht oder der Start scheitert.
+  if (new URLSearchParams(location.search).get('spiel')) {
+    var startHinweis = document.createElement('div');
+    startHinweis.id = 'start-hinweis';
+    startHinweis.innerHTML = '<div class="start-hinweis-titel">Spiel wird gestartet …</div>' +
+      '<div class="start-hinweis-text">Verbinde mit CueDesk …</div>';
+    document.body.appendChild(startHinweis);
+  }
+</script>
 <div id="app">
 
   <div id="header">
@@ -897,6 +913,7 @@
   import { setupFullscreenButton } from "./js/fullscreen.js";
   import { setupProtocolShare } from "./js/share-protocol.js";
   import { waehrendSpeichern } from "./js/knopf-warten.js";
+  import { startHinweisText, startHinweisAus } from "./js/start-hinweis.js";
 
   keepScreenAwake();          // Bildschirm im Kiosk-Betrieb anhalten
   setupFullscreenButton();    // Vollbild-Button (blendet sich aus, wenn wirkungslos)
@@ -977,7 +994,13 @@
     // window.history: 'history' ist hier der Undo-Stapel des Boards
     window.history.replaceState(null, '', ohneSpielParameter(location.href));   // auch nicht nach dem Neuladen
     const m = tournament.schedule[id];
-    if (m && m.status === 'pending' && m.player1 && m.player2) void startMatch141(id);
+    if (m && m.status === 'pending' && m.player1 && m.player2) {
+      // Bis das Spiel am Tisch steht, bleibt der Start-Hinweis stehen
+      startHinweisText(`${m.player1} – ${m.player2} · Tisch ${tableId}`);
+      void startMatch141(id).finally(startHinweisAus);
+    } else {
+      startHinweisAus();
+    }
   }
 
   function renderPicker141() {
@@ -1906,6 +1929,13 @@
       return;
     }
     const zeigePicker = zeige141Auswahl(tournamentActive(), imTurnier, frei141, hat141Partien(tournament));
+    // Spiel aus dem Pool-Board, aber keine Auswahl hier (kein Spieltag, Tisch
+    // schon belegt): nichts starten, Start-Hinweis weg
+    if (spielAusAdresse && tournamentLoaded && !zeigePicker) {
+      spielAusAdresse = null;
+      window.history.replaceState(null, '', ohneSpielParameter(location.href));   // auch nicht nach dem Neuladen
+      startHinweisAus();
+    }
     const overlay = document.getElementById('picker141');
     if (overlay) {
       overlay.style.display = zeigePicker ? 'flex' : 'none';
@@ -2124,6 +2154,7 @@
      =========================== */
   function showYieldOverlay(msg, allowReclaim = true) {
     yielded = true;
+    startHinweisAus();   // ein Spiel aus dem Pool-Board wird hier nicht mehr gestartet
     document.getElementById('yield-text').textContent = msg;
     const rc = document.getElementById('yield-reclaim');
     if (rc) rc.style.display = allowReclaim ? 'inline-block' : 'none';

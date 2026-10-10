@@ -844,6 +844,12 @@ export async function runTransaction(
       .neq('status', 'beendet')
       .select('id');
     geklappt = (data ?? []).length === 1;
+    // Geklappt: Das Board stellt das Spiel gleich an den Tisch und braucht den
+    // neuen Plan dafuer nicht - im Hintergrund nachladen spart beim Start Zeit
+    if (geklappt) {
+      void turnierAuffrischen().catch(() => {});
+      geschrieben = false;
+    }
   } else if (neu.status === 'completed' && alt.status === 'running') {
     // Abschluss: das Ergebnis selbst kommt gleich mit update(); hier nur pruefen,
     // dass das Spiel noch diesem Tisch gehoert. Geschrieben wird hier nichts.

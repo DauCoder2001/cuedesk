@@ -349,6 +349,10 @@ button:disabled { opacity: 0.4; }
 .p1c { color: #cc0000; font-weight: bold; }
 .p2c { color: #1133cc; font-weight: bold; }
 .log-empty { color: #888; text-align: center; padding: 18px; }
+/* Start-Hinweis beim Wechsel mit einem Spiel aus dem 14.1-Board (js/start-hinweis.js) */
+#start-hinweis { position: fixed; inset: 0; z-index: 125; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2vmin; background: #f4f6fa; color: #1f3b73; text-align: center; padding: 4vmin; }
+.start-hinweis-titel { font-size: 6vmin; font-weight: bold; }
+.start-hinweis-text { font-size: 4vmin; color: #555; }
 </style>
 
   <link rel="icon" type="image/svg+xml" href="./img/favicon.svg">
@@ -358,6 +362,18 @@ button:disabled { opacity: 0.4; }
 </head>
 
 <body>
+<script>
+  // Mit einem Spiel aus dem 14.1-Board gekommen (?spiel=): sofort "Spiel wird
+  // gestartet" zeigen, noch bevor das Board laedt. Entfernt wird der Hinweis in
+  // js/start-hinweis.js, sobald das Spiel am Tisch steht oder der Start scheitert.
+  if (new URLSearchParams(location.search).get('spiel')) {
+    var startHinweis = document.createElement('div');
+    startHinweis.id = 'start-hinweis';
+    startHinweis.innerHTML = '<div class="start-hinweis-titel">Spiel wird gestartet …</div>' +
+      '<div class="start-hinweis-text">Verbinde mit CueDesk …</div>';
+    document.body.appendChild(startHinweis);
+  }
+</script>
 
 <div id="header">
   <div class="hdr-left">
@@ -560,6 +576,7 @@ button:disabled { opacity: 0.4; }
   import { keepScreenAwake } from "./js/wake-lock.js";
   import { setupFullscreenButton } from "./js/fullscreen.js";
   import { waehrendSpeichern } from "./js/knopf-warten.js";
+  import { startHinweisText, startHinweisAus } from "./js/start-hinweis.js";
 
   keepScreenAwake();          // Bildschirm im Kiosk-Betrieb anhalten
   setupFullscreenButton();    // Vollbild-Button (blendet sich aus, wenn wirkungslos)
@@ -994,7 +1011,13 @@ async function newGame() {
     // window.history: 'history' ist hier der Undo-Stapel des Boards
     window.history.replaceState(null, '', ohneSpielParameter(location.href));   // auch nicht nach dem Neuladen
     const m = tournament.schedule[id];
-    if (m && m.status === 'pending' && m.player1 && m.player2) void startMatch(id);
+    if (m && m.status === 'pending' && m.player1 && m.player2) {
+      // Bis das Spiel am Tisch steht, bleibt der Start-Hinweis stehen
+      startHinweisText(`${m.player1} – ${m.player2} · Tisch ${tableId}`);
+      void startMatch(id).finally(startHinweisAus);
+    } else {
+      startHinweisAus();
+    }
   }
 
   function renderPicker() {
@@ -1363,6 +1386,7 @@ async function newGame() {
   function niceType(t) { return t === 'pool' ? '8/9/10-Ball' : (t === '14.1' ? '14.1' : (t || 'eine andere Spielart')); }
   function showYieldOverlay(msg, allowReclaim = true, zu141 = false) {
     yielded = true;
+    startHinweisAus();   // ein Spiel aus dem 14.1-Board wird hier nicht mehr gestartet
     document.getElementById('yield-titel').textContent = zu141 ? '🎯 14.1-Turnierpartie an diesem Tisch' : '🔁 Tisch wird woanders gesteuert';
     document.getElementById('yield-text').textContent = msg;
     const rc = document.getElementById('yield-reclaim');
@@ -1410,6 +1434,14 @@ async function newGame() {
       return;
     }
     const mode = poolModus(tActive, freeOverride, hasMatch);
+
+    // Spiel aus dem 14.1-Board, aber keine Auswahl hier (kein Spieltag, Tisch
+    // schon belegt): nichts starten, Start-Hinweis weg
+    if (spielAusAdresse && tournamentLoaded && mode !== 'picker') {
+      spielAusAdresse = null;
+      window.history.replaceState(null, '', ohneSpielParameter(location.href));   // auch nicht nach dem Neuladen
+      startHinweisAus();
+    }
 
     pickerEl.style.display = (mode === 'picker') ? 'flex' : 'none';
     if (mode === 'picker') {
