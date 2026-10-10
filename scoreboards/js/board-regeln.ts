@@ -303,6 +303,20 @@ export function spielAbschliessen(
   return eintrag;
 }
 
+// Abschluss am Tisch abgelehnt: die Meldung haengt am aktuellen Stand der
+// Partie. null = nicht mehr im Spielplan, 'completed' = das Ergebnis steht
+// schon in CueDesk (z. B. nach einem zweiten Tippen oder von Hand
+// eingetragen), sonst gehoert sie inzwischen einem anderen Tisch.
+export function abschlussAbgelehnt(stand: { status?: string; table?: string | null } | null, ergebnis: string): string {
+  if (!stand) {
+    return 'Dieses Spiel steht nicht mehr im Spielplan - vermutlich wurde die Aufstellung geändert.\n\n' +
+      'Bitte das Ergebnis ' + ergebnis + ' in CueDesk eintragen.';
+  }
+  if (stand.status === 'completed') return 'Das Ergebnis dieses Spiels steht schon in CueDesk.\n\nDer Tisch ist wieder frei.';
+  return (stand.table ? `Dieses Spiel läuft inzwischen an Tisch ${stand.table}.` : 'Dieses Spiel gehört nicht mehr zu diesem Tisch.') +
+    '\n\nHier wurde nichts gespeichert; der Tisch ist wieder frei.';
+}
+
 // Freilos werten (nur solange es offen ist)
 export function freilosAbschliessen(m: BoardSpiel | null, ergebnisId: string): BoardSpiel | undefined {
   if (!m || m.status !== 'pending') return undefined;

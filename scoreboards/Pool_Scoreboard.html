@@ -554,7 +554,7 @@ button:disabled { opacity: 0.4; }
     freiesSpielLaeuft, offeneSpiele, wartetText, filterNamen, poolAuswahl, poolModus,
     spielBeanspruchen, spielZuruecklegen, spielAbschliessen, freilosAbschliessen, freilosWertung,
     ergebnisSchonEingetragen, ohneSpielParameter, ausspielziel, zielErreicht, koFortschreibung, siegerText,
-    haengendeSpiele, fremdesTurnierspiel, wechselRueckfrage
+    haengendeSpiele, fremdesTurnierspiel, wechselRueckfrage, abschlussAbgelehnt
   } from "./js/board-regeln.ts";
   import { startIdleRedirect } from "./js/idle-timeout.js";
   import { keepScreenAwake } from "./js/wake-lock.js";
@@ -1221,11 +1221,9 @@ async function newGame() {
     } catch (e) { alert("Fehler beim Speichern: " + e.message); return; }
 
     if (!res.committed) {
-      const imPlan = tournament.schedule && tournament.schedule[matchId];
-      alert(imPlan
-        ? "Dieses Spiel wurde bereits abgeschlossen oder gehört jetzt zu einem anderen Tisch.\n\nEs wurde nichts gespeichert; der Tisch ist wieder frei."
-        : "Dieses Spiel steht nicht mehr im Spielplan - vermutlich wurde die Aufstellung geändert.\n\n"
-          + "Bitte das Ergebnis " + state.score1 + ":" + state.score2 + " in CueDesk eintragen.");
+      // Meldung nach dem frisch gelesenen Stand: schon eingetragen, anderer
+      // Tisch oder nicht mehr im Plan (frueher eine Meldung fuer alles)
+      alert(abschlussAbgelehnt(res.snapshot.val(), state.score1 + ":" + state.score2));
       try { await set(dbRef, null); } catch (e) {}
       return;
     }

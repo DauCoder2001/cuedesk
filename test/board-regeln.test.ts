@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import {
+  abschlussAbgelehnt,
   ausspielziel,
   belegteSpieler,
   ergebnisSchonEingetragen,
@@ -321,6 +322,17 @@ describe('Ergebnisse', () => {
     expect(zielErreicht(4, 4, 2)).toBe(true);
     expect(zielErreicht(4, 3, 3)).toBe(false);
     expect(zielErreicht(0, 9, 0)).toBe(false); // freies Spiel ohne Ziel
+  });
+
+  test('Abschluss abgelehnt: Meldung nach dem aktuellen Stand', () => {
+    expect(abschlussAbgelehnt({ status: 'completed', table: '5' }, '3:0')).toBe(
+      'Das Ergebnis dieses Spiels steht schon in CueDesk.\n\nDer Tisch ist wieder frei.'
+    );
+    expect(abschlussAbgelehnt({ status: 'running', table: '3' }, '3:0')).toBe(
+      'Dieses Spiel läuft inzwischen an Tisch 3.\n\nHier wurde nichts gespeichert; der Tisch ist wieder frei.'
+    );
+    expect(abschlussAbgelehnt({ status: 'pending', table: null }, '3:0')).toMatch(/^Dieses Spiel gehört nicht mehr zu diesem Tisch\./);
+    expect(abschlussAbgelehnt(null, '3:0')).toMatch(/nicht mehr im Spielplan.*\n\nBitte das Ergebnis 3:0 in CueDesk eintragen\./s);
   });
 
   test('Fernseher: Spielende und Sieger am Tisch', () => {

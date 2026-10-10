@@ -890,7 +890,7 @@
   import {
     freiesSpielLaeuft, offeneSpiele, wartetText, zeige141Auswahl, spielBeanspruchen, spielZuruecklegen,
     ergebnisSchonEingetragen, ohneSpielParameter, siegerText, haengendeSpiele, hat141Partien,
-    wechselRueckfrage
+    wechselRueckfrage, abschlussAbgelehnt
   } from "./js/board-regeln.ts";
   import { startIdleRedirect } from "./js/idle-timeout.js";
   import { keepScreenAwake } from "./js/wake-lock.js";
@@ -2067,10 +2067,17 @@
       freigabeGemeldet = true;
       const erg = await ergebnis141InPartie(state.tournamentMatchId, state, { abgebrochen: false });
       if (!erg.ok) {
-        freigabeGemeldet = false;
-        alert("Speichern fehlgeschlagen: " + erg.fehler +
-          "\n\nDas Ergebnis " + state.s1 + ":" + state.s2 + " bitte in CueDesk eintragen." +
-          (erg.endgueltig ? " Der Tisch wird freigegeben." : ""));
+        if (erg.abgelehnt !== undefined) {
+          // Meldung nach dem aktuellen Stand: schon eingetragen, anderer Tisch
+          // oder nicht mehr im Plan. Sie ersetzt den Hinweis "steht schon in CueDesk".
+          freigabeGemeldet = true;
+          alert(abschlussAbgelehnt(erg.abgelehnt, state.s1 + ":" + state.s2));
+        } else {
+          freigabeGemeldet = false;
+          alert("Speichern fehlgeschlagen: " + erg.fehler +
+            "\n\nDas Ergebnis " + state.s1 + ":" + state.s2 + " bitte in CueDesk eintragen." +
+            (erg.endgueltig ? " Der Tisch wird freigegeben." : ""));
+        }
         // Liegt der Grund in CueDesk (Aufstellung geaendert, Partie woanders),
         // hilft kein neuer Versuch - sonst haengt der Tisch in diesem Spiel fest
         if (erg.endgueltig) { frei141 = false; try { await set(dbRef, null); } catch (e) {} }

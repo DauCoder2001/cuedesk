@@ -1181,12 +1181,17 @@ export async function ergebnis141InPartie(
   matchId: string,
   zustand: Zustand141 & { player1: string; player2: string },
   optionen: { abgebrochen: boolean }
-): Promise<{ ok: true } | { ok: false; fehler: string; endgueltig?: boolean }> {
+): Promise<
+  | { ok: true }
+  // abgelehnt: aktueller Stand der Partie fuer die Meldung am Board
+  // (board-regeln: abschlussAbgelehnt); null = nicht mehr im Spielplan
+  | { ok: false; fehler: string; endgueltig?: boolean; abgelehnt?: { status: string; table?: string | null } | null }
+> {
   const v = verbindung;
   if (!v) return { ok: false, fehler: 'Nicht mit CueDesk verbunden.' };
   const eintrag = aktuellesTurnier?.schedule[matchId];
   // endgueltig: Der Grund liegt in CueDesk, ein neuer Versuch am Tisch aendert nichts
-  if (!eintrag) return { ok: false, fehler: 'Das Spiel steht nicht mehr im Spielplan.', endgueltig: true };
+  if (!eintrag) return { ok: false, fehler: 'Das Spiel steht nicht mehr im Spielplan.', endgueltig: true, abgelehnt: null };
   // Kopplung pruefen und Partie lesen gleichzeitig: jede Anfrage kostet am
   // Tisch spuerbar Zeit ("Ergebnis bestaetigen" wirkte traege)
   const [getrennt, { data: partie, error: fehlerPartie }] = await Promise.all([
@@ -1234,7 +1239,19 @@ export async function ergebnis141InPartie(
   if (fehlerUpdate) return { ok: false, fehler: fehlerUpdate.message };
   // Ohne diese Pruefung meldete das Board "gespeichert", obwohl die Partie offen blieb
   if ((geschrieben ?? []).length === 0) {
-    return { ok: false, fehler: 'Die Partie läuft an einem anderen Tisch oder ist schon abgeschlossen.', endgueltig: true };
+    // Warum nicht? Frisch nachsehen, damit die Meldung stimmt: schon
+    // eingetragen oder an einem anderen Tisch
+    const { data: jetzt } = await v.supabase.from('partien').select('status, tisch_id').eq('id', matchId).maybeSingle();
+    let abgelehnt: { status: string; table?: string | null } | null = null;
+    if (jetzt?.status === 'beendet') {
+      abgelehnt = { status: 'completed' };
+    } else if (jetzt) {
+      const { data: tisch } = jetzt.tisch_id
+        ? await v.supabase.from('tische').select('nummer').eq('id', jetzt.tisch_id).maybeSingle()
+        : { data: null };
+      abgelehnt = { status: 'running', table: tisch ? String(tisch.nummer) : null };
+    }
+    return { ok: false, fehler: 'Die Partie läuft an einem anderen Tisch oder ist schon abgeschlossen.', endgueltig: true, abgelehnt };
   }
 
   const zeilen = aufnahmenAusProtokoll(zustand.log, idSeite1, idSeite2).map((z) => ({
