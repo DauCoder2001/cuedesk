@@ -186,6 +186,28 @@ describe('Spielauswahl am Pool-Board', () => {
     expect(liste.find((m) => m.id === 'e')?._freilos).toBe(true);
   });
 
+  test('Doppel: ein Spieler in zwei Doppeln sperrt das zweite, solange das erste laeuft', () => {
+    const plan = (ersterStatus: BoardSpiel['status']): BoardTurnier => ({
+      status: 'running',
+      schedule: {
+        d1: spiel({ player1: 'Frank F. / Matthias N.', player2: 'Gast A / Gast B', status: ersterStatus, table: '1', personen: ['frank', 'matthias', 'ga', 'gb'] }),
+        d2: spiel({ player1: 'Kai K. / Volker B.', player2: 'Gast C / Gast D', personen: ['kai', 'volker', 'gc', 'gd'] }),
+        d3: spiel({ player1: 'Olli G. / Frank F.', player2: 'Gast E / Gast F', personen: ['olli', 'frank', 'ge', 'gf'] })
+      }
+    });
+    const liste = poolAuswahl(plan('running'), '');
+    expect(liste.find((m) => m.id === 'd2')?._playable).toBe(true);
+    expect(liste.find((m) => m.id === 'd3')?._playable).toBe(false);
+    // Ist Doppel 1 fertig, ist Frank wieder frei
+    expect(poolAuswahl(plan('completed'), '').find((m) => m.id === 'd3')?._playable).toBe(true);
+  });
+
+  test('Ohne Kennungen (Pool-TS, offline) zaehlt weiter der Name', () => {
+    const liste = poolAuswahl(turnier(), '');
+    expect(liste.find((m) => m.id === 'c')?._playable).toBe(false);
+    expect(liste.find((m) => m.id === 'a')?._playable).toBe(true);
+  });
+
   test('Filter zeigt nur die Spiele eines Spielers', () => {
     expect(poolAuswahl(turnier(), 'Olli').map((m) => m.id)).toEqual(['c']);
   });

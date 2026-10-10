@@ -281,6 +281,29 @@ export function doppelSeitePruefen(
   return null;
 }
 
+// Doppel: Wer steht in mehreren Doppeln derselben Begegnung? Das ist erlaubt;
+// die Tablets starten solche Doppel nacheinander, weil ein Doppel gesperrt
+// ist, solange einer seiner Spieler an einem anderen Tisch spielt
+// (scoreboards/js/board-regeln.ts, belegteSpieler). Ergebnis: je Spieler ein
+// Satz, nach Namen sortiert.
+export function mehrfachImDoppel(
+  zeilen: { nr: number; spieler: (string | null)[] }[],
+  name: (id: string) => string
+): string[] {
+  const nummern = new Map<string, number[]>();
+  for (const z of zeilen) {
+    for (const id of new Set(z.spieler.filter((x): x is string => Boolean(x)))) {
+      nummern.set(id, [...(nummern.get(id) ?? []), z.nr]);
+    }
+  }
+  const aufzaehlung = (n: number[]) => (n.length === 1 ? String(n[0]) : `${n.slice(0, -1).join(', ')} und ${n[n.length - 1]}`);
+  return [...nummern.entries()]
+    .filter(([, n]) => n.length > 1)
+    .map(([id, n]) => ({ name: name(id), n: [...n].sort((a, b) => a - b) }))
+    .sort((a, b) => a.name.localeCompare(b.name, 'de'))
+    .map((x) => `${x.name} spielt in Doppel ${aufzaehlung(x.n)}.`);
+}
+
 export type LigaVerweis = {
   begegnung?: 1 | 2;
   partner?: string;

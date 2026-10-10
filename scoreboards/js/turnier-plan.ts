@@ -42,6 +42,9 @@ export type PlanEintrag = {
   discipline?: string | null;
   // 14.1: Aufnahmen-Begrenzung aus den Ausspielzielen (raceTo ist das Punkteziel)
   innings?: number | null;
+  // Kennungen aller Spieler der Partie, im Doppel bis zu vier. Damit erkennt
+  // das Tablet jeden einzeln, der gerade an einem anderen Tisch spielt.
+  personen?: string[];
 };
 
 export type TabletTurnier = {
@@ -180,7 +183,8 @@ export function tabletSpielplan(
       vorgabe1: p.vorgabe_a,
       vorgabe2: p.vorgabe_b,
       discipline: DISZIPLIN_NAME[p.disziplin ?? ''] ?? null,
-      innings: p.disziplin === '14-1' ? aufnahmen141 ?? null : null
+      innings: p.disziplin === '14-1' ? aufnahmen141 ?? null : null,
+      personen: [p.spieler_a, p.partner_a, p.spieler_b, p.partner_b].filter((id): id is string => Boolean(id))
     };
   }
   return plan;

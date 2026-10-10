@@ -59,15 +59,18 @@ describe('PDF-Schreiber', () => {
 });
 
 describe.skipIf(!existsSync(V57))('PDF-Schreiber gleich wie in v57', () => {
+  // Der Block wird auch beim Ueberspringen eingelesen: ohne Datei nichts bauen
   const q = existsSync(V57) ? readFileSync(V57, 'utf8') : '';
-  const v57 = new Function(
-    `${stueck(q, 'const PDF_BREITE')} ${stueck(q, 'const PDF_HOEHE')} ${stueck(q, 'const PDF_RAND')}
+  const v57 = (q
+    ? new Function(
+        `${stueck(q, 'const PDF_BREITE')} ${stueck(q, 'const PDF_HOEHE')} ${stueck(q, 'const PDF_RAND')}
      ${stueck(q, 'const PDF_W_NORMAL')} ${stueck(q, 'const PDF_W_FETT')} ${stueck(q, 'const PDF_W_SONDER')}
      ${['pdfZeichenbreite', 'pdfTextbreite', 'pdfKuerzen', 'pdfEscape', 'pdfDokument', 'pdfNeueSeite', 'pdfPlatz',
         'pdfText', 'pdfLinie', 'pdfRechteck', 'pdfUeberschrift', 'pdfTabelle']
        .map((n) => stueck(q, `function ${n}(`)).join('\n')}
      return { pdfEscape, pdfTextbreite, pdfDokument, pdfUeberschrift, pdfTabelle };`
-  )() as {
+      )()
+    : null) as {
     pdfEscape: (t: string) => string;
     pdfTextbreite: (t: string, g: number, f: boolean) => number;
     pdfDokument: () => { seiten: string[][] };

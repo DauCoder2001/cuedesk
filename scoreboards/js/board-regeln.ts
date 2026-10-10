@@ -158,16 +158,28 @@ export function wartetText(anzahl: number, art: BoardArt): string {
 
 // ---------- Spielauswahl am Pool-Board ----------
 
-// Wer steckt gerade in einem laufenden Spiel? (zum Ausgrauen)
+// Wer steckt gerade in einem laufenden Spiel? (zum Ausgrauen) Enthaelt die
+// angezeigten Namen und, aus CueDesk, die Kennungen jedes einzelnen Spielers.
+// Im Doppel steht als Name das Paar ("A / B"); erst die Kennungen zeigen, dass
+// A auch in einem anderen Doppel steht.
 export function belegteSpieler(turnier: BoardTurnier): Set<string> {
   const belegt = new Set<string>();
   Object.values(turnier?.schedule ?? {}).forEach((m) => {
     if (m.status === 'running') {
       if (m.player1) belegt.add(m.player1);
       if (m.player2) belegt.add(m.player2);
+      (m.personen ?? []).forEach((id) => belegt.add(id));
     }
   });
   return belegt;
+}
+
+// Kann das Spiel jetzt beginnen, ohne dass jemand an zwei Tischen steht?
+// Mit Kennungen (CueDesk) zaehlt jeder Spieler einzeln, ohne (Pool-TS,
+// offline) der angezeigte Name.
+function spielerFrei(m: BoardSpiel, belegt: Set<string>): boolean {
+  if (m.personen && m.personen.length > 0) return m.personen.every((id) => !belegt.has(id));
+  return !belegt.has(m.player1 as string) && !belegt.has(m.player2 as string);
 }
 
 // Namen fuer den Filter: alle, die noch offene Spiele haben, ohne Freilos
@@ -201,7 +213,7 @@ export function poolAuswahl(turnier: BoardTurnier, filter: string): AuswahlEintr
   const liste = offen.map((m) => {
     const wartet = m.player1 == null || m.player2 == null;
     const freilos = !wartet && (istFreilos(m.player1) || istFreilos(m.player2));
-    const spielbar = !wartet && (freilos || (!belegt.has(m.player1 as string) && !belegt.has(m.player2 as string)));
+    const spielbar = !wartet && (freilos || spielerFrei(m, belegt));
     return { ...m, _waiting: wartet, _freilos: freilos, _playable: spielbar };
   });
   return liste.sort((a, b) => {

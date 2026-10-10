@@ -12,6 +12,7 @@ import {
   doppelSpielplan,
   fertigGespielt,
   gesperrteSpieler,
+  mehrfachImDoppel,
   spielplan,
   wertung
 } from '../liga';
@@ -481,6 +482,22 @@ export default function LigaAnsicht({
     return aufstellungPruefen(spiele, plan, (id) => anzeige(id));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [spiele, partien, wahl, anzeige, wirSindHeim]);
+
+  // Doppel: Spieler in mehreren Doppeln (erlaubt, die Tablets starten sie
+  // nacheinander). Verborgene Seiten bleiben aussen vor, sonst verriete der
+  // Hinweis die Aufstellung.
+  const mehrfachDoppel = useMemo(() => {
+    if (!istDoppel) return [];
+    const seiten = (['heim', 'gast'] as const).filter((seite) => !istVerdeckt('hin', seite));
+    return mehrfachImDoppel(
+      spiele.map((s) => ({
+        nr: s.nr,
+        spieler: seiten.flatMap((seite) => [spielerIn(s, seite), spielerIn(s, `${seite}2`)]).map((x) => (x === GEIST ? null : x))
+      })),
+      (id) => anzeige(id)
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [spiele, partien, wahl, anzeige, liga?.verdeckt]);
 
   const hinweiseKader = useMemo(() => {
     const eigene = mannschaften.find((m) => m.id === liga?.mannschaft_id);
@@ -1523,6 +1540,12 @@ export default function LigaAnsicht({
               </tfoot>
             )}
           </table>
+          {istDoppel && turnier.status !== 'beendet' && mehrfachDoppel.length > 0 && (
+            <p className="hinweis">
+              {mehrfachDoppel.join(' ')} Die Tablets starten diese Doppel nacheinander, nie gleichzeitig: Ein Doppel ist
+              gesperrt, solange einer seiner Spieler an einem anderen Tisch spielt.
+            </p>
+          )}
           {bearbeitbar && r.runde === 'hin' && hinGeschuetzt && (
             <p className="hinweis">
               Hinrunde geschützt, weil die Rückrunde läuft: Ergebnisse, Aufstellung, Rating-Haken und Zurücksetzen sind

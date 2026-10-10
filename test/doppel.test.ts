@@ -8,6 +8,7 @@ import {
   doppelVon,
   fertigGespielt,
   istDoppelBegegnung,
+  mehrfachImDoppel,
   spieltagStand,
   zweiteBegegnungIds
 } from '../src/liga';
@@ -48,6 +49,23 @@ describe('Doppel-Begegnung: Plan und Pruefung', () => {
     expect(doppelSeitePruefen(2, 'f', 'f', () => 'Frank F.')).toBe('Doppel 2: Frank F. steht zweimal auf derselben Seite.');
     expect(doppelSeitePruefen(2, 'f', 'v', () => '')).toBeNull();
     expect(doppelSeitePruefen(2, 'f', null, () => '')).toBeNull();
+  });
+
+  test('Spieler in mehreren Doppeln: je Spieler ein Satz, nach Namen', () => {
+    const namen: Record<string, string> = { f: 'Frank F.', o: 'Olli G.', k: 'Kai K.' };
+    const name = (id: string) => namen[id] ?? id;
+    expect(
+      mehrfachImDoppel(
+        [
+          { nr: 3, spieler: ['o', 'f', null, null] },
+          { nr: 1, spieler: ['f', 'm', null, null] },
+          { nr: 2, spieler: ['k', 'o', null, null] },
+          { nr: 4, spieler: ['f', null, null, null] }
+        ],
+        name
+      )
+    ).toEqual(['Frank F. spielt in Doppel 1, 3 und 4.', 'Olli G. spielt in Doppel 2 und 3.']);
+    expect(mehrfachImDoppel([{ nr: 1, spieler: ['f', 'm'] }, { nr: 2, spieler: ['k', null] }], name)).toEqual([]);
   });
 });
 
