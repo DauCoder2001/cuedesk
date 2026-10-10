@@ -833,6 +833,7 @@ export async function runTransaction(
   if (!neu || !alt) return abgelehnt(alt);
 
   let geklappt = false;
+  let geschrieben = true; // nur dann lohnt es, den Plan gleich neu zu laden
   if (neu.status === 'running' && alt.status === 'pending') {
     // Spiel beanspruchen: nur wenn es noch keinen Tisch hat
     const { data } = await v.supabase
@@ -845,8 +846,9 @@ export async function runTransaction(
     geklappt = (data ?? []).length === 1;
   } else if (neu.status === 'completed' && alt.status === 'running') {
     // Abschluss: das Ergebnis selbst kommt gleich mit update(); hier nur pruefen,
-    // dass das Spiel noch diesem Tisch gehoert.
+    // dass das Spiel noch diesem Tisch gehoert. Geschrieben wird hier nichts.
     geklappt = alt.table === tischNummer;
+    geschrieben = false;
   } else if (neu.status === 'completed' && alt.status === 'pending') {
     // Die Partie hat ihren Tisch zwischendurch verloren (zum Beispiel, weil sie
     // in CueDesk zurueckgelegt wurde). Solange sie offen ist und an keinem
@@ -870,9 +872,11 @@ export async function runTransaction(
       .neq('status', 'beendet')
       .select('id');
     geklappt = (data ?? []).length === 1;
+  } else {
+    geschrieben = false;
   }
 
-  await turnierAuffrischen();
+  if (geschrieben) await turnierAuffrischen();
   return geklappt ? { committed: true, snapshot: { val: () => neu } } : abgelehnt(alt);
 }
 
@@ -902,7 +906,9 @@ export async function update(_verweis: Verweis, werte: Record<string, unknown>):
     }
     // Weitere Pfade (KO-Fortschreibung) gibt es in der Einzelgruppe nicht.
   }
-  await turnierAuffrischen();
+  // Im Hintergrund: Ergebnis und Tisch stehen schon, das Board soll nicht auf
+  // den neu geladenen Plan warten ("Ergebnis bestaetigen" wirkte traege)
+  void turnierAuffrischen().catch(() => {});
 }
 
 // Lesen auf Abruf. Genutzt wird es fuer die Ergebnisliste am Tisch ("results").
@@ -1181,14 +1187,13 @@ export async function ergebnis141InPartie(
   const eintrag = aktuellesTurnier?.schedule[matchId];
   // endgueltig: Der Grund liegt in CueDesk, ein neuer Versuch am Tisch aendert nichts
   if (!eintrag) return { ok: false, fehler: 'Das Spiel steht nicht mehr im Spielplan.', endgueltig: true };
-  const getrennt = await nichtGekoppelt(`${zustand.s1} : ${zustand.s2}`);
+  // Kopplung pruefen und Partie lesen gleichzeitig: jede Anfrage kostet am
+  // Tisch spuerbar Zeit ("Ergebnis bestaetigen" wirkte traege)
+  const [getrennt, { data: partie, error: fehlerPartie }] = await Promise.all([
+    nichtGekoppelt(`${zustand.s1} : ${zustand.s2}`),
+    v.supabase.from('partien').select('id, spieler_a, spieler_b, race_to').eq('id', matchId).maybeSingle()
+  ]);
   if (getrennt) return { ok: false, fehler: getrennt };
-
-  const { data: partie, error: fehlerPartie } = await v.supabase
-    .from('partien')
-    .select('id, spieler_a, spieler_b, race_to')
-    .eq('id', matchId)
-    .maybeSingle();
   if (fehlerPartie || !partie) return { ok: false, fehler: fehlerPartie?.message ?? 'Partie nicht gefunden.' };
 
   if (!dieselbenSpieler(eintrag, zustand)) {
@@ -1232,30 +1237,36 @@ export async function ergebnis141InPartie(
     return { ok: false, fehler: 'Die Partie läuft an einem anderen Tisch oder ist schon abgeschlossen.', endgueltig: true };
   }
 
-  const { error: fehler141 } = await v.supabase.from('partien_141').upsert({
-    partie_id: matchId,
-    verein_id: v.vereinId,
-    ziel_punkte: zustand.target,
-    ziel_aufnahmen: zustand.targetInn,
-    aufnahmen_a: getauscht ? zustand.inn2 : zustand.inn1,
-    aufnahmen_b: getauscht ? zustand.inn1 : zustand.inn2,
-    hoechstserie_a: getauscht ? zustand.high2 : zustand.high1,
-    hoechstserie_b: getauscht ? zustand.high1 : zustand.high2,
-    dauer_sek: dauer
-  });
-  if (fehler141) return { ok: false, fehler: fehler141.message };
-
-  // Ein zweiter Anlauf soll das Protokoll nicht verdoppeln
-  await v.supabase.from('aufnahmen_141').delete().eq('partie_id', matchId);
   const zeilen = aufnahmenAusProtokoll(zustand.log, idSeite1, idSeite2).map((z) => ({
     ...z,
     partie_id: matchId,
     verein_id: v.vereinId
   }));
-  if (zeilen.length > 0) {
-    const { error } = await v.supabase.from('aufnahmen_141').insert(zeilen);
-    if (error) return { ok: false, fehler: error.message };
-  }
-  await turnierAuffrischen();
+  // Kennzahlen und Protokoll haengen nicht voneinander ab: gleichzeitig schreiben
+  const [{ error: fehler141 }, fehlerProtokoll] = await Promise.all([
+    v.supabase.from('partien_141').upsert({
+      partie_id: matchId,
+      verein_id: v.vereinId,
+      ziel_punkte: zustand.target,
+      ziel_aufnahmen: zustand.targetInn,
+      aufnahmen_a: getauscht ? zustand.inn2 : zustand.inn1,
+      aufnahmen_b: getauscht ? zustand.inn1 : zustand.inn2,
+      hoechstserie_a: getauscht ? zustand.high2 : zustand.high1,
+      hoechstserie_b: getauscht ? zustand.high1 : zustand.high2,
+      dauer_sek: dauer
+    }),
+    (async () => {
+      // Ein zweiter Anlauf soll das Protokoll nicht verdoppeln
+      await v.supabase.from('aufnahmen_141').delete().eq('partie_id', matchId);
+      if (zeilen.length === 0) return null;
+      const { error } = await v.supabase.from('aufnahmen_141').insert(zeilen);
+      return error;
+    })()
+  ]);
+  if (fehler141) return { ok: false, fehler: fehler141.message };
+  if (fehlerProtokoll) return { ok: false, fehler: fehlerProtokoll.message };
+  // Den Spielplan im Hintergrund nachladen: Das Ergebnis steht schon, der Tisch
+  // muss darauf nicht warten (die Aenderung an den Partien meldet sich ohnehin)
+  void turnierAuffrischen().catch(() => {});
   return { ok: true };
 }

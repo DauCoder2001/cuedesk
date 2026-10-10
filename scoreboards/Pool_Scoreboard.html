@@ -237,6 +237,7 @@ button:disabled { opacity: 0.4; }
 #confirm-text { font-size: 2.8vmin; font-weight: bold; color: #1f3b73; margin-bottom: 0.6vmin; }
 #confirm-panel .hint { display: block; font-size: 1.8vmin; color: #666; margin-top: 0.5vmin; }
 #btn-confirm, #btn-newmatch { background: #28a745; color: #fff; font-size: 2.8vmin; padding: 1vmin 2.5vmin; margin: 0.5vmin; }
+#btn-confirm:disabled { opacity: 0.6; cursor: wait; }
 
 /* Picker-Overlay (Turnier: Spielauswahl) */
 #picker {
@@ -558,6 +559,7 @@ button:disabled { opacity: 0.4; }
   import { startIdleRedirect } from "./js/idle-timeout.js";
   import { keepScreenAwake } from "./js/wake-lock.js";
   import { setupFullscreenButton } from "./js/fullscreen.js";
+  import { waehrendSpeichern } from "./js/knopf-warten.js";
 
   keepScreenAwake();          // Bildschirm im Kiosk-Betrieb anhalten
   setupFullscreenButton();    // Vollbild-Button (blendet sich aus, wenn wirkungslos)
@@ -1285,7 +1287,9 @@ async function newGame() {
     applyMode();
   }
 
-  document.getElementById('btn-confirm').addEventListener('click', confirmMatch);
+  // Sofort "Speichert …" und gesperrt, solange die Anfragen laufen
+  document.getElementById('btn-confirm').addEventListener('click', (e) =>
+    void waehrendSpeichern(e.currentTarget, confirmMatch, document.querySelector('#confirm-panel .hint')));
   document.getElementById('btn-abort').addEventListener('click', abortMatch);
   document.getElementById('btn-free').addEventListener('click', enableFreeMode);
   document.getElementById('btn-back').addEventListener('click', backToTournament);

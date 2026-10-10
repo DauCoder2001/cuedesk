@@ -453,6 +453,7 @@
   #confirm-141-text { font-size: 2.8vmin; font-weight: bold; color: #1f3b73; margin-bottom: 0.6vmin; }
   #confirm-141 .hinweis { display: block; font-size: 1.8vmin; color: #666; margin-top: 0.5vmin; }
   #btn-confirm-141 { background: #28a745; color: #fff; font-size: 2.8vmin; padding: 1vmin 2.5vmin; margin: 0.5vmin; }
+  #btn-confirm-141:disabled { opacity: 0.6; cursor: wait; }
   /* Wechsel zum Pool-Board: kein Spiel, deshalb andere Optik als die Liste */
   .pick-wechsel { width: 100%; margin-top: 2vmin; background: #fff; color: #1f3b73;
     border: 0.3vmin solid #1f3b73; font-size: 3vmin; padding: 1.8vmin; border-radius: 1.2vmin; }
@@ -895,6 +896,7 @@
   import { keepScreenAwake } from "./js/wake-lock.js";
   import { setupFullscreenButton } from "./js/fullscreen.js";
   import { setupProtocolShare } from "./js/share-protocol.js";
+  import { waehrendSpeichern } from "./js/knopf-warten.js";
 
   keepScreenAwake();          // Bildschirm im Kiosk-Betrieb anhalten
   setupFullscreenButton();    // Vollbild-Button (blendet sich aus, wenn wirkungslos)
@@ -2047,7 +2049,9 @@
 
   // "Zurueck zum Turnier": Turnierspiele laufen ueber das Pool-Board (Picker). Das
   // 14.1-Board hat keinen Picker -> Tisch freigeben und direkt zum Pool-Board.
-  document.getElementById('btn-confirm-141').addEventListener('click', () => void ergebnisBestaetigen());
+  // Sofort "Speichert …" und gesperrt, solange die Anfragen laufen
+  document.getElementById('btn-confirm-141').addEventListener('click', (e) =>
+    void waehrendSpeichern(e.currentTarget, ergebnisBestaetigen, document.querySelector('#confirm-141 .hinweis')));
 
   // Ergebnis in die Partie des Spieltags schreiben und den Tisch freigeben
   async function ergebnisBestaetigen() {
