@@ -87,6 +87,13 @@ Einstellung wie im Test-Projekt:
 
 ## Schritt 4 · Geheime Werte (Matthias)
 
+**Erledigt 12.10.2026:** Vault mit `dienstschluessel` (Secret Key
+`sb_secret_…`) und `funktionsadresse`, Edge-Function-Secrets eingetragen.
+Probelauf `rating_nachts()`: Antwort 200 „fertig“. Vorsicht beim Eintragen:
+In `vault.create_secret(wert, name, beschreibung)` kommt der Schlüssel an die
+**erste** Stelle; Namen sind nicht verschlüsselt. Ein dabei offengelegter
+Schlüssel wurde ersetzt.
+
 1. **Vault** für den nächtlichen Rating-Lauf, im SQL-Editor der Produktion
    (Werte selbst einsetzen; der Dienstschlüssel steht unter Project Settings
    → API Keys):
