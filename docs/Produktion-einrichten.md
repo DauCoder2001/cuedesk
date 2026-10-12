@@ -39,6 +39,21 @@ den Stand).
 
 ## Schritt 2 · Datenbank aufbauen (Claude, nach „einspielen“)
 
+**Erledigt 12.10.2026:** Projekt `cuedesk-produktion` (Kennung
+`dfagdegjsedeahktklul`). Eingespielt mit dem Supabase-CLI von Matthias
+(`supabase link`, `supabase db push --dry-run`, `supabase db push`), damit
+die Dateien unverändert und mit ihren Zeitstempeln ankommen. Der Abgleich
+fand einen echten Unterschied: Neue Supabase-Projekte geben `anon` und
+`authenticated` automatisch alle Tabellenrechte, das Test-Projekt nicht.
+Behoben mit `20261012100000_tabellenrechte_festschreiben.sql` (Probelauf mit
+angemeldetem Benutzer, Test und Produktion eingespielt). Danach stimmen alle
+16 geprüften Bereiche überein; die übrigen Abweichungen waren nur Kommentare
+in Funktionen. Sicherheitsprüfung: nur die bekannten, gewollten Hinweise.
+
+**Weitere Migrationen in die Produktion** künftig ebenso: erst Test-DB, dann
+im CLI-Fenster `supabase db push` (Token mit
+`$env:SUPABASE_ACCESS_TOKEN = "…"` setzen, wenn das Fenster neu ist).
+
 1. Die 52 Dateien aus `supabase/migrations/` **der Reihe nach** einspielen.
    Sie legen auch die drei nächtlichen Zeitpläne (`rating-nachts`,
    `vereine-loeschen`, `fristen-loeschen`) und die Echtzeit-Tabellen
@@ -87,9 +102,12 @@ Unter **Authentication**:
    `https://app.cuedesk.de/**`.
 2. **Providers → Email:** Passwort-Mindestlänge **10**; „Allow new users to
    sign up“ bleibt **an** (Tablets melden sich selbst an).
-3. **SMTP:** IONOS-Postfach wie im Test-Projekt (Absender, Host, Port,
+3. **Anonyme Anmeldung einschalten** („Allow anonymous sign-ins“, unter
+   Sign In / Providers): Tablets und Fernseher melden sich anonym an, bevor
+   sie gekoppelt werden. Ohne diesen Schalter lässt sich kein Tablet koppeln.
+4. **SMTP:** IONOS-Postfach wie im Test-Projekt (Absender, Host, Port,
    Benutzer, Passwort).
-4. **Emails → Templates:** die fünf Vorlagen aus `docs/Mailvorlagen.md`.
+5. **Emails → Templates:** die fünf Vorlagen aus `docs/Mailvorlagen.md`.
 
 ## Schritt 6 · Anwendung unter app.cuedesk.de
 
