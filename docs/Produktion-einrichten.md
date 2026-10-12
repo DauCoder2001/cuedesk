@@ -69,6 +69,12 @@ im CLI-Fenster `supabase db push` (Token mit
 
 ## Schritt 3 · Serverfunktionen (Claude, nach „einspielen“)
 
+**Erledigt 12.10.2026:** Bereitgestellt von Matthias im CLI-Fenster mit
+`supabase functions deploy --project-ref dfagdegjsedeahktklul --use-api`;
+die JWT-Einstellung steht in `supabase/config.toml` und wird dabei
+übernommen. Geänderte Funktionen künftig genauso bereitstellen (für die
+Test-DB mit deren Kennung).
+
 Die vier Funktionen aus `supabase/functions/` bereitstellen, mit derselben
 Einstellung wie im Test-Projekt:
 

@@ -413,3 +413,18 @@ enabled = true
 # formatted with uppercase keywords, indent 2, max width 180, trailing commas,
 # and column/key alignment. Set to "null" to emit raw, unformatted SQL.
 # format_options = "{\"keywordCase\":\"upper\",\"indent\":2,\"maxWidth\":180,\"commaStyle\":\"trailing\"}"
+
+# CueDesk-Serverfunktionen: JWT-Pruefung wie im Test-Projekt.
+# einladung und rating pruefen die Rolle selbst (rating wird nachts auch vom
+# Zeitplan mit dem Dienstschluessel gerufen), kontakt laeuft ohne Anmeldung.
+[functions.einladung]
+verify_jwt = false
+
+[functions.rating]
+verify_jwt = false
+
+[functions.kontakt]
+verify_jwt = false
+
+[functions.spielbericht]
+verify_jwt = true
