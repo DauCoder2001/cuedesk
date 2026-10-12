@@ -109,6 +109,12 @@ Deno.serve(async (anfrage) => {
   const benutzer = Deno.env.get('SMTP_USER');
   const passwort = Deno.env.get('SMTP_PASS');
   const an = Deno.env.get('KONTAKT_AN');
+  // Nur im Test-Projekt gesetzt (z. B. TEST): Betreff "[TEST] …" und
+  // Absender "CueDesk-Test", damit man Mails aus dem Test-System sofort
+  // erkennt. In der Produktion fehlt die Einstellung, dort bleibt es bei "CueDesk".
+  const kennung = (Deno.env.get('MAIL_KENNUNG') ?? '').trim();
+  const absenderName = kennung ? `CueDesk-${kennung.charAt(0).toUpperCase()}${kennung.slice(1).toLowerCase()}` : 'CueDesk';
+  const betreffVorsatz = kennung ? `[${kennung}] ` : '';
   let fehler: string | null = null;
   if (!host || !benutzer || !passwort || !an) {
     fehler = 'Secrets für den Mailversand fehlen (SMTP_HOST, SMTP_USER, SMTP_PASS, KONTAKT_AN).';
@@ -117,10 +123,10 @@ Deno.serve(async (anfrage) => {
       const versand = nodemailer.createTransport({ host, port: 465, secure: true, auth: { user: benutzer, pass: passwort } });
       const eingegangen = new Date(zeile.eingegangen_am).toLocaleString('de-DE', { timeZone: 'Europe/Berlin' });
       await versand.sendMail({
-        from: { name: 'CueDesk', address: benutzer },
+        from: { name: absenderName, address: benutzer },
         to: an,
         replyTo: { name, address: email },
-        subject: `CueDesk-Kontakt: ${name}`,
+        subject: `${betreffVorsatz}CueDesk-Kontakt: ${name}`,
         text: [
           `Name: ${name}`,
           `E-Mail: ${email}`,

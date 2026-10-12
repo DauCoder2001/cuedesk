@@ -16,6 +16,24 @@ Benutzt werden **Magic Link**, **Confirm signup**, **Invite user**,
 „Confirm signup“ geht an Personen, die sich zum ersten Mal anmelden. Es hat
 deshalb denselben Inhalt wie der Anmeldelink.
 
+## Nur im Test-Projekt: als Test-Mail kennzeichnen
+
+Damit man Mails aus dem Test-System sofort erkennt (Entscheidung 12.10.2026),
+im **Test-Projekt** – nicht in der Produktion – zusätzlich:
+
+1. **Authentication → Emails → SMTP Settings → Sender name:** `CueDesk-Test`.
+2. In allen fünf Vorlagen den **Betreff** mit `[TEST] ` beginnen lassen, z. B.
+   `[TEST] Dein Anmeldecode für CueDesk: {{ .Token }}`.
+3. In allen fünf Vorlagen diese Zeile **ganz oben** in den Inhalt setzen, vor
+   die Überschrift:
+   ```html
+   <p style="background:#fff3cd;color:#664d03;border:1px solid #ffe69c;border-radius:6px;padding:8px 12px;margin:0 0 16px">Diese Mail kommt aus dem <strong>Test-System</strong> von CueDesk.</p>
+   ```
+4. **Edge Functions → Secrets:** `MAIL_KENNUNG` = `TEST`. Damit kennzeichnet
+   auch die Funktion `kontakt` ihre Mails (`[TEST] CueDesk-Kontakt: …`,
+   Absender `CueDesk-Test`). In der Produktion diese Einstellung **nicht**
+   anlegen.
+
 ---
 
 ## Magic Link

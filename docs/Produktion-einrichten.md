@@ -109,6 +109,12 @@ die Namen), und `rating_nachts()` läuft ohne Fehlermeldung.
 
 ## Schritt 5 · Anmeldung einstellen (Matthias)
 
+**Erledigt 12.10.2026.** Von außen geprüft (öffentliche Auth-Einstellungen):
+E-Mail-Anmeldung, neue Konten erlaubt, Bestätigung nötig und anonyme
+Anmeldung wie im Test-Projekt. Adressen, Passwortlänge, SMTP und Vorlagen
+zeigt erst die erste echte Einladung in Schritt 9. Das Test-Projekt
+kennzeichnet seine Mails zusätzlich als Test (siehe `docs/Mailvorlagen.md`).
+
 Unter **Authentication**:
 
 1. **URL Configuration:** Site URL `https://app.cuedesk.de/`, Redirect URLs
