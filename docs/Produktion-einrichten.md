@@ -172,8 +172,15 @@ noch leer. Workflow `produktion-veroeffentlichen.yml` liegt bereit.
    `main` (E1). Bricht ab, wenn eine Variable oder das Token fehlt oder
    `PROD_SUPABASE_URL` auf die Test-Datenbank zeigt.
 2. Nach dem ersten Lauf prüfen: Lauf grün, Inhalt von `cuedesk-app`, HTTPS
-   und Anmeldeseite unter `app.cuedesk.de`.
-3. Testfassung kennzeichnen (E3).
+   und Anmeldeseite unter `app.cuedesk.de`. **Erster Lauf 13.10.2026 grün:**
+   Branch `main` angelegt, `CNAME` = `app.cuedesk.de`, das Programm enthält
+   nur die Kennung der Produktion, keine Pfade mit `/cuedesk/`.
+3. Testfassung kennzeichnen (E3, erledigt 13.10.2026, Variante „Streifen
+   oben“): `src/testfassung.ts`, eingeschaltet mit `VITE_TESTFASSUNG: '1'` in
+   `veroeffentlichen.yml`. Gelber Streifen „Testumgebung – keine echten
+   Turniere eintragen · zur echten Fassung: app.cuedesk.de“ über jeder Seite
+   der Verwaltung und der Anmeldung, „[TEST]“ im Tab-Titel. Lokal, in der
+   Produktion, auf Scoreboards und TV kein Streifen.
 
 Die Scoreboards und TV-Seiten sind Teil der Anwendung und liegen danach unter
 `app.cuedesk.de/scoreboards/`. Die Offline-Scoreboards bleiben unverändert.

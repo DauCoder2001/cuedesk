@@ -40,6 +40,8 @@ jobs:
           VITE_SUPABASE_KEY: ${{ vars.VITE_SUPABASE_KEY }}
           # Unterordner auf GitHub Pages. Bei eigener Domain auf "/" aendern.
           VITE_BASIS: /cuedesk/
+          # Streifen "Testumgebung" und [TEST] im Tab-Titel (src/testfassung.ts)
+          VITE_TESTFASSUNG: '1'
         run: npm run build
 
       - uses: actions/upload-pages-artifact@v5
