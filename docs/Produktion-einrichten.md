@@ -240,8 +240,9 @@ Datenbanken angekommen.
 3. **Matthias** auf `app.cuedesk.de`: anmelden → Konsole → Verein **B&W**
    anlegen → sich selbst als Vereins-Administrator einladen → Auftragsverarbeitung
    zustimmen → System einstellen (Logo, Vorgaben, Saisonbeginn, Schutzwort).
-4. Spieler: über **Altdaten übernehmen** aus Turnier light oder von Hand.
-   Seit 13.10.2026 nimmt „Altdaten übernehmen“ auch einen **CueDesk-Export**
+4. Spieler: über **System → Daten einlesen** (bis 13.10.2026 eigener
+   Menüpunkt „Altdaten übernehmen“, jetzt nur für Vereins-Administratoren) aus
+   Turnier light oder von Hand. Seit 13.10.2026 nimmt das Einlesen auch einen **CueDesk-Export**
    (System → Daten exportieren, z. B. aus der Test-DB) und übernimmt daraus nur
    Stammdaten: Spieler mit Eintritt, Austritt, Pass-/DBU-Nummer, Notiz und
    Rating-Startwert, Mannschaften mit Kader, Tische. Turniere, Partien, Rating,

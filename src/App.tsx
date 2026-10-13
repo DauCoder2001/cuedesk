@@ -6,7 +6,6 @@ import Personen from './seiten/Personen';
 import BenutzerRollen from './seiten/BenutzerRollen';
 import TischeGeraete from './seiten/TischeGeraete';
 import Geraet from './seiten/Geraet';
-import Altdaten from './seiten/Altdaten';
 import Rating from './seiten/Rating';
 import Serien from './seiten/Serien';
 import Ranglisten from './seiten/Ranglisten';
@@ -42,7 +41,6 @@ type Bereich =
   | 'statistik141'
   | 'benutzer'
   | 'tische'
-  | 'altdaten'
   | 'system'
   | 'konsole'
   | 'konto' // "Mein Konto", ueber den eigenen Namen in der Kopfzeile
@@ -254,16 +252,10 @@ export default function App() {
       tipp: 'Tische anlegen und die Tablets an den Tischen koppeln.'
     },
     {
-      wert: 'altdaten',
-      name: 'Altdaten übernehmen',
-      sichtbar: darf('vereinsadmin', 'sportwart'),
-      tipp: 'Den Datenbestand aus Turnier light oder die Stammdaten aus einem CueDesk-Export (Spieler, Mannschaften, Tische) einlesen und den Spielern zuordnen.'
-    },
-    {
       wert: 'system',
       name: 'System',
       sichtbar: darf('vereinsadmin'),
-      tipp: 'Einstellungen des Vereins: Name und Logo, Vorgaben für neue Turniere und Liga-Spieltage, Saisonbeginn, Schutzwort.'
+      tipp: 'Einstellungen des Vereins: Name und Logo, Vorgaben für neue Turniere und Liga-Spieltage, Saisonbeginn, Schutzwort, Daten exportieren und einlesen.'
     },
     // Ganz hinten: gilt fuer ganz CueDesk, nicht fuer den Verein
     {
@@ -427,7 +419,6 @@ export default function App() {
         {angezeigt === 'benutzer' && <BenutzerRollen key={kontoStart ?? ''} start={kontoStart} />}
         {angezeigt === 'tische' && <TischeGeraete />}
         {angezeigt === 'system' && <System />}
-        {angezeigt === 'altdaten' && <Altdaten />}
           </>
         )}
       </main>

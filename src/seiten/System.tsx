@@ -15,6 +15,7 @@ import type { Vereinsangaben } from '../vereinsangaben';
 import { homepageLink } from '../mandanten';
 import { useUngespeichert, weichtAb } from '../ungespeichert';
 import { STANDARD_EINSTELLUNGEN } from '../rating';
+import Altdaten from './Altdaten';
 
 // Seite "System": Einstellungen des Vereins, nur fuer den Vereins-Administrator.
 // Verein (Name, Kuerzel, Logo), Vorgaben fuer neue Turniere und Liga-Spieltage,
@@ -152,6 +153,8 @@ export default function System() {
   const [wort, setWort] = useState('');
   const [wortWieder, setWortWieder] = useState('');
   const [arbeitet, setArbeitet] = useState(false);
+  // "Daten einlesen" (Altdaten.tsx) aufgeklappt
+  const [einlesenOffen, setEinlesenOffen] = useState(false);
   const [fehler, setFehler] = useState<string | null>(null);
   const [meldung, setMeldung] = useState<string | null>(null);
   const dateiFeld = useRef<HTMLInputElement>(null);
@@ -646,7 +649,7 @@ export default function System() {
       </section>
 
       <section className="block">
-        <h2>Daten exportieren</h2>
+        <h2>Daten exportieren / einlesen</h2>
         <p className="hinweis">
           Alle Daten des Vereins als Datei: Spieler, Einwilligungen mit Verlauf, Turniere mit Anmeldungen, Partien,
           14.1-Aufnahmen, Rating, Mannschaften, Tische, Tablets, Konten mit ihren Rollen und die Zustimmung zu
@@ -660,7 +663,23 @@ export default function System() {
             <small className="hinweis">zuletzt am {new Date(verein.export_am).toLocaleString('de-DE')}</small>
           )}
         </div>
+        <p className="hinweis">
+          Einlesen: Datenbestand aus Turnier light oder Stammdaten (Spieler, Mannschaften, Tische) aus einem
+          CueDesk-Export.
+        </p>
+        <div className="knopfpaar">
+          <button
+            type="button"
+            title="Eine Datei aus Turnier light oder einen CueDesk-Export einlesen; geschrieben wird erst nach der Vorschau"
+            onClick={() => setEinlesenOffen(true)}
+            disabled={einlesenOffen}
+          >
+            Daten einlesen
+          </button>
+        </div>
       </section>
+
+      {einlesenOffen && <Altdaten schliessen={() => setEinlesenOffen(false)} />}
 
       <section className="block">
         <h2>Verträge</h2>

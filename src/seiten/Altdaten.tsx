@@ -13,9 +13,11 @@ import ExportStammdaten from './ExportStammdaten';
 // oder der Stammdaten aus einem CueDesk-Export (ExportStammdaten.tsx).
 // Die Datei wird nur im Browser gelesen; geschrieben wird erst auf Knopfdruck.
 
-export default function Altdaten() {
+// Eingebettet unter System → "Daten exportieren / einlesen" (nur
+// Vereins-Administrator, wie der Export); schliessen klappt den Bereich zu.
+export default function Altdaten({ schliessen }: { schliessen: () => void }) {
   const { verein, darf } = useSitzung();
-  const darfUebernehmen = darf('vereinsadmin', 'sportwart');
+  const darfUebernehmen = darf('vereinsadmin');
 
   const [dateiname, setDateiname] = useState<string | null>(null);
   const [analyse, setAnalyse] = useState<Analyse | null>(null);
@@ -343,11 +345,11 @@ export default function Altdaten() {
   const partienGesamt = analyse?.turniere.reduce((n, t) => n + t.partien.length, 0) ?? 0;
 
   return (
-    <div className="einspaltig">
+    <>
       <section className="block">
-        <h2>Altdaten übernehmen</h2>
+        <h2>Daten einlesen</h2>
         <p className="hinweis">
-          Datenbestand der Serienwertung (Turnier light) oder ein CueDesk-Export (System → Daten exportieren); aus dem
+          Datenbestand der Serienwertung (Turnier light) oder ein CueDesk-Export (z. B. aus der Testfassung); aus dem
           Export kommen nur Spieler, Mannschaften mit Kader und Tische. Die Datei wird zuerst nur gelesen. Geschrieben
           wird erst mit "Übernehmen".
         </p>
@@ -361,6 +363,9 @@ export default function Altdaten() {
             }}
           />
           {dateiname && <span className="hinweis">{dateiname}</span>}
+          <button type="button" title="Einlesen schließen, ohne etwas zu übernehmen" onClick={schliessen} disabled={laeuft}>
+            Schließen
+          </button>
         </div>
         {fehler && <p className="fehler">{fehler}</p>}
       </section>
@@ -485,7 +490,7 @@ export default function Altdaten() {
           </section>
         </>
       )}
-    </div>
+    </>
   );
 }
 
