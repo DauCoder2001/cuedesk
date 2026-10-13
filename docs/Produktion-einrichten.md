@@ -19,7 +19,7 @@ ein und bekommt sie nicht zu sehen.
 
 | Nr. | Frage | Entscheidung |
 |---|---|---|
-| E1 | Wann wird die Produktion neu veröffentlicht? | **Auf Knopfdruck** (Workflow „Produktion veröffentlichen“), nicht bei jedem Push. So läuft eine Änderung zuerst in der Testfassung, und Migrationen kommen vor dem neuen Programmstand in die Produktion. |
+| E1 | Wann wird die Produktion neu veröffentlicht? | **Auf Knopfdruck** (Workflow „Produktion veröffentlichen“, seit 13.10.2026 „Produktion“ mit Datenbank und App), nicht bei jedem Push. So läuft eine Änderung zuerst in der Testfassung, und Migrationen kommen vor dem neuen Programmstand in die Produktion. |
 | E2 | Wohin geht die Sicherung der Produktion? | **Eigenes privates Repo `cuedesk-sicherung-produktion`.** Der Sicherungslauf legt bei jedem Lauf eine neue Historie an; zwei Datenbanken in einem Repo würden sich gegenseitig löschen. |
 | E3 | Testfassung kennzeichnen? | **Ja:** schmaler Streifen „Testumgebung – keine echten Turniere“ oben in der Testfassung, damit niemand versehentlich ein echtes Turnier in die Test-DB einträgt. Eingeschaltet über eine Variable beim Bauen der Testfassung, sobald die Produktion läuft; Aussehen zeigt Claude vorher. |
 
@@ -265,14 +265,18 @@ Datenbanken angekommen.
 ## Danach: Ablauf bei jeder Änderung
 
 1. Änderung wie bisher in die Testfassung (Push), dort prüfen.
-2. Neue Migrationen: erst Test-DB, dann nach „einspielen“ die Produktion.
-   Seit 13.10.2026 über den Workflow **Produktion Datenbank** (Actions → Run
-   workflow): zuerst Modus „probelauf“ (zeigt die ausstehenden Migrationen in
-   der Zusammenfassung, schreibt nichts), dann „einspielen“. Er nutzt
-   `SUPABASE_DB_URL_PRODUKTION`; ein lokales CLI mit Token ist dafür nicht mehr
-   nötig (nur noch für Edge Functions).
-3. Erst danach „Produktion veröffentlichen“ starten.
-4. Geänderte Serverfunktionen in beiden Projekten bereitstellen.
+2. Neue Migrationen: erst Test-DB (Probelauf, „einspielen“).
+3. Workflow **Produktion** (Actions → Run workflow, seit 13.10.2026; ersetzt
+   „Produktion veröffentlichen“):
+   - Modus **probelauf** (Vorgabe): zeigt in der Zusammenfassung die
+     ausstehenden Migrationen und baut die App zur Probe; schreibt nichts.
+   - Modus **veroeffentlichen**: spielt zuerst ausstehende Migrationen ein
+     (`supabase db push` mit `SUPABASE_DB_URL_PRODUKTION`), dann wird die App
+     nach `cuedesk-app` gelegt. Scheitert eine Migration, bleibt die alte App
+     online. So stimmt die Reihenfolge Datenbank → App immer.
+   Ein lokales CLI mit Token ist dafür nicht mehr nötig.
+4. Geänderte Serverfunktionen in beiden Projekten bereitstellen (weiterhin
+   per CLI).
 
 **Vor weiteren Vereinen:** Abschnitt 2 in Vor-dem-Livegang.md (Recht und
 Datenschutz) muss erledigt sein. Für B&W als Pilotverein des Betreibers reicht

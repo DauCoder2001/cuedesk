@@ -1,0 +1,135 @@
+name: Produktion
+
+# Bringt die Produktion (app.cuedesk.de, Datenbank cuedesk-produktion) auf den
+# Stand von main. Nur auf Knopfdruck und nur von main (Entscheidung E1 in
+# docs/Produktion-einrichten.md): Aenderungen laufen zuerst in der
+# Testfassung, neue Migrationen zuerst in der Test-DB.
+#
+# Modus "probelauf" (Vorgabe): zeigt die ausstehenden Migrationen und baut die
+#   App zur Probe. Schreibt nichts, veroeffentlicht nichts.
+# Modus "veroeffentlichen": spielt zuerst die ausstehenden Migrationen ein
+#   (supabase db push) und legt danach die gebaute App in das Repository
+#   DauCoder2001/cuedesk-app (GitHub Pages). Scheitert eine Migration, bricht
+#   der Lauf ab und die bisherige App bleibt online.
+#
+# Einmalig in GitHub (Settings -> Secrets and variables -> Actions):
+#   Variable PROD_SUPABASE_URL           Adresse der Produktion (nicht geheim)
+#   Variable PROD_SUPABASE_KEY           oeffentlicher Schluessel (nicht geheim)
+#   Secret   SUPABASE_DB_URL_PRODUKTION  Verbindung zur Datenbank (wie Sicherung)
+#   Secret   APP_TOKEN                   Fine-grained Token, nur Contents: Read
+#                                        and write auf DauCoder2001/cuedesk-app
+
+on:
+  workflow_dispatch:
+    inputs:
+      modus:
+        description: 'probelauf zeigt nur an, veroeffentlichen spielt Migrationen ein und stellt die App bereit'
+        type: choice
+        options: [probelauf, veroeffentlichen]
+        default: probelauf
+
+permissions:
+  contents: read
+
+concurrency:
+  group: produktion
+  cancel-in-progress: false
+
+env:
+  ZIEL: DauCoder2001/cuedesk-app
+  DOMAIN: app.cuedesk.de
+
+jobs:
+  produktion:
+    runs-on: ubuntu-latest
+    name: produktion (${{ inputs.modus }})
+    env:
+      DB_URL: ${{ secrets.SUPABASE_DB_URL_PRODUKTION }}
+    steps:
+      - name: Voraussetzungen pruefen
+        env:
+          REF: ${{ github.ref }}
+          URL: ${{ vars.PROD_SUPABASE_URL }}
+          KEY: ${{ vars.PROD_SUPABASE_KEY }}
+          TEST_URL: ${{ vars.VITE_SUPABASE_URL }}
+          TOKEN_DA: ${{ secrets.APP_TOKEN != '' }}
+        run: |
+          if [ "$REF" != "refs/heads/main" ]; then echo "::error::Nur vom Branch main."; exit 1; fi
+          if [ -z "$URL" ] || [ -z "$KEY" ]; then echo "::error::Variable PROD_SUPABASE_URL oder PROD_SUPABASE_KEY fehlt."; exit 1; fi
+          if [ "$URL" = "$TEST_URL" ]; then echo "::error::PROD_SUPABASE_URL zeigt auf die Test-Datenbank."; exit 1; fi
+          if [ -z "$DB_URL" ]; then echo "::error::Secret SUPABASE_DB_URL_PRODUKTION fehlt."; exit 1; fi
+          if [ "$TOKEN_DA" != "true" ]; then echo "::error::Secret APP_TOKEN fehlt."; exit 1; fi
+          echo "Datenbank: $URL"
+
+      - uses: actions/checkout@v7
+
+      - uses: supabase/setup-cli@v3
+        with:
+          version: latest
+
+      - name: Ausstehende Migrationen
+        id: migrationen
+        run: |
+          set -o pipefail
+          supabase db push --db-url "$DB_URL" --dry-run 2>&1 | tee probelauf.txt
+          if grep -q '\.sql' probelauf.txt; then echo "ausstehend=ja" >> "$GITHUB_OUTPUT"; else echo "ausstehend=nein" >> "$GITHUB_OUTPUT"; fi
+          {
+            echo "### Datenbank: ausstehende Migrationen"
+            echo '```'
+            cat probelauf.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: App bauen
+        env:
+          VITE_SUPABASE_URL: ${{ vars.PROD_SUPABASE_URL }}
+          VITE_SUPABASE_KEY: ${{ vars.PROD_SUPABASE_KEY }}
+          # Eigene Domain: die Anwendung liegt im Wurzelordner
+          VITE_BASIS: /
+        run: npm run build
+
+      - name: Migrationen einspielen
+        if: inputs.modus == 'veroeffentlichen' && steps.migrationen.outputs.ausstehend == 'ja'
+        run: |
+          set -o pipefail
+          supabase db push --db-url "$DB_URL" --yes 2>&1 | tee einspielen.txt
+          {
+            echo "### Datenbank: eingespielt"
+            echo '```'
+            cat einspielen.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: App veroeffentlichen
+        if: inputs.modus == 'veroeffentlichen'
+        env:
+          TOKEN: ${{ secrets.APP_TOKEN }}
+        run: |
+          git clone "https://x-access-token:${TOKEN}@github.com/${ZIEL}.git" ziel
+          cd ziel
+          git checkout -B main
+          find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+          cp -a ../dist/. .
+          echo "$DOMAIN" > CNAME
+          touch .nojekyll
+          git add -A
+          if git diff --cached --quiet; then
+            echo "Keine Aenderung an der App." | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "CueDesk ${GITHUB_SHA::7}"
+          git push origin main
+          echo "### App: CueDesk ${GITHUB_SHA::7} veroeffentlicht" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Nur Probelauf
+        if: inputs.modus == 'probelauf'
+        run: echo "### Probelauf - nichts eingespielt, nichts veroeffentlicht. App gebaut ohne Fehler." >> "$GITHUB_STEP_SUMMARY"
