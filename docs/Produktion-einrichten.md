@@ -266,6 +266,11 @@ Datenbanken angekommen.
 
 1. Änderung wie bisher in die Testfassung (Push), dort prüfen.
 2. Neue Migrationen: erst Test-DB, dann nach „einspielen“ die Produktion.
+   Seit 13.10.2026 über den Workflow **Produktion Datenbank** (Actions → Run
+   workflow): zuerst Modus „probelauf“ (zeigt die ausstehenden Migrationen in
+   der Zusammenfassung, schreibt nichts), dann „einspielen“. Er nutzt
+   `SUPABASE_DB_URL_PRODUKTION`; ein lokales CLI mit Token ist dafür nicht mehr
+   nötig (nur noch für Edge Functions).
 3. Erst danach „Produktion veröffentlichen“ starten.
 4. Geänderte Serverfunktionen in beiden Projekten bereitstellen.
 
