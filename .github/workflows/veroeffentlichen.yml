@@ -1,7 +1,9 @@
-name: Veroeffentlichen
+name: Auto Push Testfassung
 
-# Baut CueDesk und stellt es auf GitHub Pages bereit.
-# Laeuft bei jedem Push auf main und auf Knopfdruck.
+# Baut die Testfassung von CueDesk (Test-DB, Teststreifen) und stellt sie auf
+# GitHub Pages unter daucoder2001.github.io/cuedesk/ bereit.
+# Laeuft bei jedem Push auf main und auf Knopfdruck. Die Produktion
+# (app.cuedesk.de) bringt der Workflow "Produktion" auf den Stand.
 
 on:
   push:
