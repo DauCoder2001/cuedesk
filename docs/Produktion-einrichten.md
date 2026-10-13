@@ -216,6 +216,14 @@ ein Commit, keine Forks) und ist jetzt privat. `sicherung.yml` umgebaut auf
 zwei getrennte Läufe „sichern (test)“ und „sichern (produktion)“; das Repo
 wird mit `git clone` geholt, weil das der Produktion beim ersten Lauf leer ist.
 
+**Erledigt 13.10.2026.** Erster Lauf der Produktion scheiterte an einer
+fehlerhaften `SUPABASE_DB_URL_PRODUKTION` („failed to parse connection
+string“); nach der Korrektur Lauf 38373997480 grün in beiden Teilen:
+`sicherung-2026-10-13.tar.gz.gpg` in `cuedesk-sicherung` (2,0 MB) und
+`cuedesk-sicherung-produktion` (27 KB), beide Repos privat. Rückmeldung
+`system_ereignisse` (art `sicherung`, erfolg true, Größe passend) in beiden
+Datenbanken angekommen.
+
 ## Schritt 9 · Erster Super-Admin und erster Verein
 
 1. **Matthias:** Authentication → Users → **Add user** mit der eigenen
