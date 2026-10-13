@@ -249,6 +249,10 @@ Datenbanken angekommen.
    Konten und Geräte bleiben draußen; Gäste sind zunächst auf „nicht
    übernehmen“ gestellt. Die Freigabe „Name öffentlich“ wird je Spieler neu
    erfasst (Nachweis).
+   **Erledigt 13.10.2026** aus einem Export der Testfassung: 28 Mitglieder
+   (alle mit vertraulichen Angaben, keine doppelten Namen), 1 Mannschaft mit
+   6 Spielern im Kader, Tische 1 bis 4; keine Turniere, Partien oder
+   Einwilligungen. Offen: Einwilligungen „Name öffentlich“ mit Nachweis erfassen.
    Mannschaften und Kader, Tische anlegen.
 5. **Tablets neu koppeln** unter `app.cuedesk.de/scoreboards/`, TV-Gerät neu
    einrichten.
