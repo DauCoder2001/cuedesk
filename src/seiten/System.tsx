@@ -648,8 +648,9 @@ export default function System() {
       <section className="block">
         <h2>Daten exportieren</h2>
         <p className="hinweis">
-          Alle Daten des Vereins als Datei: Spieler, Turniere, Partien, 14.1-Aufnahmen, Rating, Mannschaften, Tische, Tablets
-          und Konten mit ihren Rollen. Ohne das Änderungsprotokoll. Die Datei enthält Mitgliederdaten – sicher aufbewahren.
+          Alle Daten des Vereins als Datei: Spieler, Einwilligungen mit Verlauf, Turniere mit Anmeldungen, Partien,
+          14.1-Aufnahmen, Rating, Mannschaften, Tische, Tablets, Konten mit ihren Rollen und die Zustimmung zu
+          Nutzungsbedingungen und Auftragsverarbeitung. Ohne das Änderungsprotokoll. Die Datei enthält Mitgliederdaten – sicher aufbewahren.
         </p>
         <div className="knopfpaar">
           <button type="button" title="Alle Vereinsdaten als JSON-Datei herunterladen" onClick={() => void exportieren()} disabled={arbeitet}>

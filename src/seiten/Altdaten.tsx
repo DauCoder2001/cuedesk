@@ -5,8 +5,12 @@ import { nameZerlegen, personName } from '../namen';
 import type { Person } from '../datenbank.types';
 import { auswerten } from '../altdaten-lesen';
 import type { Analyse } from '../altdaten-lesen';
+import { istCuedeskExport, stammdatenAuswerten, zuordnungVorschlagen } from '../export-lesen';
+import type { ExportStammdaten as Stammdaten, Zuordnung } from '../export-lesen';
+import ExportStammdaten from './ExportStammdaten';
 
-// Uebernahme des Datenbestands aus der Serienwertung (Turnier light, v15).
+// Uebernahme des Datenbestands aus der Serienwertung (Turnier light, v15)
+// oder der Stammdaten aus einem CueDesk-Export (ExportStammdaten.tsx).
 // Die Datei wird nur im Browser gelesen; geschrieben wird erst auf Knopfdruck.
 
 export default function Altdaten() {
@@ -15,6 +19,7 @@ export default function Altdaten() {
 
   const [dateiname, setDateiname] = useState<string | null>(null);
   const [analyse, setAnalyse] = useState<Analyse | null>(null);
+  const [stammdaten, setStammdaten] = useState<{ daten: Stammdaten; vorschlag: Record<string, Zuordnung> } | null>(null);
   const [personen, setPersonen] = useState<Person[]>([]);
   const [zuordnung, setZuordnung] = useState<Record<string, string>>({});
   const [mitSerien, setMitSerien] = useState(true);
@@ -31,8 +36,22 @@ export default function Altdaten() {
     setFehler(null);
     setProtokoll([]);
     setDateiname(datei.name);
+    setStammdaten(null);
+    setAnalyse(null);
     try {
-      const inhalt = JSON.parse(await datei.text()) as Parameters<typeof auswerten>[0];
+      const roh: unknown = JSON.parse(await datei.text());
+      if (istCuedeskExport(roh)) {
+        const daten = stammdatenAuswerten(roh);
+        const { data } = await supabase.from('personen').select('*').eq('verein_id', verein!.id);
+        const vorhanden = data ?? [];
+        setPersonen(vorhanden);
+        setStammdaten({ daten, vorschlag: zuordnungVorschlagen(daten.personen, vorhanden) });
+        return;
+      }
+      if (typeof roh !== 'object' || roh === null || !Array.isArray((roh as { serien?: unknown }).serien)) {
+        throw new Error('Die Datei stammt weder aus Turnier light noch aus einem CueDesk-Export.');
+      }
+      const inhalt = roh as Parameters<typeof auswerten>[0];
       const ergebnis = auswerten(inhalt);
       setAnalyse(ergebnis);
 
@@ -328,8 +347,9 @@ export default function Altdaten() {
       <section className="block">
         <h2>Altdaten übernehmen</h2>
         <p className="hinweis">
-          Datenbestand der Serienwertung (Turnier light). Die Datei wird zuerst nur gelesen.
-          Geschrieben wird erst mit "Übernehmen".
+          Datenbestand der Serienwertung (Turnier light) oder ein CueDesk-Export (System → Daten exportieren); aus dem
+          Export kommen nur Spieler, Mannschaften mit Kader und Tische. Die Datei wird zuerst nur gelesen. Geschrieben
+          wird erst mit "Übernehmen".
         </p>
         <div className="zeile">
           <input
@@ -344,6 +364,17 @@ export default function Altdaten() {
         </div>
         {fehler && <p className="fehler">{fehler}</p>}
       </section>
+
+      {stammdaten && (
+        <ExportStammdaten
+          key={`${dateiname}-${stammdaten.daten.erstellt}`}
+          stammdaten={stammdaten.daten}
+          vereinId={verein.id}
+          personen={personen}
+          vorschlag={stammdaten.vorschlag}
+          deutsch={deutscherFehler}
+        />
+      )}
 
       {analyse && (
         <>

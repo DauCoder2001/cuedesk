@@ -257,7 +257,7 @@ export default function App() {
       wert: 'altdaten',
       name: 'Altdaten übernehmen',
       sichtbar: darf('vereinsadmin', 'sportwart'),
-      tipp: 'Den Datenbestand aus Turnier light einlesen und den Spielern zuordnen.'
+      tipp: 'Den Datenbestand aus Turnier light oder die Stammdaten aus einem CueDesk-Export (Spieler, Mannschaften, Tische) einlesen und den Spielern zuordnen.'
     },
     {
       wert: 'system',
