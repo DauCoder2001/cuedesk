@@ -24,6 +24,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          # ganze Historie: die Versionsnummer zaehlt die Commits (src/version.ts)
+          fetch-depth: 0
+
+      - name: Version ermitteln
+        run: |
+          echo "VITE_VERSION_NR=$(git rev-list --count HEAD)" >> "$GITHUB_ENV"
+          echo "VITE_VERSION_DATUM=$(TZ=Europe/Berlin date +%d-%m-%Y)" >> "$GITHUB_ENV"
+          echo "VITE_VERSION_COMMIT=$GITHUB_SHA" >> "$GITHUB_ENV"
 
       - uses: actions/setup-node@v7
         with:

@@ -48,6 +48,13 @@ button:disabled { cursor: default; color: var(--text-leise); }
 }
 .teststreifen a { color: inherit; }
 
+/* Konsole: Versionsangabe oben rechts (src/version.ts) */
+.konsolenkopf { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.versionsmarke {
+  background: #c0dd97; color: #173404; border: 1px solid #97c459; border-radius: var(--radius);
+  padding: 4px 10px; font-size: 14px; white-space: nowrap; cursor: help;
+}
+
 .mitte { min-height: 100vh; display: grid; place-items: center; padding: 24px; }
 .karte {
   width: 100%; max-width: 380px; background: var(--flaeche);

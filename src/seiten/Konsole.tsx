@@ -3,6 +3,7 @@ import { supabase } from '../supabase';
 import { useSitzung } from '../sitzung';
 import { useRueckfrage } from '../rueckfrage';
 import { ANWENDUNGSADRESSE } from '../adresse';
+import { VERSION, VERSION_TIPP } from '../version';
 import {
   DATENBANK_GRENZE_BYTES,
   adresseAusName,
@@ -385,7 +386,12 @@ export default function Konsole() {
   return (
     <div className="einspaltig">
       <section className="block">
-        <h2>Konsole</h2>
+        <div className="konsolenkopf">
+          <h2>Konsole</h2>
+          <span className="versionsmarke" title={VERSION_TIPP}>
+            CueDesk Version: {VERSION}
+          </span>
+        </div>
         <p className="hinweis">
           Verwaltung aller Vereine. Namen, Spieler und Ergebnisse eines Vereins sind hier bewusst nicht zu sehen; dafür
           gibt der Vereins-Administrator einen befristeten Support-Zugang frei.

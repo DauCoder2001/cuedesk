@@ -62,6 +62,17 @@ jobs:
           echo "Datenbank: $URL"
 
       - uses: actions/checkout@v7
+        with:
+          # ganze Historie: die Versionsnummer zaehlt die Commits (src/version.ts)
+          fetch-depth: 0
+
+      - name: Version ermitteln
+        run: |
+          nr=$(git rev-list --count HEAD)
+          echo "VITE_VERSION_NR=$nr" >> "$GITHUB_ENV"
+          echo "VITE_VERSION_DATUM=$(TZ=Europe/Berlin date +%d-%m-%Y)" >> "$GITHUB_ENV"
+          echo "VITE_VERSION_COMMIT=$GITHUB_SHA" >> "$GITHUB_ENV"
+          printf '### Version v%04d (Commit %s)\n' "$nr" "${GITHUB_SHA::7}" >> "$GITHUB_STEP_SUMMARY"
 
       - uses: supabase/setup-cli@v3
         with:
