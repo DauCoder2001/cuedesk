@@ -18,9 +18,18 @@ import { ANWENDUNGSADRESSE } from '../adresse';
 // email_mitschreiben zieht dann public.benutzer nach.
 
 const EMAIL_MUSTER = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const NAME_HOECHSTENS = 60;
 
 export default function Konto() {
-  const { benutzer, vereine } = useSitzung();
+  const { benutzer, vereine, benutzerNeuLaden } = useSitzung();
+  // Eigener Name (benutzer.anzeigename): null = unveraendert. Leer gespeichert
+  // heisst "kein Name", dann zeigt CueDesk die E-Mail-Adresse.
+  const [nameEntwurf, setNameEntwurf] = useState<string | null>(null);
+  const [nameArbeitet, setNameArbeitet] = useState(false);
+  const [nameMeldung, setNameMeldung] = useState<string | null>(null);
+  const [nameFehler, setNameFehler] = useState<string | null>(null);
+  const nameGeaendert = nameEntwurf !== null && nameEntwurf.trim() !== (benutzer?.anzeigename ?? '');
+  useUngespeichert('konto-name', nameGeaendert, 'Der neue Name', () => nameSpeichern());
   // Mit dem Konto verknuepfte Spieler, je Verein einer: fuer "Meine Daten"
   const [eigeneSpieler, setEigeneSpieler] = useState<{ person_id: string; verein_id: string }[]>([]);
   const [codeGeschickt, setCodeGeschickt] = useState(false);
@@ -76,6 +85,22 @@ export default function Konto() {
     if (error) return setFehler(error.message);
     setCodeGeschickt(true);
     setMeldung(`Der Code ist unterwegs an ${benutzer?.email ?? 'deine E-Mail-Adresse'}.`);
+  }
+
+  async function nameSpeichern() {
+    if (!benutzer || nameEntwurf === null) return true;
+    const name = nameEntwurf.trim().replace(/\s+/g, ' ');
+    if (name.length > NAME_HOECHSTENS) return setNameFehler(`Der Name darf höchstens ${NAME_HOECHSTENS} Zeichen lang sein.`);
+    setNameFehler(null);
+    setNameMeldung(null);
+    setNameArbeitet(true);
+    const { error } = await supabase.from('benutzer').update({ anzeigename: name || null }).eq('id', benutzer.id);
+    if (!error) await benutzerNeuLaden();
+    setNameArbeitet(false);
+    if (error) return setNameFehler(error.message);
+    setNameEntwurf(null);
+    setNameMeldung(name ? 'Name gespeichert.' : 'Name entfernt. CueDesk zeigt jetzt deine E-Mail-Adresse.');
+    return true;
   }
 
   async function adresseAendern() {
@@ -146,7 +171,18 @@ export default function Konto() {
           </label>
           <label className="feld">
             <span>Name</span>
-            <input value={benutzer?.anzeigename ?? ''} disabled />
+            <input
+              value={nameEntwurf ?? benutzer?.anzeigename ?? ''}
+              maxLength={NAME_HOECHSTENS}
+              autoComplete="name"
+              placeholder="z. B. Vorname Nachname"
+              title="So erscheinst du in CueDesk, z. B. oben rechts und in der Benutzerliste deines Vereins"
+              onChange={(e) => {
+                setNameMeldung(null);
+                setNameFehler(null);
+                setNameEntwurf(e.target.value);
+              }}
+            />
           </label>
           {neueAdresse !== null && (
             <label className="feld l">
@@ -170,6 +206,14 @@ export default function Konto() {
         )}
         {neueAdresse === null ? (
           <div className="knopfpaar">
+            <button
+              type="button"
+              title="Den Namen speichern"
+              onClick={() => void nameSpeichern()}
+              disabled={!nameGeaendert || nameArbeitet}
+            >
+              {nameArbeitet ? 'Speichert …' : 'Name speichern'}
+            </button>
             <button
               type="button"
               title="Eine neue E-Mail-Adresse für die Anmeldung und alle Mails von CueDesk eintragen"
@@ -206,6 +250,8 @@ export default function Konto() {
             </div>
           </>
         )}
+        {nameFehler && <p className="fehler">{nameFehler}</p>}
+        {nameMeldung && <p className="meldung">{nameMeldung}</p>}
         {mailMeldung && <p className="meldung">{mailMeldung}</p>}
         {fehler && <p className="fehler">{fehler}</p>}
         {meldung && <p className="meldung">{meldung}</p>}

@@ -28,6 +28,8 @@ export type SitzungsStand = {
   abmelden: () => Promise<void>;
   // Nach Aenderungen auf der Seite "System": Name, Logo, Einstellungen frisch holen
   vereinNeuLaden: () => Promise<void>;
+  // Nach Aenderungen unter "Mein Konto" (Name) das eigene Konto frisch holen
+  benutzerNeuLaden: () => Promise<void>;
 };
 
 const Sitzungskontext = createContext<SitzungsStand | null>(null);
@@ -151,6 +153,11 @@ export function SitzungsRahmen({ children }: { children: ReactNode }) {
         if (!verein) return;
         const { data } = await supabase.from('vereine').select('*').eq('id', verein.id).maybeSingle();
         if (data) setVerein(data);
+      },
+      benutzerNeuLaden: async () => {
+        if (!sitzung) return;
+        const { data } = await supabase.from('benutzer').select('*').eq('id', sitzung.user.id).maybeSingle();
+        if (data) setBenutzer(data);
       }
     }),
     [laedt, sitzung, benutzer, verein, rollen, vereine, gesperrt]

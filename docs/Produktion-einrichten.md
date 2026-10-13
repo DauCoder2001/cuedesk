@@ -232,6 +232,11 @@ Datenbanken angekommen.
    (`benutzer.systemadmin`). Weitere Super-Admins gehen danach über die Konsole.
    **Erledigt 13.10.2026:** Einladung angenommen, angemeldet; nach Freigabe
    `systemadmin = true` für das einzige Konto gesetzt (aktiv).
+   **Verein angelegt 13.10.2026:** „Black & White Billardclub Verden“
+   (B&W Verden, kein Testverein), Vereins-Administrator per angenommener
+   Einladung, Zustimmung `NB1-AVV1` (aktuelle Fassung), Schutzwort gesetzt,
+   Protokoll mit „verein_angelegt“ und „vertrag_zugestimmt“. Noch offen:
+   Logo, Adresse und Kontakt, eigene Vorgaben (bis dahin gelten die Standardwerte).
 3. **Matthias** auf `app.cuedesk.de`: anmelden → Konsole → Verein **B&W**
    anlegen → sich selbst als Vereins-Administrator einladen → Auftragsverarbeitung
    zustimmen → System einstellen (Logo, Vorgaben, Saisonbeginn, Schutzwort).
