@@ -230,6 +230,8 @@ Datenbanken angekommen.
    Adresse („Send invitation“ oder „Create new user“).
 2. **Claude** (nach Freigabe): dieses Konto zum Super-Admin machen
    (`benutzer.systemadmin`). Weitere Super-Admins gehen danach über die Konsole.
+   **Erledigt 13.10.2026:** Einladung angenommen, angemeldet; nach Freigabe
+   `systemadmin = true` für das einzige Konto gesetzt (aktiv).
 3. **Matthias** auf `app.cuedesk.de`: anmelden → Konsole → Verein **B&W**
    anlegen → sich selbst als Vereins-Administrator einladen → Auftragsverarbeitung
    zustimmen → System einstellen (Logo, Vorgaben, Saisonbeginn, Schutzwort).
