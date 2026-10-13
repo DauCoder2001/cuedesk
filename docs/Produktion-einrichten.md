@@ -207,6 +207,15 @@ GitHub aufbewahrt sein.
 Repos; die Rückmeldung geht in die Konsole der jeweiligen Datenbank. Danach
 einen Lauf von Hand starten und das Ergebnis in der Konsole prüfen.
 
+**Stand 13.10.2026:** Repo `cuedesk-sicherung-produktion` privat angelegt,
+Secret `SUPABASE_DB_URL_PRODUKTION` gesetzt. `SICHERUNG_TOKEN` ist ein
+klassisches Token mit „repo“ und erreicht damit beide Repos (später durch ein
+Fine-grained-Token nur für die beiden Sicherungs-Repos ersetzen). Dabei
+aufgefallen: `cuedesk-sicherung` war öffentlich (nur verschlüsselte Auszüge,
+ein Commit, keine Forks) und ist jetzt privat. `sicherung.yml` umgebaut auf
+zwei getrennte Läufe „sichern (test)“ und „sichern (produktion)“; das Repo
+wird mit `git clone` geholt, weil das der Produktion beim ersten Lauf leer ist.
+
 ## Schritt 9 · Erster Super-Admin und erster Verein
 
 1. **Matthias:** Authentication → Users → **Add user** mit der eigenen

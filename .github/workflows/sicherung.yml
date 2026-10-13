@@ -1,17 +1,22 @@
 name: Sicherung
 
-# Zieht woechentlich einen vollstaendigen Auszug der Datenbank und legt ihn
-# verschluesselt im privaten Repository cuedesk-sicherung ab. Die Gratisstufe
-# von Supabase sichert nichts von sich aus.
+# Zieht woechentlich einen vollstaendigen Auszug beider Datenbanken und legt
+# ihn verschluesselt in je einem privaten Repository ab:
+#   test        -> cuedesk-sicherung             (SUPABASE_DB_URL)
+#   produktion  -> cuedesk-sicherung-produktion  (SUPABASE_DB_URL_PRODUKTION)
+# Zwei getrennte Laeufe; scheitert einer, laeuft der andere trotzdem. Die
+# Gratisstufe von Supabase sichert nichts von sich aus.
 #
 # Noetige Geheimnisse in diesem Repository
 # (Settings -> Secrets and variables -> Actions -> Secrets):
-#   SUPABASE_DB_URL       Verbindungszeichenfolge aus dem Supabase-Dashboard
-#                         (Connect -> Session pooler), mit eingesetztem Passwort
-#   SICHERUNG_TOKEN       Zugriffsschluessel mit Schreibrecht auf cuedesk-sicherung
-#   SICHERUNG_SCHLUESSEL  langes Kennwort fuer die Verschluesselung; zusaetzlich
-#                         ausserhalb von GitHub aufbewahren, sonst ist keine
-#                         Sicherung mehr lesbar
+#   SUPABASE_DB_URL             Verbindungszeichenfolge der Test-DB
+#   SUPABASE_DB_URL_PRODUKTION  Verbindungszeichenfolge der Produktion
+#                               (beide: Connect -> Session pooler, mit Passwort)
+#   SICHERUNG_TOKEN             Zugriffsschluessel mit Schreibrecht auf beide
+#                               Sicherungs-Repositorys
+#   SICHERUNG_SCHLUESSEL        langes Kennwort fuer die Verschluesselung (fuer
+#                               beide); zusaetzlich ausserhalb von GitHub
+#                               aufbewahren, sonst ist keine Sicherung mehr lesbar
 #
 # Der Auszug enthaelt Mitgliederdaten. GitHub bekommt ihn nur verschluesselt
 # (gpg, AES256). Jeder Lauf legt die Historie des Sicherungs-Repositorys neu
@@ -27,13 +32,30 @@ on:
 jobs:
   sichern:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - datenbank: test
+            ziel: DauCoder2001/cuedesk-sicherung
+          - datenbank: produktion
+            ziel: DauCoder2001/cuedesk-sicherung-produktion
+    name: sichern (${{ matrix.datenbank }})
+    env:
+      DB_URL: ${{ matrix.datenbank == 'test' && secrets.SUPABASE_DB_URL || secrets.SUPABASE_DB_URL_PRODUKTION }}
     steps:
       - name: Sicherungs-Repository holen
-        uses: actions/checkout@v7
-        with:
-          repository: DauCoder2001/cuedesk-sicherung
-          token: ${{ secrets.SICHERUNG_TOKEN }}
-          path: sicherung
+        env:
+          TOKEN: ${{ secrets.SICHERUNG_TOKEN }}
+          ZIEL: ${{ matrix.ziel }}
+        run: |
+          if [ -z "$DB_URL" ]; then
+            echo "::error::Verbindungszeichenfolge fuer ${{ matrix.datenbank }} fehlt."
+            exit 1
+          fi
+          # git clone statt actions/checkout: das Repository der Produktion ist
+          # beim ersten Lauf noch leer
+          git clone "https://x-access-token:${TOKEN}@github.com/${ZIEL}.git" sicherung
 
       - uses: supabase/setup-cli@v3
         with:
@@ -41,7 +63,6 @@ jobs:
 
       - name: Auszug erstellen und verschluesseln
         env:
-          DB_URL: ${{ secrets.SUPABASE_DB_URL }}
           SCHLUESSEL: ${{ secrets.SICHERUNG_SCHLUESSEL }}
         run: |
           set -e
@@ -72,7 +93,6 @@ jobs:
       - name: Ablegen mit neuer Historie
         run: |
           cd sicherung
-          zweig=$(git rev-parse --abbrev-ref HEAD)
           git config user.name "CueDesk Sicherung"
           git config user.email "noreply@github.com"
           # Neue Historie aus einem einzigen Stand: geloeschte Auszuege sind
@@ -80,7 +100,7 @@ jobs:
           git checkout --orphan neu
           git add -A
           git commit -m "Sicherung vom $(date +%d.%m.%Y)"
-          git push --force origin "HEAD:$zweig"
+          git push --force origin HEAD:main
 
       # Rueckmeldung fuer die Konsole in CueDesk - auch wenn ein Schritt davor
       # gescheitert ist. Scheitert die Rueckmeldung selbst, bleibt der Lauf gruen:
@@ -89,7 +109,6 @@ jobs:
         if: always()
         continue-on-error: true
         env:
-          DB_URL: ${{ secrets.SUPABASE_DB_URL }}
           ERFOLG: ${{ job.status == 'success' }}
         run: |
           groesse=$(du -sb "sicherung/sicherung-$(date +%Y-%m-%d).tar.gz.gpg" 2>/dev/null | cut -f1)
