@@ -130,34 +130,50 @@ Unter **Authentication**:
 
 ## Schritt 6 · Anwendung unter app.cuedesk.de
 
+**Stand 13.10.2026:** Punkte 1, 2 und 4 erledigt. Der TXT-Eintrag
+`_github-pages-challenge-DauCoder2001` und der CNAME `app` →
+`daucoder2001.github.io` sind öffentlich sichtbar (Google, Cloudflare, IONOS),
+MX und SPF von `cuedesk.de` unverändert. Repo `cuedesk-app` öffentlich und
+noch leer. Workflow `produktion-veroeffentlichen.yml` liegt bereit.
+
 **Matthias:**
 
 1. Zuerst die Domain bei GitHub **verifizieren**: Profil-Settings → Pages →
    „Add a domain“ → `cuedesk.de`; GitHub nennt einen TXT-Eintrag, den bei
    IONOS (Domains & SSL → cuedesk.de → DNS) eintragen und dann bestätigen. Das
    verhindert, dass ein fremdes GitHub-Konto `app.cuedesk.de` für sich
-   beansprucht, solange der CNAME schon steht.
-2. Neues **öffentliches** Repo `DauCoder2001/cuedesk-app` (leer, mit README).
-3. Dort Settings → Pages: Quelle „Deploy from a branch“, `main`, Ordner `/`;
-   Custom domain `app.cuedesk.de`; nach dem Zertifikat **Enforce HTTPS**.
-4. Bei IONOS für `app.cuedesk.de` einen **CNAME** auf `daucoder2001.github.io`.
+   beansprucht, solange der CNAME schon steht. Den TXT-Eintrag stehen lassen,
+   GitHub prüft ihn später erneut.
+2. Neues **öffentliches** Repo `DauCoder2001/cuedesk-app`. Es darf leer
+   bleiben; der erste Lauf des Workflows legt den Branch `main` an.
+3. Bei IONOS für `app.cuedesk.de` einen **CNAME** auf `daucoder2001.github.io`.
    Dafür ist **kein Webpaket** nötig (Entscheidung „Hosting und Sicherung“ vom
    07.10.2026): IONOS liefert nur den DNS-Eintrag der Domain; die Seite selbst
    und das HTTPS-Zertifikat kommen kostenlos von GitHub Pages. Postfach und
-   Mailversand von `cuedesk.de` bleiben davon unberührt.
-5. Im Repo `cuedesk` (Settings → Secrets and variables → Actions):
+   Mailversand von `cuedesk.de` bleiben davon unberührt. IONOS schaltet dabei
+   die Standardeinträge der Subdomain `app` ab (Parkseite, Mail für
+   `…@app.cuedesk.de`); das ist gewollt.
+4. Im Repo `cuedesk` (Settings → Secrets and variables → Actions):
    - Variablen `PROD_SUPABASE_URL` und `PROD_SUPABASE_KEY` (Adresse und
      öffentlicher Schlüssel der Produktion; nicht geheim),
    - Secret `APP_TOKEN`: Fine-grained Token, nur „Contents: Read and write“
      auf `cuedesk-app`.
+5. Im Repo `cuedesk` unter Actions den Workflow **Produktion veröffentlichen**
+   mit „Run workflow“ (Branch `main`) starten.
+6. Danach in `cuedesk-app` Settings → Pages: Quelle „Deploy from a branch“,
+   `main`, Ordner `/`; Custom domain `app.cuedesk.de` (steht durch die Datei
+   `CNAME` meist schon drin); nach dem Zertifikat **Enforce HTTPS**.
 
 **Claude:**
 
-1. Neuer Workflow `produktion-veroeffentlichen.yml`: baut CueDesk mit den
+1. Workflow `produktion-veroeffentlichen.yml` (erledigt): baut CueDesk mit den
    Werten der Produktion und `VITE_BASIS=/`, legt das Ergebnis samt `CNAME`
-   und `.nojekyll` in `cuedesk-app` (Muster wie „Scoreboards offline“). Start
-   auf Knopfdruck (E1).
-2. Testfassung kennzeichnen (E3).
+   und `.nojekyll` in `cuedesk-app`. Start nur auf Knopfdruck und nur von
+   `main` (E1). Bricht ab, wenn eine Variable oder das Token fehlt oder
+   `PROD_SUPABASE_URL` auf die Test-Datenbank zeigt.
+2. Nach dem ersten Lauf prüfen: Lauf grün, Inhalt von `cuedesk-app`, HTTPS
+   und Anmeldeseite unter `app.cuedesk.de`.
+3. Testfassung kennzeichnen (E3).
 
 Die Scoreboards und TV-Seiten sind Teil der Anwendung und liegen danach unter
 `app.cuedesk.de/scoreboards/`. Die Offline-Scoreboards bleiben unverändert.
