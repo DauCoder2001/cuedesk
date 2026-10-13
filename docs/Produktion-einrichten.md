@@ -130,11 +130,14 @@ Unter **Authentication**:
 
 ## Schritt 6 · Anwendung unter app.cuedesk.de
 
-**Stand 13.10.2026:** Punkte 1, 2 und 4 erledigt. Der TXT-Eintrag
+**Erledigt 13.10.2026.** Der TXT-Eintrag
 `_github-pages-challenge-DauCoder2001` und der CNAME `app` →
 `daucoder2001.github.io` sind öffentlich sichtbar (Google, Cloudflare, IONOS),
-MX und SPF von `cuedesk.de` unverändert. Repo `cuedesk-app` öffentlich und
-noch leer. Workflow `produktion-veroeffentlichen.yml` liegt bereit.
+MX und SPF von `cuedesk.de` unverändert. Pages in `cuedesk-app`: Quelle
+`main` `/`, Zertifikat ausgestellt, Enforce HTTPS an. `https://app.cuedesk.de/`
+zeigt die Anmeldeseite ohne Teststreifen und ohne Fehler in der Konsole; das
+geladene Programm enthält nur die Kennung der Produktion. Impressum, Live-Link
+und `scoreboards/` antworten mit 200. Die Testfassung zeigt den Streifen.
 
 **Matthias:**
 
@@ -188,7 +191,9 @@ Die Scoreboards und TV-Seiten sind Teil der Anwendung und liegen danach unter
 ## Schritt 7 · Wachhalten (Claude)
 
 `datenbank-wachhalten.yml` klopft zusätzlich bei der Produktion an (mit
-`PROD_SUPABASE_URL` und `PROD_SUPABASE_KEY`), alle drei Tage.
+`PROD_SUPABASE_URL` und `PROD_SUPABASE_KEY`), alle drei Tage. Umgesetzt
+13.10.2026 als zwei getrennte Läufe „anklopfen (test)“ und „anklopfen
+(produktion)“; schlägt einer fehl, läuft der andere trotzdem.
 
 ## Schritt 8 · Wöchentliche Sicherung
 

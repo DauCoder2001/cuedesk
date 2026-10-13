@@ -2,8 +2,10 @@ name: Datenbank wachhalten
 
 # Die Gratisstufe von Supabase pausiert ein Projekt nach sieben Tagen ohne
 # Zugriff. Dieser Ablauf stellt alle drei Tage eine echte Abfrage und haelt
-# das Projekt damit wach. Er braucht keine geheimen Daten: die Abfrage laeuft
-# mit dem oeffentlichen Schluessel und liest nur die Vereinsliste.
+# das Projekt damit wach, und zwar fuer die Test-Datenbank und die Produktion
+# (je ein eigener Lauf, ein Fehler bei der einen bremst die andere nicht).
+# Er braucht keine geheimen Daten: die Abfrage laeuft mit dem oeffentlichen
+# Schluessel und liest nur die Vereinsliste.
 
 on:
   schedule:
@@ -13,14 +15,19 @@ on:
 jobs:
   anklopfen:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        datenbank: [test, produktion]
+    name: anklopfen (${{ matrix.datenbank }})
     steps:
       - name: Abfrage stellen
         env:
-          URL: ${{ vars.VITE_SUPABASE_URL }}
-          KEY: ${{ vars.VITE_SUPABASE_KEY }}
+          URL: ${{ matrix.datenbank == 'test' && vars.VITE_SUPABASE_URL || vars.PROD_SUPABASE_URL }}
+          KEY: ${{ matrix.datenbank == 'test' && vars.VITE_SUPABASE_KEY || vars.PROD_SUPABASE_KEY }}
         run: |
           if [ -z "$URL" ] || [ -z "$KEY" ]; then
-            echo "VITE_SUPABASE_URL oder VITE_SUPABASE_KEY fehlt (Repository-Variablen)."
+            echo "Adresse oder Schluessel fuer ${{ matrix.datenbank }} fehlt (Repository-Variablen)."
             exit 1
           fi
           antwort=$(curl -sS -o /tmp/antwort.json -w '%{http_code}' \
