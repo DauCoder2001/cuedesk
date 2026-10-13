@@ -30,17 +30,17 @@ Ein **Spieler** braucht kein Konto; ein **Konto** ist der Zugang einer Person zu
 2. Die Rollen:
    - **Lesezugang**: sieht Live, Zuschauen und Chat, Ranglisten, Auswertung und Archiv und die eigene Statistik.
    - **Turnierleiter**: legt Turniere an und führt sie durch, koppelt Tablets.
-   - **Sportwart**: wie Turnierleiter, dazu Spieler, Mannschaften, Einladungen und Altdaten.
-   - **Vereins-Administrator**: alles, auch System und Rollen.
+   - **Sportwart**: wie Turnierleiter, dazu Spieler, Mannschaften und Einladungen.
+   - **Vereins-Administrator**: alles, auch System, Rollen und Daten exportieren und einlesen.
 3. Unter **Spieler zuordnen** das Konto mit dem passenden Spieler verknüpfen (**Verknüpfter Spieler**). Erst dann sieht die Person ihre eigene Statistik. In der Auswahl steht hinter jedem Spieler sein Status (Mitglied, Gast, Ausgetreten).
 
 ## 5. Tische und Geräte
 
 Unter **Tische und Geräte** die Tische anlegen und die Tablets koppeln. Mehr dazu im Thema **Tablets und Fernseher**.
 
-## 6. Altdaten übernehmen (optional)
+## 6. Daten einlesen (optional)
 
-Wer vorher mit Turnier light gearbeitet hat, liest dessen Datenbestand unter **Altdaten übernehmen** ein und ordnet die Namen den Spielern zu. So stimmen Rating und Ranglisten von Anfang an.
+Wer vorher mit Turnier light gearbeitet hat, liest dessen Datenbestand unter **System → Daten einlesen** ein und ordnet die Namen den Spielern zu. So stimmen Rating und Ranglisten von Anfang an. Dort lassen sich auch die Stammdaten (Spieler, Mannschaften, Tische) aus einem CueDesk-Export einlesen, zum Beispiel aus der Testfassung. Das darf nur der Vereins-Administrator.
 
 ## Später wichtig
 
