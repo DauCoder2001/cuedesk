@@ -13,6 +13,7 @@ import {
 import type { Abend, NamensWahl } from '../excel-serie';
 import { abendBlatt } from '../excel-raster';
 import { Modal } from '../modal';
+import { useRueckfrage } from '../rueckfrage';
 
 // System -> "Excel-Serie einlesen": Abend-Dateien der alten Excel-Serien
 // (src/excel-serie.ts) als beendete Turniere einer angelegten Serie
@@ -40,6 +41,9 @@ export default function ExcelSerie({ vereinId, schliessen }: { vereinId: string;
   const [zuordnung, setZuordnung] = useState<Record<string, NamensWahl>>({});
   const [vorhanden, setVorhanden] = useState<Set<string>>(new Set());
   const [mitRating, setMitRating] = useState(true);
+  // Vorhandene importierte Spieltage desselben Tages ersetzen (Korrektur)
+  const [ersetzen, setErsetzen] = useState(false);
+  const [rueckfrage, fragen] = useRueckfrage();
   const [liest, setLiest] = useState(false);
   const [laeuft, setLaeuft] = useState(false);
   const [fehler, setFehler] = useState<string | null>(null);
@@ -173,6 +177,19 @@ export default function ExcelSerie({ vereinId, schliessen }: { vereinId: string;
       document.getElementById('excel-abende')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       return;
     }
+    const zuErsetzen = ersetzen ? lesbar.filter((e) => vorhanden.has(e.datum)) : [];
+    if (
+      zuErsetzen.length > 0 &&
+      !(await fragen(
+        `${zuErsetzen.length === 1 ? 'Einen vorhandenen Spieltag' : `${zuErsetzen.length} vorhandene Spieltage`} der Serie (${zuErsetzen
+          .map((e) => datumText(e.datum))
+          .join(', ')}) löschen und neu einlesen? Teilnehmer, Endplätze und Partien dieser Tage werden ersetzt. In CueDesk gespielte Turniere bleiben unberührt.`,
+        'Ersetzen',
+        { schutzwort: vereinId }
+      ))
+    ) {
+      return;
+    }
     setFehler(null);
     setProtokoll([]);
     setLaeuft(true);
@@ -205,8 +222,30 @@ export default function ExcelSerie({ vereinId, schliessen }: { vereinId: string;
       for (const e of lesbar) {
         const a = e.abend!;
         if (vorhanden.has(e.datum)) {
-          melde(`${datumText(e.datum)}: in der Serie schon vorhanden, übersprungen.`);
-          continue;
+          if (!ersetzen) {
+            melde(`${datumText(e.datum)}: in der Serie schon vorhanden, übersprungen.`);
+            continue;
+          }
+          // Nur importierte Spieltage ersetzen; Teilnehmer und Partien gehen mit (Fremdschluessel mit Kaskade)
+          const { error: fehlerWeg } = await supabase
+            .from('turniere')
+            .delete()
+            .eq('verein_id', vereinId)
+            .eq('serie_id', serie!.id)
+            .eq('datum', e.datum)
+            .eq('quelle', 'import');
+          if (fehlerWeg) throw new Error(`Spieltag ${datumText(e.datum)} nicht ersetzt: ${fehlerWeg.message}`);
+          const { count } = await supabase
+            .from('turniere')
+            .select('id', { count: 'exact', head: true })
+            .eq('verein_id', vereinId)
+            .eq('serie_id', serie!.id)
+            .eq('datum', e.datum);
+          if ((count ?? 0) > 0) {
+            melde(`${datumText(e.datum)}: in CueDesk gespieltes Turnier vorhanden, nicht ersetzt.`);
+            continue;
+          }
+          melde(`${datumText(e.datum)}: alter Spieltag gelöscht.`);
         }
         const teilnehmer = [...new Set([...a.gruppen.flatMap((g) => g.spieler), ...a.platzierung.map((p) => p.name)])].filter((n) =>
           personNachName.has(n)
@@ -372,7 +411,11 @@ export default function ExcelSerie({ vereinId, schliessen }: { vereinId: string;
                   <td className="hinweis">
                     {e.fehler ??
                       [
-                        e.datum && vorhanden.has(e.datum) ? 'In der Serie schon vorhanden, wird übersprungen.' : '',
+                        e.datum && vorhanden.has(e.datum)
+                          ? ersetzen
+                            ? 'In der Serie schon vorhanden, wird ersetzt.'
+                            : 'In der Serie schon vorhanden, wird übersprungen.'
+                          : '',
                         !e.datum ? `Datum eintragen${e.monat ? ` (${e.monat.slice(5)}/${e.monat.slice(0, 4)})` : ''}.` : '',
                         zeilenFehler(e) === 'Datum doppelt' ? 'Datum doppelt – zwei Spieltage am selben Tag.' : '',
                         ...(e.abend?.warnungen ?? [])
@@ -435,6 +478,16 @@ export default function ExcelSerie({ vereinId, schliessen }: { vereinId: string;
               <small>danach unter Rating „Jetzt neu berechnen“</small>
             </span>
           </label>
+          <label className="ankreuz">
+            <input type="checkbox" checked={ersetzen} onChange={(e) => setErsetzen(e.target.checked)} />
+            <span>
+              Vorhandene Spieltage ersetzen
+              <small>
+                zum Korrigieren: Spieltage derselben Serie am selben Tag werden gelöscht und neu eingelesen (nur eingelesene, mit
+                Schutzwort)
+              </small>
+            </span>
+          </label>
           <div className="zeile">
             <button
               type="button"
@@ -445,7 +498,11 @@ export default function ExcelSerie({ vereinId, schliessen }: { vereinId: string;
             >
               {laeuft ? 'Wird übernommen …' : 'Spieltage übernehmen'}
             </button>
-            <span className="hinweis">Spieltage, die die Serie am selben Tag schon hat, werden übersprungen.</span>
+            <span className="hinweis">
+              {ersetzen
+                ? 'Spieltage, die die Serie am selben Tag schon hat, werden ersetzt.'
+                : 'Spieltage, die die Serie am selben Tag schon hat, werden übersprungen.'}
+            </span>
           </div>
           {fehler && <p className="fehler">{fehler}</p>}
           {protokoll.length > 0 && (
@@ -526,6 +583,7 @@ export default function ExcelSerie({ vereinId, schliessen }: { vereinId: string;
           <p className="fehler">{fehler}</p>
         </section>
       )}
+      {rueckfrage}
     </>
   );
 }

@@ -11,6 +11,7 @@ import { herunterladen } from '../pdf';
 import AusschreibungBlock from './AusschreibungBlock';
 import AuslosungTeilen from './AuslosungTeilen';
 import LiveSchalter from './LiveSchalter';
+import SpielerErsetzen from './SpielerErsetzen';
 import ChatSchalter from './ChatSchalter';
 import OeffentlicherLink from './OeffentlicherLink';
 import Platz from './Platz';
@@ -1897,7 +1898,18 @@ export default function TurnierAnsicht({
       )}
 
       {turnier.quelle === 'import' ? (
-        <Altturnier teilnehmer={teilnehmer} partien={partien} anzeige={anzeige} />
+        <>
+          <Altturnier teilnehmer={teilnehmer} partien={partien} anzeige={anzeige} />
+          {darf('vereinsadmin', 'sportwart') && turnier.status === 'beendet' && (
+            <SpielerErsetzen
+              turnierId={turnier.id}
+              teilnehmer={teilnehmer.map((t) => t.person_id)}
+              personen={personen}
+              anzeige={anzeige}
+              fertig={laden}
+            />
+          )}
+        </>
       ) : turnier.status === 'geplant' ? (
         <section className="block">
           <h2>Teilnehmer ({teilnehmer.length})</h2>
