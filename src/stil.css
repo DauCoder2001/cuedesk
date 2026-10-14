@@ -58,6 +58,9 @@ button:disabled { cursor: default; color: var(--text-leise); }
   padding: 8px 12px; font-size: 14px;
 }
 button.hauptaktion { background: var(--akzent); border-color: var(--akzent); color: #fff; }
+button.hauptaktion:disabled { background: var(--flaeche-2); border-color: var(--rand); color: var(--text-leise); }
+.datumsliste { display: flex; flex-direction: column; gap: 12px; margin: 12px 0; }
+.datumszeile .zeile { margin-top: 4px; flex-wrap: wrap; }
 button.hauptaktion:hover:not(:disabled) { background: #0c447c; }
 tr.fehlerzeile td { background: #fbeaea; }
 tr.fehlerzeile td:first-child { box-shadow: inset 3px 0 0 var(--fehler); }

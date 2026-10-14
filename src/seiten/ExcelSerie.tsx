@@ -6,11 +6,13 @@ import {
   abendLesen,
   datumAusDateiname,
   disziplinAusDateiname,
+  freitageImMonat,
   namenDesAbends,
   namenVorschlagen
 } from '../excel-serie';
 import type { Abend, NamensWahl } from '../excel-serie';
 import { abendBlatt } from '../excel-raster';
+import { Modal } from '../modal';
 
 // System -> "Excel-Serie einlesen": Abend-Dateien der alten Excel-Serien
 // (src/excel-serie.ts) als beendete Turniere einer angelegten Serie
@@ -26,6 +28,8 @@ const DISZIPLINEN: [Disziplin, string][] = [
   ['10-ball', '10-Ball']
 ];
 const datumText = (iso: string) => (iso ? iso.split('-').reverse().join('.') : '');
+const MONATSNAMEN = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
+const monatText = (monat: string | null) => (monat ? `${MONATSNAMEN[Number(monat.slice(5)) - 1]} ${monat.slice(0, 4)}` : 'Monat unbekannt');
 
 export default function ExcelSerie({ vereinId, schliessen }: { vereinId: string; schliessen: () => void }) {
   const [serien, setSerien] = useState<Serie[]>([]);
@@ -114,7 +118,35 @@ export default function ExcelSerie({ vereinId, schliessen }: { vereinId: string;
   const [versucht, setVersucht] = useState(false);
   const [fertig, setFertig] = useState(false);
 
-  function pruefen(): string | null {
+  // Fenster fuer fehlende Daten: Entwurf je Datei
+  const [datumsEntwurf, setDatumsEntwurf] = useState<Record<string, string> | null>(null);
+  const datumsFehler = useMemo(() => {
+    if (!datumsEntwurf) return null;
+    const leer = Object.entries(datumsEntwurf).filter(([, d]) => !d);
+    if (leer.length > 0) return `Noch ohne Datum: ${leer.map(([n]) => n).join(', ')}.`;
+    const alle = lesbar.map((e) => datumsEntwurf[e.datei] ?? e.datum);
+    const doppelt = alle.filter((t, i) => alle.indexOf(t) !== i);
+    if (doppelt.length > 0) return `Zwei Spieltage am selben Tag: ${[...new Set(doppelt)].map(datumText).join(', ')}.`;
+    return null;
+  }, [datumsEntwurf, lesbar]);
+
+  // Abbrechen: schon gewaehlte Daten in die Tabelle uebernehmen, nichts einlesen
+  function datumsFensterSchliessen() {
+    if (datumsEntwurf) {
+      setEintraege((alt) => alt.map((e) => (datumsEntwurf[e.datei] ? { ...e, datum: datumsEntwurf[e.datei] } : e)));
+    }
+    setDatumsEntwurf(null);
+  }
+
+  function datenUebernehmen() {
+    if (!datumsEntwurf || datumsFehler) return;
+    const neu = eintraege.map((e) => (datumsEntwurf[e.datei] !== undefined ? { ...e, datum: datumsEntwurf[e.datei] } : e));
+    setEintraege(neu);
+    setDatumsEntwurf(null);
+    void uebernehmen(neu);
+  }
+
+  function pruefen(lesbar: Eintrag[]): string | null {
     if (!serie) return 'Bitte eine Serie wählen.';
     if (!diszi) return 'Bitte die Disziplin wählen.';
     if (lesbar.length === 0) return 'Keine lesbare Spieltag-Datei ausgewählt.';
@@ -126,9 +158,16 @@ export default function ExcelSerie({ vereinId, schliessen }: { vereinId: string;
     return null;
   }
 
-  async function uebernehmen() {
+  async function uebernehmen(liste: Eintrag[] = eintraege) {
+    const lesbar = liste.filter((e) => e.abend);
     setVersucht(true);
-    const problem = pruefen();
+    // Fehlt nur das Datum, fragt ein Fenster danach
+    if (serie && diszi && lesbar.some((e) => !e.datum)) {
+      setFehler(null);
+      setDatumsEntwurf(Object.fromEntries(lesbar.filter((e) => !e.datum).map((e) => [e.datei, ''])));
+      return;
+    }
+    const problem = pruefen(lesbar);
     if (problem) {
       setFehler(problem);
       document.getElementById('excel-abende')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -417,6 +456,70 @@ export default function ExcelSerie({ vereinId, schliessen }: { vereinId: string;
             </ul>
           )}
         </section>
+      )}
+      {datumsEntwurf && (
+        <Modal breit abbrechen={datumsFensterSchliessen}>
+          <div className="feldkopf">
+            {Object.keys(datumsEntwurf).length === 1
+              ? 'Datum für einen Spieltag fehlt'
+              : `Datum für ${Object.keys(datumsEntwurf).length} Spieltage fehlt`}
+          </div>
+          <p className="hinweis" style={{ marginTop: 0 }}>
+            Im Dateinamen steht kein Tag. Bitte den Spieltag wählen – die Freitage des Monats stehen zum Anklicken bereit.
+          </p>
+          <div className="datumsliste">
+            {lesbar
+              .filter((e) => datumsEntwurf[e.datei] !== undefined)
+              .map((e) => {
+                const wert = datumsEntwurf[e.datei];
+                const setze = (d: string) => setDatumsEntwurf((alt) => (alt ? { ...alt, [e.datei]: d } : alt));
+                return (
+                  <div key={e.datei} className="datumszeile">
+                    <div>
+                      <strong>{e.datei}</strong> <span className="hinweis">· {monatText(e.monat)}</span>
+                    </div>
+                    <div className="zeile">
+                      {e.monat &&
+                        freitageImMonat(e.monat).map((f) => (
+                          <button
+                            key={f}
+                            type="button"
+                            className={wert === f ? 'chip aktiv' : 'chip'}
+                            title={`Freitag, ${datumText(f)}`}
+                            onClick={() => setze(f)}
+                          >
+                            Fr. {datumText(f).slice(0, 6)}
+                          </button>
+                        ))}
+                      <input
+                        type="date"
+                        value={wert}
+                        min={e.monat ? `${e.monat}-01` : undefined}
+                        max={e.monat ? `${e.monat}-31` : undefined}
+                        onChange={(x) => setze(x.target.value)}
+                        title="Anderes Datum"
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+          </div>
+          {datumsFehler && <p className="hinweis">{datumsFehler}</p>}
+          <div className="knopfpaar">
+            <button type="button" onClick={datumsFensterSchliessen} title="Fenster schließen, ohne einzulesen; gewählte Daten bleiben in der Tabelle">
+              Abbrechen
+            </button>
+            <button
+              type="button"
+              className="hauptaktion"
+              onClick={datenUebernehmen}
+              disabled={!!datumsFehler}
+              title="Die Daten eintragen und die Spieltage einlesen"
+            >
+              Daten übernehmen und einlesen
+            </button>
+          </div>
+        </Modal>
       )}
       {lesbar.length === 0 && fehler && (
         <section className="block">

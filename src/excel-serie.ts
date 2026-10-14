@@ -254,6 +254,20 @@ export function namenVorschlagen(namen: string[], personen: Kandidat[]): Record<
   return vorschlag;
 }
 
+// Alle Freitage eines Monats ("2026-06" -> ["2026-06-05", ...]) als
+// Schnellauswahl fuer Freitagsserien ohne Tag im Dateinamen
+export function freitageImMonat(monat: string): string[] {
+  const [jahr, m] = monat.split('-').map(Number);
+  if (!jahr || !m) return [];
+  const liste: string[] = [];
+  for (let tag = 1; tag <= 31; tag++) {
+    const d = new Date(Date.UTC(jahr, m - 1, tag));
+    if (d.getUTCMonth() !== m - 1) break;
+    if (d.getUTCDay() === 5) liste.push(`${monat}-${String(tag).padStart(2, '0')}`);
+  }
+  return liste;
+}
+
 // Disziplin aus dem Dateinamen, falls die Serie keine festlegt
 export function disziplinAusDateiname(name: string): '8-ball' | '9-ball' | '10-ball' | null {
   const klein = name.toLowerCase().replace(/[\s_-]/g, '');

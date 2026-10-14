@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { abendLesen, datumAusDateiname, disziplinAusDateiname, namenDesAbends, namenVorschlagen } from '../src/excel-serie';
+import { abendLesen, datumAusDateiname, disziplinAusDateiname, freitageImMonat, namenDesAbends, namenVorschlagen } from '../src/excel-serie';
 import type { Raster } from '../src/excel-serie';
 
 // Nachgebaute Abend-Blaetter ohne echte Namen. Zeile/Spalte ab 0.
@@ -95,6 +95,12 @@ describe('Dateinamen', () => {
     expect(datumAusDateiname('Fr Serie_1.Liga_Juni 2026.xlsx')).toEqual({ datum: null, monat: '2026-06' });
     expect(datumAusDateiname('Fr. Serie_1.Liga_April 26.xlsx')).toEqual({ datum: null, monat: '2026-04' });
     expect(datumAusDateiname('Fr. Serie  L.1 Oktober.xlsx')).toEqual({ datum: null, monat: null });
+  });
+
+  test('Freitage eines Monats', () => {
+    expect(freitageImMonat('2026-06')).toEqual(['2026-06-05', '2026-06-12', '2026-06-19', '2026-06-26']);
+    expect(freitageImMonat('2026-05')).toEqual(['2026-05-01', '2026-05-08', '2026-05-15', '2026-05-22', '2026-05-29']);
+    expect(freitageImMonat('')).toEqual([]);
   });
 
   test('Disziplin', () => {
