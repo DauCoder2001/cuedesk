@@ -658,7 +658,7 @@ export default function System() {
         </p>
         <div className="knopfpaar">
           <button type="button" title="Alle Vereinsdaten als JSON-Datei herunterladen" onClick={() => void exportieren()} disabled={arbeitet}>
-            Export herunterladen
+            Daten herunterladen
           </button>
           {verein.export_am && (
             <small className="hinweis">zuletzt am {new Date(verein.export_am).toLocaleString('de-DE')}</small>
