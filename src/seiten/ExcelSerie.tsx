@@ -88,6 +88,8 @@ export default function ExcelSerie({ vereinId, schliessen }: { vereinId: string;
       }
       neu.sort((a, b) => (a.datum || a.monat || a.datei).localeCompare(b.datum || b.monat || b.datei));
       setEintraege(neu);
+      setVersucht(false);
+      setFertig(false);
       const namen = [...new Set(neu.flatMap((e) => (e.abend ? namenDesAbends(e.abend) : [])))].sort((a, b) => a.localeCompare(b, 'de'));
       setZuordnung(namenVorschlagen(namen, personen));
       if (!disziplin) {
@@ -105,22 +107,33 @@ export default function ExcelSerie({ vereinId, schliessen }: { vereinId: string;
   const auswahl = useMemo(() => [...personen].sort((x, y) => personName(x).localeCompare(personName(y), 'de')), [personen]);
   const lesbar = eintraege.filter((e) => e.abend);
   const diszi: Disziplin | '' = serie?.disziplin ?? disziplin;
+  // Zeilen, die das Uebernehmen verhindern: Datum fehlt oder doppelt
+  const tage = lesbar.map((e) => e.datum).filter(Boolean);
+  const zeilenFehler = (e: Eintrag): string | null =>
+    !e.abend ? null : !e.datum ? 'Datum fehlt' : tage.filter((t) => t === e.datum).length > 1 ? 'Datum doppelt' : null;
+  const [versucht, setVersucht] = useState(false);
+  const [fertig, setFertig] = useState(false);
 
   function pruefen(): string | null {
     if (!serie) return 'Bitte eine Serie wählen.';
     if (!diszi) return 'Bitte die Disziplin wählen.';
-    if (lesbar.length === 0) return 'Keine lesbare Abend-Datei ausgewählt.';
+    if (lesbar.length === 0) return 'Keine lesbare Spieltag-Datei ausgewählt.';
     const ohneDatum = lesbar.filter((e) => !e.datum);
     if (ohneDatum.length > 0) return `Datum fehlt: ${ohneDatum.map((e) => e.datei).join(', ')}.`;
     const tage = lesbar.map((e) => e.datum);
     const doppelt = tage.filter((t, i) => tage.indexOf(t) !== i);
-    if (doppelt.length > 0) return `Zwei Abende am selben Tag: ${[...new Set(doppelt)].map(datumText).join(', ')}.`;
+    if (doppelt.length > 0) return `Zwei Spieltage am selben Tag: ${[...new Set(doppelt)].map(datumText).join(', ')}.`;
     return null;
   }
 
   async function uebernehmen() {
+    setVersucht(true);
     const problem = pruefen();
-    if (problem) return setFehler(problem);
+    if (problem) {
+      setFehler(problem);
+      document.getElementById('excel-abende')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return;
+    }
     setFehler(null);
     setProtokoll([]);
     setLaeuft(true);
@@ -177,7 +190,7 @@ export default function ExcelSerie({ vereinId, schliessen }: { vereinId: string;
           })
           .select('id')
           .single();
-        if (error || !turnier) throw new Error(`Abend ${datumText(e.datum)}: ${error?.message}`);
+        if (error || !turnier) throw new Error(`Spieltag ${datumText(e.datum)}: ${error?.message}`);
         turniere += 1;
 
         const { error: fehlerTn } = await supabase.from('turnier_teilnehmer').upsert(
@@ -214,13 +227,14 @@ export default function ExcelSerie({ vereinId, schliessen }: { vereinId: string;
           }));
         if (zeilen.length > 0) {
           const { error: fehlerP } = await supabase.from('partien').insert(zeilen);
-          if (fehlerP) throw new Error(`Spiele ${datumText(e.datum)}: ${fehlerP.message}`);
+          if (fehlerP) throw new Error(`Partien ${datumText(e.datum)}: ${fehlerP.message}`);
         }
         partien += zeilen.length;
-        melde(`${datumText(e.datum)}: ${teilnehmer.length} Teilnehmer, ${zeilen.length} Spiele.`);
+        melde(`${datumText(e.datum)}: ${teilnehmer.length} Teilnehmer, ${zeilen.length} Partien.`);
       }
-      melde(`Fertig: ${turniere} Abende mit ${partien} Spielen übernommen.${mitRating && partien > 0 ? ' Das Rating unter Rating mit „Jetzt neu berechnen“ aktualisieren.' : ''}`);
+      melde(`Fertig: ${turniere} Spieltage mit ${partien} Partien übernommen.${mitRating && partien > 0 ? ' Das Rating unter Rating mit „Jetzt neu berechnen“ aktualisieren.' : ''}`);
       setVorhanden((alt) => new Set([...alt, ...lesbar.map((e) => e.datum)]));
+      setFertig(true);
     } catch (e) {
       setFehler((e as Error).message);
     } finally {
@@ -233,12 +247,12 @@ export default function ExcelSerie({ vereinId, schliessen }: { vereinId: string;
       <section className="block">
         <h2>Excel-Serie einlesen</h2>
         <p className="hinweis">
-          Abend-Dateien der alten Excel-Serien („2 Gruppen Turnier – Jeder gegen Jeden“, .xls oder .xlsx), mehrere auf
-          einmal. Jede Datei wird ein beendetes Turnier der gewählten Serie, mit Endplatzierung und allen Spielen. Die
+          Spieltag-Dateien der alten Excel-Serien („2 Gruppen Turnier – Jeder gegen Jeden“, .xls oder .xlsx), mehrere auf
+          einmal. Jede Datei wird ein beendetes Turnier der gewählten Serie, mit Endplatzierung und allen Partien. Die
           Dateien werden nur im Browser gelesen; geschrieben wird erst mit „Übernehmen“.
         </p>
         <div className="zeile">
-          <select value={serieId} onChange={(e) => setSerieId(e.target.value)} required title="Die Serie, zu der die Abende gehören">
+          <select value={serieId} onChange={(e) => setSerieId(e.target.value)} required title="Die Serie, zu der die Spieltage gehören">
             <option value="">Serie wählen …</option>
             {serien.map((s) => (
               <option key={s.id} value={s.id}>
@@ -249,7 +263,7 @@ export default function ExcelSerie({ vereinId, schliessen }: { vereinId: string;
             ))}
           </select>
           {serie && !serie.disziplin && (
-            <select value={disziplin} onChange={(e) => setDisziplin(e.target.value as Disziplin)} required title="Disziplin der Abende">
+            <select value={disziplin} onChange={(e) => setDisziplin(e.target.value as Disziplin)} required title="Disziplin der Spieltage">
               <option value="">Disziplin wählen …</option>
               {DISZIPLINEN.map(([k, t]) => (
                 <option key={k} value={k}>
@@ -274,22 +288,29 @@ export default function ExcelSerie({ vereinId, schliessen }: { vereinId: string;
       </section>
 
       {eintraege.length > 0 && (
-        <section className="block">
-          <h2>Abende</h2>
+        <section className="block" id="excel-abende">
+          <h2>Serien-Spieltage</h2>
+          {!fertig && lesbar.length > 0 && (
+            <p className="einlesehinweis">
+              Noch nichts übernommen. Prüfen, Namen zuordnen und dann ganz unten auf <strong>„Spieltage übernehmen“</strong>{' '}
+              klicken. „Speichern“ oben gilt nur für die Einstellungen des Vereins.
+            </p>
+          )}
+          {versucht && fehler && <p className="fehler">{fehler}</p>}
           <table className="tabelle kompakt">
             <thead>
               <tr>
                 <th>Datei</th>
                 <th style={{ width: '150px' }}>Datum</th>
                 <th style={{ width: '80px' }}>Spieler</th>
-                <th style={{ width: '70px' }}>Spiele</th>
+                <th style={{ width: '70px' }}>Partien</th>
                 <th style={{ width: '140px' }}>Sieger</th>
                 <th>Hinweise</th>
               </tr>
             </thead>
             <tbody>
               {eintraege.map((e, i) => (
-                <tr key={e.datei}>
+                <tr key={e.datei} className={versucht && zeilenFehler(e) ? 'fehlerzeile' : undefined}>
                   <td>{e.datei}</td>
                   <td>
                     {e.abend && (
@@ -313,6 +334,7 @@ export default function ExcelSerie({ vereinId, schliessen }: { vereinId: string;
                       [
                         e.datum && vorhanden.has(e.datum) ? 'In der Serie schon vorhanden, wird übersprungen.' : '',
                         !e.datum ? `Datum eintragen${e.monat ? ` (${e.monat.slice(5)}/${e.monat.slice(0, 4)})` : ''}.` : '',
+                        zeilenFehler(e) === 'Datum doppelt' ? 'Datum doppelt – zwei Spieltage am selben Tag.' : '',
                         ...(e.abend?.warnungen ?? [])
                       ]
                         .filter(Boolean)
@@ -358,7 +380,7 @@ export default function ExcelSerie({ vereinId, schliessen }: { vereinId: string;
           </table>
           <p className="hinweis">
             Vorgeschlagen wird ein Spieler mit gleichem Namen, Anzeigenamen, „Vorname N.“ oder eindeutigem Vornamen. Wer
-            „nicht übernommen“ wird, fehlt in Platzierung und Spielen.
+            „nicht übernommen“ wird, fehlt in Platzierung und Partien.
           </p>
         </section>
       )}
@@ -369,15 +391,21 @@ export default function ExcelSerie({ vereinId, schliessen }: { vereinId: string;
           <label className="ankreuz">
             <input type="checkbox" checked={mitRating} onChange={(e) => setMitRating(e.target.checked)} />
             <span>
-              Spiele fürs Rating werten
+              Partien fürs Rating werten
               <small>danach unter Rating „Jetzt neu berechnen“</small>
             </span>
           </label>
           <div className="zeile">
-            <button type="button" title="Die Abende als Turniere der Serie anlegen" onClick={() => void uebernehmen()} disabled={laeuft}>
-              {laeuft ? 'Wird übernommen …' : 'Übernehmen'}
+            <button
+              type="button"
+              className="hauptaktion"
+              title="Die Spieltage als Turniere der Serie anlegen"
+              onClick={() => void uebernehmen()}
+              disabled={laeuft}
+            >
+              {laeuft ? 'Wird übernommen …' : 'Spieltage übernehmen'}
             </button>
-            <span className="hinweis">Abende, die die Serie am selben Tag schon hat, werden übersprungen.</span>
+            <span className="hinweis">Spieltage, die die Serie am selben Tag schon hat, werden übersprungen.</span>
           </div>
           {fehler && <p className="fehler">{fehler}</p>}
           {protokoll.length > 0 && (

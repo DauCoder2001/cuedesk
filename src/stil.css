@@ -48,6 +48,16 @@ button:disabled { cursor: default; color: var(--text-leise); }
 }
 .teststreifen a { color: inherit; }
 
+/* Einlesen (ExcelSerie.tsx): Hinweis, deutlicher Knopf, Zeilen mit Fehler */
+.einlesehinweis {
+  background: var(--akzent-hell); border: 1px solid #b5d4f4; border-radius: var(--radius);
+  padding: 8px 12px; font-size: 14px;
+}
+button.hauptaktion { background: var(--akzent); border-color: var(--akzent); color: #fff; }
+button.hauptaktion:hover:not(:disabled) { background: #0c447c; }
+tr.fehlerzeile td { background: #fbeaea; }
+tr.fehlerzeile td:first-child { box-shadow: inset 3px 0 0 var(--fehler); }
+
 /* Konsole: Versionsangabe oben rechts (src/version.ts) */
 .konsolenkopf { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .versionsmarke {

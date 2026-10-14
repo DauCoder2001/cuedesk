@@ -666,7 +666,7 @@ export default function System() {
         </div>
         <p className="hinweis">
           Einlesen: Datenbestand aus Turnier light oder Stammdaten (Spieler, Mannschaften, Tische) aus einem
-          CueDesk-Export; dazu die Abend-Dateien alter Excel-Serien in eine angelegte Serie.
+          CueDesk-Export; dazu die Spieltag-Dateien alter Excel-Serien in eine angelegte Serie.
         </p>
         <div className="knopfpaar">
           <button
@@ -679,7 +679,7 @@ export default function System() {
           </button>
           <button
             type="button"
-            title="Abend-Dateien einer alten Excel-Serie als Turniere einer Serie einlesen; geschrieben wird erst nach der Vorschau"
+            title="Spieltag-Dateien einer alten Excel-Serie als Turniere einer Serie einlesen; geschrieben wird erst nach der Vorschau"
             onClick={() => setEinlesen('excel')}
             disabled={einlesen !== null}
           >
