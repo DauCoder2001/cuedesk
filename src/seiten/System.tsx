@@ -16,6 +16,7 @@ import { homepageLink } from '../mandanten';
 import { useUngespeichert, weichtAb } from '../ungespeichert';
 import { STANDARD_EINSTELLUNGEN } from '../rating';
 import Altdaten from './Altdaten';
+import ExcelSerie from './ExcelSerie';
 
 // Seite "System": Einstellungen des Vereins, nur fuer den Vereins-Administrator.
 // Verein (Name, Kuerzel, Logo), Vorgaben fuer neue Turniere und Liga-Spieltage,
@@ -153,8 +154,8 @@ export default function System() {
   const [wort, setWort] = useState('');
   const [wortWieder, setWortWieder] = useState('');
   const [arbeitet, setArbeitet] = useState(false);
-  // "Daten einlesen" (Altdaten.tsx) aufgeklappt
-  const [einlesenOffen, setEinlesenOffen] = useState(false);
+  // Aufgeklappt: "Daten einlesen" (Altdaten.tsx) oder "Excel-Serie einlesen" (ExcelSerie.tsx)
+  const [einlesen, setEinlesen] = useState<'daten' | 'excel' | null>(null);
   const [fehler, setFehler] = useState<string | null>(null);
   const [meldung, setMeldung] = useState<string | null>(null);
   const dateiFeld = useRef<HTMLInputElement>(null);
@@ -665,21 +666,30 @@ export default function System() {
         </div>
         <p className="hinweis">
           Einlesen: Datenbestand aus Turnier light oder Stammdaten (Spieler, Mannschaften, Tische) aus einem
-          CueDesk-Export.
+          CueDesk-Export; dazu die Abend-Dateien alter Excel-Serien in eine angelegte Serie.
         </p>
         <div className="knopfpaar">
           <button
             type="button"
             title="Eine Datei aus Turnier light oder einen CueDesk-Export einlesen; geschrieben wird erst nach der Vorschau"
-            onClick={() => setEinlesenOffen(true)}
-            disabled={einlesenOffen}
+            onClick={() => setEinlesen('daten')}
+            disabled={einlesen !== null}
           >
             Daten einlesen
+          </button>
+          <button
+            type="button"
+            title="Abend-Dateien einer alten Excel-Serie als Turniere einer Serie einlesen; geschrieben wird erst nach der Vorschau"
+            onClick={() => setEinlesen('excel')}
+            disabled={einlesen !== null}
+          >
+            Excel-Serie einlesen
           </button>
         </div>
       </section>
 
-      {einlesenOffen && <Altdaten schliessen={() => setEinlesenOffen(false)} />}
+      {einlesen === 'daten' && <Altdaten schliessen={() => setEinlesen(null)} />}
+      {einlesen === 'excel' && <ExcelSerie vereinId={verein.id} schliessen={() => setEinlesen(null)} />}
 
       <section className="block">
         <h2>Verträge</h2>
