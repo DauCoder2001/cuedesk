@@ -10,6 +10,7 @@ import { LIGEN, doppelBegegnungIds, doppelPlanAusEingabe, doppelVon, partnerVon,
 import type { Ausspielziele, DoppelPartie, LigaKennung } from '../liga';
 import type { Ausschreibung } from '../ausschreibung';
 import { saisonAus } from '../mannschaften';
+import { importMarke } from '../importquelle';
 import { vereinsEinstellungen } from '../vereinseinstellungen';
 import { kurzesRaceHinweis } from '../vorgabe';
 import { Pflichthinweis, usePflicht } from '../pflicht';
@@ -848,7 +849,7 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
                   <td>{new Date(`${t.datum}T12:00:00`).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}</td>
                   <td>
                     {t.name}
-                    {t.quelle === 'import' && <span className="marke">aus Turnier light</span>}
+                    {importMarke(t) && <span className="marke">{importMarke(t)}</span>}
                   </td>
                   {artenInListe.length > 0 && <td>{artVon(t) ?? '–'}</td>}
                   <td>{turnierDisziplinText(t)}</td>

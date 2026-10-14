@@ -2,6 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { supabase } from '../supabase';
 import { useSitzung } from '../sitzung';
 import { personName } from '../namen';
+import { importMarke } from '../importquelle';
 import { useRueckfrage } from '../rueckfrage';
 import { herunterladen } from '../pdf';
 import { serienwertung } from '../serien';
@@ -108,6 +109,35 @@ export default function Serien() {
     [alleTurniere, gewaehlt]
   );
   const offeneTurniere = alleTurniere.filter((t) => gehoertZu(t, gewaehlt) && t.status !== 'beendet');
+
+  // Oben stehen die laufenden Serien; beendete (aktiv aus) kommen nach Saison
+  // gruppiert in "Abgelaufene Serien", neueste Saison zuerst.
+  const abgelaufen = useMemo(() => {
+    const gruppen = new Map<string, Serie[]>();
+    serien
+      .filter((s) => !s.aktiv)
+      .forEach((s) => gruppen.set(s.saison ?? '', [...(gruppen.get(s.saison ?? '') ?? []), s]));
+    return [...gruppen.entries()].sort(([a], [b]) => (a === '' ? 1 : b === '' ? -1 : b.localeCompare(a)));
+  }, [serien]);
+
+  const serienKnopf = (eintrag: Serie) => (
+    <button
+      key={eintrag.id}
+      type="button"
+      className={gewaehlt === eintrag.id ? 'chip aktiv' : 'chip'}
+      title="Diese Serie anzeigen"
+      onClick={() => {
+        void (async () => {
+          if (!(await wechselErlaubt())) return;
+          setGewaehlt(eintrag.id);
+          setFormular(null);
+        })();
+      }}
+    >
+      {eintrag.name}
+      {eintrag.saison ? ` ${eintrag.saison}` : ''}
+    </button>
+  );
 
   const wertung = useMemo(() => {
     if (!serie) return [];
@@ -266,26 +296,11 @@ export default function Serien() {
           </div>
         </div>
         <div className="filterzeile">
-          {serien.map((eintrag) => (
-            <button
-              key={eintrag.id}
-              type="button"
-              className={gewaehlt === eintrag.id ? 'chip aktiv' : 'chip'}
-              title="Diese Serie anzeigen"
-              onClick={() => {
-                void (async () => {
-                  if (!(await wechselErlaubt())) return;
-                  setGewaehlt(eintrag.id);
-                  setFormular(null);
-                })();
-              }}
-            >
-              {eintrag.name}
-              {eintrag.saison ? ` ${eintrag.saison}` : ''}
-              {!eintrag.aktiv ? ' (beendet)' : ''}
-            </button>
-          ))}
+          {serien.filter((s) => s.aktiv).map(serienKnopf)}
           {serien.length === 0 && <span className="hinweis">Noch keine Serie angelegt.</span>}
+          {serien.length > 0 && !serien.some((s) => s.aktiv) && (
+            <span className="hinweis">Keine laufende Serie – die beendeten stehen unten unter „Abgelaufene Serien“.</span>
+          )}
         </div>
         {serie && !formular && (
           <p className="hinweis">
@@ -447,7 +462,7 @@ export default function Serien() {
                     <td style={{ width: '110px' }}>{DATUM(t.datum)}</td>
                     <td>
                       {t.name}
-                      {t.quelle === 'import' && <span className="marke">aus Turnier light</span>}
+                      {importMarke(t) && <span className="marke">{importMarke(t)}</span>}
                     </td>
                     <td style={{ width: '140px' }}>{turnierDisziplinText(t)}</td>
                     <td className="rechts">
@@ -477,6 +492,19 @@ export default function Serien() {
             </button>
           </div>
           <p className="hinweis">Ein Turnier gehört zu höchstens einer Serie. Gewertet wird es, sobald es beendet ist.</p>
+        </section>
+      )}
+      {abgelaufen.length > 0 && (
+        <section className="block">
+          <h2>Abgelaufene Serien</h2>
+          <div className="saisonarchiv">
+            {abgelaufen.map(([saison, liste]) => (
+              <div key={saison} className="saisongruppe">
+                <div className="feldkopf">{saison === '' ? 'ohne Saison' : `Saison ${saison}`}</div>
+                <div className="filterzeile">{liste.map(serienKnopf)}</div>
+              </div>
+            ))}
+          </div>
         </section>
       )}
       {rueckfrage}

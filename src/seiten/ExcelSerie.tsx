@@ -184,6 +184,7 @@ export default function ExcelSerie({ vereinId, schliessen }: { vereinId: string;
             status: 'beendet',
             rating_werten: mitRating,
             quelle: 'import',
+            alt_id: `excel:${serie!.id}:${e.datum}`,
             teilnehmerzahl: teilnehmer.length,
             importiert_am: new Date().toISOString(),
             beendet_am: new Date(`${e.datum}T23:00:00`).toISOString()

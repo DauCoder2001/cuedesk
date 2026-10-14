@@ -48,6 +48,10 @@ button:disabled { cursor: default; color: var(--text-leise); }
 }
 .teststreifen a { color: inherit; }
 
+/* Serien: abgelaufene Serien nach Saison nebeneinander (Serien.tsx) */
+.saisonarchiv { display: flex; flex-wrap: wrap; gap: 16px 32px; align-items: flex-start; }
+.saisongruppe .feldkopf { margin-bottom: 6px; }
+
 /* Einlesen (ExcelSerie.tsx): Hinweis, deutlicher Knopf, Zeilen mit Fehler */
 .einlesehinweis {
   background: var(--akzent-hell); border: 1px solid #b5d4f4; border-radius: var(--radius);
