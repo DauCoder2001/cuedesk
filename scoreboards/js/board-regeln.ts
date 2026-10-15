@@ -200,8 +200,17 @@ export type AuswahlEintrag = BoardSpiel & {
   _playable: boolean;
 };
 
+// Ueberschrift ueber einem Eintrag der Auswahl: nur, wenn mehrere
+// Liga-Begegnungen zugleich laufen und hier eine neue beginnt
+export function begegnungUeberschrift(liste: BoardSpiel[], i: number): string | null {
+  const name = liste[i]?.begegnung;
+  if (!name) return null;
+  return i === 0 || liste[i - 1]?.begegnung !== name ? name : null;
+}
+
 // Die Liste der Spielauswahl am Pool-Board: offene Spiele ohne 14.1, auf
-// Wunsch nur die eines Spielers. Spielbare zuerst, wartende KO-Spiele zuletzt.
+// Wunsch nur die eines Spielers. Laufen mehrere Liga-Begegnungen, stehen sie
+// nacheinander (1., Doppel, 2.). Darin spielbare zuerst, wartende KO-Spiele zuletzt.
 export function poolAuswahl(turnier: BoardTurnier, filter: string): AuswahlEintrag[] {
   if (!turnier || !turnier.schedule) return [];
   const belegt = belegteSpieler(turnier);
@@ -217,6 +226,7 @@ export function poolAuswahl(turnier: BoardTurnier, filter: string): AuswahlEintr
     return { ...m, _waiting: wartet, _freilos: freilos, _playable: spielbar };
   });
   return liste.sort((a, b) => {
+    if ((a.begegnungNr ?? 0) !== (b.begegnungNr ?? 0)) return (a.begegnungNr ?? 0) - (b.begegnungNr ?? 0);
     if (a._playable !== b._playable) return a._playable ? -1 : 1;
     if (a._waiting !== b._waiting) return a._waiting ? 1 : -1;
     return 0;

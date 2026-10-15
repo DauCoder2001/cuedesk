@@ -459,6 +459,8 @@
   /* Wechsel zum Pool-Board: kein Spiel, deshalb andere Optik als die Liste */
   .pick-wechsel { width: 100%; margin-top: 2vmin; background: #fff; color: #1f3b73;
     border: 0.3vmin solid #1f3b73; font-size: 3vmin; padding: 1.8vmin; border-radius: 1.2vmin; }
+  /* Liga: mehrere Begegnungen zugleich - Ueberschrift je Begegnung */
+  .pick-begegnung { display: block; font-size: 2.8vmin; font-weight: bold; color: #1f3b73; margin: 2vmin 0 0.5vmin; text-align: left; }
   .pick-notiz { display: block; text-align: center; font-size: 2.4vmin; color: #666; margin-top: 2.5vmin; }
   /* Partie, die hier laeuft, deren Stand am Tisch aber fehlt */
   .pick141.pick-haengt { background: #fff4e0; border: 0.3vmin solid #b8860b; margin-bottom: 2vmin; }
@@ -908,7 +910,7 @@
   import {
     freiesSpielLaeuft, offeneSpiele, wartetText, zeige141Auswahl, spielBeanspruchen, spielZuruecklegen,
     ergebnisSchonEingetragen, ohneSpielParameter, siegerText, haengendeSpiele, hat141Partien,
-    wechselRueckfrage, abschlussAbgelehnt
+    wechselRueckfrage, abschlussAbgelehnt, begegnungUeberschrift
   } from "./js/board-regeln.ts";
   import { startIdleRedirect } from "./js/idle-timeout.js";
   import { keepScreenAwake } from "./js/wake-lock.js";
@@ -1019,10 +1021,12 @@
       zeigeHaengende();
       return;
     }
-    liste.innerHTML = offen.map(m => {
+    liste.innerHTML = offen.map((m, i) => {
+      const kopf = begegnungUeberschrift(offen, i);
       const ziel = m.raceTo ? m.raceTo + ' Pkt.' : '';
       const aufn = m.innings ? ' / ' + m.innings + ' Aufn.' : '';
-      return '<button class="pick141" data-id="' + m.id + '">'
+      return (kopf ? '<span class="pick-begegnung">' + kopf + '</span>' : '')
+        + '<button class="pick141" data-id="' + m.id + '">'
         + '<span>' + m.player1 + '</span><span class="vs">vs</span><span>' + m.player2 + '</span>'
         + ' <span class="note">(' + ziel + aufn + ')</span></button>';
     }).join('');

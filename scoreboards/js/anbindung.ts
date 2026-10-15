@@ -641,7 +641,9 @@ let turnierLaeuftSchon = false;
 let turnierZeitgeber: number | null = null;
 
 // Laufendes Turnier fuer die Tablets. Fuer die Fernseher zaehlt ausserdem ein
-// heute beendetes Turnier (Ergebnis-Anzeige nach dem Abschluss).
+// heute beendetes Turnier (Ergebnis-Anzeige nach dem Abschluss). Laufen bei
+// einem Liga-Spieltag mehrere Begegnungen zugleich (etwa die 2. schon, waehrend
+// die 1. noch zu Ende gespielt wird), stehen ihre Partien gemeinsam im Plan.
 async function turnierLaden(): Promise<void> {
   const v = verbindung;
   if (!v) return;
@@ -654,7 +656,11 @@ async function turnierLaden(): Promise<void> {
     .gte('datum', gestern)
     .order('datum', { ascending: false });
   const liste = kandidaten ?? [];
-  const t = liste.find((x) => x.status === 'laeuft') ?? liste.find((x) => x.status === 'beendet') ?? null;
+  const gefunden = liste.find((x) => x.status === 'laeuft') ?? liste.find((x) => x.status === 'beendet') ?? null;
+  // Die Begegnungen in der Reihenfolge 1., Doppel, 2.; die erste traegt Name,
+  // Auslosung und Ergebnis fuer den Fernseher
+  const begegnungen = gefunden ? laufendeBegegnungen(liste, gefunden) : [];
+  const t = begegnungen[0] ?? null;
   if (!t) {
     aktuellesTurnier = null;
     tvAnsicht = null;
@@ -667,9 +673,9 @@ async function turnierLaden(): Promise<void> {
     v.supabase
       .from('partien')
       .select(
-        'id, spieler_a, spieler_b, partner_a, partner_b, race_to, vorgabe_a, vorgabe_b, ergebnis_a, ergebnis_b, status, tisch_id, runde, gruppe, phase, disziplin, begonnen'
+        'id, turnier_id, spieler_a, spieler_b, partner_a, partner_b, race_to, vorgabe_a, vorgabe_b, ergebnis_a, ergebnis_b, status, tisch_id, runde, gruppe, phase, disziplin, begonnen'
       )
-      .eq('turnier_id', t.id)
+      .in('turnier_id', begegnungen.map((b) => b.id))
       .order('runde')
       .order('paarung'),
     v.supabase.from('personen').select('id, vorname, nachname, anzeigename').eq('verein_id', v.vereinId),
@@ -681,14 +687,40 @@ async function turnierLaden(): Promise<void> {
   );
   const name = (id: string) => namen.get(id) ?? '?';
   const nummern = new Map((tischAntwort.data ?? []).map((x) => [x.id, String(x.nummer)]));
-  const einstellungen = (t.einstellungen ?? {}) as {
+  type Einstellungen = {
     raceTo?: number;
     pausiert?: boolean;
     tvAnsicht?: string;
     handReihenfolge?: Record<string, number[]>;
     liga?: { verdeckt?: Verdeckt; gestartet?: Gestartet; ziele?: { aufnahmen141?: number } };
   };
-  const partien = (partienAntwort.data ?? []) as (PlanPartie & { ergebnis_a: number | null; ergebnis_b: number | null })[];
+  const einstellungenVon = (b: { einstellungen: unknown }) => (b.einstellungen ?? {}) as Einstellungen;
+  const einstellungen = einstellungenVon(t);
+  type Zeile = PlanPartie & { turnier_id: string; ergebnis_a: number | null; ergebnis_b: number | null };
+  const allePartien = (partienAntwort.data ?? []) as Zeile[];
+  const partien = allePartien.filter((p) => p.turnier_id === t.id);
+  // Spielplan fuer die Tablets: je Begegnung mit ihren eigenen Regeln (verdeckt,
+  // gestartete Runden, 14.1-Aufnahmen). Die Partie-Kennungen sind eindeutig,
+  // Ergebnis und Tisch laufen deshalb ohne Umweg ueber die Begegnung.
+  const mehrere = begegnungen.length > 1;
+  const schedule: Record<string, PlanEintrag> = {};
+  for (const b of begegnungen) {
+    const e = einstellungenVon(b);
+    const plan = tabletSpielplan(
+      fuersTablet(
+        allePartien.filter((p) => p.turnier_id === b.id),
+        e.liga?.verdeckt,
+        e.liga?.gestartet
+      ),
+      (id) => namen.get(id) ?? '?',
+      (id) => nummern.get(id) ?? null,
+      e.liga?.ziele?.aufnahmen141
+    );
+    const kennung = begegnungKennung(b);
+    for (const [id, eintrag] of Object.entries(plan)) {
+      schedule[id] = mehrere ? { ...eintrag, begegnung: kennung.name, begegnungNr: kennung.nr } : eintrag;
+    }
+  }
   const aufstellung = (teilnehmerAntwort.data ?? [])
     .filter((x) => x.startnummer !== null)
     .sort((a, b) => (a.startnummer ?? 0) - (b.startnummer ?? 0))
@@ -704,14 +736,9 @@ async function turnierLaden(): Promise<void> {
           id: t.id,
           name: t.name,
           status: 'running',
-          paused: Boolean(einstellungen.pausiert),
+          paused: begegnungen.every((b) => Boolean(einstellungenVon(b).pausiert)),
           raceTo: einstellungen.raceTo ?? 0,
-          schedule: tabletSpielplan(
-            fuersTablet(partien, einstellungen.liga?.verdeckt, einstellungen.liga?.gestartet),
-            name,
-            (id) => nummern.get(id) ?? null,
-            einstellungen.liga?.ziele?.aufnahmen141
-          ),
+          schedule,
           // fuer die TV-Auslosung
           mode: modus,
           type: t.name,
@@ -1097,9 +1124,11 @@ export async function ergebnisSpeichernPool(
 
 export { aufnahmenAusProtokoll } from './protokoll-141';
 import {
+  begegnungKennung,
   dieselbenSpieler,
   ergebnisVomTablet,
   fuersTablet,
+  laufendeBegegnungen,
   ohneZusatz,
   seitenGetauscht,
   tabletSpielplan,

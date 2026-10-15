@@ -45,6 +45,11 @@ export type PlanEintrag = {
   // Kennungen aller Spieler der Partie, im Doppel bis zu vier. Damit erkennt
   // das Tablet jeden einzeln, der gerade an einem anderen Tisch spielt.
   personen?: string[];
+  // Liga: Laufen mehrere Begegnungen eines Spieltags zugleich, steht hier, zu
+  // welcher die Partie gehoert ("1. Begegnung", "Doppel", "2. Begegnung"),
+  // und die Reihenfolge fuer die Auswahl. Bei nur einer Begegnung fehlt beides.
+  begegnung?: string | null;
+  begegnungNr?: number;
 };
 
 export type TabletTurnier = {
@@ -190,7 +195,43 @@ export function tabletSpielplan(
   return plan;
 }
 
-export type ErgebnisPartie = Pick<PlanPartie, 'spieler_a' | 'spieler_b' | 'vorgabe_a' | 'vorgabe_b' | 'phase'> & {
+// ---------- Liga: mehrere Begegnungen zugleich an den Tablets ----------
+
+// Verweise zwischen den Begegnungen eines Spieltags (einstellungen.liga)
+export type LigaVerweis = { art?: string; haupt?: string; begegnung?: number; partner?: string };
+type MitLiga = { id: string; status: string; modus?: string | null; einstellungen: unknown };
+
+const ligaVon = (t: MitLiga): LigaVerweis | null =>
+  t.modus === 'liga' ? ((t.einstellungen ?? {}) as { liga?: LigaVerweis }).liga ?? null : null;
+
+// Kennung der 1. Begegnung: gemeinsamer Schluessel aller Begegnungen eines
+// Spieltags (wie spieltagLaden in anbindung.ts)
+export function spieltagSchluessel(t: MitLiga): string | null {
+  const liga = ligaVon(t);
+  if (!liga) return null;
+  if (liga.art === 'doppel') return liga.haupt ?? null;
+  return (liga.begegnung ?? 1) === 1 ? t.id : liga.partner ?? null;
+}
+
+// Name und Reihenfolge am Tablet: 1. Begegnung, Doppel, 2. Begegnung
+export function begegnungKennung(t: MitLiga): { name: string; nr: number } {
+  const liga = ligaVon(t);
+  if (liga?.art === 'doppel') return { name: 'Doppel', nr: 2 };
+  return (liga?.begegnung ?? 1) === 2 ? { name: '2. Begegnung', nr: 3 } : { name: '1. Begegnung', nr: 1 };
+}
+
+// Welche laufenden Turniere teilen sich die Tablets mit "t"? Bei einem
+// Liga-Spieltag alle gestarteten Begegnungen desselben Spieltags, sortiert;
+// sonst nur "t" selbst. Nicht gestartete oder beendete bleiben draussen.
+export function laufendeBegegnungen<T extends MitLiga>(liste: T[], t: T): T[] {
+  const schluessel = spieltagSchluessel(t);
+  if (!schluessel || t.status !== 'laeuft') return [t];
+  return liste
+    .filter((x) => x.status === 'laeuft' && spieltagSchluessel(x) === schluessel)
+    .sort((a, b) => begegnungKennung(a).nr - begegnungKennung(b).nr);
+}
+
+export type ErgebnisPartie =Pick<PlanPartie, 'spieler_a' | 'spieler_b' | 'vorgabe_a' | 'vorgabe_b' | 'phase'> & {
   ergebnis_a: number | null;
   ergebnis_b: number | null;
 };

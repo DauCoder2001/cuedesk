@@ -14,10 +14,11 @@ import { schutzwortPruefen } from './schutzwort';
 // Vereins ab (Loeschen von Turnieren und Spieltagen) und sagt erst ja, wenn
 // es stimmt. Bei falschem Wort bleibt sie offen.
 
-export type RueckfrageOptionen = { schutzwort?: string };
+// "nein" beschriftet den zweiten Knopf, wenn "Abbrechen" missverstaendlich waere
+export type RueckfrageOptionen = { schutzwort?: string; nein?: string };
 
 export function useRueckfrage(): [ReactNode, (text: string, ja?: string, optionen?: RueckfrageOptionen) => Promise<boolean>] {
-  const [offen, setOffen] = useState<{ text: string; ja: string; schutzVerein?: string } | null>(null);
+  const [offen, setOffen] = useState<{ text: string; ja: string; nein?: string; schutzVerein?: string } | null>(null);
   const [wort, setWort] = useState('');
   const [fehler, setFehler] = useState<string | null>(null);
   const [prueft, setPrueft] = useState(false);
@@ -29,7 +30,7 @@ export function useRueckfrage(): [ReactNode, (text: string, ja?: string, optione
         antwort.current = fertig;
         setWort('');
         setFehler(null);
-        setOffen({ text, ja, schutzVerein: optionen?.schutzwort });
+        setOffen({ text, ja, nein: optionen?.nein, schutzVerein: optionen?.schutzwort });
       }),
     []
   );
@@ -92,7 +93,7 @@ export function useRueckfrage(): [ReactNode, (text: string, ja?: string, optione
             {offen.ja}
           </button>
           <button type="button" onClick={() => schliessen(false)}>
-            Abbrechen
+            {offen.nein ?? 'Abbrechen'}
           </button>
         </div>
       )}

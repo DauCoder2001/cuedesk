@@ -2,6 +2,7 @@ import { describe, expect, test } from 'vitest';
 import {
   abschlussAbgelehnt,
   ausspielziel,
+  begegnungUeberschrift,
   belegteSpieler,
   ergebnisSchonEingetragen,
   filterNamen,
@@ -372,5 +373,37 @@ describe('Direktlink', () => {
       '/scoreboards/14.1_Scoreboard.html?table=2'
     );
     expect(ohneSpielParameter('http://x/scoreboards/Pool_Scoreboard.html?spiel=abc')).toBe('/scoreboards/Pool_Scoreboard.html');
+  });
+});
+
+describe('Auswahl mit mehreren Liga-Begegnungen', () => {
+  const spiel = (begegnung: string, begegnungNr: number, personen: string[], status: 'pending' | 'running' = 'pending') => ({
+    player1: `Spieler ${personen[0]}`,
+    player2: `Spieler ${personen[1]}`,
+    status,
+    discipline: '9-Ball',
+    begegnung,
+    begegnungNr,
+    personen
+  });
+  const turnier = {
+    schedule: {
+      z1: spiel('2. Begegnung', 3, ['e', 'f']),
+      e1: spiel('1. Begegnung', 1, ['a', 'b']),
+      e2: spiel('1. Begegnung', 1, ['c', 'd'], 'running'),
+      z2: spiel('2. Begegnung', 3, ['c', 'g'])
+    }
+  };
+
+  test('nach Begegnung geordnet, belegte Spieler gesperrt', () => {
+    const liste = poolAuswahl(turnier, '');
+    expect(liste.map((m) => m.id)).toEqual(['e1', 'z1', 'z2']);
+    expect(liste.find((m) => m.id === 'z2')?._playable).toBe(false);
+  });
+
+  test('Ueberschrift nur, wo eine Begegnung beginnt', () => {
+    const liste = poolAuswahl(turnier, '');
+    expect(liste.map((_, i) => begegnungUeberschrift(liste, i))).toEqual(['1. Begegnung', '2. Begegnung', null]);
+    expect(begegnungUeberschrift([{ player1: 'A', player2: 'B' }], 0)).toBeNull();
   });
 });

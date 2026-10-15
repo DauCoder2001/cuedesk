@@ -1,12 +1,15 @@
 import { describe, expect, test } from 'vitest';
 import {
   abschnittName,
+  begegnungKennung,
   dieselbenSpieler,
   ergebnisVomTablet,
   fuersTablet,
+  laufendeBegegnungen,
   ohneZusatz,
   planStatus,
   rundeGestartet,
+  spieltagSchluessel,
   tabletSpielplan,
   tvErgebnis
 } from '../scoreboards/js/turnier-plan';
@@ -206,5 +209,41 @@ describe('Dieselben Spieler', () => {
   test('anderer Spieler oder fehlender Name', () => {
     expect(dieselbenSpieler({ player1: 'Marcel B.', player2: 'Frank' }, { player1: 'Frank', player2: 'Thomas B.' })).toBe(false);
     expect(dieselbenSpieler({ player1: 'Marcel B.', player2: null }, { player1: 'Marcel B.', player2: '' })).toBe(false);
+  });
+});
+
+describe('mehrere Liga-Begegnungen zugleich an den Tablets', () => {
+  const liga = (id: string, status: string, l: Record<string, unknown>) => ({
+    id,
+    status,
+    modus: 'liga',
+    einstellungen: { liga: l }
+  });
+  const erste = liga('t1', 'laeuft', { begegnung: 1, partner: 't2', doppel: 'td' });
+  const doppel = liga('td', 'laeuft', { art: 'doppel', haupt: 't1' });
+  const zweite = liga('t2', 'laeuft', { begegnung: 2, partner: 't1' });
+  const fremd = liga('x1', 'laeuft', { begegnung: 1, partner: 'x2' });
+  const serie = { id: 's1', status: 'laeuft', modus: 'serie', einstellungen: {} };
+
+  test('alle gestarteten Begegnungen desselben Spieltags, in der Reihenfolge 1., Doppel, 2.', () => {
+    expect(laufendeBegegnungen([zweite, fremd, doppel, erste, serie], zweite).map((t) => t.id)).toEqual(['t1', 'td', 't2']);
+  });
+
+  test('nicht gestartete und beendete Begegnungen bleiben draussen', () => {
+    const geplant = { ...zweite, status: 'geplant' };
+    const beendet = { ...doppel, status: 'beendet' };
+    expect(laufendeBegegnungen([erste, geplant, beendet], erste).map((t) => t.id)).toEqual(['t1']);
+  });
+
+  test('kein Liga-Spieltag: nur das Turnier selbst', () => {
+    expect(laufendeBegegnungen([serie, erste], serie).map((t) => t.id)).toEqual(['s1']);
+  });
+
+  test('Name und Reihenfolge der Begegnung', () => {
+    expect(begegnungKennung(erste)).toEqual({ name: '1. Begegnung', nr: 1 });
+    expect(begegnungKennung(doppel)).toEqual({ name: 'Doppel', nr: 2 });
+    expect(begegnungKennung(zweite)).toEqual({ name: '2. Begegnung', nr: 3 });
+    expect(spieltagSchluessel(zweite)).toBe('t1');
+    expect(spieltagSchluessel(serie)).toBeNull();
   });
 });

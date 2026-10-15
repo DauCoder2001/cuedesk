@@ -967,32 +967,29 @@ export default function LigaAnsicht({
   // Die Hinrunde setzt die Begegnung auf "laeuft" (Live, Chat, Tablets).
   async function rundeStarten(runde: 'hin' | 'rueck') {
     if (!turnier || !liga) return;
-    // Die Tablets zeigen immer nur eine laufende Begegnung. Ist die andere
-    // schon fertig gespielt, nur noch nicht abgeschlossen: gleich mit abschliessen.
-    const laeuftNoch = teile.find((x) => x.id !== turnier.id && x.status === 'laeuft');
-    if (runde === 'hin' && laeuftNoch) {
+    // Laeuft eine andere Begegnung des Spieltags noch, stehen an den Tablets
+    // die Partien beider zur Auswahl (scoreboards/js/anbindung.ts). Ist sie
+    // schon fertig gespielt, nur noch nicht abgeschlossen: Abschluss anbieten.
+    let laeuftNoch = runde === 'hin' ? teile.find((x) => x.id !== turnier.id && x.status === 'laeuft') : undefined;
+    if (laeuftNoch) {
       const andere = `${laeuftNoch.nummer}. Begegnung${laeuftNoch.doppel ? ' (Doppel)' : ''}`;
       const { data: ihrePartien } = await supabase.from('partien').select('status').eq('turnier_id', laeuftNoch.id);
-      if (fertigGespielt(ihrePartien ?? [])) {
-        if (
-          !(await fragen(
-            `Die ${andere} ist fertig gespielt, aber noch nicht abgeschlossen.\n${andere} abschließen und ${istDoppel ? 'Doppel' : 'Hinrunde'} starten?`,
-            'Abschließen und starten'
-          ))
-        ) {
-          return;
-        }
-        const { error: abschlussFehler } = await supabase.from('turniere').update({ status: 'beendet' }).eq('id', laeuftNoch.id);
-        if (abschlussFehler) return setFehler(abschlussFehler.message);
-      } else if (
-        !(await fragen(
-          `Die ${andere} läuft noch. An den Tablets erscheint immer nur eine Begegnung. Trotzdem starten?`,
-          'Trotzdem starten'
+      if (
+        fertigGespielt(ihrePartien ?? []) &&
+        (await fragen(
+          `Die ${andere} ist fertig gespielt, aber noch nicht abgeschlossen.\nGleich mit abschließen?`,
+          'Abschließen',
+          { nein: 'Offen lassen' }
         ))
       ) {
-        return;
+        const { error: abschlussFehler } = await supabase.from('turniere').update({ status: 'beendet' }).eq('id', laeuftNoch.id);
+        if (abschlussFehler) return setFehler(abschlussFehler.message);
+        laeuftNoch = undefined;
       }
     }
+    const nebenher = laeuftNoch
+      ? ` Die Partien der ${laeuftNoch.nummer}. Begegnung${laeuftNoch.doppel ? ' (Doppel)' : ''} bleiben dort ebenfalls wählbar.`
+      : '';
     const neu = { ...einstellungen, liga: { ...liga, gestartet: { ...gestartet, [runde]: true } } };
     const { error } = await supabase
       .from('turniere')
@@ -1001,11 +998,11 @@ export default function LigaAnsicht({
     if (error) return setFehler(error.message);
     if (runde === 'rueck') setHinFrei(false);
     setMeldung(
-      istDoppel
+      (istDoppel
         ? 'Doppel gestartet. Die Partien stehen jetzt an den Tablets zur Auswahl.'
         : runde === 'hin'
         ? 'Hinrunde gestartet. Ihre Partien stehen jetzt an den Tablets zur Auswahl.'
-        : 'Rückrunde gestartet. Ihre Partien stehen jetzt an den Tablets zur Auswahl; die Hinrunde ist geschützt.'
+        : 'Rückrunde gestartet. Ihre Partien stehen jetzt an den Tablets zur Auswahl; die Hinrunde ist geschützt.') + nebenher
     );
     await laden();
   }

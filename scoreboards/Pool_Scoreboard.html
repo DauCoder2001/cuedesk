@@ -273,6 +273,8 @@ button:disabled { opacity: 0.4; }
 /* Wechsel zum 14.1-Board: kein Spiel, deshalb andere Optik als die Liste */
 .pick-wechsel { width: 100%; margin-top: 2vmin; background: #fff; color: #1f3b73;
   border: 0.3vmin solid #1f3b73; font-size: 3vmin; padding: 1.8vmin; border-radius: 1.2vmin; }
+/* Liga: mehrere Begegnungen zugleich - Ueberschrift je Begegnung */
+.pick-begegnung { display: block; font-size: 2.8vmin; font-weight: bold; color: #1f3b73; margin: 2vmin 0 0.5vmin; text-align: left; }
 .pick-notiz { display: block; text-align: center; font-size: 2.4vmin; color: #666; margin-top: 2.5vmin; }
 /* Partie, die hier laeuft, deren Stand am Tisch aber fehlt */
 .pick-item.pick-haengt { background: #fff4e0; border: 0.3vmin solid #b8860b; margin-bottom: 2vmin; }
@@ -570,7 +572,7 @@ button:disabled { opacity: 0.4; }
     freiesSpielLaeuft, offeneSpiele, wartetText, filterNamen, poolAuswahl, poolModus,
     spielBeanspruchen, spielZuruecklegen, spielAbschliessen, freilosAbschliessen, freilosWertung,
     ergebnisSchonEingetragen, ohneSpielParameter, ausspielziel, zielErreicht, koFortschreibung, siegerText,
-    haengendeSpiele, fremdesTurnierspiel, wechselRueckfrage, abschlussAbgelehnt
+    haengendeSpiele, fremdesTurnierspiel, wechselRueckfrage, abschlussAbgelehnt, begegnungUeberschrift
   } from "./js/board-regeln.ts";
   import { startIdleRedirect } from "./js/idle-timeout.js";
   import { keepScreenAwake } from "./js/wake-lock.js";
@@ -1045,7 +1047,11 @@ async function newGame() {
       return;
     }
     const raceTo = (tournament && tournament.raceTo) || 0;
-    pickerListEl.innerHTML = pend.map(m => {
+    pickerListEl.innerHTML = pend.map((m, i) => {
+      const kopf = begegnungUeberschrift(pend, i);
+      return (kopf ? `<span class="pick-begegnung">${kopf}</span>` : '') + pickEintrag(m);
+    }).join('');
+    function pickEintrag(m) {
       if (m._waiting) {
         // KO-Spiel, dessen Spieler noch nicht feststehen -> ausgegraut, nicht waehlbar
         return `<button class="pick-item busy" disabled><span>🏆 ${m.title || 'KO-Spiel'}</span>`
@@ -1068,7 +1074,7 @@ async function newGame() {
       if (filter && m.player2 === filter) { left = m.player2; right = m.player1; }
       return `<button class="pick-item${m._playable ? '' : ' busy'}" data-id="${m.id}" ${m._playable ? '' : 'disabled'}>`
         + `<span class="pick-p1">${left}</span><span class="pick-vs">vs</span><span class="pick-p2">${right}</span>${disNote}${rtNote}${note}</button>`;
-    }).join('');
+    }
     pickerListEl.querySelectorAll('.pick-item:not(.busy)').forEach(btn => {
       if (btn.dataset.freilos) {
         btn.addEventListener('click', () => resolveFreilos(btn.getAttribute('data-id')));
