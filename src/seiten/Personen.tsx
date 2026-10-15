@@ -10,6 +10,7 @@ import AuskunftKnoepfe from './AuskunftKnoepfe';
 import { EinwilligungLeitung } from './Einwilligungen';
 import { rollenText } from '../rollen';
 import { Modal } from '../modal';
+import SpielerZusammenfuehren from './SpielerZusammenfuehren';
 
 type Entwurf = Omit<Person, 'id' | 'erstellt_am' | 'geaendert_am'> & { id: string | null };
 type EntwurfIntern = Omit<PersonIntern, 'person_id' | 'verein_id'>;
@@ -265,6 +266,18 @@ export default function Personen({ kontoOeffnen }: { kontoOeffnen?: (kontoId: st
   }
   const hatErgebnisse = (b: Bindung | null) => !!b && b.partien + b.teilnahmen + b.aufnahmen > 0;
 
+  // Turniere, in denen der Spieler steht (als Teilnehmer oder in einer Partie), nach Datum
+  async function turniereVon(id: string): Promise<{ name: string; datum: string }[]> {
+    const [tn, pt] = await Promise.all([
+      supabase.from('turnier_teilnehmer').select('turnier_id').eq('person_id', id),
+      supabase.from('partien').select('turnier_id').or(`spieler_a.eq.${id},spieler_b.eq.${id},partner_a.eq.${id},partner_b.eq.${id}`)
+    ]);
+    const ids = [...new Set([...(tn.data ?? []), ...(pt.data ?? [])].map((z) => z.turnier_id).filter((x): x is string => !!x))];
+    if (ids.length === 0) return [];
+    const { data } = await supabase.from('turniere').select('name, datum').in('id', ids).order('datum');
+    return data ?? [];
+  }
+
   // Eine Person wird nur geloescht, wenn nichts an ihr haengt. Ergebnisse
   // duerfen nicht verschwinden, deshalb gibt es sonst "Ausgetreten" oder,
   // fuer den Vereins-Administrator, "Anonymisieren".
@@ -279,14 +292,27 @@ export default function Personen({ kontoOeffnen }: { kontoOeffnen?: (kontoId: st
 
     if (partien + teilnahmen + aufnahmen > 0) {
       const teile = [
-        partien > 0 ? `${partien} Partien` : null,
-        teilnahmen > 0 ? `${teilnahmen} Turnierteilnahmen` : null,
+        partien > 0 ? `${partien} ${partien === 1 ? 'Partie' : 'Partien'}` : null,
+        teilnahmen > 0 ? `${teilnahmen} ${teilnahmen === 1 ? 'Turnierteilnahme' : 'Turnierteilnahmen'}` : null,
         aufnahmen > 0 ? `${aufnahmen} 14.1-Aufnahmen` : null
       ].filter(Boolean);
+      const turniere = await turniereVon(id);
+      const liste =
+        turniere.length > 0
+          ? `\n\n${turniere.length === 1 ? 'Turnier' : 'Turniere'}:\n` +
+            turniere
+              .slice(0, 8)
+              .map((t) => `• ${t.name} (${new Date(`${t.datum}T12:00:00`).toLocaleDateString('de-DE')})`)
+              .join('\n') +
+            (turniere.length > 8 ? `\n• und ${turniere.length - 8} weitere` : '')
+          : '';
       const frage =
-        `${name} kann nicht gelöscht werden: ${teile.join(', ')} hängen daran.\n\n` +
+        `${name} kann nicht gelöscht werden: ${teile.join(', ')} hängen daran.${liste}\n\n` +
         'Stattdessen auf „Ausgetreten“ setzen? Der Spieler verschwindet dann aus Auswahllisten und Ranglisten, ' +
-        'die Ergebnisse bleiben erhalten.';
+        'die Ergebnisse bleiben erhalten.' +
+        (darfAnonymisieren
+          ? '\n\nIst es ein doppelter Eintrag desselben Spielers? Dann besser abbrechen, den richtigen Spieler öffnen und dort „Doppelten Eintrag übernehmen“ nutzen.'
+          : '');
       if (!(await fragen(frage, 'Ausgetreten'))) return;
       const { error } = await supabase.from('personen').update({ status: 'ausgetreten' }).eq('id', id);
       if (error) return setFehler(error.message);
@@ -607,6 +633,13 @@ export default function Personen({ kontoOeffnen }: { kontoOeffnen?: (kontoId: st
                   </button>
                 </p>
               ))}
+
+            {darfAnonymisieren && verein && entwurf.id && !entwurf.anonymisiert_am && (() => {
+              const offen = personen.find((p) => p.id === entwurf.id);
+              return offen ? (
+                <SpielerZusammenfuehren vereinId={verein.id} behalten={offen} personen={personen} fertig={() => laden(verein.id)} />
+              ) : null;
+            })()}
 
             {fehler && <p className="fehler">{fehler}</p>}
             {meldung && <p className="meldung">{meldung}</p>}
