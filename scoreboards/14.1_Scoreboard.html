@@ -146,7 +146,7 @@
     width: fit-content;
     max-width: 100%;
     border-radius: 1.5vmin;
-    padding: 0.6vmin 1.5vmin 1vmin;
+    padding: 0.6vmin 1.5vmin 0.4vmin;
     font-size: 6vmin;
     font-weight: bold;
   }
@@ -198,7 +198,9 @@
     font-size: 30vmin;
     font-weight: bold;
     user-select: none;
-    line-height: 1;
+    /* Ziffern haben keine Unterlaengen: knappe Zeilenhoehe, damit die gruene
+       Aktiv-Flaeche nicht in den Hinweis darunter ragt */
+    line-height: 0.82;
   }
 
   #s1 {
@@ -217,7 +219,7 @@
     font-weight: bold;
     line-height: 1;
     padding: 0 1vmin;
-    margin-top: 20.3vmin;   /* auf Ziffernmitte; alles vmin-basiert, traegt ueber Bildschirmgroessen */
+    margin-top: 17.6vmin;   /* auf Ziffernmitte (zur Zeilenhoehe 0.82 der Ziffern); alles vmin-basiert, traegt ueber Bildschirmgroessen */
     position: relative;     /* Anker fuer das Mini-Protokoll */
   }
 
