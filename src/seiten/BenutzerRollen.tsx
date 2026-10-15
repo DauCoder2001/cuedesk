@@ -7,6 +7,7 @@ import { Pflichthinweis, usePflicht } from '../pflicht';
 import { useUngespeichert } from '../ungespeichert';
 import { ROLLEN, rollenText } from '../rollen';
 import type { Benutzer, Person, Rolle } from '../datenbank.types';
+import { personName } from '../namen';
 
 type Konto = Benutzer & {
   rollen: Rolle[];
@@ -16,7 +17,8 @@ type Konto = Benutzer & {
 
 const STATUS_NAME: Record<string, string> = { mitglied: 'Mitglied', gast: 'Gast', ausgetreten: 'Ausgetreten' };
 // Spieler in den Auswahllisten mit Status, damit Gast und Ausgetreten auffallen
-const spielerText = (p: Person) => `${p.nachname}, ${p.vorname} · ${STATUS_NAME[p.status] ?? p.status}`;
+// Wie auf der Seite Spieler: "Vorname Nachname", nach Vorname sortiert
+const spielerText = (p: Person) => `${personName(p)} · ${STATUS_NAME[p.status] ?? p.status}`;
 
 // Seite "Konten und Rollen". "start": Konto, das gleich geoeffnet wird
 // (Sprung von der Spielerseite).
@@ -60,7 +62,7 @@ export default function BenutzerRollen({ start = null }: { start?: string | null
     if (!verein) return;
     const [rollenAntwort, personenAntwort, rechteAntwort, verknuepfungAntwort] = await Promise.all([
       supabase.from('benutzer_rollen').select('benutzer_id, rolle').eq('verein_id', verein.id),
-      supabase.from('personen').select('*').eq('verein_id', verein.id).order('nachname'),
+      supabase.from('personen').select('*').eq('verein_id', verein.id).order('vorname').order('nachname'),
       supabase.from('benutzer_rechte').select('*').eq('verein_id', verein.id),
       supabase.from('benutzer_personen').select('benutzer_id, person_id').eq('verein_id', verein.id)
     ]);
