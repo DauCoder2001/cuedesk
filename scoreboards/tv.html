@@ -189,8 +189,12 @@
             // CueDesk: auch mit Ausspielziel; dieselbe Regel wie bei 14.1 und auf Live/Zuschauen
             if (tournamentRunning && !tableData.tournamentMatchId) extraBadge += ` <span class="game-badge" style="background:#6c757d;">Freies Spiel</span>`;
 
+            // CueDesk: Disziplin der Partie (vom Tablet beim Start mitgeschrieben);
+            // beim freien Spiel steht sie erst beim Speichern fest
+            const disziplin = tableData.discipline || '8/9/10-Ball';
+
             container.innerHTML = `
-              <div class="table-title">Tisch ${i} <span class="game-badge">Pool</span>${extraBadge}</div>
+              <div class="table-title">Tisch ${i} <span class="game-badge">${esc(disziplin)}</span>${extraBadge}</div>
               <div class="matchup">
                 <div class="p1">${esc(tableData.player1 || "Spieler 1")}</div>
                 <div class="score">
