@@ -553,6 +553,23 @@ tr.klickbar:hover td { background: var(--flaeche-2); }
 .linkknopf { border: none; background: transparent; color: var(--akzent); padding: 0; font-size: 14px; text-align: left; }
 .linkknopf:disabled { color: var(--text-leise); cursor: default; }
 .turnierzweier { display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); gap: 80px; }
+/* Spielplan: alle Runden untereinander, kraeftiger Balken zwischen den Runden,
+   farbige Marke je Gruppe (1 = A gruen, 2 = B blau, 3 = C orange, 4 = D lila) */
+.spielplanliste { position: relative; margin-top: 8px; }
+.spielplanrunde { border-top: 3px solid var(--text); padding-top: 6px; margin-top: 14px; scroll-margin-top: 140px; }
+.spielplanrunde:first-child { border-top: none; margin-top: 0; padding-top: 0; }
+.spielplanrunde .hinweis { margin: 6px 0 0; }
+.gruppenmarke { display: inline-block; color: #fff; border-radius: 4px; padding: 1px 8px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+.filterzeile .gruppenmarke { margin-right: 4px; }
+.gruppe-A { background: #2f9a76; }
+.gruppe-B { background: #3a7fbf; }
+.gruppe-C { background: #c95300; }
+.gruppe-D { background: #8a44ad; }
+.gruppe-neutral { background: #6b6b66; }
+/* Breites Fenster: eigener Scrollbalken, die Teilnehmer bleiben stehen */
+@media (min-width: 1181px) {
+  .spielplanliste { max-height: calc(100vh - 200px); min-height: 300px; overflow-y: auto; padding-right: 8px; }
+}
 /* Darunter passen Teilnehmer (mit Rating) und Spielplan nicht mehr nebeneinander */
 @media (max-width: 1180px) { .turnierzweier { grid-template-columns: 1fr; } }
 /* Gruppentabellen: so viele nebeneinander, wie mit mindestens 300 px passen */

@@ -129,7 +129,6 @@ export default function TurnierAnsicht({
   const [modusWahl, setModusWahl] = useState<WaehlbarerModus | null>(null);
   const [suche, setSuche] = useState('');
   const [gastName, setGastName] = useState('');
-  const [abschnitt, setAbschnitt] = useState<string | null>(null);
   // Markierte Teilnehmer (hoechstens zwei): Ihre Partie wird im Spielplan
   // hervorgehoben. Nur Anzeige, nichts wird gespeichert.
   const [markiert, setMarkiert] = useState<string[]>([]);
@@ -452,7 +451,7 @@ export default function TurnierAnsicht({
   // Abschnitte des Spielplans: Runden, bei Gruppen je Gruppe, dazu Phase 2,
   // die KO-Runden und Phase 3
   const abschnitte = useMemo(() => {
-    const karte = new Map<string, { schluessel: string; zeile: string; titel: string; ordnung: string; partien: Partie[] }>();
+    const karte = new Map<string, { schluessel: string; zeile: string; titel: string; ordnung: string; runde: number; partien: Partie[] }>();
     partien.forEach((p) => {
       const r = p.runde ?? 0;
       const [schluessel, zeile, titel, ordnung] =
@@ -465,12 +464,72 @@ export default function TurnierAnsicht({
               : p.gruppe
             ? [`${p.gruppe}-${r}`, p.gruppe, `Runde ${r}`, `${p.gruppe}${String(r).padStart(3, '0')}`]
             : [`r${r}`, '', `Runde ${r}`, String(r).padStart(3, '0')];
-      const a = karte.get(schluessel) ?? { schluessel, zeile, titel, ordnung, partien: [] };
+      const a = karte.get(schluessel) ?? { schluessel, zeile, titel, ordnung, runde: r, partien: [] };
       a.partien.push(p);
       karte.set(schluessel, a);
     });
     return [...karte.values()].sort((a, b) => a.ordnung.localeCompare(b.ordnung));
   }, [partien]);
+
+  // Reihenfolge in der Spielplan-Liste: Gruppenrunden abwechselnd (A 1, B 1,
+  // A 2, B 2 ...), danach Duelle, KO-Runde und Platzierungsspiele
+  const listenAbschnitte = useMemo(() => {
+    const rang = (a: { zeile: string; ordnung: string; runde: number }) =>
+      istGruppenzeile(a.zeile) || a.zeile === '' ? `0${String(a.runde).padStart(3, '0')}${a.zeile}` : `1${a.ordnung}`;
+    return [...abschnitte].sort((a, b) => rang(a).localeCompare(rang(b)));
+  }, [abschnitte]);
+
+  // Spielplan als Liste mit eigenem Scrollbalken; die Rundenknoepfe springen.
+  // Beim Oeffnen steht die Liste bei der ersten Runde mit offenen Spielen.
+  const listeRef = useRef<HTMLDivElement>(null);
+  const abschnittRefs = useRef(new Map<string, HTMLDivElement>());
+  const [sichtbar, setSichtbar] = useState<string | null>(null); // Runde oben in der Liste
+  const [sprung, setSprung] = useState(0);
+  const sprungZiel = useRef<string | null>(null); // gewaehlter, noch nicht ausgefuehrter Sprung
+  const ersterSprung = useRef(false);
+  const listeScrollt = () => Boolean(listeRef.current && getComputedStyle(listeRef.current).overflowY === 'auto');
+  // Liefert true, wenn die Runde gefunden wurde. Die ganze Seite wird nur auf
+  // ausdruecklichen Wunsch gescrollt (schmales Fenster ohne eigenen Balken).
+  function zumAbschnitt(schluessel: string, seiteErlaubt: boolean): boolean {
+    const el = abschnittRefs.current.get(schluessel);
+    const box = listeRef.current;
+    if (!el || !box) return false;
+    if (listeScrollt()) box.scrollTo({ top: el.offsetTop, behavior: ersterSprung.current ? 'smooth' : 'auto' });
+    else if (seiteErlaubt) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setSichtbar(schluessel);
+    return true;
+  }
+  function springen(schluessel: string) {
+    sprungZiel.current = schluessel;
+    setSprung((n) => n + 1);
+  }
+  // Nach neuer Auslosung oder zurueckgesetzter Phase: wieder zur ersten offenen Runde
+  function sprungNeu() {
+    sprungZiel.current = null;
+    ersterSprung.current = false;
+    setSprung((n) => n + 1);
+  }
+  useEffect(() => {
+    const erste = abschnitte.find((a) => a.partien.some((p) => p.status !== 'beendet')) ?? abschnitte[0];
+    const ziel = sprungZiel.current ?? (ersterSprung.current ? null : erste?.schluessel ?? null);
+    if (!ziel) return;
+    if (zumAbschnitt(ziel, sprungZiel.current !== null)) {
+      sprungZiel.current = null;
+      ersterSprung.current = true;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- nur bei neuem Plan oder Sprung
+  }, [abschnitte, sprung]);
+  // Welche Runde steht oben? (fuer den hervorgehobenen Rundenknopf)
+  function beimScrollen() {
+    const box = listeRef.current;
+    if (!box || box.scrollTop + box.clientHeight >= box.scrollHeight - 2) return; // am Ende: Wahl behalten
+    let oben: string | null = null;
+    for (const a of listenAbschnitte) {
+      const el = abschnittRefs.current.get(a.schluessel);
+      if (el && el.offsetTop <= box.scrollTop + 8) oben = a.schluessel;
+    }
+    if (oben) setSichtbar(oben);
+  }
 
   if (!verein) return null;
   if (!turnier) {
@@ -712,7 +771,7 @@ export default function TurnierAnsicht({
       .eq('id', turnier.id);
     if (error) setFehler(error.message);
     setArbeitet(false);
-    setAbschnitt(null);
+    sprungNeu();
     await laden();
   }
 
@@ -1330,7 +1389,7 @@ export default function TurnierAnsicht({
     }
     await einstellungenSetzen({ phase2: p2 });
     setArbeitet(false);
-    setAbschnitt('P2');
+    springen('P2');
     await laden();
   }
 
@@ -1343,7 +1402,7 @@ export default function TurnierAnsicht({
     const neu = { ...einstellungen };
     delete neu.phase2;
     await supabase.from('turniere').update({ einstellungen: neu }).eq('id', turnier.id);
-    setAbschnitt(null);
+    sprungNeu();
     setMeldung('Platzierungsduelle zurückgesetzt.');
     await laden();
   }
@@ -1441,7 +1500,7 @@ export default function TurnierAnsicht({
     setTurnier({ ...turnier, einstellungen: neu });
     await koAbgleichen(partien, ko);
     setArbeitet(false);
-    setAbschnitt(null);
+    sprungNeu();
   }
 
   async function koZuruecksetzen() {
@@ -1454,7 +1513,7 @@ export default function TurnierAnsicht({
     delete neu.ko;
     delete neu.phase3;
     await supabase.from('turniere').update({ einstellungen: neu }).eq('id', turnier.id);
-    setAbschnitt(null);
+    sprungNeu();
     setMeldung('KO-Runde zurückgesetzt.');
     await laden();
   }
@@ -1494,7 +1553,7 @@ export default function TurnierAnsicht({
     }
     await einstellungenSetzen({ phase3: { reihung, abPlatz } });
     setArbeitet(false);
-    setAbschnitt('P3');
+    springen('P3');
     await laden();
   }
 
@@ -1507,7 +1566,7 @@ export default function TurnierAnsicht({
     const neu = { ...einstellungen };
     delete neu.phase3;
     await supabase.from('turniere').update({ einstellungen: neu }).eq('id', turnier.id);
-    setAbschnitt(null);
+    sprungNeu();
     setMeldung('Platzierungsspiele zurückgesetzt.');
     await laden();
   }
@@ -1585,11 +1644,6 @@ export default function TurnierAnsicht({
           .slice(0, 8)
       : [];
 
-  // Angezeigter Abschnitt: gewaehlt, sonst der erste mit offenem Spiel
-  const aktiv =
-    abschnitte.find((a) => a.schluessel === abschnitt) ??
-    abschnitte.find((a) => a.partien.some((p) => p.status !== 'beendet')) ??
-    abschnitte[0];
   const alleFertig = partien.length > 0 && offeneSpiele === 0;
   const zeilenDerAbschnitte = [...new Set(abschnitte.map((a) => a.zeile))];
   // Gruppenplaetze fixiert (Phase 2 oder KO-Runde gestartet)
@@ -1628,14 +1682,13 @@ export default function TurnierAnsicht({
     setMarkiert(neu);
     const gefunden = neu.length === 2 ? gemeinsamePartie(partien, neu[0], neu[1]) : null;
     const ziel = gefunden ? abschnittVon(gefunden) : undefined;
-    if (ziel) setAbschnitt(ziel.schluessel);
+    if (ziel) springen(ziel.schluessel);
   }
   const abschnittKurz = (a: { zeile: string; titel: string }) =>
     istGruppenzeile(a.zeile) ? `Gruppe ${a.zeile}, ${a.titel}` : a.titel;
 
-  // Wer im angezeigten Abschnitt spielfrei ist
-  const spielfreiText = (() => {
-    if (!aktiv) return '';
+  // Wer in einer Runde spielfrei ist
+  const spielfreiVon = (aktiv: (typeof abschnitte)[number]) => {
     if (aktiv.zeile === 'P2') {
       const p2 = einstellungen.phase2;
       return p2 ? phase2Paare(p2.A, p2.B).spielfrei.map(anzeige).join(', ') : '';
@@ -1653,7 +1706,10 @@ export default function TurnierAnsicht({
       .filter((id) => !spielen.has(id))
       .map(anzeige)
       .join(', ');
-  })();
+  };
+  // Farbige Marke im Kopf jeder Runde
+  const rundenMarke = (a: (typeof abschnitte)[number]) =>
+    istGruppenzeile(a.zeile) ? `Gruppe ${a.zeile} · ${a.titel}` : a.titel;
 
   // Setzungen vor der Auslosung
   const gesetztVorher = gesetztKarte();
@@ -2310,9 +2366,9 @@ export default function TurnierAnsicht({
                     <button
                       key={a.schluessel}
                       type="button"
-                      className={a.schluessel === aktiv?.schluessel ? 'chip aktiv' : 'chip'}
+                      className={a.schluessel === sichtbar ? 'chip aktiv' : 'chip'}
                       title={`${abschnittKurz(a)} im Spielplan anzeigen`}
-                      onClick={() => setAbschnitt(a.schluessel)}
+                      onClick={() => springen(a.schluessel)}
                     >
                       {abschnittKurz(a)}
                       {beendetBei(p) ? ' ✓' : p.tisch_id ? ' (läuft)' : ''}
@@ -2343,7 +2399,7 @@ export default function TurnierAnsicht({
               </div>
               {zeilenDerAbschnitte.map((zeile) => (
                 <div key={zeile} className="filterzeile">
-                  {istGruppenzeile(zeile) && <span className="hinweis">Gruppe {zeile}:</span>}
+                  {istGruppenzeile(zeile) && <span className={`gruppenmarke gruppe-${zeile}`}>Gruppe {zeile}</span>}
                   {zeile === 'KO' && <span className="hinweis">KO-Runde:</span>}
                   {abschnitte
                     .filter((a) => a.zeile === zeile)
@@ -2351,9 +2407,9 @@ export default function TurnierAnsicht({
                       <button
                         key={a.schluessel}
                         type="button"
-                        className={a.schluessel === aktiv?.schluessel ? 'chip aktiv' : 'chip'}
+                        className={a.schluessel === sichtbar ? 'chip aktiv' : 'chip'}
                         title={`${a.titel} im Spielplan anzeigen`}
-                        onClick={() => setAbschnitt(a.schluessel)}
+                        onClick={() => springen(a.schluessel)}
                       >
                         {istGruppenzeile(zeile) ? a.titel.replace('Runde ', '') : a.titel}
                         {a.partien.every(beendetBei) ? ' ✓' : ''}
@@ -2361,36 +2417,62 @@ export default function TurnierAnsicht({
                     ))}
                 </div>
               ))}
-              <table className="tabelle">
-                <thead>
-                  <tr>
-                    <th>Spiel</th>
-                    <th className="rechts">Vorgabe</th>
-                    <th className="rechts">Stand</th>
-                    <th>Status</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(aktiv?.partien ?? []).map((p) => (
-                    <Spielzeile
-                      key={p.id}
-                      partie={p}
-                      markiert={istMarkiert(p, markiert, paar)}
-                      raceTo={p.race_to ?? raceTo}
-                      nameA={anzeige(p.spieler_a)}
-                      nameB={anzeige(p.spieler_b)}
-                      tisch={p.tisch_id ? tische.get(p.tisch_id) ?? null : null}
-                      laufend={laufendText(p)}
-                      bearbeitbar={bearbeitbar && !(istGruppenspiel(p) && mehrgruppig && gruppenGesperrt) && !koGesperrt(p)}
-                      mitVerlauf={darfLeiten}
-                      speichern={(a, b) => void ergebnisSetzen(p, a, b)}
-                      verlauf={() => void verlaufZeigen(p)}
-                      zuruecksetzen={darfLeiten ? () => setRuecksetzPartie(p) : undefined}
-                    />
-                  ))}
-                </tbody>
-              </table>
+              <div className="spielplanliste" ref={listeRef} onScroll={beimScrollen}>
+                {listenAbschnitte.map((a) => {
+                  const frei = spielfreiVon(a);
+                  return (
+                    <div
+                      key={a.schluessel}
+                      className="spielplanrunde"
+                      ref={(el) => {
+                        if (el) abschnittRefs.current.set(a.schluessel, el);
+                        else abschnittRefs.current.delete(a.schluessel);
+                      }}
+                    >
+                      <table className="tabelle">
+                        <thead>
+                          <tr>
+                            <th>
+                              Spiel{' '}
+                              <span className={`gruppenmarke ${istGruppenzeile(a.zeile) ? `gruppe-${a.zeile}` : 'gruppe-neutral'}`}>
+                                {rundenMarke(a)}
+                              </span>
+                            </th>
+                            <th className="rechts">Vorgabe</th>
+                            <th className="rechts">Stand</th>
+                            <th>Status</th>
+                            <th></th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {a.partien.map((p) => (
+                            <Spielzeile
+                              key={p.id}
+                              partie={p}
+                              markiert={istMarkiert(p, markiert, paar)}
+                              raceTo={p.race_to ?? raceTo}
+                              nameA={anzeige(p.spieler_a)}
+                              nameB={anzeige(p.spieler_b)}
+                              tisch={p.tisch_id ? tische.get(p.tisch_id) ?? null : null}
+                              laufend={laufendText(p)}
+                              bearbeitbar={bearbeitbar && !(istGruppenspiel(p) && mehrgruppig && gruppenGesperrt) && !koGesperrt(p)}
+                              mitVerlauf={darfLeiten}
+                              speichern={(x, y) => void ergebnisSetzen(p, x, y)}
+                              verlauf={() => void verlaufZeigen(p)}
+                              zuruecksetzen={darfLeiten ? () => setRuecksetzPartie(p) : undefined}
+                            />
+                          ))}
+                        </tbody>
+                      </table>
+                      {frei && (
+                        <p className="hinweis">
+                          {a.zeile === 'P3' ? 'Ohne Gegner' : 'Spielfrei'}: {frei}
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
               {ruecksetzPartie && verein && (
                 <ZuruecksetzenDialog
                   partie={ruecksetzPartie}
@@ -2399,13 +2481,6 @@ export default function TurnierAnsicht({
                   abbrechen={() => setRuecksetzPartie(null)}
                   fertig={() => void zurueckgesetzt(ruecksetzPartie)}
                 />
-              )}
-              {spielfreiText && (
-                <p className="hinweis">
-                  {aktiv?.zeile === 'P3' ? 'Ohne Gegner' : 'Spielfrei'}
-                  {aktiv && !['P2', 'P3'].includes(aktiv.zeile) ? ` in ${aktiv.zeile ? `Gruppe ${aktiv.zeile}, ` : ''}${aktiv.titel}` : ''}:{' '}
-                  {spielfreiText}
-                </p>
               )}
             </section>
           </div>
