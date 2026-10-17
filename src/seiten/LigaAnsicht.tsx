@@ -23,6 +23,7 @@ import { kaderHinweise } from '../mannschaften';
 import { schutzwortPruefen } from '../schutzwort';
 import { STATUS_TEXT } from './Turniere';
 import SpielberichtImport from './SpielberichtImport';
+import SpieltagAendern from './SpieltagAendern';
 import LiveSchalter from './LiveSchalter';
 import ChatSchalter from './ChatSchalter';
 import OeffentlicherLink from './OeffentlicherLink';
@@ -227,6 +228,7 @@ export default function LigaAnsicht({
   const [schutzFrage, setSchutzFrage] = useState(false);
   const [ruecksetzPartie, setRuecksetzPartie] = useState<Partie | null>(null); // Partie zuruecksetzen (Dialog)
   const [importOffen, setImportOffen] = useState(false);
+  const [aendernOffen, setAendernOffen] = useState(false); // "Spieltag ändern" (nur in Vorbereitung)
   // Halbe Aufstellung: solange nur eine Seite gewaehlt ist, gibt es noch keine
   // Partie in der Datenbank. Die Wahl haelt deshalb die Ansicht fest.
   // Im Doppel zusaetzlich heim2/gast2, der zweite Spieler je Seite.
@@ -1215,6 +1217,15 @@ export default function LigaAnsicht({
           <div className="kopfrechts">
           <div className="knopfpaar kopfaktionen">
             <span className={`marke ${turnier.status === 'laeuft' ? 'livelaeuft' : ''}`}>{STATUS_TEXT[turnier.status]}</span>
+            {bearbeitbar && teile.every((x) => x.status === 'geplant') && turnier.status === 'geplant' && (
+              <button
+                type="button"
+                title="Name, Datum, Liga, Spieltag, Heimrecht, eigene Mannschaft und Gegner korrigieren – für alle Begegnungen dieses Spieltags. Nur in Vorbereitung."
+                onClick={() => setAendernOffen(true)}
+              >
+                Spieltag ändern
+              </button>
+            )}
             {bearbeitbar && !istDoppel && (
               <button type="button" title="Den Spielbericht des Verbands einlesen und die Ergebnisse in diese Begegnung übernehmen. Vorher zeigt eine Vorschau jede Partie." onClick={() => setImportOffen(true)}>
                 Spielbericht einlesen
@@ -1609,6 +1620,20 @@ export default function LigaAnsicht({
             </button>
           </div>
         </Modal>
+      )}
+      {aendernOffen && verein && (
+        <SpieltagAendern
+          ids={teile.length > 0 ? teile.map((x) => x.id) : [turnier.id]}
+          mannschaften={mannschaften}
+          saisonbeginn={vereinsEinstellungen(verein.einstellungen).saisonbeginn}
+          vereinName={verein.name}
+          schliessen={() => setAendernOffen(false)}
+          fertig={(hinweis) => {
+            setAendernOffen(false);
+            setMeldung(hinweis);
+            void laden();
+          }}
+        />
       )}
       {importOffen && (
         <SpielberichtImport
