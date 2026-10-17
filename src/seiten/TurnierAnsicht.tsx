@@ -18,6 +18,7 @@ import Platz from './Platz';
 import { diffText, LEERE_BILANZ, turnierBilanz } from '../turnier-bilanz';
 import ZuruecksetzenDialog from './ZuruecksetzenDialog';
 import { zuruecksetzbar } from '../partie-zuruecksetzen';
+import { gemeinsamePartie, istMarkiert, markierungUmschalten } from '../markierung';
 import { useLaufendeStaende } from '../laufende-staende';
 import { modusOptionen, modusVorschlag } from '../modus-wahl';
 import type { WaehlbarerModus } from '../modus-wahl';
@@ -129,6 +130,9 @@ export default function TurnierAnsicht({
   const [suche, setSuche] = useState('');
   const [gastName, setGastName] = useState('');
   const [abschnitt, setAbschnitt] = useState<string | null>(null);
+  // Markierte Teilnehmer (hoechstens zwei): Ihre Partie wird im Spielplan
+  // hervorgehoben. Nur Anzeige, nichts wird gespeichert.
+  const [markiert, setMarkiert] = useState<string[]>([]);
   const [tausch, setTausch] = useState<{ raus: string; von: string; nach: string } | null>(null);
   const [nachtrag, setNachtrag] = useState<{ ziel: string; suche: string; gast: string } | null>(null);
   const [verlauf, setVerlauf] = useState<{ partie: Partie; zeilen: Aenderungszeile[] } | null>(null);
@@ -1591,6 +1595,27 @@ export default function TurnierAnsicht({
   const nichtImKo = koFest ? nichtQualifiziert(gruppenListen, koFest.seeds) : [];
   const offenP3 = p3Partien.filter((x) => !beendetBei(x)).length;
 
+  // Markierte Teilnehmer: gemeinsame Partie, Abschnitte des einzelnen Spielers
+  const abschnittVon = (p: Partie) => abschnitte.find((a) => a.partien.some((x) => x.id === p.id));
+  const paar = markiert.length === 2 ? gemeinsamePartie(partien, markiert[0], markiert[1]) : null;
+  const abschnitteDesMarkierten =
+    markiert.length === 1
+      ? abschnitte.flatMap((a) => {
+          const p = a.partien.find((x) => x.spieler_a === markiert[0] || x.spieler_b === markiert[0]);
+          return p ? [{ a, p }] : [];
+        })
+      : [];
+  // Ankreuzen; bei zwei Markierten springt der Spielplan zu ihrer Partie
+  function markieren(id: string) {
+    const neu = markierungUmschalten(markiert, id);
+    setMarkiert(neu);
+    const gefunden = neu.length === 2 ? gemeinsamePartie(partien, neu[0], neu[1]) : null;
+    const ziel = gefunden ? abschnittVon(gefunden) : undefined;
+    if (ziel) setAbschnitt(ziel.schluessel);
+  }
+  const abschnittKurz = (a: { zeile: string; titel: string }) =>
+    istGruppenzeile(a.zeile) ? `Gruppe ${a.zeile}, ${a.titel}` : a.titel;
+
   // Wer im angezeigten Abschnitt spielfrei ist
   const spielfreiText = (() => {
     if (!aktiv) return '';
@@ -2179,22 +2204,34 @@ export default function TurnierAnsicht({
                   {ratingAus ? 'Rating einblenden' : 'Rating ausblenden'}
                 </button>
               </div>
-              <table className="tabelle kompakt">
+              <table className="tabelle kompakt voll">
                 <thead>
                   <tr>
                     <th>Nr.</th>
                     <th className="namenspalte">Name</th>
+                    <th className="markierspalte" title="Zwei Spieler ankreuzen: ihre Partie wird im Spielplan hervorgehoben.">
+                      ✓
+                    </th>
                     {mehrgruppig && <th>Gruppe</th>}
                     {!ratingAus && <th className="rechts">Rating</th>}
                   </tr>
                 </thead>
                 <tbody>
                   {aufstellung.map((t) => (
-                    <tr key={t.person_id}>
+                    <tr key={t.person_id} className={markiert.includes(t.person_id) ? 'markiert' : ''}>
                       <td>{t.startnummer}</td>
                       <td>
                         {anzeige(t.person_id)}
                         {person(t.person_id)?.status === 'gast' && <span className="marke">Gast</span>}
+                      </td>
+                      <td className="markierspalte">
+                        <input
+                          type="checkbox"
+                          aria-label={`${anzeige(t.person_id)} markieren`}
+                          title="Markieren: Partien dieses Spielers im Spielplan hervorheben"
+                          checked={markiert.includes(t.person_id)}
+                          onChange={() => markieren(t.person_id)}
+                        />
                       </td>
                       {mehrgruppig && (
                         <td>
@@ -2241,6 +2278,34 @@ export default function TurnierAnsicht({
                   ))}
                 </tbody>
               </table>
+              {markiert.length > 0 && (
+                <div className="markierzeile">
+                  <span>
+                    {markiert.length === 2
+                      ? `Markiert: ${markiert.map(anzeige).join(', ')} · ${
+                          paar ? abschnittKurz(abschnittVon(paar) ?? { zeile: '', titel: '' }) : 'Keine gemeinsame Partie'
+                        }`
+                      : abschnitteDesMarkierten.length > 0
+                        ? `Spiele von ${anzeige(markiert[0])}:`
+                        : `${anzeige(markiert[0])}: keine Partie im Spielplan`}
+                  </span>
+                  {abschnitteDesMarkierten.map(({ a, p }) => (
+                    <button
+                      key={a.schluessel}
+                      type="button"
+                      className={a.schluessel === aktiv?.schluessel ? 'chip aktiv' : 'chip'}
+                      title={`${abschnittKurz(a)} im Spielplan anzeigen`}
+                      onClick={() => setAbschnitt(a.schluessel)}
+                    >
+                      {abschnittKurz(a)}
+                      {beendetBei(p) ? ' ✓' : p.tisch_id ? ' (läuft)' : ''}
+                    </button>
+                  ))}
+                  <button type="button" className="klein" title="Alle Häkchen entfernen" onClick={() => setMarkiert([])}>
+                    Markierung aufheben
+                  </button>
+                </div>
+              )}
               {!ratingAus && (
                 <p className="hinweis">
                   {irgendeinErgebnis
@@ -2294,6 +2359,7 @@ export default function TurnierAnsicht({
                     <Spielzeile
                       key={p.id}
                       partie={p}
+                      markiert={istMarkiert(p, markiert, paar)}
                       raceTo={p.race_to ?? raceTo}
                       nameA={anzeige(p.spieler_a)}
                       nameB={anzeige(p.spieler_b)}
@@ -2840,6 +2906,7 @@ function Tabelle(props: {
 // des Feldes oder mit Enter.
 function Spielzeile(props: {
   partie: Partie;
+  markiert?: boolean; // Partie markierter Teilnehmer, hervorgehoben
   raceTo: number;
   nameA: string;
   nameB: string;
@@ -2909,7 +2976,7 @@ function Spielzeile(props: {
     );
 
   return (
-    <tr ref={zeile} className={fertig ? 'gespielt' : ''}>
+    <tr ref={zeile} className={[fertig ? 'gespielt' : '', props.markiert ? 'markiert' : ''].filter(Boolean).join(' ')}>
       <td>
         {props.nameA} – {props.nameB}
       </td>
