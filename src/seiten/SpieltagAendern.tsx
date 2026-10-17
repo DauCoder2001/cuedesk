@@ -81,18 +81,29 @@ export default function SpieltagAendern({
       liga: ligaFrei ? eingabe.liga : alt.liga
     };
     setArbeitet(true);
+    // Gespeichert gilt erst, wenn jede Begegnung wirklich geaendert wurde: Trifft
+    // das Update keine Zeile (inzwischen gestartet, fehlende Rechte), meldet die
+    // Datenbank keinen Fehler, sondern liefert nur nichts zurueck.
+    const nicht: string[] = [];
     for (const z of spieltagAenderung(teile, neu)) {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('turniere')
         .update({ name: z.name, datum: z.datum, einstellungen: z.einstellungen })
         .eq('id', z.id)
-        .eq('status', 'geplant');
+        .eq('status', 'geplant')
+        .select('id');
       if (error) {
         setArbeitet(false);
         return setFehler(error.message);
       }
+      if ((data ?? []).length !== 1) nicht.push(z.name);
     }
     setArbeitet(false);
+    if (nicht.length > 0) {
+      return setFehler(
+        `Nicht gespeichert: ${nicht.join(', ')}. Vermutlich wurde die Begegnung inzwischen gestartet oder es fehlen die Rechte. Bitte neu laden und prüfen.`
+      );
+    }
     const mitAufstellung = teile.some(
       (t) => Object.keys(((t.einstellungen ?? {}) as TurnierEinstellungen).liga?.aufstellung ?? {}).length > 0
     );
