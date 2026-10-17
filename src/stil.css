@@ -231,6 +231,8 @@ ul.schlicht { list-style: none; padding: 0; margin: 0; display: flex; flex-direc
 
 .bearbeiten { padding: 14px 16px; display: flex; flex-direction: column; gap: 14px; }
 .bearbeitenkopf { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+/* Ueberschrift mit Knopf direkt dahinter (Teilnehmer: "Spieler nachtragen") */
+.bearbeitenkopf .kopflinks { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 
 .felder { display: grid; grid-template-columns: repeat(auto-fill, 120px); gap: 10px; }
 .feld { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--text-leise); }

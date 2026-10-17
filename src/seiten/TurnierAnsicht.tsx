@@ -86,6 +86,9 @@ const QUELLE_KURZ: Partial<Record<RatingQuelle, string>> = {
   startwert: 'Startwert'
 };
 
+// Merkzeichen im Browser: Rating-Spalte der Teilnehmer ausgeblendet
+const RATING_AUS = 'cuedesk.turnier.ratingAus';
+
 const zeitText = (iso: string) =>
   new Date(iso).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' });
 
@@ -132,6 +135,25 @@ export default function TurnierAnsicht({
   const [stapel, setStapel] = useState<Rueckgaengig[]>([]);
   const [ruecksetzPartie, setRuecksetzPartie] = useState<Partie | null>(null); // Partie zuruecksetzen (Dialog)
   const [rueckfrage, fragen] = useRueckfrage();
+  // Rating-Spalte der Teilnehmer ausblenden (etwa am Laptop, den die Spieler
+  // sehen); je Geraet gemerkt, fuer alle Turniere
+  const [ratingAus, setRatingAus] = useState(() => {
+    try {
+      return localStorage.getItem(RATING_AUS) === '1';
+    } catch {
+      return false;
+    }
+  });
+  function ratingUmschalten() {
+    const neu = !ratingAus;
+    setRatingAus(neu);
+    try {
+      if (neu) localStorage.setItem(RATING_AUS, '1');
+      else localStorage.removeItem(RATING_AUS);
+    } catch {
+      // ohne Speicher gilt es nur bis zum Neuladen
+    }
+  }
   const [, setTakt] = useState(0);
   // KO-Abgleich fuer den Echtzeit-Kanal; wird bei jedem Zeichnen neu gesetzt
   const abgleichRef = useRef<(liste: Partie[]) => Promise<void>>(async () => {});
@@ -2137,16 +2159,25 @@ export default function TurnierAnsicht({
           <div className="turnierzweier">
             <section className="block">
               <div className="bearbeitenkopf">
-                <h2>Teilnehmer</h2>
-                {nachtragMoeglich && (
-                  <button
-                    type="button"
-                    title="Nachzügler aufnehmen: bereits eingetragene Ergebnisse bleiben erhalten"
-                    onClick={() => setNachtrag({ ziel: nachtragZiele[0], suche: '', gast: '' })}
-                  >
-                    Spieler nachtragen
-                  </button>
-                )}
+                <div className="kopflinks">
+                  <h2>Teilnehmer</h2>
+                  {nachtragMoeglich && (
+                    <button
+                      type="button"
+                      title="Nachzügler aufnehmen: bereits eingetragene Ergebnisse bleiben erhalten"
+                      onClick={() => setNachtrag({ ziel: nachtragZiele[0], suche: '', gast: '' })}
+                    >
+                      Spieler nachtragen
+                    </button>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  title={ratingAus ? 'Rating-Spalte wieder anzeigen.' : 'Rating-Spalte auf diesem Gerät ausblenden, die Vorgaben bleiben.'}
+                  onClick={ratingUmschalten}
+                >
+                  {ratingAus ? 'Rating einblenden' : 'Rating ausblenden'}
+                </button>
               </div>
               <table className="tabelle kompakt">
                 <thead>
@@ -2154,7 +2185,7 @@ export default function TurnierAnsicht({
                     <th>Nr.</th>
                     <th className="namenspalte">Name</th>
                     {mehrgruppig && <th>Gruppe</th>}
-                    <th className="rechts">Rating</th>
+                    {!ratingAus && <th className="rechts">Rating</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -2188,31 +2219,35 @@ export default function TurnierAnsicht({
                           {t.gesetzt && <span className="marke">gesetzt</span>}
                         </td>
                       )}
-                      <td className="rechts">
-                        {t.rating_quelle && QUELLE_KURZ[t.rating_quelle] && (
-                          <span className={`marke vorne quelle-${t.rating_quelle}`}>{QUELLE_KURZ[t.rating_quelle]}</span>
-                        )}
-                        {bearbeitbar && !irgendeinErgebnis ? (
-                          <input
-                            className="zahlfeld"
-                            defaultValue={t.rating_eingefroren ?? ''}
-                            onBlur={(e) => {
-                              if (e.target.value !== String(t.rating_eingefroren ?? '')) void ratingAendern(t.person_id, e.target.value);
-                            }}
-                          />
-                        ) : (
-                          t.rating_eingefroren
-                        )}
-                      </td>
+                      {!ratingAus && (
+                        <td className="rechts">
+                          {t.rating_quelle && QUELLE_KURZ[t.rating_quelle] && (
+                            <span className={`marke vorne quelle-${t.rating_quelle}`}>{QUELLE_KURZ[t.rating_quelle]}</span>
+                          )}
+                          {bearbeitbar && !irgendeinErgebnis ? (
+                            <input
+                              className="zahlfeld"
+                              defaultValue={t.rating_eingefroren ?? ''}
+                              onBlur={(e) => {
+                                if (e.target.value !== String(t.rating_eingefroren ?? '')) void ratingAendern(t.person_id, e.target.value);
+                              }}
+                            />
+                          ) : (
+                            t.rating_eingefroren
+                          )}
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
               </table>
-              <p className="hinweis">
-                {irgendeinErgebnis
-                  ? `Ratings eingefroren am ${turnier.eingefroren_am ? zeitText(turnier.eingefroren_am) : '–'}.`
-                  : 'Bis zum ersten Ergebnis lassen sich die Ratings noch von Hand ändern; die Vorgaben rechnen sich neu.'}
-              </p>
+              {!ratingAus && (
+                <p className="hinweis">
+                  {irgendeinErgebnis
+                    ? `Ratings eingefroren am ${turnier.eingefroren_am ? zeitText(turnier.eingefroren_am) : '–'}.`
+                    : 'Bis zum ersten Ergebnis lassen sich die Ratings noch von Hand ändern; die Vorgaben rechnen sich neu.'}
+                </p>
+              )}
             </section>
 
             <section className="block">
