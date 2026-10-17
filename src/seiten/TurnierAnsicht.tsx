@@ -256,6 +256,19 @@ export default function TurnierAnsicht({
   );
 
   const einstellungen = (turnier?.einstellungen ?? {}) as TurnierEinstellungen;
+  // Erstes Spiel begonnen (am Tablet oder hier): Fernseher einmal von der
+  // Auslosung auf die Live-Tische umschalten. Wer danach wieder die Auslosung
+  // waehlt, behaelt sie.
+  const tvAufLive =
+    darfLeiten &&
+    turnier?.status === 'laeuft' &&
+    einstellungen.tvAnsicht === 'auslosung' &&
+    !einstellungen.tvLiveGewechselt &&
+    partien.some((p) => p.status !== 'geplant' || p.tisch_id !== null);
+  useEffect(() => {
+    if (tvAufLive) void einstellungenSetzen({ tvAnsicht: 'live', tvLiveGewechselt: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- nur beim Wechsel auf "noetig"
+  }, [tvAufLive]);
   // Disziplin wird erst am Spieltag festgelegt (Serie ohne feste Disziplin)
   const disziplinOffen = Boolean(einstellungen.disziplinOffen);
   // Modus wird am Turniertag nach der Teilnehmerzahl festgelegt
@@ -692,6 +705,7 @@ export default function TurnierAnsicht({
         einstellungen: {
           ...einstellungen,
           tvAnsicht: 'auslosung',
+          tvLiveGewechselt: undefined,
           ...(mitKo ? { gruppenzahl, weiter: weiter ?? undefined, paarung } : {})
         }
       })
@@ -780,7 +794,10 @@ export default function TurnierAnsicht({
     if (!turnier) return;
     const aenderung: TurnierEinstellungen = {};
     if (!einstellungen.beginn) aenderung.beginn = new Date().toISOString();
-    if (einstellungen.tvAnsicht === 'auslosung') aenderung.tvAnsicht = 'live';
+    if (einstellungen.tvAnsicht === 'auslosung' && !einstellungen.tvLiveGewechselt) {
+      aenderung.tvAnsicht = 'live';
+      aenderung.tvLiveGewechselt = true;
+    }
     if (Object.keys(aenderung).length > 0) await einstellungenSetzen(aenderung);
   }
 
