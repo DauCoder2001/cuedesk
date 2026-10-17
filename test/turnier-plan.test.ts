@@ -6,6 +6,9 @@ import {
   ergebnisVomTablet,
   fuersTablet,
   laufendeBegegnungen,
+  laufendeTische,
+  listenRang,
+  naechsteSpiele,
   ohneZusatz,
   planStatus,
   rundeGestartet,
@@ -245,5 +248,46 @@ describe('mehrere Liga-Begegnungen zugleich an den Tablets', () => {
     expect(begegnungKennung(zweite)).toEqual({ name: '2. Begegnung', nr: 3 });
     expect(spieltagSchluessel(zweite)).toBe('t1');
     expect(spieltagSchluessel(serie)).toBeNull();
+  });
+});
+
+describe('Naechste Spiele am Fernseher', () => {
+  const partie = (id: string, a: string, b: string, runde: number, gruppe: string, status: PlanPartie['status'] = 'geplant', tisch: string | null = null): PlanPartie => ({
+    id, spieler_a: a, spieler_b: b, race_to: 3, vorgabe_a: 0, vorgabe_b: 0, status, tisch_id: tisch, runde, begonnen: null, gruppe, phase: 'gruppe', disziplin: '9-ball'
+  });
+  const namen: Record<string, string> = { a: 'Anna', b: 'Bert', c: 'Carl', d: 'Dora', e: 'Emil', f: 'Fritz', g: 'Gina', h: 'Hugo' };
+  const plan = tabletSpielplan(
+    [
+      partie('a1', 'a', 'b', 1, 'A', 'beendet'),
+      partie('a2', 'c', 'd', 1, 'A'),
+      partie('b1', 'e', 'f', 1, 'B', 'laeuft', 't1'),
+      partie('b2', 'g', 'h', 1, 'B'),
+      partie('a3', 'a', 'c', 2, 'A'),
+      partie('a4', 'b', 'd', 2, 'A'),
+      partie('b3', 'e', 'g', 2, 'B'),
+      partie('b4', 'f', 'h', 2, 'B')
+    ],
+    (id) => namen[id],
+    (id) => (id === 't1' ? '1' : null)
+  );
+
+  test('offene Spiele in der Reihenfolge der Spielplan-Liste, hoechstens die gewuenschte Zahl', () => {
+    expect(naechsteSpiele(plan, 6).map((s) => s.id)).toEqual(['a2', 'b2', 'a3', 'a4', 'b3', 'b4']);
+    expect(naechsteSpiele(plan, 2).map((s) => s.id)).toEqual(['a2', 'b2']);
+  });
+
+  test('wer gerade an einem anderen Tisch spielt, wird je Seite genannt', () => {
+    const b3 = naechsteSpiele(plan, 6).find((s) => s.id === 'b3');
+    expect(b3?.belegt).toEqual([{ name: 'Emil', tisch: '1' }]);
+    const b4 = naechsteSpiele(plan, 6).find((s) => s.id === 'b4');
+    expect(b4?.belegt).toEqual([{ name: 'Fritz', tisch: '1' }]);
+    expect(naechsteSpiele(plan, 6).find((s) => s.id === 'a2')?.belegt).toEqual([]);
+  });
+
+  test('laufende Tische und Rang der Phasen', () => {
+    expect(laufendeTische(plan).map((e) => e.player1)).toEqual(['Emil']);
+    expect(listenRang({ runde: 2, gruppe: 'B', phase: 'gruppe' }) < listenRang({ runde: 3, gruppe: 'A', phase: 'gruppe' })).toBe(true);
+    expect(listenRang({ runde: 7, gruppe: 'A', phase: 'gruppe' }) < listenRang({ runde: 1, gruppe: null, phase: 'phase2' })).toBe(true);
+    expect(naechsteSpiele(null, 6)).toEqual([]);
   });
 });

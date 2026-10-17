@@ -1918,6 +1918,7 @@ export default function TurnierAnsicht({
                 [
                   ['auslosung', 'Auslosung'],
                   ['live', 'Live-Tische'],
+                  ['naechste', 'Nächste Spiele'],
                   ['results', 'Ergebnis']
                 ] as const
               ).map(([wert, name]) => (

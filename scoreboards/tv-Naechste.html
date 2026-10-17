@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CueDesk – Nächste Spiele</title>
+  <link rel="icon" type="image/svg+xml" href="./img/favicon.svg">
+  <!-- "TV zeigt: Nächste Spiele": die naechsten sechs offenen Paarungen in der
+       Reihenfolge der Spielplan-Liste, mit Hinweis, wer gerade noch an einem
+       anderen Tisch spielt. Gerechnet in js/turnier-plan.ts (naechsteSpiele),
+       Daten aus tournament/active. Stil wie die anderen TV-Seiten. -->
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; background: #111; color: #fff; margin: 0; height: 100vh; overflow: hidden; }
+    /* Auto-Fit: der Inhalt in #tv-stage wird per JS passend auf den Bildschirm skaliert */
+    #tv-viewport { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }
+    #tv-stage { width: 100vw; padding: 4vh 5vw; transform-origin: center center; }
+    .kopf { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 3vh; }
+    .titel { color: #ddd; font-size: 4.5vh; font-weight: bold; }
+    .sub { color: #888; font-size: 2.4vh; }
+    .liste { display: grid; gap: 1.6vh; }
+    .spiel { display: grid; grid-template-columns: 30vw minmax(0, 1fr) auto; align-items: center; gap: 2vw;
+             background: #222; border-radius: 12px; padding: 2.2vh 2vw; }
+    .marke { display: inline-block; color: #fff; border-radius: 6px; padding: 0.5vh 1vw; font-size: 2.2vh; font-weight: bold; white-space: nowrap; }
+    .gruppe-A { background: #2f9a76; }
+    .gruppe-B { background: #3a7fbf; }
+    .gruppe-C { background: #c95300; }
+    .gruppe-D { background: #8a44ad; }
+    .gruppe-neutral { background: #555; }
+    .paar { font-size: 4.4vh; font-weight: bold; overflow-wrap: anywhere; }
+    .p1 { color: #ff4444; }
+    .p2 { color: #4488ff; }
+    .gegen { color: #666; margin: 0 1vw; }
+    .zustand { font-size: 2.6vh; text-align: right; }
+    .bereit { color: #22c55e; }
+    .wartet { color: #e0b050; }
+    .fuss { margin-top: 3vh; color: #888; font-size: 2.4vh; }
+    .empty { text-align: center; color: #666; font-size: 4vh; margin-top: 18vh; }
+  </style>
+</head>
+<body>
+
+  <div id="tv-viewport"><div id="tv-stage">
+    <div class="kopf"><span class="titel">Nächste Spiele</span><span class="sub" id="sub"></span></div>
+    <div class="liste" id="liste"></div>
+    <div class="fuss" id="fuss"></div>
+    <div class="empty" id="empty" style="display:none;"></div>
+  </div></div>
+
+  <script type="module">
+    import { db, ref, onValue, starten } from "./js/anbindung.ts";
+    import { naechsteSpiele, laufendeTische } from "./js/turnier-plan.ts";
+    import { keepScreenAwake } from "./js/wake-lock.js";
+    import { startTvAutofit } from "./js/tv-autofit.js";
+
+    await starten();
+
+    // Namen kommen aus CueDesk - nie als HTML einsetzen
+    const esc = (t) => String(t == null ? '' : t).replace(/[&<>"]/g, (c) =>
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+    keepScreenAwake();   // Bildschirm im Kiosk-Betrieb anhalten (Anzeige ohne Interaktion)
+
+    // Auto-Fit + Overscan wie auf den anderen TV-Seiten
+    let overscanPct = 3;
+    const refit = startTvAutofit(document.getElementById('tv-stage'), () => overscanPct);
+    onValue(ref(db, 'system/tvSettings'), (snap) => {
+      const p = snap.val() && Number(snap.val().overscanPct);
+      overscanPct = Number.isFinite(p) ? p : 3;
+      refit();
+    });
+
+    // Umschaltung am Turnierbildschirm ("TV zeigt")
+    const PAGE_FOR = { auslosung: 'tv-Auslosung.html', live: 'tv.html', naechste: 'tv-Naechste.html', results: 'tv-Turnier-Ergebnis.html', spieltag: 'tv-Spieltag.html' };
+    onValue(ref(db, 'tournament/tvView'), (snap) => {
+      const target = PAGE_FOR[snap.val()] || 'tv.html';
+      if (target !== 'tv-Naechste.html') window.location.href = target;
+    });
+
+    const subEl = document.getElementById('sub');
+    const listeEl = document.getElementById('liste');
+    const fussEl = document.getElementById('fuss');
+    const emptyEl = document.getElementById('empty');
+
+    // Farbe der Gruppe aus der Beschriftung ("Gruppe A · Runde 2")
+    const farbe = (group) => {
+      const g = /^Gruppe ([A-D])\b/.exec(group || '');
+      return g ? 'gruppe-' + g[1] : 'gruppe-neutral';
+    };
+    const tischText = (t) => (t ? 'an Tisch ' + esc(t) : 'an einem anderen Tisch');
+
+    onValue(ref(db, 'tournament/active'), (snap) => {
+      const t = snap.val();
+      const plan = t && t.schedule ? t.schedule : null;
+      const alle = plan ? Object.values(plan) : [];
+      const fertig = alle.filter((e) => e.status === 'completed').length;
+      subEl.textContent = t ? [t.name, alle.length ? fertig + ' von ' + alle.length + ' beendet' : ''].filter(Boolean).join(' · ') : '';
+
+      const spiele = naechsteSpiele(plan, 6);
+      if (spiele.length === 0) {
+        listeEl.innerHTML = '';
+        fussEl.textContent = '';
+        emptyEl.textContent = !t ? 'Gerade läuft kein Turnier.' : alle.some((e) => e.status === 'running') ? 'Alle Spiele sind vergeben.' : 'Keine offenen Spiele.';
+        emptyEl.style.display = 'block';
+        refit();
+        return;
+      }
+      emptyEl.style.display = 'none';
+
+      listeEl.innerHTML = spiele.map(({ eintrag: e, belegt }) => {
+        const marke = [e.begegnung, e.group].filter(Boolean).join(' · ');
+        const zustand = belegt.length === 0
+          ? '<span class="bereit">bereit</span>'
+          : '<span class="wartet">' + belegt.map((b) => esc(b.name) + ' spielt ' + tischText(b.tisch)).join('<br>') + '</span>';
+        return '<div class="spiel">'
+          + '<span>' + (marke ? '<span class="marke ' + farbe(e.group) + '">' + esc(marke) + '</span>' : '') + '</span>'
+          + '<span class="paar"><span class="p1">' + esc(e.player1) + '</span><span class="gegen">–</span><span class="p2">' + esc(e.player2) + '</span></span>'
+          + '<span class="zustand">' + zustand + '</span>'
+          + '</div>';
+      }).join('');
+
+      const laufend = laufendeTische(plan);
+      fussEl.innerHTML = laufend.length
+        ? 'Läuft gerade: ' + laufend.map((e) => (e.table ? 'Tisch ' + esc(e.table) + ' ' : '') + esc(e.player1) + ' – ' + esc(e.player2)).join(' · ')
+        : '';
+      refit();
+    });
+  </script>
+</body>
+</html>

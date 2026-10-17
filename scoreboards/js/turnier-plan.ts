@@ -50,6 +50,11 @@ export type PlanEintrag = {
   // und die Reihenfolge fuer die Auswahl. Bei nur einer Begegnung fehlt beides.
   begegnung?: string | null;
   begegnungNr?: number;
+  // Fuer "Naechste Spiele" am Fernseher: Rang wie in der Spielplan-Liste der
+  // Turnieransicht und die Kennungen je Seite (wer spielt gerade woanders?)
+  reihe?: string;
+  personen1?: string[];
+  personen2?: string[];
 };
 
 export type TabletTurnier = {
@@ -189,10 +194,63 @@ export function tabletSpielplan(
       vorgabe2: p.vorgabe_b,
       discipline: DISZIPLIN_NAME[p.disziplin ?? ''] ?? null,
       innings: p.disziplin === '14-1' ? aufnahmen141 ?? null : null,
-      personen: [p.spieler_a, p.partner_a, p.spieler_b, p.partner_b].filter((id): id is string => Boolean(id))
+      personen: [p.spieler_a, p.partner_a, p.spieler_b, p.partner_b].filter((id): id is string => Boolean(id)),
+      reihe: listenRang(p),
+      personen1: [p.spieler_a, p.partner_a].filter((id): id is string => Boolean(id)),
+      personen2: [p.spieler_b, p.partner_b].filter((id): id is string => Boolean(id))
     };
   }
   return plan;
+}
+
+// Rang in der Spielplan-Liste (wie listenAbschnitte in TurnierAnsicht.tsx):
+// Gruppenrunden abwechselnd (A 1, B 1, A 2 ...), danach Duelle, KO, Phase 3
+export function listenRang(p: Pick<PlanPartie, 'runde' | 'gruppe' | 'phase'>): string {
+  const r = String(p.runde ?? 0).padStart(3, '0');
+  if (p.phase === 'phase2') return '1Z';
+  if (p.phase === 'phase3') return '1Z3';
+  if (p.phase === 'ko') return `1Y${r}`;
+  return `0${r}${p.gruppe ?? ''}`;
+}
+
+export type NaechstesSpiel = {
+  id: string;
+  eintrag: PlanEintrag;
+  belegt: { name: string; tisch: string | null }[]; // Seiten, die gerade woanders spielen
+};
+
+// Die naechsten offenen Spiele (ohne Tisch, beide Spieler bekannt) in der
+// Reihenfolge der Spielplan-Liste. Bei mehreren Liga-Begegnungen zuerst nach
+// Begegnung.
+export function naechsteSpiele(schedule: Record<string, PlanEintrag> | null | undefined, anzahl: number): NaechstesSpiel[] {
+  const alle = Object.entries(schedule ?? {});
+  const tischVon = new Map<string, string | null>();
+  for (const [, e] of alle) {
+    if (e.status === 'running') (e.personen ?? []).forEach((id) => tischVon.set(id, e.table));
+  }
+  const rang = (e: PlanEintrag) => `${String(e.begegnungNr ?? 0).padStart(2, '0')}${e.reihe ?? ''}`;
+  return alle
+    .filter(([, e]) => e.status === 'pending' && e.player1 && e.player2)
+    .map(([id, e], i) => ({ id, e, i }))
+    .sort((a, b) => rang(a.e).localeCompare(rang(b.e)) || a.i - b.i)
+    .slice(0, anzahl)
+    .map(({ id, e }) => {
+      const belegt: NaechstesSpiel['belegt'] = [];
+      const seite = (ids: string[] | undefined, name: string) => {
+        const id = (ids ?? []).find((x) => tischVon.has(x));
+        if (id) belegt.push({ name, tisch: tischVon.get(id) ?? null });
+      };
+      seite(e.personen1, e.player1);
+      seite(e.personen2, e.player2);
+      return { id, eintrag: e, belegt };
+    });
+}
+
+// Laufende Tische fuer die Fusszeile, nach Tischnummer
+export function laufendeTische(schedule: Record<string, PlanEintrag> | null | undefined): PlanEintrag[] {
+  return Object.values(schedule ?? {})
+    .filter((e) => e.status === 'running')
+    .sort((a, b) => Number(a.table ?? 0) - Number(b.table ?? 0));
 }
 
 // ---------- Liga: mehrere Begegnungen zugleich an den Tablets ----------

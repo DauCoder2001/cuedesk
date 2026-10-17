@@ -34,7 +34,8 @@ export default defineConfig(() => ({
         tv: resolve(__dirname, 'scoreboards/tv.html'),
         tvAuslosung: resolve(__dirname, 'scoreboards/tv-Auslosung.html'),
         tvErgebnis: resolve(__dirname, 'scoreboards/tv-Turnier-Ergebnis.html'),
-        tvSpieltag: resolve(__dirname, 'scoreboards/tv-Spieltag.html')
+        tvSpieltag: resolve(__dirname, 'scoreboards/tv-Spieltag.html'),
+        tvNaechste: resolve(__dirname, 'scoreboards/tv-Naechste.html')
       }
     }
   }
