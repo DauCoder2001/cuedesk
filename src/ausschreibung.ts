@@ -242,6 +242,22 @@ export function anmeldestand(
   ];
 }
 
+// Uebersicht einer Ausschreibung: Teilnehmer sind alle in der Teilnehmerliste,
+// ob selbst angemeldet oder von der Turnierleitung eingetragen; dazu die
+// Nachruecker. "ich": Wo steht der eigene Spieler?
+export function ausschreibungUebersicht(
+  anmeldungen: { person_id: string; angemeldet_am: string; abgemeldet_am: string | null }[],
+  teilnehmer: string[],
+  eigene: string | null
+): { teilnehmer: string[]; nachruecker: string[]; ich: 'teilnehmer' | 'nachruecker' | null } {
+  const dabei = [...new Set(teilnehmer)];
+  const nachruecker = anmeldestand(anmeldungen, dabei)
+    .filter((s) => s.art === 'nachruecker')
+    .map((s) => s.person_id);
+  const ich = !eigene ? null : dabei.includes(eigene) ? 'teilnehmer' : nachruecker.includes(eigene) ? 'nachruecker' : null;
+  return { teilnehmer: dabei, nachruecker, ich };
+}
+
 export function aushangDateiname(name: string, datum: string): string {
   const sauber = name
     .replace(/[äÄ]/g, 'ae')

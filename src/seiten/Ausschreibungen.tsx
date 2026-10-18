@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { supabase } from '../supabase';
 import { useSitzung } from '../sitzung';
 import { personName } from '../namen';
-import { anmeldestand, anmeldungOffen, meldeschlussText } from '../ausschreibung';
+import { anmeldungOffen, ausschreibungUebersicht, meldeschlussText } from '../ausschreibung';
 import type { Person, Turnier, TurnierAnmeldung } from '../datenbank.types';
 import type { TurnierEinstellungen } from './Turniere';
 
@@ -97,12 +97,14 @@ export default function Ausschreibungen({
         <tbody>
           {offene.map((t) => {
             const a = (t.einstellungen as TurnierEinstellungen).ausschreibung;
-            const stand = anmeldestand(
+            // Auch von der Turnierleitung eingetragene Spieler zaehlen als Teilnehmer
+            const ueber = ausschreibungUebersicht(
               anmeldungen.filter((x) => x.turnier_id === t.id),
-              teilnehmer.filter((x) => x.turnier_id === t.id).map((x) => x.person_id)
+              teilnehmer.filter((x) => x.turnier_id === t.id).map((x) => x.person_id),
+              eigene ?? null
             );
-            const aktiv = stand.filter((s) => s.art !== 'abgemeldet');
-            const ich = eigene ? stand.find((s) => s.person_id === eigene && s.art !== 'abgemeldet') : undefined;
+            const dabeiNamen = ueber.teilnehmer.map(name).sort((x, y) => x.localeCompare(y, 'de'));
+            const ich = ueber.ich;
             const offen = anmeldungOffen(a, t.status);
             return (
               <tr key={t.id} id={`ausschreibung-${t.id}`} className={t.id === hervorheben ? 'hervorgehoben' : ''}>
@@ -113,25 +115,20 @@ export default function Ausschreibungen({
                     {a?.uhrzeit ? ` · ${a.uhrzeit} Uhr` : ''}
                     {a?.meldeschluss ? ` · Meldeschluss ${meldeschlussText(a.meldeschluss, t.datum)}` : ''}
                     {a?.startgeld ? ` · Startgeld ${a.startgeld}` : ''}
-                    {` · ${aktiv.length} angemeldet`}
+                    {` · ${ueber.teilnehmer.length} Teilnehmer`}
                     {a?.hoechstens ? ` (höchstens ${a.hoechstens})` : ''}
+                    {ueber.nachruecker.length > 0 ? ` · ${ueber.nachruecker.length} Nachrücker` : ''}
                   </div>
-                  {aktiv.length > 0 && (
+                  {(dabeiNamen.length > 0 || ueber.nachruecker.length > 0) && (
                     <div className="hinweis">
-                      {aktiv.map((s, i) => (
-                        <span key={s.person_id}>
-                          {i > 0 && ', '}
-                          {name(s.person_id)}
-                          {s.art === 'nachruecker' && ' (Nachrücker)'}
-                        </span>
-                      ))}
+                      {[...dabeiNamen, ...ueber.nachruecker.map((id) => `${name(id)} (Nachrücker)`)].join(', ')}
                     </div>
                   )}
                 </td>
                 <td className="rechts">
                   {ich && (
-                    <span className={ich.art === 'nachruecker' ? 'marke warnmarke' : 'marke gutmarke'}>
-                      {ich.art === 'nachruecker' ? 'du bist Nachrücker' : 'du bist Teilnehmer'}
+                    <span className={ich === 'nachruecker' ? 'marke warnmarke' : 'marke gutmarke'}>
+                      {ich === 'nachruecker' ? 'du bist Nachrücker' : 'du bist Teilnehmer'}
                     </span>
                   )}
                   {!offen ? (

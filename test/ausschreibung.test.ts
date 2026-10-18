@@ -9,6 +9,7 @@ import {
   aushangPdf,
   auslosungText,
   ausschreibungText,
+  ausschreibungUebersicht,
   meldeschlussText,
   meldeschlussVorschlag,
   umbrechen
@@ -193,5 +194,28 @@ describe('Aushang', () => {
     const pdf = aushangPdf(daten({ uhrzeit: '19:00', hoechstens: 8 }));
     expect(new TextDecoder('latin1').decode(pdf.subarray(0, 8))).toBe('%PDF-1.4');
     expect(aushangDateiname('Größtes Turnier 2026!', '2026-10-09')).toBe('Ausschreibung_2026-10-09_Groesstes_Turnier_2026.pdf');
+  });
+});
+
+describe('Übersicht einer Ausschreibung', () => {
+  const an = (person_id: string, zeit: string, abgemeldet_am: string | null = null) => ({ person_id, angemeldet_am: zeit, abgemeldet_am });
+
+  test('von der Turnierleitung eingetragene Spieler zählen als Teilnehmer', () => {
+    const u = ausschreibungUebersicht([], ['a', 'b', 'c'], 'b');
+    expect(u.teilnehmer).toEqual(['a', 'b', 'c']);
+    expect(u.nachruecker).toEqual([]);
+    expect(u.ich).toBe('teilnehmer');
+  });
+
+  test('selbst angemeldet und eingetragen: nur einmal, Nachrücker getrennt', () => {
+    const u = ausschreibungUebersicht([an('a', '2026-10-01T10:00:00Z'), an('x', '2026-10-02T10:00:00Z'), an('y', '2026-10-03T10:00:00Z', '2026-10-04T10:00:00Z')], ['a', 'b'], 'x');
+    expect(u.teilnehmer).toEqual(['a', 'b']);
+    expect(u.nachruecker).toEqual(['x']);
+    expect(u.ich).toBe('nachruecker');
+  });
+
+  test('ohne verknüpften Spieler oder nicht dabei', () => {
+    expect(ausschreibungUebersicht([], ['a'], null).ich).toBeNull();
+    expect(ausschreibungUebersicht([], ['a'], 'z').ich).toBeNull();
   });
 });
