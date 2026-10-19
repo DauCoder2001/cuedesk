@@ -3,6 +3,8 @@ import { supabase } from '../supabase';
 import { useSitzung } from '../sitzung';
 import { Pflichthinweis, usePflicht } from '../pflicht';
 import { OHNE_TISCH_TEXT } from '../live';
+import { useRueckfrage } from '../rueckfrage';
+import { andereAmTisch, belegtText } from '../geraete';
 import type { Geraet, Tisch } from '../datenbank.types';
 
 export default function TischeGeraete() {
@@ -23,6 +25,18 @@ export default function TischeGeraete() {
   const [fehler, setFehler] = useState<string | null>(null);
   const tischPflicht = usePflicht();
   const koppelPflicht = usePflicht();
+  const [rueckfrage, fragen] = useRueckfrage();
+
+  const tischName = (id: string) => {
+    const t = tische.find((x) => x.id === id);
+    return t ? `Tisch ${t.nummer}` : 'diesem Tisch';
+  };
+  // Haengt am Tisch schon ein anderes Geraet? Dann erst nachfragen.
+  async function belegtOk(tischId: string, ausser: string | undefined, ja: string): Promise<boolean> {
+    const andere = andereAmTisch(geraete, tischId, ausser);
+    if (andere.length === 0) return true;
+    return fragen(belegtText(tischName(tischId), andere, zuletzt), ja);
+  }
 
   useEffect(() => {
     if (!verein) return;
@@ -84,6 +98,7 @@ export default function TischeGeraete() {
     setMeldung(null);
     if (!koppelPflicht.pruefen()) return;
     if (!/^[A-Za-z0-9]{6}$/.test(code.trim())) return koppelPflicht.melden('Der Code besteht aus sechs Zeichen.');
+    if (!(await belegtOk(geraetTisch, undefined, 'Trotzdem koppeln'))) return;
     const { error } = await supabase.rpc('geraet_koppeln', {
       p_code: code.trim().toUpperCase(),
       p_verein: verein.id,
@@ -102,6 +117,9 @@ export default function TischeGeraete() {
   }
 
   async function geraetTischSetzen(geraet: Geraet, tischId: string) {
+    setFehler(null);
+    // Abbrechen: Die Auswahl zeigt weiter den bisherigen Tisch (gesteuertes Feld)
+    if (!(await belegtOk(tischId, geraet.id, 'Trotzdem umstellen'))) return;
     const { error } = await supabase
       .from('geraete')
       .update({ tisch_id: tischId || null })
@@ -111,6 +129,7 @@ export default function TischeGeraete() {
   }
 
   async function trennen(geraet: Geraet) {
+    if (!(await fragen(`${geraet.name} trennen?\nEs zeigt danach wieder einen Kopplungscode und muss neu gekoppelt werden.`, 'Trennen'))) return;
     const { error } = await supabase.from('geraete').delete().eq('id', geraet.id);
     if (error) {
       setFehler(error.message);
@@ -218,6 +237,14 @@ export default function TischeGeraete() {
           <div key={geraet.id} className="geraetezeile">
             <div className="geraetename">
               {geraet.name}
+              {geraet.tisch_id && andereAmTisch(geraete, geraet.tisch_id, geraet.id).length > 0 && (
+                <span
+                  className="marke warnmarke"
+                  title={`Am selben Tisch: ${andereAmTisch(geraete, geraet.tisch_id, geraet.id).map((g) => g.name).join(', ')}. Zwei Geräte überschreiben sich gegenseitig den Spielstand.`}
+                >
+                  ⚠ teilt {tischName(geraet.tisch_id)}
+                </span>
+              )}
               <small>{zuletzt(geraet.zuletzt_gesehen)}</small>
             </div>
             <select
@@ -287,6 +314,7 @@ export default function TischeGeraete() {
         {fehler && <p className="fehler">{fehler}</p>}
         {meldung && <p className="meldung">{meldung}</p>}
       </section>
+      {rueckfrage}
     </div>
   );
 }
