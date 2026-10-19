@@ -138,13 +138,14 @@
   .player-box { flex: 1; display: flex; justify-content: center; min-width: 0; }
 
   /* Gruene Aktiv-Flaeche: umschliesst Name, Stift, Statistik und Zaehler.
-     width:fit-content -> so breit wie der breiteste Teil, waechst mit langen Namen. */
+     Immer volle Haelftenbreite, damit der Stift unten rechts bei kurzen und langen
+     Namen an derselben Stelle sitzt (bis 18.10.2026: fit-content). */
   .player-hl {
     display: flex;
     flex-direction: column;
     align-items: center;
-    width: fit-content;
-    max-width: 100%;
+    width: 100%;
+    box-sizing: border-box;
     border-radius: 1.5vmin;
     padding: 0.6vmin 1.5vmin 0.4vmin;
     font-size: 6vmin;
@@ -154,16 +155,17 @@
   .player-left  { color: var(--red); }
   .player-right { color: var(--blue); }
 
-  /* Name: konstantes Padding, damit die Aktiv-Markierung die Hoehe nicht aendert */
-  #p1, #p2 { padding: 0.3vmin 1vmin; }        /* Hoehe konstant halten */
-  /* Namen 25 % groesser als der Block (7,5 statt 6 vmin). Zu lange Namen
-     verkleinert namenEinpassen() bis auf 6 vmin, erst danach brechen sie um. */
-  #p1, #p2 { font-size: 7.5vmin; white-space: nowrap; }
-  #p1.umbruch, #p2.umbruch { white-space: normal; }
+  /* Namen einzeilig, 10 vmin. Zu lange Namen verkleinert namenEinpassen() bis
+     auf 5 vmin, darunter wird mit "…" gekuerzt - nie umgebrochen. Feste
+     Zeilenhoehe: beide Zaehler stehen so immer auf gleicher Hoehe. */
+  #p1, #p2 { font-size: 10vmin; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+             text-align: center; height: 12vmin; line-height: 12vmin; }
   .player-hl.active { background: var(--active); }
 
-  /* Name + Stift in einer Zeile */
-  .name-row { display: flex; align-items: center; justify-content: center; gap: 1.5vmin; }
+  /* Namenszeile ueber die ganze Breite; der Stift sitzt darunter am rechten
+     Rand, auf Hoehe der Statistik, und nimmt dem Namen keine Breite weg */
+  .name-row { position: relative; align-self: stretch; height: 12vmin; }
+  .name-row .edit-btn { position: absolute; right: 0; top: 100%; margin-top: 0.4vmin; z-index: 2; }
 
   /* Mittelspalte mit Seitenwechsel (auf Hoehe der Namen, ~20% kleiner) */
   .player-mid { flex: 0 0 auto; align-self: stretch; display: flex; flex-direction: column;
@@ -219,7 +221,7 @@
     font-weight: bold;
     line-height: 1;
     padding: 0 1vmin;
-    margin-top: 17.6vmin;   /* auf Ziffernmitte (zur Zeilenhoehe 0.82 der Ziffern); alles vmin-basiert, traegt ueber Bildschirmgroessen */
+    margin-top: 17.6vmin;   /* Startwert; doppelpunktAusrichten() setzt ihn genau auf die Ziffernmitte */
     position: relative;     /* Anker fuer das Mini-Protokoll */
   }
 
@@ -391,6 +393,11 @@
     .score {
       font-size: 26vmin;
     }
+
+    /* Schmale Haelften: der Stift bekommt eine eigene Zeile unter dem Namen,
+       sonst laege er auf der Statistik */
+    .name-row { height: auto; }
+    .name-row .edit-btn { position: static; display: block; margin: 0.4vmin auto 0; }
 
     #colon {
       font-size: 11vmin;
@@ -1565,35 +1572,52 @@
     return { text: "", warn: false };
   }
 
-  // Spielernamen in ihre Haelfte einpassen: Grundgroesse 7,5 vmin, bei zu
-  // langen Namen kleiner bis 6 vmin (80 %). Reicht auch das nicht, darf der
-  // Name umbrechen wie frueher.
+  // Spielernamen einzeilig einpassen: Grundgroesse 10 vmin aus dem CSS, zu
+  // lange Namen proportional kleiner bis 5 vmin; reicht das nicht, kuerzt das
+  // CSS mit "…". Gemessen wird der Textknoten (Range), nicht der Kasten.
   let namenSchluessel = "";
   function namenEinpassen() {
     const schluessel = state.player1 + "|" + state.player2 + "|" + innerWidth + "x" + innerHeight;
     if (schluessel === namenSchluessel) return;
     namenSchluessel = schluessel;
+    const vmin = Math.min(innerWidth, innerHeight) / 100;
     for (const nr of [1, 2]) {
       const name = document.getElementById("p" + nr);
-      const hl = document.getElementById("hl" + nr);
-      const knopf = document.getElementById("editP" + nr + "Btn");
-      const box = hl.parentElement;
       name.style.fontSize = "";
-      name.classList.remove("umbruch");
-      const hlStil = getComputedStyle(hl);
-      const zeile = getComputedStyle(name.parentElement);
-      const platz = box.clientWidth
-        - parseFloat(hlStil.paddingLeft) - parseFloat(hlStil.paddingRight)
-        - knopf.offsetWidth - (parseFloat(zeile.columnGap) || 0);
-      const breite = name.scrollWidth;
+      const platz = name.clientWidth - 0.5 * vmin;
+      const r = document.createRange(); r.selectNodeContents(name);
+      const breite = r.getBoundingClientRect().width;
       if (breite <= platz) continue;
       const basis = parseFloat(getComputedStyle(name).fontSize);
-      const groesse = Math.max(basis * 0.8, Math.floor(basis * platz / breite));
-      name.style.fontSize = groesse + "px";
-      if (name.scrollWidth > platz) name.classList.add("umbruch");
+      name.style.fontSize = Math.max(5 * vmin, Math.floor(basis * platz / breite)) + "px";
     }
   }
-  addEventListener("resize", () => namenEinpassen());
+
+  // Doppelpunkt senkrecht genau auf die Mitte der beiden Zaehler setzen. Die
+  // Mitte eines Zeichens ergibt sich aus der Grundlinie und seinen Glyph-Massen
+  // (Canvas), weil der Textkasten Ober- und Unterlaengen mitzaehlt.
+  const glyphMass = document.createElement("canvas").getContext("2d");
+  function zeichenMitte(el, zeichen) {
+    const text = [...el.childNodes].find((k) => k.nodeType === Node.TEXT_NODE && k.textContent.trim());
+    if (!text) return null;
+    const stil = getComputedStyle(el);
+    glyphMass.font = stil.fontWeight + " " + stil.fontSize + " " + stil.fontFamily;
+    const m = glyphMass.measureText(zeichen);
+    const r = document.createRange(); r.selectNodeContents(text);
+    const grundlinie = r.getBoundingClientRect().top + m.fontBoundingBoxAscent;
+    return grundlinie - (m.actualBoundingBoxAscent - m.actualBoundingBoxDescent) / 2;
+  }
+  function doppelpunktAusrichten() {
+    const colon = document.getElementById("colon");
+    const z1 = zeichenMitte(document.getElementById("s1"), "0");
+    const z2 = zeichenMitte(document.getElementById("s2"), "0");
+    const ist = zeichenMitte(colon, ":");
+    if (z1 === null || z2 === null || ist === null) return;
+    const abstand = (z1 + z2) / 2 - ist;
+    if (Math.abs(abstand) < 0.5) return;
+    colon.style.marginTop = parseFloat(getComputedStyle(colon).marginTop) + abstand + "px";
+  }
+  addEventListener("resize", () => { namenEinpassen(); doppelpunktAusrichten(); });
 
   function render() {
     document.getElementById("p1").textContent = state.player1;
@@ -1658,6 +1682,7 @@
     drawBalls();
     if (logOpen) buildProtocol();   // offenes Protokoll-Overlay live mitziehen
     buildMiniLog();                 // offenes Mini-Protokoll ebenso
+    doppelpunktAusrichten();        // Fouls oder Hinweise koennen die Zaehler verschieben
     checkEnd();
   }
 
