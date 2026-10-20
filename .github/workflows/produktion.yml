@@ -130,6 +130,8 @@ jobs:
           cp -a ../dist/. .
           echo "$DOMAIN" > CNAME
           touch .nojekyll
+          # Readme fuer das Ziel-Repository (es wird oben jedes Mal geleert)
+          cp ../skripte/cuedesk-app-README.md README.md
           git add -A
           if git diff --cached --quiet; then
             echo "Keine Aenderung an der App." | tee -a "$GITHUB_STEP_SUMMARY"
