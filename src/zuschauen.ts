@@ -9,6 +9,7 @@ import { KO_GRUPPEN, standardGruppenzahl } from './ko';
 import { doppelVon, istDoppelBegegnung, partnerVon, wertung } from './liga';
 import type { RanglistenPartie } from './turnier';
 import type { Partie, Turnier, TurnierTeilnehmer } from './datenbank.types';
+import { mitSpielern } from './partie-spieler';
 
 type Einstellungen = {
   gruppenzahl?: number;
@@ -84,6 +85,7 @@ export function tabellen(turnier: Turnier, teilnehmer: TurnierTeilnehmer[], part
     .sort((a, b) => (a.startnummer ?? 0) - (b.startnummer ?? 0));
   const posVon = new Map(aufstellung.map((t, i) => [t.person_id, i]));
   const eingabe: RanglistenPartie[] = partien
+    .filter(mitSpielern)
     .filter((p) => istGruppenspiel(p) && posVon.has(p.spieler_a) && posVon.has(p.spieler_b))
     .map((p) => ({
       a: posVon.get(p.spieler_a) as number,
@@ -210,6 +212,8 @@ export function paarungText(
     const n = (id: string) => (kurz ? ohneZusatz(name(id)) : name(id));
     return zweiter ? `${n(erster)} / ${n(zweiter)}` : n(erster);
   };
+  // Team-Match (Teamvergleich): Team gegen Team, ohne einzelne Spieler
+  if (!mitSpielern(p)) return 'Team-Match';
   const kurz = seite(p.spieler_a, p.partner_a, true) !== seite(p.spieler_b, p.partner_b, true);
   return `${seite(p.spieler_a, p.partner_a, kurz)} – ${seite(p.spieler_b, p.partner_b, kurz)}`;
 }

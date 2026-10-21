@@ -46,7 +46,8 @@ export const MODUS_TEXT: Record<TurnierModus, string> = {
   'gruppen-ko': 'Gruppen mit KO',
   einzelspiel: 'Einzelspiel',
   liga: 'Liga-Spieltag',
-  sonstiges: 'Sonstiges'
+  sonstiges: 'Sonstiges',
+  teamvergleich: 'Teamvergleich'
 };
 
 export const STATUS_TEXT: Record<TurnierStatus, string> = {

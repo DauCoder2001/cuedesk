@@ -13,6 +13,8 @@ import KaderImport from './KaderImport';
 import type { Mannschaftspass } from '../mannschaftspass';
 import type { LigaKennung } from '../liga';
 import type { Mannschaft, MannschaftSpieler, Partie, Person, Turnier } from '../datenbank.types';
+import { mitSpielern } from '../partie-spieler';
+import type { SpielerPartie } from '../partie-spieler';
 import type { TurnierEinstellungen } from './Turniere';
 
 // Mannschaften einer Saison mit ihrem Kader. Dazu die Saisonuebersicht der
@@ -45,7 +47,7 @@ export default function Mannschaften() {
   const [kader, setKader] = useState<MannschaftSpieler[]>([]);
   const [personen, setPersonen] = useState<Person[]>([]);
   const [spieltage, setSpieltage] = useState<Turnier[]>([]);
-  const [partien, setPartien] = useState<Partie[]>([]);
+  const [partien, setPartien] = useState<SpielerPartie<Partie>[]>([]);
   const [formular, setFormular] = useState<Formular | null>(null);
   const [zugang, setZugang] = useState<Record<string, string>>({}); // je Mannschaft der gewaehlte Spieler
   const [fehler, setFehler] = useState<string | null>(null);
@@ -87,7 +89,7 @@ export default function Mannschaften() {
 
     const ids = begegnungen.map((x) => x.id);
     const pa = ids.length ? await supabase.from('partien').select('*').in('turnier_id', ids) : { data: [] as Partie[] };
-    setPartien(pa.data ?? []);
+    setPartien((pa.data ?? []).filter(mitSpielern));
   }, [verein]);
 
   useEffect(() => {

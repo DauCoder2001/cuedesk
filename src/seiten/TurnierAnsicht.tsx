@@ -19,6 +19,8 @@ import { diffText, LEERE_BILANZ, turnierBilanz } from '../turnier-bilanz';
 import ZuruecksetzenDialog from './ZuruecksetzenDialog';
 import { zuruecksetzbar } from '../partie-zuruecksetzen';
 import { gemeinsamePartie, istMarkiert, markierungUmschalten } from '../markierung';
+import { mitSpielern } from '../partie-spieler';
+import type { SpielerPartie } from '../partie-spieler';
 import { useLaufendeStaende } from '../laufende-staende';
 import { modusOptionen, modusVorschlag } from '../modus-wahl';
 import type { WaehlbarerModus } from '../modus-wahl';
@@ -61,6 +63,9 @@ import type { Partie, Person, RatingQuelle, Turnier, TurnierAnmeldung, TurnierTe
 import { anmeldeLink, anmeldestand } from '../ausschreibung';
 import { Modal } from '../modal';
 
+// Partien dieser Ansicht haben immer Spieler (Team-Matches gibt es nur im Teamvergleich)
+type TPartie = SpielerPartie<Partie>;
+
 // Ein Turnier im Modus Einzelgruppe, Zwei Gruppen oder Gruppen mit KO:
 // Teilnehmer, Auslosung, Spielplan, Tabellen, bei zwei Gruppen die
 // Platzierungsduelle (Phase 2), bei Gruppen mit KO die KO-Runde und die
@@ -73,10 +78,10 @@ const ZWEI_GRUPPEN_MAX = 16;
 // KO-Runde: Rundennummer im Spielplan
 const KO_RUNDE_NR: Record<KoRunde, number> = { R16: 1, QF: 2, SF: 3, FIN: 4, BRO: 4 };
 const KO_ABSCHNITT: Record<string, string> = { af: 'Achtelfinale', qf: 'Viertelfinale', sf: 'Halbfinale', fin: 'Finale und Platz 3', bro: 'Finale und Platz 3' };
-const istGruppenspiel = (p: Partie) => !p.phase || p.phase === 'gruppe';const istGruppenzeile = (zeile: string) => /^[A-D]$/.test(zeile);
+const istGruppenspiel = (p: TPartie) => !p.phase || p.phase === 'gruppe';const istGruppenzeile = (zeile: string) => /^[A-D]$/.test(zeile);
 
-type Aenderungszeile = { zeitpunkt: string; nachher: Partial<Partie> | null; aktion: string };
-type Rueckgaengig = { partieId: string; vorher: Pick<Partie, 'ergebnis_a' | 'ergebnis_b' | 'status' | 'beendet'> };
+type Aenderungszeile = { zeitpunkt: string; nachher: Partial<TPartie> | null; aktion: string };
+type Rueckgaengig = { partieId: string; vorher: Pick<TPartie, 'ergebnis_a' | 'ergebnis_b' | 'status' | 'beendet'> };
 
 const QUELLE_KURZ: Partial<Record<RatingQuelle, string>> = {
   vorlaeufig: 'vorläufig',
@@ -114,7 +119,7 @@ export default function TurnierAnsicht({
   const [nichtGefunden, setNichtGefunden] = useState(false);
   const [teilnehmer, setTeilnehmer] = useState<TurnierTeilnehmer[]>([]);
   const [anmeldungen, setAnmeldungen] = useState<TurnierAnmeldung[]>([]);
-  const [partien, setPartien] = useState<Partie[]>([]);
+  const [partien, setPartien] = useState<TPartie[]>([]);
   const [personen, setPersonen] = useState<Person[]>([]);
   const [ratings, setRatings] = useState<Map<string, { wert: number; quelle: RatingQuelle }>>(new Map());
   const [tische, setTische] = useState<Map<string, number>>(new Map());
@@ -134,9 +139,9 @@ export default function TurnierAnsicht({
   const [markiert, setMarkiert] = useState<string[]>([]);
   const [tausch, setTausch] = useState<{ raus: string; von: string; nach: string } | null>(null);
   const [nachtrag, setNachtrag] = useState<{ ziel: string; suche: string; gast: string } | null>(null);
-  const [verlauf, setVerlauf] = useState<{ partie: Partie; zeilen: Aenderungszeile[] } | null>(null);
+  const [verlauf, setVerlauf] = useState<{ partie: TPartie; zeilen: Aenderungszeile[] } | null>(null);
   const [stapel, setStapel] = useState<Rueckgaengig[]>([]);
-  const [ruecksetzPartie, setRuecksetzPartie] = useState<Partie | null>(null); // Partie zuruecksetzen (Dialog)
+  const [ruecksetzPartie, setRuecksetzPartie] = useState<TPartie | null>(null); // Partie zuruecksetzen (Dialog)
   const [rueckfrage, fragen] = useRueckfrage();
   // Rating-Spalte der Teilnehmer ausblenden (etwa am Laptop, den die Spieler
   // sehen); je Geraet gemerkt, fuer alle Turniere
@@ -159,7 +164,7 @@ export default function TurnierAnsicht({
   }
   const [, setTakt] = useState(0);
   // KO-Abgleich fuer den Echtzeit-Kanal; wird bei jedem Zeichnen neu gesetzt
-  const abgleichRef = useRef<(liste: Partie[]) => Promise<void>>(async () => {});
+  const abgleichRef = useRef<(liste: TPartie[]) => Promise<void>>(async () => {});
 
   // Zeitprognose haengt an der Uhr, nicht nur an Eingaben
   useEffect(() => {
@@ -182,7 +187,7 @@ export default function TurnierAnsicht({
     setNichtGefunden(!t.error && !t.data);
     setTeilnehmer(tn.data ?? []);
     setAnmeldungen(an.data ?? []);
-    setPartien(p.data ?? []);
+    setPartien((p.data ?? []).filter(mitSpielern));
     setPersonen(pe.data ?? []);
     setTische(new Map((ti.data ?? []).map((x) => [x.id, x.nummer])));
 
@@ -219,8 +224,9 @@ export default function TurnierAnsicht({
     const partienNeu = async () => {
       const { data } = await supabase.from('partien').select('*').eq('turnier_id', turnierId).order('runde').order('paarung');
       if (data) {
-        setPartien(data);
-        void abgleichRef.current(data);
+        const mit = data.filter(mitSpielern);
+        setPartien(mit);
+        void abgleichRef.current(mit);
       }
     };
     const kanal = supabase
@@ -238,7 +244,7 @@ export default function TurnierAnsicht({
 
   // Laufender Stand am Tisch neben dem (noch leeren) Ergebnis
   const laufendeStaende = useLaufendeStaende(verein?.id);
-  const laufendText = (p: Partie) => {
+  const laufendText = (p: TPartie) => {
     const t = laufendeStaende.get(p.id);
     if (!t || p.status === 'beendet') return null;
     const stand = laufenderStand(t.zustand, t.aktualisiert, anzeige(p.spieler_a), anzeige(p.spieler_b));
@@ -288,7 +294,7 @@ export default function TurnierAnsicht({
   const mehrgruppig = zwei || mitKo;
   const race2 = einstellungen.racePhase2 ?? raceTo;
   const race3 = einstellungen.racePhase3 ?? raceTo;
-  const beendetBei = (p: Partie) => spielBeendet(p.ergebnis_a, p.ergebnis_b, p.race_to ?? raceTo);
+  const beendetBei = (p: TPartie) => spielBeendet(p.ergebnis_a, p.ergebnis_b, p.race_to ?? raceTo);
 
   // Gruppen mit KO: vor der Auslosung nach der Teilnehmerzahl, danach fest
   const gruppenzahl = mitKo ? einstellungen.gruppenzahl ?? standardGruppenzahl(teilnehmer.length) : 2;
@@ -308,7 +314,7 @@ export default function TurnierAnsicht({
 
   // Gruppenspiele (Einzelgruppe: alle), Platzierungsduelle, KO und Phase 3 getrennt
   const gruppenPartien = useMemo(() => partien.filter(istGruppenspiel), [partien]);
-  const nachPaarung = (a: Partie, b: Partie) => (a.paarung ?? 0) - (b.paarung ?? 0);
+  const nachPaarung = (a: TPartie, b: TPartie) => (a.paarung ?? 0) - (b.paarung ?? 0);
   const duelle = useMemo(() => partien.filter((p) => p.phase === 'phase2').sort(nachPaarung), [partien]);
   const koPartien = useMemo(() => partien.filter((p) => p.phase === 'ko'), [partien]);
   const p3Partien = useMemo(() => partien.filter((p) => p.phase === 'phase3').sort(nachPaarung), [partien]);
@@ -357,7 +363,7 @@ export default function TurnierAnsicht({
   const offeneSpiele = partien.filter((p) => !beendetBei(p)).length;
   const offenInGruppe = (g: string) => gruppenPartien.filter((p) => p.gruppe === g && !beendetBei(p)).length;
   const offeneGruppenspiele = gruppenPartien.filter((p) => !beendetBei(p)).length;
-  const begonnen = (p: Partie) => angefangen(p.ergebnis_a, p.ergebnis_b, p.vorgabe_a, p.vorgabe_b);
+  const begonnen = (p: TPartie) => angefangen(p.ergebnis_a, p.ergebnis_b, p.vorgabe_a, p.vorgabe_b);
   const irgendeinErgebnis = partien.some(begonnen);
   // Steht in der Folgephase ein Ergebnis, sind die Gruppenspiele gesperrt (v64)
   const gruppenGesperrt = partien.some((p) => !istGruppenspiel(p) && begonnen(p));
@@ -373,7 +379,7 @@ export default function TurnierAnsicht({
 
   // Stand eines KO-Spiels: nur wenn die Partie zu den Spielern im Baum passt
   const koStaende = useCallback(
-    (liste: Partie[]) => (id: string, p1: string, p2: string) => {
+    (liste: TPartie[]) => (id: string, p1: string, p2: string) => {
       const x = liste.find((p) => p.phase === 'ko' && p.gruppe === id && p.spieler_a === p1 && p.spieler_b === p2);
       return x ? { s1: x.ergebnis_a ?? x.vorgabe_a, s2: x.ergebnis_b ?? x.vorgabe_b } : { s1: null, s2: null };
     },
@@ -424,7 +430,7 @@ export default function TurnierAnsicht({
   }, [koFest, baum, leistung, gruppenListen, ordnung, einstellungen.phase3, p3Partien, race3]);
 
   // Ein KO-Ergebnis ist gesperrt, sobald im Folgespiel gespielt wird (v74)
-  const koGesperrt = (p: Partie) =>
+  const koGesperrt = (p: TPartie) =>
     p.phase === 'ko' &&
     koFest !== null &&
     folgespiele(koFest.gruppenzahl * koFest.weiter, p.gruppe ?? '').some((id) => {
@@ -451,7 +457,7 @@ export default function TurnierAnsicht({
   // Abschnitte des Spielplans: Runden, bei Gruppen je Gruppe, dazu Phase 2,
   // die KO-Runden und Phase 3
   const abschnitte = useMemo(() => {
-    const karte = new Map<string, { schluessel: string; zeile: string; titel: string; ordnung: string; runde: number; partien: Partie[] }>();
+    const karte = new Map<string, { schluessel: string; zeile: string; titel: string; ordnung: string; runde: number; partien: TPartie[] }>();
     partien.forEach((p) => {
       const r = p.runde ?? 0;
       const [schluessel, zeile, titel, ordnung] =
@@ -803,7 +809,7 @@ export default function TurnierAnsicht({
 
   // ---------- Ergebnisse ----------
 
-  async function ergebnisSetzen(p: Partie, a: number | null, b: number | null, merken = true) {
+  async function ergebnisSetzen(p: TPartie, a: number | null, b: number | null, merken = true) {
     const race = p.race_to ?? raceTo;
     // Eine Seite leer, die andere eingetragen: leere Seite steht auf der Vorgabe
     if (a !== null && b === null) b = p.vorgabe_b;
@@ -838,7 +844,7 @@ export default function TurnierAnsicht({
 
   // Nach "Zuruecksetzen": KO-Folgespiele abgleichen (der Sieger faellt dort
   // wieder heraus), danach frisch laden.
-  async function zurueckgesetzt(p: Partie) {
+  async function zurueckgesetzt(p: TPartie) {
     setRuecksetzPartie(null);
     const offen = { ergebnis_a: null, ergebnis_b: null, status: 'geplant' as const, tisch_id: null, begonnen: null, beendet: null };
     const liste = partien.map((x) => (x.id === p.id ? { ...x, ...offen } : x));
@@ -882,7 +888,7 @@ export default function TurnierAnsicht({
       year: 'numeric'
     });
     const handicap = va.aktiv ? ` · Handicap ${va.staerke} %${va.obergrenze > 0 ? `, Obergrenze ${va.obergrenze}` : ''}` : '';
-    const spiel = (s: Partie) => ({
+    const spiel = (s: TPartie) => ({
       nameA: anzeige(s.spieler_a),
       nameB: anzeige(s.spieler_b),
       standA: s.ergebnis_a,
@@ -1167,7 +1173,7 @@ export default function TurnierAnsicht({
     await koAbgleichen(partien.map((x) => (x.id === letzter.partieId ? { ...x, ...letzter.vorher } : x)));
   }
 
-  async function verlaufZeigen(p: Partie) {
+  async function verlaufZeigen(p: TPartie) {
     const { data, error } = await supabase
       .from('aenderungen')
       .select('zeitpunkt, nachher, aktion')
@@ -1179,7 +1185,7 @@ export default function TurnierAnsicht({
     setVerlauf({ partie: p, zeilen: (data ?? []) as Aenderungszeile[] });
   }
 
-  async function standWiederherstellen(p: Partie, z: Aenderungszeile) {
+  async function standWiederherstellen(p: TPartie, z: Aenderungszeile) {
     const alt = z.nachher ?? {};
     await ergebnisSetzen(p, alt.ergebnis_a ?? null, alt.ergebnis_b ?? null);
     setVerlauf(null);
@@ -1421,11 +1427,11 @@ export default function TurnierAnsicht({
   // Spieler einer noch nicht begonnenen Folgepartie mit; eine Partie ohne
   // feststehende Spieler entfaellt wieder. Das Notebook der Turnierleitung
   // erledigt das, auch fuer Ergebnisse von den Tablets.
-  async function koAbgleichen(liste: Partie[], fest = koFest) {
+  async function koAbgleichen(liste: TPartie[], fest = koFest) {
     if (!turnier || !fest || turnier.status !== 'laeuft' || !darfLeiten) return;
     const b = koAufloesen(fest, koStaende(liste), raceFuer);
     const werte = ratingWerte();
-    const ruhend = (x: Partie) => !begonnen(x) && x.status !== 'laeuft' && x.tisch_id === null;
+    const ruhend = (x: TPartie) => !begonnen(x) && x.status !== 'laeuft' && x.tisch_id === null;
     let geaendert = false;
     for (const [i, spiel] of koSpiele(fest.gruppenzahl * fest.weiter).entries()) {
       const m = b[spiel.id];
@@ -1466,7 +1472,7 @@ export default function TurnierAnsicht({
     }
     if (geaendert) {
       const { data } = await supabase.from('partien').select('*').eq('turnier_id', turnier.id).order('runde').order('paarung');
-      if (data) setPartien(data);
+      if (data) setPartien(data.filter(mitSpielern));
     }
   }
   abgleichRef.current = koAbgleichen;
@@ -1667,7 +1673,7 @@ export default function TurnierAnsicht({
   const offenP3 = p3Partien.filter((x) => !beendetBei(x)).length;
 
   // Markierte Teilnehmer: gemeinsame Partie, Abschnitte des einzelnen Spielers
-  const abschnittVon = (p: Partie) => abschnitte.find((a) => a.partien.some((x) => x.id === p.id));
+  const abschnittVon = (p: TPartie) => abschnitte.find((a) => a.partien.some((x) => x.id === p.id));
   const paar = markiert.length === 2 ? gemeinsamePartie(partien, markiert[0], markiert[1]) : null;
   const abschnitteDesMarkierten =
     markiert.length === 1
@@ -2998,7 +3004,7 @@ function Tabelle(props: {
 // Eine Spielzeile mit zwei Eingabefeldern. Gespeichert wird beim Verlassen
 // des Feldes oder mit Enter.
 function Spielzeile(props: {
-  partie: Partie;
+  partie: TPartie;
   markiert?: boolean; // Partie markierter Teilnehmer, hervorgehoben
   raceTo: number;
   nameA: string;
@@ -3109,7 +3115,7 @@ function Altturnier({
   anzeige
 }: {
   teilnehmer: TurnierTeilnehmer[];
-  partien: Partie[];
+  partien: TPartie[];
   anzeige: (id: string) => string;
 }) {
   const plaetze = [...teilnehmer].sort((a, b) => (a.endplatz ?? 999) - (b.endplatz ?? 999));

@@ -177,6 +177,7 @@ export default function Archiv() {
             .from('partien')
             .select('id, turnier_id, disziplin, datum, phase, gruppe, spieler_a, spieler_b, doppel, partner_a, partner_b, ergebnis_a, ergebnis_b, vorgabe_a, vorgabe_b, beendet, begonnen, tisch_id')
             .eq('verein_id', verein.id)
+            .not('spieler_a', 'is', null) // Team-Matches (Teamvergleich) haben keine einzelnen Spieler
             .eq('status', 'beendet');
           if (zeitraum) abfrage = abfrage.gte('datum', zeitraum.von).lte('datum', zeitraum.bis);
           return abfrage.order('datum', { ascending: false }).order('id').range(von, bis);

@@ -251,7 +251,7 @@ export type Aenderung = {
 
 
 export type Disziplin = '8-ball' | '9-ball' | '10-ball' | 'multi-ball' | '14-1';
-export type TurnierModus = 'einzelgruppe' | 'zwei-gruppen' | 'gruppen-ko' | 'einzelspiel' | 'liga' | 'sonstiges';
+export type TurnierModus = 'einzelgruppe' | 'zwei-gruppen' | 'gruppen-ko' | 'einzelspiel' | 'liga' | 'sonstiges' | 'teamvergleich';
 export type TurnierStatus = 'geplant' | 'laeuft' | 'beendet' | 'abgebrochen';
 export type PartieStatus = 'geplant' | 'laeuft' | 'beendet' | 'abgebrochen';
 export type RatingQuelle =
@@ -324,8 +324,10 @@ export type Partie = {
   runde: number | null;
   paarung: number | null;
   tisch_id: string | null;
-  spieler_a: string;
-  spieler_b: string;
+  // Leer nur beim Team-Match eines Teamvergleichs (phase 'team', nie fuers
+  // Rating, Regel partien_team_match); sonst immer gesetzt
+  spieler_a: string | null;
+  spieler_b: string | null;
   // Doppel (Stufe 30/31): zweiter Spieler je Seite; im Doppel leer = Geist
   doppel: boolean;
   partner_a: string | null;

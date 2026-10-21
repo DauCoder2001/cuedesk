@@ -70,6 +70,7 @@ export default function Ranglisten() {
           .eq('verein_id', verein.id)
           .neq('disziplin', '14-1')
           .eq('doppel', false) // Doppel zaehlen in keiner Rangliste
+          .not('spieler_a', 'is', null) // Team-Matches (Teamvergleich) ebenso wenig
           .eq('status', 'beendet')
           .gte('datum', ab),
         supabase
@@ -77,6 +78,7 @@ export default function Ranglisten() {
           .select('id, datum, status, spieler_a, spieler_b, ergebnis_a, ergebnis_b, begonnen, beendet')
           .eq('verein_id', verein.id)
           .eq('disziplin', '14-1')
+          .not('spieler_a', 'is', null)
           .eq('status', 'beendet')
           .gte('datum', ab),
         supabase.from('turniere').select('id, name, datum, serie_id, teilnehmerzahl, status').eq('verein_id', verein.id),

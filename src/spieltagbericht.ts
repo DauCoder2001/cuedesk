@@ -9,6 +9,7 @@ import { doppelSpielplan, istDoppelBegegnung, spielplan } from './liga';
 import { ligaStand, spieltagGesamt } from './zuschauen';
 import type { Ausspielziele, DoppelPartie, LigaSpiel } from './liga';
 import type { Partie, Turnier } from './datenbank.types';
+import { mitSpielern } from './partie-spieler';
 
 export type BerichtPartie = { nr: number; disziplin: string; heim: string; gast: string; ergebnis: string };
 export type BerichtBegegnung = {
@@ -57,7 +58,7 @@ export function spieltagBerichtDaten(
     const liga = ligaVon(b);
     const doppel = istDoppelBegegnung(b);
     const plan = doppel ? doppelSpielplan(liga.doppelPlan ?? []) : liga.ziele ? spielplan(liga.ziele) : [];
-    const eigene = partien.filter((p) => p.turnier_id === b.id);
+    const eigene = partien.filter(mitSpielern).filter((p) => p.turnier_id === b.id);
     const zeile = (s: LigaSpiel): BerichtPartie => {
       const p = eigene.find((x) => x.runde === (s.runde === 'hin' ? 1 : 2) && x.paarung === s.paarung);
       return {
