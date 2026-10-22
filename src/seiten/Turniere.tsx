@@ -762,7 +762,7 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
                   </label>
                   {(
                     [
-                      ['team', 'Race to Team-Match'],
+                      ['team', 'Race to Team'],
                       ['doppel', 'Race to Doppel'],
                       ['einzel', 'Race to Einzel']
                     ] as const
