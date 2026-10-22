@@ -12,8 +12,17 @@ export type MatchArt = 'team' | 'doppel' | 'einzel';
 export type TeamvergleichEinstellungen = {
   ziel: number; // Punkte zum Sieg
   race: Record<MatchArt, number>;
-  teams: Record<TeamSeite, { name: string; kapitaen?: string | null }>;
+  // Kapitaen: ein Spieler des Teams (kapitaenId) oder ein freier Name, der
+  // nicht mitspielt (kapitaen) - wie im Mosconi Cup
+  teams: Record<TeamSeite, { name: string; kapitaen?: string | null; kapitaenId?: string | null }>;
   einzelFuersRating?: boolean;
+};
+
+export const TEAM_VORGABE: TeamvergleichEinstellungen = {
+  ziel: 7,
+  race: { team: 5, doppel: 5, einzel: 5 },
+  teams: { A: { name: 'Team Rot' }, B: { name: 'Team Blau' } },
+  einzelFuersRating: false
 };
 
 export const TEAM_GROESSE = { min: 2, max: 8 };

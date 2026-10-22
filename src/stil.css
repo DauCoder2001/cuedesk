@@ -650,3 +650,10 @@ button.aktivmarke { color: var(--gut); border-color: var(--gut); }
 .hilfetext code { background: var(--flaeche-2); padding: 1px 5px; border-radius: 4px; font-size: 0.92em; }
 .hilfekapitel { border-top: 1px solid var(--rand); margin-top: 24px; }
 @media (max-width: 760px) { .hilfe { grid-template-columns: 1fr; } .hilfethemen { position: static; } }
+
+/* Teamvergleich: Teamfarben Rot und Blau, Bloecke im Spielplan */
+.teammarke { display: inline-block; color: #fff; border-radius: 4px; padding: 1px 8px; font-weight: 600; }
+.teammarke.team-A { background: #c62828; }
+.teammarke.team-B { background: #1f5fae; }
+.tabelle tr.blockanfang td { border-top: 2px solid var(--text); }
+.tabelle tr.planfehler td { background: #fbeaea; }

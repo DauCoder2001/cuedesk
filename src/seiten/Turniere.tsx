@@ -5,6 +5,7 @@ import LigaAnsicht, { andereBegegnungAnlegen, doppelBegegnungAnlegen } from './L
 import DoppelPlanFelder, { DOPPEL_ZEILEN_STANDARD } from './DoppelPlanFelder';
 import type { DoppelZeile } from './DoppelPlanFelder';
 import TurnierAnsicht from './TurnierAnsicht';
+import TeamvergleichAnsicht from './TeamvergleichAnsicht';
 import Ausschreibungen from './Ausschreibungen';
 import { LIGEN, doppelBegegnungIds, doppelPlanAusEingabe, doppelVon, partnerVon, spieltagStand, zweiteBegegnungIds } from '../liga';
 import type { Ausspielziele, DoppelPartie, LigaKennung } from '../liga';
@@ -16,6 +17,8 @@ import { kurzesRaceHinweis } from '../vorgabe';
 import { Pflichthinweis, usePflicht } from '../pflicht';
 import { useUngespeichert, weichtAb } from '../ungespeichert';
 import { useRueckfrage } from '../rueckfrage';
+import { TEAM_VORGABE, ZIEL_GRENZEN } from '../teamvergleich';
+import type { TeamvergleichEinstellungen } from '../teamvergleich';
 import type { Disziplin, Mannschaft, Serie, Turnier, TurnierModus, TurnierStatus } from '../datenbank.types';
 
 // Turnierliste. Turnierleiter, Sportwart und Vereins-Admin legen Turniere an
@@ -119,6 +122,7 @@ export type TurnierEinstellungen = {
   tvLiveGewechselt?: boolean; // TV einmal selbsttaetig von der Auslosung auf Live-Tische gestellt
   beginn?: string; // erstes Ergebnis (Zeitprognose)
   ausschreibung?: Ausschreibung; // Einladung zum Turnier (src/ausschreibung.ts)
+  teamvergleich?: TeamvergleichEinstellungen; // Teamvergleich (src/teamvergleich.ts)
 };
 
 const heute = () => new Date().toISOString().slice(0, 10);
@@ -166,6 +170,11 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
   const [ratingWerten, setRatingWerten] = useState(true);
   const [art, setArt] = useState('');
   const [chat, setChat] = useState(true);
+  // Teamvergleich: Ziel, Race to je Match-Art, Teamnamen
+  const [tvZiel, setTvZiel] = useState(String(TEAM_VORGABE.ziel));
+  const [tvRace, setTvRace] = useState({ team: '5', doppel: '5', einzel: '5' });
+  const [tvTeamA, setTvTeamA] = useState(TEAM_VORGABE.teams.A.name);
+  const [tvTeamB, setTvTeamB] = useState(TEAM_VORGABE.teams.B.name);
   const [live, setLive] = useState(true);
   // Filter der Turnierliste nach Turnierart ('' = alle)
   const [artFilter, setArtFilter] = useState('');
@@ -177,7 +186,8 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
   // Aenderungen nachfragt
   const formularStand = formular
     ? { name, datum, disziplin, modus, raceTo, racePhase2, raceKo, liga, spieltag, heim, gegner, eigeneMannschaft,
-        mannschaftId, ziele, mitDoppel, doppelZeilen, serieId, vorgabeAn, staerke, obergrenze, ratingWerten, art, chat, live }
+        mannschaftId, ziele, mitDoppel, doppelZeilen, serieId, vorgabeAn, staerke, obergrenze, ratingWerten, art, chat, live,
+        tvZiel, tvRace, tvTeamA, tvTeamB }
     : null;
   const [ursprung, setUrsprung] = useState<unknown>(null);
   useEffect(() => {
@@ -232,6 +242,7 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
   // Bei "am Turniertag festlegen" gelten die Race-Felder aller Modi
   const mitZwei = modus === 'zwei-gruppen' || modus === 'offen';
   const mitKoFeldern = modus === 'gruppen-ko' || modus === 'offen';
+  const istTeam = modus === 'teamvergleich';
   const hinweisKurzesRace = kurzesRaceHinweis([
     Number(raceTo),
     ...(mitZwei ? [Number(racePhase2)] : []),
@@ -269,8 +280,26 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
     const mitDoppelBegegnung = modus === 'liga' && liga === 'spass' && mitDoppel && !bearbeitet;
     const doppelGeprueft = mitDoppelBegegnung ? doppelPlanAusEingabe(doppelZeilen) : null;
     if (doppelGeprueft && doppelGeprueft.fehler !== null) return pflicht.melden(doppelGeprueft.fehler);
+    // Teamvergleich: Ziel und Race to je Match-Art; Kapitaene setzt die Turnieransicht, sie bleiben beim Aendern
+    let teamvergleich: TeamvergleichEinstellungen | undefined;
+    if (istTeam) {
+      const tvZ = Number(tvZiel);
+      const r = { team: Number(tvRace.team), doppel: Number(tvRace.doppel), einzel: Number(tvRace.einzel) };
+      if (!Number.isInteger(tvZ) || tvZ < ZIEL_GRENZEN.min || tvZ > ZIEL_GRENZEN.max) {
+        return pflicht.melden(`Sieg bei ${ZIEL_GRENZEN.min} bis ${ZIEL_GRENZEN.max} Punkten.`);
+      }
+      if (Object.values(r).some((x) => !Number.isInteger(x) || x < 1 || x > 15)) return pflicht.melden('Race to: 1 bis 15.');
+      const alt = (bearbeitet?.einstellungen as TurnierEinstellungen | null)?.teamvergleich;
+      teamvergleich = {
+        ziel: tvZ,
+        race: r,
+        teams: { A: { ...alt?.teams.A, name: tvTeamA.trim() }, B: { ...alt?.teams.B, name: tvTeamB.trim() } },
+        einzelFuersRating: ratingWerten
+      };
+    }
     const einstellungen: TurnierEinstellungen = {
-      raceTo: race,
+      raceTo: teamvergleich ? teamvergleich.race.einzel : race,
+      ...(teamvergleich ? { teamvergleich } : {}),
       ...(modus === 'liga'
         ? {
             liga: {
@@ -291,7 +320,7 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
         : {}),
       vorgabe: {
         // In der Liga wird ohne Vorgabe gespielt (Ausschreibung, Abschnitt Modus)
-        aktiv: modus === 'liga' ? false : vorgabeAn,
+        aktiv: modus === 'liga' || istTeam ? false : vorgabeAn,
         staerke: Math.min(100, Math.max(0, Number(staerke) || 0)),
         obergrenze: Math.max(0, Number(obergrenze) || 0)
       },
@@ -305,6 +334,7 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
     // Platzhalter, solange die Disziplin offen ist; festgelegt wird vor dem Auslosen
     const dbDisziplin: Disziplin =
       modus === 'liga' ? 'multi-ball' : disziplin === 'offen' ? vorgaben.turnier.disziplin : disziplin;
+    const dbSerie = istTeam ? null : serieId || null;
     if (bearbeitet) return aenderungSpeichern(bearbeitet, einstellungen, dbDisziplin, dbModus);
     const { data, error } = await supabase
       .from('turniere')
@@ -314,7 +344,7 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
         datum,
         disziplin: dbDisziplin,
         modus: dbModus,
-        serie_id: serieId || null,
+        serie_id: dbSerie,
         status: 'geplant',
         rating_werten: ratingWerten,
         einstellungen: art ? { ...einstellungen, art } : einstellungen
@@ -367,6 +397,11 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
     setLive(e.live ?? true);
     setRatingWerten(t.rating_werten);
     setArt(e.art ?? '');
+    const tv = e.teamvergleich ?? TEAM_VORGABE;
+    setTvZiel(String(tv.ziel));
+    setTvRace({ team: String(tv.race.team), doppel: String(tv.race.doppel), einzel: String(tv.race.einzel) });
+    setTvTeamA(tv.teams.A.name);
+    setTvTeamB(tv.teams.B.name);
     pflicht.zuruecksetzen();
     setBearbeitet(t);
     setFormular(true);
@@ -407,7 +442,7 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
     // Was das Formular festlegt, kommt neu; alles andere (Ausschreibung,
     // TV-Ansicht ...) bleibt. Bei neuem Modus fallen dessen Vorbereitungen weg.
     const behalten = { ...((aktuell.einstellungen ?? {}) as TurnierEinstellungen) };
-    const vomFormular: (keyof TurnierEinstellungen)[] = ['raceTo', 'racePhase2', 'raceKo', 'racePhase3', 'vorgabe', 'art', 'chat', 'live', 'disziplinOffen', 'modusOffen'];
+    const vomFormular: (keyof TurnierEinstellungen)[] = ['raceTo', 'racePhase2', 'raceKo', 'racePhase3', 'vorgabe', 'art', 'chat', 'live', 'disziplinOffen', 'modusOffen', 'teamvergleich'];
     const modusAbhaengig: (keyof TurnierEinstellungen)[] = [
       'gruppenzahl', 'weiter', 'paarung', 'ko', 'phase2', 'phase3', 'handReihenfolge', 'tausch', 'nachgetragen'
     ];
@@ -419,7 +454,7 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
         datum,
         disziplin: dbDisziplin,
         modus: dbModus,
-        serie_id: serieId || null,
+        serie_id: istTeam ? null : serieId || null,
         rating_werten: ratingWerten,
         einstellungen: { ...behalten, ...formEinstellungen, ...(art ? { art } : {}) }
       })
@@ -471,6 +506,29 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
     );
   }
 
+  // Ein Teamvergleich hat seine eigene Ansicht, wie der Liga-Spieltag
+  const formularFuer = () => {
+    if (!offen) return;
+    void (async () => {
+      const { data, error } = await supabase.from('turniere').select('*').eq('id', offen).single();
+      if (error || !data) return setFehler(error?.message ?? 'Turnier nicht gefunden.');
+      formularAus(data);
+      setOffen(null);
+    })();
+  };
+  if (offen && offenesTurnier?.modus === 'teamvergleich') {
+    return (
+      <TeamvergleichAnsicht
+        turnierId={offen}
+        zurueck={() => {
+          setOffen(null);
+          void laden();
+        }}
+        aendern={formularFuer}
+      />
+    );
+  }
+
   if (offen) {
     return (
       <TurnierAnsicht
@@ -518,6 +576,10 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
                 setArt(t.art ?? '');
                 setChat(true);
                 setLive(true);
+                setTvZiel(String(TEAM_VORGABE.ziel));
+                setTvRace({ team: '5', doppel: '5', einzel: '5' });
+                setTvTeamA(TEAM_VORGABE.teams.A.name);
+                setTvTeamB(TEAM_VORGABE.teams.B.name);
                 setMitDoppel(false);
                 setDoppelZeilen(DOPPEL_ZEILEN_STANDARD.map((z) => ({ ...z })));
                 setLiga(vorgaben.liga.liga);
@@ -591,12 +653,20 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
               {/* Erst der Modus: Er entscheidet, ob es eine Disziplin gibt (Liga: je Partie) */}
               <label className="feld l">
                 <span>Modus</span>
-                <select value={modus} onChange={(e) => setModus(e.target.value as TurnierModus | 'offen')}>
+                {/* Ein Teamvergleich bleibt einer: Teams und Spielplan passen zu keinem anderen Modus */}
+                <select
+                  value={modus}
+                  disabled={bearbeitet?.modus === 'teamvergleich'}
+                  onChange={(e) => setModus(e.target.value as TurnierModus | 'offen')}
+                >
                   <option value="einzelgruppe">Einzelgruppe (jeder gegen jeden)</option>
                   <option value="zwei-gruppen">Zwei Gruppen mit Platzierungsduellen</option>
                   <option value="gruppen-ko">Gruppen mit KO-Runde</option>
                   <option value="offen">{MODUS_OFFEN_TEXT} (nach Teilnehmerzahl)</option>
                   {!bearbeitet && <option value="liga">Liga-Spieltag (Begegnung)</option>}
+                  {(!bearbeitet || bearbeitet.modus === 'teamvergleich') && (
+                    <option value="teamvergleich">Teamvergleich (Team gegen Team, Mosconi-Format)</option>
+                  )}
                 </select>
               </label>
               {modus !== 'liga' && (
@@ -678,11 +748,39 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
                   </label>
                 </>
               )}
-              {modus !== 'liga' && (
+              {modus !== 'liga' && !istTeam && (
               <label className="feld s">
                 <span>{modus === 'einzelgruppe' ? 'Race to' : modus === 'offen' ? 'Race to (Einzelgruppe bzw. Gruppenphase)' : 'Race to Gruppenphase'}</span>
                 <input inputMode="numeric" required value={raceTo} onChange={(e) => setRaceTo(e.target.value)} />
               </label>
+              )}
+              {istTeam && (
+                <>
+                  <label className="feld s" title="Gewonnen hat das Team, das zuerst so viele Punkte hat. Jedes Match gibt einen Punkt.">
+                    <span>Sieg bei Punkten</span>
+                    <input inputMode="numeric" required value={tvZiel} onChange={(e) => setTvZiel(e.target.value)} />
+                  </label>
+                  {(
+                    [
+                      ['team', 'Race to Team-Match'],
+                      ['doppel', 'Race to Doppel'],
+                      ['einzel', 'Race to Einzel']
+                    ] as const
+                  ).map(([k, text]) => (
+                    <label key={k} className="feld s">
+                      <span>{text}</span>
+                      <input inputMode="numeric" required value={tvRace[k]} onChange={(e) => setTvRace({ ...tvRace, [k]: e.target.value })} />
+                    </label>
+                  ))}
+                  <label className="feld">
+                    <span>Team A (Rot)</span>
+                    <input required value={tvTeamA} onChange={(e) => setTvTeamA(e.target.value)} />
+                  </label>
+                  <label className="feld">
+                    <span>Team B (Blau)</span>
+                    <input required value={tvTeamB} onChange={(e) => setTvTeamB(e.target.value)} />
+                  </label>
+                </>
               )}
               {mitZwei && (
                 <label className="feld s">
@@ -705,6 +803,7 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
                     <input inputMode="numeric" required value={raceKo[k]} onChange={(e) => setRaceKo({ ...raceKo, [k]: e.target.value })} />
                   </label>
                 ))}
+              {!istTeam && (
               <label className="feld l">
                 <span>Serie</span>
                 <select
@@ -727,6 +826,7 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
                   ))}
                 </select>
               </label>
+              )}
             </div>
             {modus === 'liga' && liga === 'spass' && !bearbeitet && (
               <>
@@ -743,7 +843,7 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
                 {mitDoppel && <DoppelPlanFelder zeilen={doppelZeilen} aendern={setDoppelZeilen} />}
               </>
             )}
-            {modus !== 'liga' && (
+            {modus !== 'liga' && !istTeam && (
             <label className="ankreuz">
               <input type="checkbox" checked={vorgabeAn} onChange={(e) => setVorgabeAn(e.target.checked)} />
               <span>
@@ -752,7 +852,7 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
               </span>
             </label>
             )}
-            {vorgabeAn && modus !== 'liga' && (
+            {vorgabeAn && modus !== 'liga' && !istTeam && (
               <div className="felder">
                 <label className="feld">
                   <span>Ausgleich in Prozent</span>
@@ -764,15 +864,17 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
                 </label>
               </div>
             )}
-            {vorgabeAn && modus !== 'liga' && hinweisKurzesRace && <p className="hinweis">{hinweisKurzesRace}</p>}
+            {vorgabeAn && modus !== 'liga' && !istTeam && hinweisKurzesRace && <p className="hinweis">{hinweisKurzesRace}</p>}
             <label className="ankreuz">
               <input type="checkbox" checked={ratingWerten} onChange={(e) => setRatingWerten(e.target.checked)} />
               <span>
-                Zählt für das Vereins-Rating
+                {istTeam ? 'Einzel zählen für das Vereins-Rating' : 'Zählt für das Vereins-Rating'}
                 <small>
                   {modus === 'liga'
                     ? 'Im Liga-Spieltag zählen auch die Partien gegen die gegnerische Mannschaft; 14.1 zählt nie.'
-                    : 'Partien mit Gästen zählen nie.'}
+                    : istTeam
+                      ? 'Doppel und Team-Match zählen nie, Partien mit Gästen ebenso wenig.'
+                      : 'Partien mit Gästen zählen nie.'}
                 </small>
               </span>
             </label>
