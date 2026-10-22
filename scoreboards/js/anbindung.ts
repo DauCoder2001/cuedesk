@@ -693,6 +693,7 @@ async function turnierLaden(): Promise<void> {
     tvAnsicht?: string;
     handReihenfolge?: Record<string, number[]>;
     liga?: { verdeckt?: Verdeckt; gestartet?: Gestartet; ziele?: { aufnahmen141?: number } };
+    teamvergleich?: { teams?: Record<'A' | 'B', { name?: string }>; freigegeben?: number };
   };
   const einstellungenVon = (b: { einstellungen: unknown }) => (b.einstellungen ?? {}) as Einstellungen;
   const einstellungen = einstellungenVon(t);
@@ -706,15 +707,23 @@ async function turnierLaden(): Promise<void> {
   const schedule: Record<string, PlanEintrag> = {};
   for (const b of begegnungen) {
     const e = einstellungenVon(b);
+    const ihre = allePartien.filter((p) => p.turnier_id === b.id);
+    // Teamvergleich: nur freigegebene Bloecke; Team-Match mit Teamnamen und allen Spielern
+    const istTeam = b.modus === 'teamvergleich';
+    const teamSpieler = (seite: 'A' | 'B') =>
+      (teilnehmerAntwort.data ?? []).filter((x) => x.gruppe === seite).map((x) => x.person_id as string);
+    const teams: TabletTeams | undefined = istTeam
+      ? {
+          namen: { A: e.teamvergleich?.teams?.A?.name ?? 'Team Rot', B: e.teamvergleich?.teams?.B?.name ?? 'Team Blau' },
+          spieler: { A: teamSpieler('A'), B: teamSpieler('B') }
+        }
+      : undefined;
     const plan = tabletSpielplan(
-      fuersTablet(
-        allePartien.filter((p) => p.turnier_id === b.id),
-        e.liga?.verdeckt,
-        e.liga?.gestartet
-      ),
+      istTeam ? fuersTabletTeam(ihre, e.teamvergleich?.freigegeben ?? 0) : fuersTablet(ihre, e.liga?.verdeckt, e.liga?.gestartet),
       (id) => namen.get(id) ?? '?',
       (id) => nummern.get(id) ?? null,
-      e.liga?.ziele?.aufnahmen141
+      e.liga?.ziele?.aufnahmen141,
+      teams
     );
     const kennung = begegnungKennung(b);
     for (const [id, eintrag] of Object.entries(plan)) {
@@ -1128,6 +1137,7 @@ import {
   dieselbenSpieler,
   ergebnisVomTablet,
   fuersTablet,
+  fuersTabletTeam,
   laufendeBegegnungen,
   ohneZusatz,
   seitenGetauscht,
@@ -1135,7 +1145,7 @@ import {
   tvErgebnis
 } from './turnier-plan';
 import { neueKennung } from './kennung';
-import type { Gestartet, PlanEintrag, PlanPartie, TabletTurnier, TvErgebnis, Verdeckt } from './turnier-plan';
+import type { Gestartet, PlanEintrag, PlanPartie, TabletTeams, TabletTurnier, TvErgebnis, Verdeckt } from './turnier-plan';
 import { aufnahmenAusProtokoll, protokollAusAufnahmen } from './protokoll-141';
 import type { AufnahmeZeile, Zustand141 } from './protokoll-141';
 

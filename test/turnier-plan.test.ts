@@ -5,6 +5,7 @@ import {
   dieselbenSpieler,
   ergebnisVomTablet,
   fuersTablet,
+  fuersTabletTeam,
   laufendeBegegnungen,
   laufendeTische,
   listenRang,
@@ -289,5 +290,30 @@ describe('Naechste Spiele am Fernseher', () => {
     expect(listenRang({ runde: 2, gruppe: 'B', phase: 'gruppe' }) < listenRang({ runde: 3, gruppe: 'A', phase: 'gruppe' })).toBe(true);
     expect(listenRang({ runde: 7, gruppe: 'A', phase: 'gruppe' }) < listenRang({ runde: 1, gruppe: null, phase: 'phase2' })).toBe(true);
     expect(naechsteSpiele(null, 6)).toEqual([]);
+  });
+});
+
+describe('Teamvergleich am Tablet', () => {
+  const partie = (id: string, runde: number, phase: string, a: string | null, b: string | null, status: PlanPartie['status'] = 'geplant', tisch: string | null = null): PlanPartie => ({
+    id, spieler_a: a, spieler_b: b, race_to: 5, vorgabe_a: 0, vorgabe_b: 0, status, tisch_id: tisch, runde, begonnen: null, gruppe: null, phase, disziplin: '9-ball'
+  });
+  const teams = { namen: { A: 'Team Rot', B: 'Team Blau' }, spieler: { A: ['r1', 'r2'], B: ['b1', 'b2'] } };
+  const namen: Record<string, string> = { r1: 'Rita', r2: 'Ralf', b1: 'Bea', b2: 'Bodo' };
+
+  test('nur freigegebene Blöcke, entfallene Matches nicht', () => {
+    const liste = [partie('t', 1, 'team', null, null), partie('e1', 2, 'einzel', 'r1', 'b1'), partie('e2', 2, 'einzel', 'r2', 'b2', 'abgebrochen'), partie('e3', 3, 'einzel', 'r1', 'b2')];
+    expect(fuersTabletTeam(liste, 2).map((p) => p.id)).toEqual(['t', 'e1']);
+    expect(fuersTabletTeam(liste, 0)).toEqual([]);
+  });
+
+  test('Team-Match: Teamnamen, alle Spieler beider Teams belegt; Block-Beschriftung', () => {
+    const plan = tabletSpielplan([partie('t', 1, 'team', null, null), partie('e1', 2, 'einzel', 'r1', 'b1')], (id) => namen[id], () => null, null, teams);
+    expect(plan.t).toMatchObject({ player1: 'Team Rot', player2: 'Team Blau', group: 'Block 1 · Team-Match', personen: ['r1', 'r2', 'b1', 'b2'], personen1: ['r1', 'r2'] });
+    expect(plan.e1).toMatchObject({ player1: 'Rita', player2: 'Bea', group: 'Block 2 · Einzel' });
+  });
+
+  test('ohne Teamangaben wird ein Team-Match nicht angeboten', () => {
+    const plan = tabletSpielplan([partie('t', 1, 'team', null, null)], (id) => namen[id], () => null);
+    expect(plan.t).toBeUndefined();
   });
 });

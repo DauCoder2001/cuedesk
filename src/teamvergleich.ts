@@ -16,6 +16,8 @@ export type TeamvergleichEinstellungen = {
   // nicht mitspielt (kapitaen) - wie im Mosconi Cup
   teams: Record<TeamSeite, { name: string; kapitaen?: string | null; kapitaenId?: string | null }>;
   einzelFuersRating?: boolean;
+  // Hoechster fuer die Tablets freigegebener Block (ab dem Start 1)
+  freigegeben?: number;
 };
 
 export const TEAM_VORGABE: TeamvergleichEinstellungen = {

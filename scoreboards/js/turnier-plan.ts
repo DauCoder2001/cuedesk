@@ -9,8 +9,9 @@ import type { HandReihenfolge } from '../../src/turnier';
 
 export type PlanPartie = {
   id: string;
-  spieler_a: string;
-  spieler_b: string;
+  // Leer nur beim Team-Match eines Teamvergleichs (Team gegen Team)
+  spieler_a: string | null;
+  spieler_b: string | null;
   // Doppel (Liga, Doppel-Begegnung): zweiter Spieler je Seite
   partner_a?: string | null;
   partner_b?: string | null;
@@ -106,6 +107,8 @@ const KO_NAME: Record<string, (id: string) => string> = {
 // Beschriftung am Tablet: Runde, bei Gruppen mit Gruppe, dazu die
 // Platzierungsrunden der Modi "Zwei Gruppen" und "Gruppen mit KO"
 export function abschnittName(p: Pick<PlanPartie, 'runde' | 'gruppe' | 'phase'>): string {
+  // Teamvergleich: Bloecke mit Team-Match, Doppel und Einzel
+  if (p.phase && p.phase in TEAM_ART_NAME) return `Block ${p.runde ?? 1} · ${TEAM_ART_NAME[p.phase]}`;
   if (p.phase === 'phase2') return 'Platzierungsduelle';
   if (p.phase === 'phase3') return 'Platzierungsspiele';
   if (p.phase === 'ko') return KO_NAME[(p.gruppe ?? '').replace(/\d+$/, '')]?.(p.gruppe ?? '') ?? 'KO-Runde';
@@ -135,6 +138,9 @@ export function dieselbenSpieler(
   const [b1, b2] = paar(amTisch);
   return a1 !== '' && a2 !== '' && a1 === b1 && a2 === b2;
 }
+
+// Teamvergleich: Match-Arten (phase der Partie)
+const TEAM_ART_NAME: Record<string, string> = { team: 'Team-Match', doppel: 'Doppel', einzel: 'Einzel' };
 
 // Wie die Disziplin am Tisch heissen soll
 const DISZIPLIN_NAME: Record<string, string> = {
@@ -166,11 +172,20 @@ export function fuersTablet<T extends { runde: number | null }>(partien: T[], ve
   });
 }
 
+// Teamvergleich: Namen der Teams und ihre Spieler (fuer das Team-Match)
+export type TabletTeams = { namen: Record<'A' | 'B', string>; spieler: Record<'A' | 'B', string[]> };
+
+// Teamvergleich am Tablet: nur freigegebene Bloecke, entfallene Matches nicht
+export function fuersTabletTeam<T extends { runde: number | null; status: string }>(partien: T[], freigegeben: number): T[] {
+  return partien.filter((p) => (p.runde ?? 1) <= freigegeben && p.status !== 'abgebrochen');
+}
+
 export function tabletSpielplan(
   partien: PlanPartie[],
   name: (personId: string) => string,
   tischNummer: (tischId: string) => string | null,
-  aufnahmen141?: number | null
+  aufnahmen141?: number | null,
+  teams?: TabletTeams
 ): Record<string, PlanEintrag> {
   const plan: Record<string, PlanEintrag> = {};
   // Reihenfolge wie im Spielplan (Runde, dann Paarung) - die Auswahl am
@@ -181,10 +196,35 @@ export function tabletSpielplan(
       const n = (id: string) => (kurz ? ohneZusatz(name(id)) : name(id));
       return zweiter ? `${n(erster)} / ${n(zweiter)}` : n(erster);
     };
-    const eindeutig = seite(p.spieler_a, p.partner_a, true) !== seite(p.spieler_b, p.partner_b, true);
+    // Team-Match (Teamvergleich): Team gegen Team; belegt sind alle Spieler beider
+    // Teams, denn im Team-Match spielen alle reihum
+    if (p.spieler_a === null || p.spieler_b === null) {
+      if (!teams) continue;
+      plan[p.id] = {
+        player1: teams.namen.A,
+        player2: teams.namen.B,
+        status: planStatus(p),
+        table: p.tisch_id ? tischNummer(p.tisch_id) : null,
+        startedAt: p.begonnen ? Date.parse(p.begonnen) : null,
+        raceTo: p.race_to,
+        group: abschnittName(p),
+        vorgabe1: p.vorgabe_a,
+        vorgabe2: p.vorgabe_b,
+        discipline: DISZIPLIN_NAME[p.disziplin ?? ''] ?? null,
+        innings: null,
+        personen: [...teams.spieler.A, ...teams.spieler.B],
+        reihe: listenRang(p),
+        personen1: teams.spieler.A,
+        personen2: teams.spieler.B
+      };
+      continue;
+    }
+    const spielerA = p.spieler_a;
+    const spielerB = p.spieler_b;
+    const eindeutig = seite(spielerA, p.partner_a, true) !== seite(spielerB, p.partner_b, true);
     plan[p.id] = {
-      player1: seite(p.spieler_a, p.partner_a, eindeutig),
-      player2: seite(p.spieler_b, p.partner_b, eindeutig),
+      player1: seite(spielerA, p.partner_a, eindeutig),
+      player2: seite(spielerB, p.partner_b, eindeutig),
       status: planStatus(p),
       table: p.tisch_id ? tischNummer(p.tisch_id) : null,
       startedAt: p.begonnen ? Date.parse(p.begonnen) : null,
@@ -307,10 +347,10 @@ export function tvErgebnis(
   const pos = new Map(teilnehmer.map((t, i) => [t.id, i]));
   const eingabe = partien
     .filter((p) => !p.phase || p.phase === 'gruppe')
-    .filter((p) => pos.has(p.spieler_a) && pos.has(p.spieler_b))
+    .filter((p) => p.spieler_a !== null && p.spieler_b !== null && pos.has(p.spieler_a) && pos.has(p.spieler_b))
     .map((p) => ({
-      a: pos.get(p.spieler_a) as number,
-      b: pos.get(p.spieler_b) as number,
+      a: pos.get(p.spieler_a as string) as number,
+      b: pos.get(p.spieler_b as string) as number,
       standA: p.ergebnis_a,
       standB: p.ergebnis_b,
       vorgabeA: p.vorgabe_a,

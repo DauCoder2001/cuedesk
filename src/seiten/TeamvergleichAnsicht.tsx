@@ -1,16 +1,21 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from '../supabase';
 import { useSitzung } from '../sitzung';
 import { personName } from '../namen';
 import { useRueckfrage } from '../rueckfrage';
-import { ART_NAME, TEAM_VORGABE, einsaetze, hoechstensMatches, pruefen, vorschlag } from '../teamvergleich';
+import { ART_NAME, TEAM_VORGABE, einsaetze, hoechstensMatches, pruefen, siegerVon, stand, vorschlag } from '../teamvergleich';
+import { useLaufendeStaende } from '../laufende-staende';
+import { laufenderStand, laufenderStandText } from '../live';
+import { hoechstwert, spielBeendet } from '../turnier';
 import type { MatchArt, TeamSeite, TeamvergleichEinstellungen, VorschlagMatch } from '../teamvergleich';
 import { DISZIPLIN_TEXT, STATUS_TEXT } from './Turniere';
 import type { TurnierEinstellungen } from './Turniere';
 import type { Partie, Person, Turnier, TurnierTeilnehmer } from '../datenbank.types';
 
-// Teamvergleich (Mosconi-Format), Vorbereitung: Teams zusammenstellen,
+// Teamvergleich (Mosconi-Format). Vorbereitung: Teams zusammenstellen,
 // Kapitaene festlegen, Spielplan vorschlagen lassen, anpassen und uebernehmen.
+// Abend: starten, Bloecke fuer die Tablets freigeben, Ergebnisse, Teamstand;
+// beim Ziel entfallen offene Matches, danach abschliessen.
 // Die Regeln stehen in src/teamvergleich.ts. Seite A = Team A (Rot) in jeder Partie.
 
 const SEITEN: TeamSeite[] = ['A', 'B'];
@@ -18,6 +23,12 @@ const FARBE: Record<TeamSeite, string> = { A: 'Rot', B: 'Blau' };
 
 const datumLang = (iso: string) =>
   new Date(`${iso}T12:00:00`).toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' });
+
+// Reihenfolge fuer den Teamstand: nach dem Zeitpunkt des Spielendes
+const nachEnde = (partien: Partie[]) => {
+  const ende = new Map(partien.map((p) => [p.id, p.beendet ?? '']));
+  return (p: { id: string }) => ende.get(p.id) ?? '';
+};
 
 // Schluessel eines Platzes im Plan: Match (Index) und Seite/Position
 type Platz = { index: number; seite: 'a' | 'b'; pos: number };
@@ -52,14 +63,18 @@ export default function TeamvergleichAnsicht({
   const [arbeitet, setArbeitet] = useState(false);
   const [fehler, setFehler] = useState<string | null>(null);
   const [meldung, setMeldung] = useState<string | null>(null);
+  const [tische, setTische] = useState<Map<string, number>>(new Map());
+  // Laufende Matches nach dem Sieg, die zu Ende gespielt werden duerfen
+  const [zuEnde, setZuEnde] = useState<Set<string>>(new Set());
 
   const laden = useCallback(async () => {
     if (!verein) return;
-    const [t, tn, pe, pa] = await Promise.all([
+    const [t, tn, pe, pa, ti] = await Promise.all([
       supabase.from('turniere').select('*').eq('id', turnierId).maybeSingle(),
       supabase.from('turnier_teilnehmer').select('*').eq('turnier_id', turnierId),
       supabase.from('personen').select('*').eq('verein_id', verein.id),
-      supabase.from('partien').select('*').eq('turnier_id', turnierId).order('runde').order('paarung')
+      supabase.from('partien').select('*').eq('turnier_id', turnierId).order('runde').order('paarung'),
+      supabase.from('tische').select('id, nummer').eq('verein_id', verein.id)
     ]);
     if (t.error) setFehler(t.error.message);
     setTurnier(t.data ?? null);
@@ -67,11 +82,59 @@ export default function TeamvergleichAnsicht({
     setTeilnehmer(tn.data ?? []);
     setPersonen(pe.data ?? []);
     setPartien(pa.data ?? []);
+    setTische(new Map((ti.data ?? []).map((x) => [x.id, x.nummer])));
   }, [verein, turnierId]);
 
   useEffect(() => {
     void laden();
   }, [laden]);
+
+  // Ergebnisse und Tischwahl von den Tablets sofort uebernehmen
+  useEffect(() => {
+    let zeitgeber: number | null = null;
+    const kanal = supabase
+      .channel(`teamvergleich-${turnierId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'partien', filter: `turnier_id=eq.${turnierId}` }, () => {
+        if (zeitgeber !== null) window.clearTimeout(zeitgeber);
+        zeitgeber = window.setTimeout(() => {
+          void supabase
+            .from('partien')
+            .select('*')
+            .eq('turnier_id', turnierId)
+            .order('runde')
+            .order('paarung')
+            .then(({ data }) => data && setPartien(data));
+        }, 300);
+      })
+      .subscribe();
+    return () => {
+      if (zeitgeber !== null) window.clearTimeout(zeitgeber);
+      void supabase.removeChannel(kanal);
+    };
+  }, [turnierId]);
+
+  const laufendeStaende = useLaufendeStaende(verein?.id);
+
+  // Ziel erreicht: offene Matches entfallen (verschwinden auch von den Tablets)
+  const entfallenLaeuft = useRef(false);
+  useEffect(() => {
+    if (!turnier || turnier.status !== 'laeuft' || !darfLeiten || entfallenLaeuft.current) return;
+    const tvx = ((turnier.einstellungen ?? {}) as TurnierEinstellungen).teamvergleich;
+    if (!tvx) return;
+    const s = stand(partien, tvx.ziel, nachEnde(partien));
+    if (!s.sieger || s.entfallen.length === 0) return;
+    entfallenLaeuft.current = true;
+    void supabase
+      .from('partien')
+      .update({ status: 'abgebrochen' })
+      .in('id', s.entfallen)
+      .eq('status', 'geplant')
+      .is('tisch_id', null)
+      .then(() => {
+        entfallenLaeuft.current = false;
+        void laden();
+      });
+  }, [partien, turnier, darfLeiten, laden]);
 
   const einstellungen = (turnier?.einstellungen ?? {}) as TurnierEinstellungen;
   const tv: TeamvergleichEinstellungen = einstellungen.teamvergleich ?? TEAM_VORGABE;
@@ -253,6 +316,131 @@ export default function TeamvergleichAnsicht({
     await laden();
   }
 
+  // ---------- Abend ----------
+
+  async function starten() {
+    if (!turnier) return;
+    setFehler(null);
+    if (partien.length === 0 || plan || planVeraltet) return setFehler('Erst den Spielplan übernehmen.');
+    if (
+      !(await fragen(
+        `${turnier.name} starten?\nBlock 1 (Team-Match) steht danach an den Tablets zur Auswahl. Teams und Spielplan sind dann fest; Namen lassen sich nur noch bei Matches tauschen, die noch nicht begonnen haben.`,
+        'Starten'
+      ))
+    ) {
+      return;
+    }
+    const { error } = await supabase
+      .from('turniere')
+      .update({ status: 'laeuft', einstellungen: { ...einstellungen, teamvergleich: { ...tv, freigegeben: 1 } } })
+      .eq('id', turnier.id);
+    if (error) return setFehler(error.message);
+    setMeldung('Teamvergleich gestartet. Block 1 steht an den Tablets zur Auswahl.');
+    await laden();
+  }
+
+  async function blockFreigeben(nr: number) {
+    if (!turnier) return;
+    setFehler(null);
+    const { error } = await supabase
+      .from('turniere')
+      .update({ einstellungen: { ...einstellungen, teamvergleich: { ...tv, freigegeben: nr } } })
+      .eq('id', turnier.id);
+    if (error) return setFehler(error.message);
+    setMeldung(`Block ${nr} steht jetzt an den Tablets zur Auswahl.`);
+    await laden();
+  }
+
+  // Ergebnis von Hand (wie im Turnier): leer = offen, Race erreicht = beendet
+  async function ergebnisSetzen(p: Partie, a: number | null, b: number | null) {
+    const race = p.race_to ?? 5;
+    if (a !== null && b === null) b = 0;
+    if (b !== null && a === null) a = 0;
+    if (a !== null && b !== null && (a > hoechstwert(b, race) || b > hoechstwert(a, race))) {
+      return setFehler(`Bei Race to ${race} ist dieser Stand nicht möglich.`);
+    }
+    const leer = a === null || b === null || (a === 0 && b === 0);
+    const fertig = spielBeendet(a, b, race);
+    setFehler(null);
+    const { error } = await supabase
+      .from('partien')
+      .update({
+        ergebnis_a: leer ? null : a,
+        ergebnis_b: leer ? null : b,
+        status: leer ? 'geplant' : fertig ? 'beendet' : 'laeuft',
+        beendet: fertig ? p.beendet ?? new Date().toISOString() : null
+      })
+      .eq('id', p.id);
+    if (error) return setFehler(error.message);
+    await laden();
+  }
+
+  // Waehrend des Abends: Namen nur bei Matches tauschen, die noch nicht begonnen haben
+  async function platzSpeichern(p: Partie, seite: 'a' | 'b', pos: number, id: string) {
+    const spalte: 'spieler_a' | 'spieler_b' | 'partner_a' | 'partner_b' =
+      pos === 0 ? (seite === 'a' ? 'spieler_a' : 'spieler_b') : seite === 'a' ? 'partner_a' : 'partner_b';
+    const imBlock = partien
+      .filter((x) => x.runde === p.runde && x.id !== p.id)
+      .flatMap((x) => [x.spieler_a, x.spieler_b, x.partner_a, x.partner_b]);
+    const imMatch = [p.spieler_a, p.spieler_b, p.partner_a, p.partner_b].filter((x, i) => x && i !== ['spieler_a', 'spieler_b', 'partner_a', 'partner_b'].indexOf(spalte));
+    if (imBlock.includes(id) || imMatch.includes(id)) return setFehler(`${anzeige(id)} spielt in Block ${p.runde} schon.`);
+    setFehler(null);
+    const { error } = await supabase
+      .from('partien')
+      .update(spalte === 'spieler_a' ? { spieler_a: id } : spalte === 'spieler_b' ? { spieler_b: id } : spalte === 'partner_a' ? { partner_a: id } : { partner_b: id })
+      .eq('id', p.id)
+      .eq('status', 'geplant')
+      .is('tisch_id', null)
+      .select('id');
+    if (error) return setFehler(error.message);
+    await laden();
+  }
+
+  // Nach dem Sieg: laufendes Match abbrechen (zaehlt nicht, Tisch wird frei)
+  async function matchAbbrechen(p: Partie) {
+    if (!(await fragen('Dieses Match abbrechen? Es zählt nicht mehr, der Tisch wird frei.', 'Abbrechen'))) return;
+    const { error } = await supabase.from('partien').update({ status: 'abgebrochen', tisch_id: null }).eq('id', p.id);
+    if (error) return setFehler(error.message);
+    await laden();
+  }
+
+  async function abschliessen() {
+    if (!turnier) return;
+    const s = stand(partien, tv.ziel, nachEnde(partien));
+    const text = s.sieger
+      ? `${tv.teams[s.sieger].name} gewinnt ${Math.max(s.a, s.b)} : ${Math.min(s.a, s.b)}. Teamvergleich abschließen?\nDie Ergebnisse sind danach gesperrt.`
+      : `Noch hat kein Team ${tv.ziel} Punkte (Stand ${s.a} : ${s.b}). Trotzdem abschließen?\nOffene Matches entfallen, die Ergebnisse sind danach gesperrt.`;
+    if (!(await fragen(text, 'Abschließen'))) return;
+    setArbeitet(true);
+    await supabase.from('partien').update({ status: 'abgebrochen' }).eq('turnier_id', turnier.id).eq('status', 'geplant');
+    const { error } = await supabase.from('turniere').update({ status: 'beendet' }).eq('id', turnier.id);
+    if (error) {
+      setArbeitet(false);
+      return setFehler(error.message);
+    }
+    const mitRating = Boolean(tv.einzelFuersRating) && partien.some((p) => p.rating_werten && p.status === 'beendet');
+    const rating = mitRating ? await supabase.functions.invoke('rating', { body: { verein_id: turnier.verein_id } }) : null;
+    setArbeitet(false);
+    setMeldung(
+      !mitRating
+        ? 'Teamvergleich abgeschlossen.'
+        : rating?.error
+          ? 'Teamvergleich abgeschlossen. Das Rating wird heute Nacht neu berechnet.'
+          : 'Teamvergleich abgeschlossen, Rating neu berechnet.'
+    );
+    await laden();
+  }
+
+  // Laufender Stand vom Tablet ("● Tisch 1 · 2 : 1")
+  const laufendText = (p: Partie) => {
+    const t = laufendeStaende.get(p.id);
+    if (!t || p.status === 'beendet') return null;
+    const nameA = p.spieler_a ? anzeige(p.spieler_a) : tv.teams.A.name;
+    const nameB = p.spieler_b ? anzeige(p.spieler_b) : tv.teams.B.name;
+    const s = laufenderStand(t.zustand, t.aktualisiert, nameA, nameB);
+    return s ? laufenderStandText(s, tische.get(t.tischId) ?? null) : null;
+  };
+
   async function loeschen() {
     if (!turnier || !verein) return;
     if (!(await fragen(`„${turnier.name}“ mit Teams und Spielplan löschen?`, 'Löschen', { schutzwort: verein.id }))) return;
@@ -264,6 +452,11 @@ export default function TeamvergleichAnsicht({
   // Spieler im gespeicherten Plan, die in keinem Team mehr stehen oder das Team gewechselt haben
   const planVeraltet =
     !plan && gespeichert.some((m) => m.a.some((id) => !teamA.includes(id)) || m.b.some((id) => !teamB.includes(id)));
+  const laeuftJetzt = turnier.status === 'laeuft';
+  const teamStand = stand(partien, tv.ziel, nachEnde(partien));
+  const freigegeben = tv.freigegeben ?? 0;
+  const letzterBlock = partien.reduce((m, p) => Math.max(m, p.runde ?? 1), 0);
+  const naechsterBlock = laeuftJetzt && !teamStand.sieger && freigegeben < letzterBlock ? freigegeben + 1 : null;
   const zahl = einsaetze(angezeigt);
   const zahlen = [...teamA, ...teamB].map((id) => zahl.get(id) ?? 0);
   const bloecke = [...new Set(angezeigt.map((m) => m.block))];
@@ -385,12 +578,14 @@ export default function TeamvergleichAnsicht({
   const auswahl = (m: VorschlagMatch, index: number, seite: 'a' | 'b', pos: number) => {
     const ids = seite === 'a' ? teamA : teamB;
     const wert = m[seite][pos] ?? '';
-    if (!bearbeitbar) return <span>{wert ? anzeige(wert) : '–'}</span>;
+    const p = !plan ? partien[index] : undefined;
+    const tauschbar = bearbeitbar || (darfLeiten && laeuftJetzt && p?.status === 'geplant' && !p.tisch_id);
+    if (!tauschbar) return <span>{wert ? anzeige(wert) : '–'}</span>;
     return (
       <select
         aria-label={`Spieler ${seite === 'a' ? tv.teams.A.name : tv.teams.B.name}`}
         value={wert}
-        onChange={(e) => platzAendern({ index, seite, pos }, e.target.value)}
+        onChange={(e) => (vorbereitung || !p ? platzAendern({ index, seite, pos }, e.target.value) : void platzSpeichern(p, seite, pos, e.target.value))}
       >
         {!ids.includes(wert) && <option value={wert}>{wert ? `${anzeige(wert)} (nicht im Team)` : '–'}</option>}
         {ids.map((id) => (
@@ -399,6 +594,27 @@ export default function TeamvergleichAnsicht({
           </option>
         ))}
       </select>
+    );
+  };
+
+  // Stand-Spalte waehrend und nach dem Abend
+  const standZelle = (p: Partie) => {
+    if (p.status === 'abgebrochen') return <span className="hinweis">entfallen</span>;
+    if (laeuftJetzt && (p.runde ?? 1) > freigegeben && p.status === 'geplant') return <span className="hinweis">nicht freigegeben</span>;
+    const sieger = siegerVon(p);
+    const live = laufendText(p);
+    return (
+      <span className="standzelle">
+        {darfLeiten && laeuftJetzt ? (
+          <ErgebnisFelder partie={p} speichern={(a, b) => void ergebnisSetzen(p, a, b)} />
+        ) : p.ergebnis_a !== null && p.ergebnis_b !== null ? (
+          `${p.ergebnis_a} : ${p.ergebnis_b}`
+        ) : (
+          '–'
+        )}
+        {sieger && <span className={`teammarke team-${sieger}`}>✓ {tv.teams[sieger].name}</span>}
+        {live && <span className="hinweis">{live}</span>}
+      </span>
     );
   };
 
@@ -412,8 +628,23 @@ export default function TeamvergleichAnsicht({
           <h2>
             {turnier.name} <span className="marke">{STATUS_TEXT[turnier.status]}</span>
           </h2>
+          {darfLeiten && laeuftJetzt && (
+            <div className="knopfpaar">
+              <button type="button" className={teamStand.sieger ? 'faellig' : undefined} disabled={arbeitet} title="Beendet den Teamvergleich und sperrt die Ergebnisse. Offene Matches entfallen." onClick={() => void abschliessen()}>
+                Teamvergleich abschließen
+              </button>
+            </div>
+          )}
           {bearbeitbar && (
             <div className="knopfpaar">
+              <button
+                type="button"
+                disabled={partien.length === 0 || Boolean(plan) || planVeraltet || teamFehler.length > 0}
+                title="Setzt den Teamvergleich auf „läuft“ und gibt Block 1 (Team-Match) für die Tablets frei."
+                onClick={() => void starten()}
+              >
+                Teamvergleich starten
+              </button>
               <button type="button" title="Name, Datum, Disziplin, Ziel, Race to und Teamnamen ändern" onClick={aendern}>
                 Turnier ändern
               </button>
@@ -431,6 +662,45 @@ export default function TeamvergleichAnsicht({
         {fehler && <p className="fehler">{fehler}</p>}
         {meldung && <p className="meldung">{meldung}</p>}
       </section>
+
+      {!vorbereitung && (
+        <section className="block teamstand">
+          <div className="teamstand-zeile">
+            <span className="teammarke team-A">{tv.teams.A.name}</span>
+            <span className="teamstand-zahl">
+              {teamStand.a} : {teamStand.b}
+            </span>
+            <span className="teammarke team-B">{tv.teams.B.name}</span>
+          </div>
+          <p className="hinweis">
+            {teamStand.sieger
+              ? `${tv.teams[teamStand.sieger].name} gewinnt ${Math.max(teamStand.a, teamStand.b)} : ${Math.min(teamStand.a, teamStand.b)}.`
+              : `Sieg bei ${tv.ziel} Punkten.`}
+            {laeuftJetzt && !teamStand.sieger && ` Freigegeben bis Block ${freigegeben} von ${letzterBlock}.`}
+          </p>
+          {teamStand.sieger && laeuftJetzt && teamStand.laufend.filter((id) => !zuEnde.has(id)).length > 0 && (
+            <div className="kasten">
+              <div className="feldkopf">Läuft noch, zählt nicht mehr</div>
+              {partien
+                .filter((p) => teamStand.laufend.includes(p.id) && !zuEnde.has(p.id))
+                .map((p) => (
+                  <div key={p.id} className="zeile">
+                    <span>
+                      {p.spieler_a ? anzeige(p.spieler_a) : tv.teams.A.name} – {p.spieler_b ? anzeige(p.spieler_b) : tv.teams.B.name}{' '}
+                      {laufendText(p) ?? ''}
+                    </span>
+                    <button type="button" className="klein" onClick={() => void matchAbbrechen(p)}>
+                      Abbrechen
+                    </button>
+                    <button type="button" className="klein" title="Das Ergebnis wird gespeichert, zählt aber nicht mehr zum Teamstand." onClick={() => setZuEnde(new Set([...zuEnde, p.id]))}>
+                      Zu Ende spielen lassen
+                    </button>
+                  </div>
+                ))}
+            </div>
+          )}
+        </section>
+      )}
 
       <div className="turnierzweier">{SEITEN.map(teamKasten)}</div>
 
@@ -469,6 +739,11 @@ export default function TeamvergleichAnsicht({
             Spielplan
             {angezeigt.length > 0 && ` (${angezeigt.length} Matches, höchstens ${hoechstensMatches(tv.ziel)} nötig)`}
           </h2>
+          {darfLeiten && naechsterBlock !== null && (
+            <button type="button" title="Die Matches dieses Blocks stehen danach an den Tablets zur Auswahl." onClick={() => void blockFreigeben(naechsterBlock)}>
+              Block {naechsterBlock} freigeben
+            </button>
+          )}
           {bearbeitbar && (
             <div className="knopfpaar">
               <button
@@ -517,6 +792,7 @@ export default function TeamvergleichAnsicht({
                   <th>
                     <span className="teammarke team-B">{tv.teams.B.name}</span>
                   </th>
+                  {!vorbereitung && <th>Stand</th>}
                 </tr>
               </thead>
               <tbody>
@@ -545,6 +821,7 @@ export default function TeamvergleichAnsicht({
                           {m.art === 'team' ? tv.teams.B.name : auswahl(m, index, 'b', 0)}
                           {m.art === 'doppel' && <> / {auswahl(m, index, 'b', 1)}</>}
                         </td>
+                        {!vorbereitung && partien[index] && <td>{standZelle(partien[index])}</td>}
                       </tr>
                     ))
                 )}
@@ -562,9 +839,38 @@ export default function TeamvergleichAnsicht({
             )}
           </>
         )}
-        {!vorbereitung && <p className="hinweis">Der Abend selbst (Start, Blöcke an den Tablets, Stand) folgt im nächsten Ausbauschritt.</p>}
       </section>
       {rueckfrage}
     </div>
+  );
+}
+
+// Ergebnis einer Partie von Hand: gespeichert wird beim Verlassen der beiden Felder
+function ErgebnisFelder({ partie, speichern }: { partie: Partie; speichern: (a: number | null, b: number | null) => void }) {
+  const text = (w: number | null) => (w === null ? '' : String(w));
+  const [a, setA] = useState(text(partie.ergebnis_a));
+  const [b, setB] = useState(text(partie.ergebnis_b));
+  const bereich = useRef<HTMLSpanElement>(null);
+  // Neuer Stand von aussen (Tablet), solange hier niemand tippt
+  useEffect(() => {
+    if (bereich.current?.contains(document.activeElement)) return;
+    setA(text(partie.ergebnis_a));
+    setB(text(partie.ergebnis_b));
+  }, [partie.ergebnis_a, partie.ergebnis_b]);
+  const zahl = (t: string) => (t.trim() === '' ? null : Number(t));
+  const verlassen = (e: React.FocusEvent<HTMLInputElement>) => {
+    if (e.relatedTarget && bereich.current?.contains(e.relatedTarget as Node)) return;
+    const na = zahl(a);
+    const nb = zahl(b);
+    if (na === partie.ergebnis_a && nb === partie.ergebnis_b) return;
+    if ((na !== null && !Number.isInteger(na)) || (nb !== null && !Number.isInteger(nb))) return;
+    speichern(na, nb);
+  };
+  return (
+    <span ref={bereich} className="ergebnisfelder">
+      <input className="zahlfeld" inputMode="numeric" aria-label="Stand links" value={a} onChange={(e) => setA(e.target.value)} onBlur={verlassen} />
+      :
+      <input className="zahlfeld" inputMode="numeric" aria-label="Stand rechts" value={b} onChange={(e) => setB(e.target.value)} onBlur={verlassen} />
+    </span>
   );
 }

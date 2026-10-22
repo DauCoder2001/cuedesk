@@ -657,3 +657,8 @@ button.aktivmarke { color: var(--gut); border-color: var(--gut); }
 .teammarke.team-B { background: #1f5fae; }
 .tabelle tr.blockanfang td { border-top: 2px solid var(--text); }
 .tabelle tr.planfehler td { background: #fbeaea; }
+.teamstand-zeile { display: flex; align-items: center; justify-content: center; gap: 24px; font-size: 22px; }
+.teamstand-zahl { font-size: 40px; font-weight: 700; }
+.teamstand .hinweis { text-align: center; }
+.standzelle { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.ergebnisfelder { display: inline-flex; align-items: center; gap: 4px; }
