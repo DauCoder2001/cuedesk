@@ -71,6 +71,12 @@ describe('Teamvergleich: Vorschlag', () => {
     expect(new Set(paare).size).toBe(paare.length);
   });
 
+  test('Doppelpartner wechseln von Block zu Block', () => {
+    const vier = vorschlag(['r1', 'r2', 'r3', 'r4'], ['b1', 'b2', 'b3', 'b4'], 7);
+    const paare = vier.filter((m) => m.art === 'doppel').map((m) => [...m.a].sort().join('+'));
+    expect(new Set(paare).size).toBe(paare.length);
+  });
+
   test('andere Variante ergibt einen anderen Vorschlag', () => {
     expect(vorschlag(rot, blau, 7, 1)).not.toEqual(plan);
   });

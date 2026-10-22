@@ -59,6 +59,20 @@ const drehen = <T>(liste: T[], um: number): T[] => {
   return [...liste.slice(k), ...liste.slice(0, k)];
 };
 
+// Doppelpartner nach dem Kreisverfahren: Die Spieler werden nach Namen
+// geordnet (damit gleiche Spieler gleiche Paare ergeben), der erste bleibt
+// stehen, die uebrigen ruecken je Runde weiter. So wechselt der Partner von
+// Block zu Block, solange es neue Kombinationen gibt.
+function partnerPaare(spieler: string[], runde: number): string[][] {
+  const liste = [...spieler].sort();
+  if (liste.length < 2) return [];
+  const [fest, ...rest] = liste;
+  const kreis = [fest, ...drehen(rest, runde)];
+  const paare: string[][] = [];
+  for (let i = 0; i < kreis.length / 2; i += 1) paare.push([kreis[i], kreis[kreis.length - 1 - i]]);
+  return paare;
+}
+
 // Vorschlag: Block 1 Team-Match, danach abwechselnd Doppel und Einzel, bis
 // genug Matches geplant sind (hoechstensMatches). Gleiche Einsaetze durch
 // Drehen der Reihenfolge je Block; "variante" ergibt einen anderen, ebenso
@@ -87,11 +101,11 @@ export function vorschlag(a: string[], b: string[], ziel: number, variante = 0):
     if (istDoppel) {
       // Paare aus den am wenigsten Eingesetzten; bei ungerader Zahl setzt so je Block ein anderer aus
       const paare = Math.min(Math.floor(n / 2), platz);
-      const ra = drehen(nachEinsatz(a, doppelNr + variante).slice(0, 2 * paare), doppelNr);
-      const rb = drehen(nachEinsatz(b, doppelNr * 2 + variante + 1).slice(0, 2 * paare), doppelNr + 1);
+      const pa = partnerPaare(nachEinsatz(a, doppelNr + variante).slice(0, 2 * paare), doppelNr + variante);
+      const pb = partnerPaare(nachEinsatz(b, doppelNr * 2 + variante + 1).slice(0, 2 * paare), doppelNr + variante + 1);
       for (let i = 0; i < paare; i += 1) {
         const j = (i + doppelNr) % paare;
-        matches.push({ block, art: 'doppel', paarung: i + 1, a: [ra[2 * i], ra[2 * i + 1]], b: [rb[2 * j], rb[2 * j + 1]] });
+        matches.push({ block, art: 'doppel', paarung: i + 1, a: pa[i], b: pb[j] });
       }
       doppelNr += 1;
     } else {
