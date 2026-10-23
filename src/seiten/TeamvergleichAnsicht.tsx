@@ -495,6 +495,22 @@ export default function TeamvergleichAnsicht({
   const freigegeben = tv.freigegeben ?? 0;
   const letzterBlock = partien.reduce((m, p) => Math.max(m, p.runde ?? 1), 0);
   const naechsterBlock = laeuftJetzt && !teamStand.sieger && freigegeben < letzterBlock ? freigegeben + 1 : null;
+  // Der naechste Schritt wird gruen hervorgehoben (faellig), immer nur einer
+  const naechsterSchritt: 'vorschlag' | 'uebernehmen' | 'starten' | 'freigeben' | 'abschliessen' | null = vorbereitung
+    ? plan
+      ? 'uebernehmen'
+      : partien.length > 0 && !planVeraltet
+        ? teamFehler.length === 0 ? 'starten' : null
+        : teamFehler.length === 0 ? 'vorschlag' : null
+    : laeuftJetzt
+      ? teamStand.sieger
+        ? 'abschliessen'
+        : naechsterBlock !== null &&
+            partien.every((p) => (p.runde ?? 1) > freigegeben || p.status === 'beendet' || p.status === 'abgebrochen')
+          ? 'freigeben'
+          : null
+      : null;
+  const faellig = (schritt: typeof naechsterSchritt) => (naechsterSchritt === schritt ? 'faellig' : undefined);
   const zahl = einsaetze(angezeigt);
   const zahlen = [...teamA, ...teamB].map((id) => zahl.get(id) ?? 0);
   const bloecke = [...new Set(angezeigt.map((m) => m.block))];
@@ -668,7 +684,7 @@ export default function TeamvergleichAnsicht({
           </h2>
           {darfLeiten && laeuftJetzt && (
             <div className="knopfpaar">
-              <button type="button" className={teamStand.sieger ? 'faellig' : undefined} disabled={arbeitet} title="Beendet den Teamvergleich und sperrt die Ergebnisse. Offene Matches entfallen." onClick={() => void abschliessen()}>
+              <button type="button" className={faellig('abschliessen')} disabled={arbeitet} title="Beendet den Teamvergleich und sperrt die Ergebnisse. Offene Matches entfallen." onClick={() => void abschliessen()}>
                 Teamvergleich abschließen
               </button>
             </div>
@@ -677,6 +693,7 @@ export default function TeamvergleichAnsicht({
             <div className="knopfpaar">
               <button
                 type="button"
+                className={faellig('starten')}
                 disabled={partien.length === 0 || Boolean(plan) || planVeraltet || teamFehler.length > 0}
                 title="Setzt den Teamvergleich auf „läuft“ und gibt Block 1 (Team-Match) für die Tablets frei."
                 onClick={() => void starten()}
@@ -816,7 +833,7 @@ export default function TeamvergleichAnsicht({
             {angezeigt.length > 0 && ` (${angezeigt.length} Matches, höchstens ${hoechstensMatches(tv.ziel)} nötig)`}
           </h2>
           {darfLeiten && naechsterBlock !== null && (
-            <button type="button" title="Die Matches dieses Blocks stehen danach an den Tablets zur Auswahl." onClick={() => void blockFreigeben(naechsterBlock)}>
+            <button type="button" className={faellig('freigeben')} title="Die Matches dieses Blocks stehen danach an den Tablets zur Auswahl." onClick={() => void blockFreigeben(naechsterBlock)}>
               Block {naechsterBlock} freigeben
             </button>
           )}
@@ -824,6 +841,7 @@ export default function TeamvergleichAnsicht({
             <div className="knopfpaar">
               <button
                 type="button"
+                className={faellig('vorschlag')}
                 title="Plant die Blöcke: Team-Match, dann Doppel und Einzel im Wechsel, mit gleichmäßigen Einsätzen."
                 disabled={teamFehler.length > 0}
                 onClick={() => vorschlagErzeugen(0)}
@@ -905,7 +923,7 @@ export default function TeamvergleichAnsicht({
             </table>
             {bearbeitbar && plan && (
               <div className="zeile">
-                <button type="button" disabled={arbeitet} title="Legt die Matches an. Bis zum Start lässt sich der Plan weiter ändern." onClick={() => void planUebernehmen()}>
+                <button type="button" className={faellig('uebernehmen')} disabled={arbeitet} title="Legt die Matches an. Bis zum Start lässt sich der Plan weiter ändern." onClick={() => void planUebernehmen()}>
                   Spielplan übernehmen
                 </button>
                 <button type="button" disabled={arbeitet} title="Den Vorschlag verwerfen" onClick={() => setPlan(null)}>
