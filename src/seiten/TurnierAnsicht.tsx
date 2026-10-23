@@ -1728,6 +1728,30 @@ export default function TurnierAnsicht({
       (!mitKo || weiter !== null)
     : teilnehmer.length >= 3;
 
+  // Naechster Schritt gruen hinterlegt (faellig), immer nur einer. Die
+  // Platzierungsspiele bei Gruppen mit KO sind freiwillig und bleiben ohne.
+  const naechsterSchritt: 'disziplin' | 'modus' | 'auslosen' | 'duelle' | 'ko' | 'abschliessen' | null =
+    !bearbeitbar
+      ? null
+      : turnier.status === 'geplant'
+        ? disziplinOffen && festDisziplin
+          ? 'disziplin'
+          : modusOffen
+            ? 'modus'
+            : !disziplinOffen && teilnehmerOk
+              ? 'auslosen'
+              : null
+        : turnier.status !== 'laeuft'
+          ? null
+          : zwei && !einstellungen.phase2
+            ? offeneGruppenspiele === 0 ? 'duelle' : null
+            : mitKo && !koFest
+              ? offeneGruppenspiele === 0 && weiter !== null ? 'ko' : null
+              : offeneSpiele === 0 && (!mitKo || Boolean(baum?.fin.fertig && baum.bro.fertig))
+                ? 'abschliessen'
+                : null;
+  const faellig = (schritt: typeof naechsterSchritt) => (naechsterSchritt === schritt ? 'faellig' : undefined);
+
   const tabellenname = (pos: number) => anzeige(aufstellung[pos]?.person_id ?? '');
 
   // Nachtragen: Zwei Gruppen in die kleinere Gruppe (sonst A), Gruppen mit KO
@@ -1796,7 +1820,7 @@ export default function TurnierAnsicht({
               </button>
             )}
             {bearbeitbar && turnier.status === 'laeuft' && (
-              <button type="button" title="Beendet das Turnier und sperrt die Ergebnisse. Zählt es fürs Rating, wird das Rating neu berechnet." onClick={() => void abschliessen()} disabled={arbeitet}>
+              <button type="button" title="Beendet das Turnier und sperrt die Ergebnisse. Zählt es fürs Rating, wird das Rating neu berechnet." onClick={() => void abschliessen()} disabled={arbeitet} className={faellig('abschliessen')}>
                 Abschließen
               </button>
             )}
@@ -1875,6 +1899,7 @@ export default function TurnierAnsicht({
                     </select>
                     <button
                       type="button"
+                      className={faellig('disziplin')}
                       title="Legt die Disziplin dieses Turniers fest. Danach lässt es sich auslosen."
                       disabled={!festDisziplin}
                       onClick={() => void disziplinFestlegen()}
@@ -2199,6 +2224,7 @@ export default function TurnierAnsicht({
                     </p>
                     <button
                       type="button"
+                      className={gewaehlt ? faellig('modus') : undefined}
                       title="Legt den Modus fest. Danach lassen sich Gruppen einstellen und das Turnier auslosen."
                       disabled={!gewaehlt}
                       onClick={() => gewaehlt && void modusFestlegen(gewaehlt)}
@@ -2209,7 +2235,7 @@ export default function TurnierAnsicht({
                 );
               })()}
               <div className="knopfpaar">
-                <button type="button" title="Lost Gruppen und Spielplan aus und startet das Turnier. Danach stehen die Spiele an den Tablets zur Auswahl." onClick={() => void auslosenUndStarten()} disabled={arbeitet || !teilnehmerOk || disziplinOffen || modusOffen}>
+                <button type="button" title="Lost Gruppen und Spielplan aus und startet das Turnier. Danach stehen die Spiele an den Tablets zur Auswahl." className={faellig('auslosen')} onClick={() => void auslosenUndStarten()} disabled={arbeitet || !teilnehmerOk || disziplinOffen || modusOffen}>
                   Auslosen und starten
                 </button>
               </div>
@@ -2530,7 +2556,7 @@ export default function TurnierAnsicht({
                 <div className="bearbeitenkopf">
                   <h2>Platzierungsduelle (Race to {race2})</h2>
                   {bearbeitbar && !einstellungen.phase2 && (
-                    <button type="button" title="Setzt die Platzierungsduelle an. Geht erst, wenn alle Gruppenspiele beendet sind." onClick={() => void phase2Starten()} disabled={arbeitet || offeneGruppenspiele > 0}>
+                    <button type="button" title="Setzt die Platzierungsduelle an. Geht erst, wenn alle Gruppenspiele beendet sind." className={faellig('duelle')} onClick={() => void phase2Starten()} disabled={arbeitet || offeneGruppenspiele > 0}>
                       Duelle starten
                     </button>
                   )}
@@ -2600,7 +2626,7 @@ export default function TurnierAnsicht({
                     <div className="bearbeitenkopf">
                       <h2>KO-Runde ({feld} Spieler)</h2>
                       {bearbeitbar && !koFest && (
-                        <button type="button" title="Setzt die KO-Runde aus den Gruppentabellen an. Geht erst, wenn alle Gruppenspiele beendet sind." onClick={() => void koStarten()} disabled={arbeitet || offeneGruppenspiele > 0 || weiter === null}>
+                        <button type="button" title="Setzt die KO-Runde aus den Gruppentabellen an. Geht erst, wenn alle Gruppenspiele beendet sind." className={faellig('ko')} onClick={() => void koStarten()} disabled={arbeitet || offeneGruppenspiele > 0 || weiter === null}>
                           KO-Runde starten
                         </button>
                       )}

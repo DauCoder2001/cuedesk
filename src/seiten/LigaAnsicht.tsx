@@ -1128,6 +1128,26 @@ export default function LigaAnsicht({
         { runde: 'hin', titel: 'Hinrunde' },
         { runde: 'rueck', titel: 'Rückrunde' }
       ];
+  // Naechster Schritt gruen hinterlegt (faellig), immer nur einer: Hinrunde starten,
+  // sobald die Aufstellung vollstaendig ist; Rueckrunde, sobald die Hinrunde
+  // gespielt ist; Abschliessen, sobald alle Partien gespielt sind
+  const aufstellungKomplett = (runde: 'hin' | 'rueck') =>
+    spiele
+      .filter((sp) => sp.runde === runde)
+      .every(
+        (sp) =>
+          spielerIn(sp, 'heim') && spielerIn(sp, 'gast') && (!istDoppel || (spielerIn(sp, 'heim2') && spielerIn(sp, 'gast2')))
+      );
+  const hinGespielt = fertigGespielt(partien.filter((p) => p.runde === 1));
+  const naechsterSchritt: 'hin' | 'rueck' | 'abschliessen' | null =
+    turnier?.status === 'beendet' || spiele.length === 0
+      ? null
+      : !gestartet.hin
+        ? aufstellungKomplett('hin') && fehlerAufstellung.length === 0 ? 'hin' : null
+        : !istDoppel && !gestartet.rueck
+          ? hinGespielt ? 'rueck' : null
+          : turnier?.status === 'laeuft' && fertigGespielt(partien) ? 'abschliessen' : null;
+
   // Umschalter: alle Begegnungen des Spieltags; ohne geladene Reihenfolge die
   // bisherigen zwei (die fehlende 2. legt begegnungOeffnen an)
   const umschalter: { nummer: number; id: string | null; doppel: boolean; status: Turnier['status'] | null }[] =
@@ -1254,8 +1274,8 @@ export default function LigaAnsicht({
             {bearbeitbar && (
               <button
                 type="button"
-                // Gelb, sobald alle Partien gespielt sind: nur das Abschliessen fehlt noch
-                className={turnier.status === 'laeuft' && fertigGespielt(partien) ? 'faellig' : undefined}
+                // Gruen, sobald alle Partien gespielt sind: nur das Abschliessen fehlt noch
+                className={naechsterSchritt === 'abschliessen' ? 'faellig' : undefined}
                 title="Beendet diese Begegnung und sperrt ihre Ergebnisse. Ist die andere Begegnung schon abgeschlossen, wird das Rating sofort neu berechnet."
                 onClick={() => void abschliessen()}
                 disabled={arbeitet}
@@ -1451,6 +1471,7 @@ export default function LigaAnsicht({
               (r.runde === 'hin' || gestartet.hin) && (
                 <button
                   type="button"
+                  className={naechsterSchritt === r.runde ? 'faellig' : undefined}
                   title={`Gibt die Partien ${istDoppel ? 'des Doppels' : `der ${r.titel}`} für die Tablets frei. Vorher lässt sich die Aufstellung in Ruhe eintragen; Ergebnisse von Hand gehen jederzeit.`}
                   onClick={() => void rundeStarten(r.runde)}
                 >

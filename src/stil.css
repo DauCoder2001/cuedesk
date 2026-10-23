@@ -602,8 +602,8 @@ tr.gespielt .zahlfeld { color: var(--text); }
 .oeffentlichhinweis { max-width: 560px; margin: 32px auto; padding: 0 16px; text-align: center; }
 .oeffentlichfuss { margin-top: 24px; text-align: center; font-size: 13px; }
 .zuschauenkopf .hinweis { font-size: 13px; white-space: nowrap; }
-/* Naechster Schritt gruen hinterlegt: Liga "Begegnung abschließen", wenn alle
-   Partien gespielt sind; Teamvergleich vom Vorschlag bis zum Abschluss */
+/* Naechster Schritt gruen hinterlegt, immer nur ein Knopf: Turnier, Liga-Spieltag
+   und Teamvergleich, von der Vorbereitung bis zum Abschluss */
 button.faellig { background: #3ddc5a; border-color: #23a83e; color: #0b3d18; }
 button.faellig:hover:not(:disabled) { background: #2fcc4c; }
 /* Knopf "Öffentlicher Link" im Turnierkopf, wenn ein gueltiger Link besteht */
