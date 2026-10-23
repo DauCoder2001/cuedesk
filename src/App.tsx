@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import { supabase } from './supabase';
 import { useSitzung } from './sitzung';
 import Anmeldung from './seiten/Anmeldung';
@@ -117,6 +117,8 @@ export default function App() {
 
   // Sprung von der Spielerseite zum verknuepften Konto
   const [kontoStart, setKontoStart] = useState<string | null>(null);
+  // Klick auf den aktiven Reiter baut die Seite neu auf: zurueck zur Uebersicht
+  const [neuAufbau, setNeuAufbau] = useState(0);
   const kontoOeffnen = (id: string) => {
     void (async () => {
       if (!(await wechselErlaubt())) return;
@@ -320,11 +322,11 @@ export default function App() {
                   .join(' ')}
                 title={eintrag.wert === 'live' && turnierLaeuft ? `Ein Turnier läuft gerade. ${eintrag.tipp}` : eintrag.tipp}
                 onClick={() => {
-                  if (eintrag.wert === angezeigt) return;
                   void (async () => {
                     if (!(await wechselErlaubt())) return;
                     setKontoStart(null);
-                    setBereich(eintrag.wert);
+                    if (eintrag.wert === angezeigt) setNeuAufbau((n) => n + 1);
+                    else setBereich(eintrag.wert);
                   })();
                 }}
               >
@@ -402,7 +404,7 @@ export default function App() {
             zugestimmt={() => setZugestimmt(true)}
           />
         ) : (
-          <>
+          <Fragment key={neuAufbau}>
         {angezeigt === 'konsole' && <Konsole />}
         {angezeigt === 'konto' && <Konto />}
         {angezeigt === 'hilfe' && <Hilfe key={hilfeThema ?? 'start'} startThema={hilfeThema} />}
@@ -419,7 +421,7 @@ export default function App() {
         {angezeigt === 'benutzer' && <BenutzerRollen key={kontoStart ?? ''} start={kontoStart} />}
         {angezeigt === 'tische' && <TischeGeraete />}
         {angezeigt === 'system' && <System />}
-          </>
+          </Fragment>
         )}
       </main>
     </div>
