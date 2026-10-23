@@ -1,6 +1,6 @@
 # Rechtstexte: Stellen zum Prüfen
 
-Stand der Liste: 09.10.2026 · Grundlage für die rechtliche Prüfung vor dem Livegang
+Stand der Liste: 23.10.2026 · Grundlage für die rechtliche Prüfung vor dem Livegang
 
 Betroffen sind die öffentlichen Seiten `impressum.html`, `datenschutz.html`, `nutzungsbedingungen.html` und `auftragsverarbeitung.html` sowie das interne `docs/Verzeichnis-Verarbeitungstaetigkeiten.md`. Betreiber ist eine Privatperson (Matthias Haas), CueDesk ist für Vereine unentgeltlich.
 
@@ -53,7 +53,7 @@ Die Liste hat vier Teile:
 
 | Nr. | Punkt | Wo es steht | Was zu tun ist |
 |---|---|---|---|
-| S1 | Zwei-Faktor-Anmeldung bei allen Dienstleistern | AVV Anlage 1 | Bei Supabase, IONOS, GitHub und Google einschalten, sonst stimmt die Zusage nicht. |
+| S1 | Zwei-Faktor-Anmeldung bei allen Dienstleistern | AVV Anlage 1 | Bei Supabase, IONOS, GitHub und Google einschalten, sonst stimmt die Zusage nicht. **Erledigt 23.10.2026:** bei allen vier eingeschaltet (Matthias). |
 | S2 | Hosting der Webseite: GitHub Pages oder IONOS | Datenschutzerklärung (GitHub), AVV Anlage 2 (IONOS), Verzeichnis A1 | Entschieden 07.10.2026: GitHub Pages bleibt. **Erledigt 09.10.2026:** AVV Anlage 2 (IONOS ohne Hosting), Verzeichnis A1 (Empfänger GitHub) gleichgezogen; die Datenschutzerklärung stimmte schon. |
 | S3 | Ablage der wöchentlichen Sicherung | Datenschutzerklärung (GitHub), Verzeichnis B, offene Punkte | Entschieden 07.10.2026: bleibt verschlüsselt bei GitHub. **Erledigt 09.10.2026:** GitHub in AVV Anlage 2 und Verzeichnis B aufgenommen. |
 | S4 | Verträge mit den Dienstleistern | Datenschutzerklärung, AVV Anlage 2, Verzeichnis | DPA bei Supabase (Dashboard) und AVV bei IONOS (Kundenkonto) abschließen, DPA mit GitHub prüfen bzw. abschließen, alles ablegen. |
