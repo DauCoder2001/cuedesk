@@ -206,14 +206,15 @@ export function spieltagGesamt(begegnungen: Turnier[], partien: Partie[], verein
 const ohneZusatz = (text: string) => text.replace(/\s*\([^()]*\)\s*$/, '').trim() || text;
 export function paarungText(
   p: Pick<Partie, 'spieler_a' | 'spieler_b' | 'partner_a' | 'partner_b'>,
-  name: (id: string) => string
+  name: (id: string) => string,
+  teams?: { A: string; B: string }
 ): string {
   const seite = (erster: string, zweiter: string | null, kurz: boolean) => {
     const n = (id: string) => (kurz ? ohneZusatz(name(id)) : name(id));
     return zweiter ? `${n(erster)} / ${n(zweiter)}` : n(erster);
   };
   // Team-Match (Teamvergleich): Team gegen Team, ohne einzelne Spieler
-  if (!mitSpielern(p)) return 'Team-Match';
+  if (!mitSpielern(p)) return teams ? `${teams.A} – ${teams.B}` : 'Team-Match';
   const kurz = seite(p.spieler_a, p.partner_a, true) !== seite(p.spieler_b, p.partner_b, true);
   return `${seite(p.spieler_a, p.partner_a, kurz)} – ${seite(p.spieler_b, p.partner_b, kurz)}`;
 }

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { einsaetze, hoechstensMatches, pruefen, stand, vorschlag } from '../src/teamvergleich';
+import { einsaetze, hoechstensMatches, pruefen, stand, teamstandAnzeige, vorschlag } from '../src/teamvergleich';
 import type { StandPartie } from '../src/teamvergleich';
 
 const rot = ['r1', 'r2', 'r3', 'r4', 'r5'];
@@ -102,5 +102,27 @@ describe('Teamvergleich: Stand', () => {
   test('nach dem Sieg beendete Matches zählen nicht mehr', () => {
     const s = stand([p('1', 5, 3), p('2', 5, 1), p('3', 1, 5)], 2);
     expect(s).toMatchObject({ a: 2, b: 0, sieger: 'A' });
+  });
+});
+
+describe('Teamvergleich: Anzeige für TV und Zuschauer', () => {
+  const p = (id: string, runde: number, phase: string, a: string | null, b: string | null, status: StandPartie['status'], ea: number | null = null, eb: number | null = null) => ({
+    id, runde, paarung: 1, phase, spieler_a: a, spieler_b: b, partner_a: null, partner_b: null, tisch_id: status === 'laeuft' ? 't1' : null,
+    status, ergebnis_a: ea, ergebnis_b: eb, beendet: status === 'beendet' ? `2026-01-01T10:0${runde}:00Z` : null
+  });
+  const e = { ziel: 2, teams: { A: { name: 'Team Rot' }, B: { name: 'Team Blau' } }, freigegeben: 2 };
+  const namen: Record<string, string> = { r1: 'Rita', b1: 'Bea' };
+
+  test('Team-Match mit Teamnamen, Stand und Sieger, laufendes Match mit Tisch, Block 3 verborgen', () => {
+    const anz = teamstandAnzeige(
+      [p('t', 1, 'team', null, null, 'beendet', 5, 3), p('e1', 2, 'einzel', 'r1', 'b1', 'laeuft'), p('e2', 3, 'einzel', 'r1', 'b1', 'geplant')],
+      e,
+      (id) => namen[id],
+      () => '4'
+    );
+    expect(anz).toMatchObject({ a: 1, b: 0, sieger: null, teams: { A: 'Team Rot', B: 'Team Blau' } });
+    expect(anz.bloecke.map((b) => b.nr)).toEqual([1, 2]);
+    expect(anz.bloecke[0].matches[0]).toMatchObject({ links: 'Team Rot', rechts: 'Team Blau', stand: '5 : 3', sieger: 'A' });
+    expect(anz.bloecke[1].matches[0]).toMatchObject({ links: 'Rita', rechts: 'Bea', tisch: '4', stand: null });
   });
 });

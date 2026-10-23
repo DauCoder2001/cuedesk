@@ -115,6 +115,19 @@ export default function TeamvergleichAnsicht({
 
   const laufendeStaende = useLaufendeStaende(verein?.id);
 
+  // Erstes Spiel begonnen: Fernseher einmal von den Teams auf die Live-Tische
+  useEffect(() => {
+    if (!turnier || turnier.status !== 'laeuft' || !darfLeiten) return;
+    const e = (turnier.einstellungen ?? {}) as TurnierEinstellungen;
+    if (e.tvAnsicht !== 'auslosung' || e.tvLiveGewechselt) return;
+    if (!partien.some((p) => p.status !== 'geplant' || p.tisch_id !== null)) return;
+    void supabase
+      .from('turniere')
+      .update({ einstellungen: { ...e, tvAnsicht: 'live', tvLiveGewechselt: true } })
+      .eq('id', turnier.id)
+      .then(() => void laden());
+  }, [partien, turnier, darfLeiten, laden]);
+
   // Ziel erreicht: offene Matches entfallen (verschwinden auch von den Tablets)
   const entfallenLaeuft = useRef(false);
   useEffect(() => {
@@ -332,7 +345,10 @@ export default function TeamvergleichAnsicht({
     }
     const { error } = await supabase
       .from('turniere')
-      .update({ status: 'laeuft', einstellungen: { ...einstellungen, teamvergleich: { ...tv, freigegeben: 1 } } })
+      .update({
+        status: 'laeuft',
+        einstellungen: { ...einstellungen, tvAnsicht: 'auslosung', tvLiveGewechselt: undefined, teamvergleich: { ...tv, freigegeben: 1 } }
+      })
       .eq('id', turnier.id);
     if (error) return setFehler(error.message);
     setMeldung('Teamvergleich gestartet. Block 1 steht an den Tablets zur Auswahl.');
@@ -413,7 +429,10 @@ export default function TeamvergleichAnsicht({
     if (!(await fragen(text, 'Abschließen'))) return;
     setArbeitet(true);
     await supabase.from('partien').update({ status: 'abgebrochen' }).eq('turnier_id', turnier.id).eq('status', 'geplant');
-    const { error } = await supabase.from('turniere').update({ status: 'beendet' }).eq('id', turnier.id);
+    const { error } = await supabase
+      .from('turniere')
+      .update({ status: 'beendet', einstellungen: { ...einstellungen, tvAnsicht: 'teamstand' } })
+      .eq('id', turnier.id);
     if (error) {
       setArbeitet(false);
       return setFehler(error.message);
@@ -428,6 +447,13 @@ export default function TeamvergleichAnsicht({
           ? 'Teamvergleich abgeschlossen. Das Rating wird heute Nacht neu berechnet.'
           : 'Teamvergleich abgeschlossen, Rating neu berechnet.'
     );
+    await laden();
+  }
+
+  async function tvSetzen(wert: NonNullable<TurnierEinstellungen['tvAnsicht']>) {
+    if (!turnier) return;
+    const { error } = await supabase.from('turniere').update({ einstellungen: { ...einstellungen, tvAnsicht: wert } }).eq('id', turnier.id);
+    if (error) return setFehler(error.message);
     await laden();
   }
 
@@ -659,6 +685,31 @@ export default function TeamvergleichAnsicht({
           {tv.race.team}/{tv.race.doppel}/{tv.race.einzel} (Team-Match/Doppel/Einzel) ·{' '}
           {tv.einzelFuersRating ? 'Einzel zählen fürs Rating' : 'zählt nicht fürs Rating'}
         </p>
+        {darfLeiten && !vorbereitung && (
+          <div className="zeile">
+            <span className="hinweis">TV zeigt:</span>
+            <span className="umschalter">
+              {(
+                [
+                  ['auslosung', 'Teams'],
+                  ['live', 'Live-Tische'],
+                  ['naechste', 'Nächste Spiele'],
+                  ['teamstand', 'Teamstand']
+                ] as const
+              ).map(([wert, text]) => (
+                <button
+                  key={wert}
+                  type="button"
+                  className={(einstellungen.tvAnsicht ?? 'live') === wert ? 'aktiv' : ''}
+                  title={`Legt fest, was die TV-Anzeige zeigt: ${text}`}
+                  onClick={() => void tvSetzen(wert)}
+                >
+                  {text}
+                </button>
+              ))}
+            </span>
+          </div>
+        )}
         {fehler && <p className="fehler">{fehler}</p>}
         {meldung && <p className="meldung">{meldung}</p>}
       </section>

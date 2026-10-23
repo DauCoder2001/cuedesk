@@ -424,6 +424,7 @@ export function onValue(verweis: Verweis, cb: Beobachter): () => void {
     verweis.pfad === 'tournament/active/status' ||
     verweis.pfad === 'tournament/tvView' ||
     verweis.pfad === 'tournament/spieltag' ||
+    verweis.pfad === 'tournament/teamstand' ||
     verweis.pfad === 'tournament_archive'
   ) {
     if (verbindung) void turnierBeobachten(verweis.pfad);
@@ -637,6 +638,7 @@ let aktuellesTurnier: TabletTurnier | null = null;
 let tvAnsicht: string | null = null; // tournament/tvView
 let tvArchiv: Record<string, TvErgebnis> | null = null; // tournament_archive
 let tvSpieltag: TvSpieltag | null = null; // tournament/spieltag (Liga, TV "Spieltag-Ergebnis")
+let tvTeamstand: TeamstandAnzeige | null = null; // tournament/teamstand (Teamvergleich, TV "Teamstand")
 let turnierLaeuftSchon = false;
 let turnierZeitgeber: number | null = null;
 
@@ -666,6 +668,7 @@ async function turnierLaden(): Promise<void> {
     tvAnsicht = null;
     tvArchiv = null;
     tvSpieltag = null;
+    tvTeamstand = null;
     return;
   }
 
@@ -673,7 +676,7 @@ async function turnierLaden(): Promise<void> {
     v.supabase
       .from('partien')
       .select(
-        'id, turnier_id, spieler_a, spieler_b, partner_a, partner_b, race_to, vorgabe_a, vorgabe_b, ergebnis_a, ergebnis_b, status, tisch_id, runde, gruppe, phase, disziplin, begonnen'
+        'id, turnier_id, spieler_a, spieler_b, partner_a, partner_b, race_to, vorgabe_a, vorgabe_b, ergebnis_a, ergebnis_b, status, tisch_id, runde, paarung, gruppe, phase, disziplin, begonnen, beendet'
       )
       .in('turnier_id', begegnungen.map((b) => b.id))
       .order('runde')
@@ -693,11 +696,11 @@ async function turnierLaden(): Promise<void> {
     tvAnsicht?: string;
     handReihenfolge?: Record<string, number[]>;
     liga?: { verdeckt?: Verdeckt; gestartet?: Gestartet; ziele?: { aufnahmen141?: number } };
-    teamvergleich?: { teams?: Record<'A' | 'B', { name?: string }>; freigegeben?: number };
+    teamvergleich?: TeamvergleichEinstellungen;
   };
   const einstellungenVon = (b: { einstellungen: unknown }) => (b.einstellungen ?? {}) as Einstellungen;
   const einstellungen = einstellungenVon(t);
-  type Zeile = PlanPartie & { turnier_id: string; ergebnis_a: number | null; ergebnis_b: number | null };
+  type Zeile = PlanPartie & { turnier_id: string; ergebnis_a: number | null; ergebnis_b: number | null; paarung: number | null; beendet: string | null };
   const allePartien = (partienAntwort.data ?? []) as Zeile[];
   const partien = allePartien.filter((p) => p.turnier_id === t.id);
   // Spielplan fuer die Tablets: je Begegnung mit ihren eigenen Regeln (verdeckt,
@@ -736,7 +739,24 @@ async function turnierLaden(): Promise<void> {
     .map((x) => ({ id: x.person_id as string, gruppe: x.gruppe as string | null, endplatz: x.endplatz as number | null }));
   // TV-Auslosung: Gruppen als Nummern 1 bis 4 (Pool-TS: mode two/four)
   const gruppenzahl = new Set(aufstellung.map((x) => x.gruppe).filter(Boolean)).size;
-  const modus = gruppenzahl >= 3 ? 'four' : gruppenzahl === 2 ? 'two' : 'single';
+  // Teamvergleich: zwei Teams statt Gruppen (die Teilnehmer haben keine Startnummer)
+  const tvTeam = t.modus === 'teamvergleich' ? einstellungen.teamvergleich ?? null : null;
+  const teamTV = tvTeam
+    ? {
+        spieler: (teilnehmerAntwort.data ?? [])
+          .filter((x) => x.gruppe === 'A' || x.gruppe === 'B')
+          .map((x) => ({ id: x.person_id as string, gruppe: x.gruppe as string, endplatz: null }))
+          .sort((a, b) => name(a.id).localeCompare(name(b.id), 'de')),
+        namen: { 1: tvTeam.teams.A.name, 2: tvTeam.teams.B.name },
+        kapitaene: Object.fromEntries(
+          (['A', 'B'] as const).map((k, i) => {
+            const kap = tvTeam.teams[k];
+            return [i + 1, kap.kapitaenId ? name(kap.kapitaenId) : kap.kapitaen ?? null];
+          })
+        )
+      }
+    : null;
+  const modus = teamTV ? 'two' : gruppenzahl >= 3 ? 'four' : gruppenzahl === 2 ? 'two' : 'single';
   const disziplin = ({ '8-ball': '8-Ball', '9-ball': '9-Ball', '10-ball': '10-Ball' } as Record<string, string>)[t.disziplin] ?? t.disziplin;
 
   aktuellesTurnier =
@@ -754,8 +774,9 @@ async function turnierLaden(): Promise<void> {
           discipline: disziplin,
           eventDate: new Date(`${t.datum}T12:00:00`).toLocaleDateString('de-DE'),
           players: Object.fromEntries(
-            aufstellung.map((x) => [x.id, { name: name(x.id), group: x.gruppe ? 'ABCD'.indexOf(x.gruppe) + 1 : 1 }])
-          )
+            (teamTV ? teamTV.spieler : aufstellung).map((x) => [x.id, { name: name(x.id), group: x.gruppe ? 'ABCD'.indexOf(x.gruppe) + 1 : 1 }])
+          ),
+          ...(teamTV ? { groupNames: teamTV.namen, captains: teamTV.kapitaene } : {})
         }
       : null;
   tvAnsicht = einstellungen.tvAnsicht ?? 'live';
@@ -769,6 +790,14 @@ async function turnierLaden(): Promise<void> {
     )
   };
   tvSpieltag = t.modus === 'liga' ? await spieltagLaden(v, t) : null;
+  tvTeamstand = tvTeam
+    ? teamstandAnzeige(
+        partien.map((p) => ({ ...p, phase: p.phase ?? null, partner_a: p.partner_a ?? null, partner_b: p.partner_b ?? null })),
+        tvTeam,
+        name,
+        (id) => nummern.get(id) ?? null
+      )
+    : null;
 }
 
 // Liga-Spieltag fuer die TV-Anzeige "Spieltag-Ergebnis": alle Begegnungen
@@ -807,6 +836,7 @@ async function turnierAuffrischen() {
   melden('tournament/tvView', tvAnsicht);
   melden('tournament_archive', tvArchiv);
   melden('tournament/spieltag', tvSpieltag);
+  melden('tournament/teamstand', tvTeamstand);
 }
 
 // Welcher Wert gehoert zu welchem Turnier-Pfad
@@ -815,6 +845,7 @@ function turnierWert(pfad: string): unknown {
   if (pfad === 'tournament/active/status') return aktuellesTurnier ? 'running' : null;
   if (pfad === 'tournament/tvView') return tvAnsicht;
   if (pfad === 'tournament/spieltag') return tvSpieltag;
+  if (pfad === 'tournament/teamstand') return tvTeamstand;
   return tvArchiv;
 }
 
@@ -1145,6 +1176,8 @@ import {
   tvErgebnis
 } from './turnier-plan';
 import { neueKennung } from './kennung';
+import { teamstandAnzeige } from '../../src/teamvergleich';
+import type { TeamstandAnzeige, TeamvergleichEinstellungen } from '../../src/teamvergleich';
 import type { Gestartet, PlanEintrag, PlanPartie, TabletTeams, TabletTurnier, TvErgebnis, Verdeckt } from './turnier-plan';
 import { aufnahmenAusProtokoll, protokollAusAufnahmen } from './protokoll-141';
 import type { AufnahmeZeile, Zustand141 } from './protokoll-141';

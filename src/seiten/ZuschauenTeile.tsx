@@ -4,6 +4,8 @@ import { ligaStand, ortsTag, paarungText, spieltagGesamt, spiellage, tabellen } 
 import { istDoppelBegegnung } from '../liga';
 import { Tischkachel } from './Live';
 import type { Anzeige, SpieltagGesamt } from '../zuschauen';
+import { ART_NAME, teamstandAnzeige } from '../teamvergleich';
+import type { TeamstandAnzeige, TeamvergleichEinstellungen } from '../teamvergleich';
 import type { Partie, Tisch, Turnier, TurnierTeilnehmer } from '../datenbank.types';
 
 // Ergebnis des ganzen Liga-Spieltags: Gesamtstand und je Begegnung eine Zeile,
@@ -37,6 +39,52 @@ function SpieltagBlock({ gesamt }: { gesamt: SpieltagGesamt }) {
               <td className="teilmp hinweis">{t.matchpunkte ? `${t.matchpunkte[0]} : ${t.matchpunkte[1]}` : ''}</td>
             </tr>
           ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// Teamvergleich: Teamstand und die freigegebenen Bloecke mit Ergebnissen
+function TeamBlock({ s }: { s: TeamstandAnzeige }) {
+  return (
+    <div className="zuschauenblock">
+      <div className="zuschauenliga">
+        <span className="teammarke team-A">{s.teams.A}</span>
+        <strong>
+          {s.a} : {s.b}
+        </strong>
+        <span className="teammarke team-B">{s.teams.B}</span>
+      </div>
+      <p className="hinweis zuschauenmitte">
+        {s.sieger
+          ? `${s.teams[s.sieger]} gewinnt ${Math.max(s.a, s.b)} : ${Math.min(s.a, s.b)}`
+          : `Sieg bei ${s.ziel} Punkten`}
+      </p>
+      <table className="tabelle">
+        <tbody>
+          {s.bloecke.flatMap((b) =>
+            b.matches.map((m, j) => (
+              <tr key={m.id} className={j === 0 ? 'blockanfang' : ''}>
+                <td>{j === 0 ? `Block ${b.nr} · ${ART_NAME[b.art]}` : ''}</td>
+                <td>
+                  {m.links} – {m.rechts}
+                </td>
+                <td className="rechts">
+                  {m.status === 'abgebrochen'
+                    ? 'entfallen'
+                    : m.status === 'beendet' && m.stand
+                      ? m.stand
+                      : m.tisch
+                        ? `● Tisch ${m.tisch}`
+                        : m.status === 'laeuft'
+                          ? '● läuft'
+                          : ''}
+                  {m.sieger && <span className={`teammarke team-${m.sieger}`}> ✓</span>}
+                </td>
+              </tr>
+            ))
+          )}
         </tbody>
       </table>
     </div>
@@ -113,9 +161,22 @@ export function TurnierTeil({
   const lage = spiellage(partien, heute);
   const heuteLage = spiellage(heutige, heute);
   const ergebnis = (p: Partie) => `${p.ergebnis_a ?? 0}:${p.ergebnis_b ?? 0}`;
-  // "A – B", im Doppel "A / B – C / D", ohne Vereinszusatz wie am Tablet
-  const paarung = (p: Partie) => paarungText(p, name);
   const tischNummer = (id: string | null) => tische.find((t) => t.id === id)?.nummer;
+  // Teamvergleich: Teamstand statt Gruppentabellen, Team-Match mit Teamnamen
+  const tvTeam =
+    anzeige?.turnier.modus === 'teamvergleich'
+      ? ((anzeige.turnier.einstellungen ?? {}) as { teamvergleich?: TeamvergleichEinstellungen }).teamvergleich ?? null
+      : null;
+  const teamstand = tvTeam
+    ? teamstandAnzeige(
+        partien.map((p) => ({ ...p, partner_a: p.partner_a ?? null, partner_b: p.partner_b ?? null })),
+        tvTeam,
+        name,
+        (id) => (tischNummer(id) !== undefined ? String(tischNummer(id)) : null)
+      )
+    : null;
+  // "A – B", im Doppel "A / B – C / D", ohne Vereinszusatz wie am Tablet
+  const paarung = (p: Partie) => paarungText(p, name, teamstand?.teams);
   const gesamt = anzeige?.turnier.modus === 'liga' ? spieltagGesamt(anzeige.begegnungen, partien, vereinName) : null;
 
   return (
@@ -125,7 +186,9 @@ export function TurnierTeil({
       ) : (
         <>
           <h2>{anzeige.begegnungen[0].name}</h2>
-          {anzeige.turnier.modus === 'liga' && gesamt ? (
+          {teamstand ? (
+            <TeamBlock s={teamstand} />
+          ) : anzeige.turnier.modus === 'liga' && gesamt ? (
             <SpieltagBlock gesamt={gesamt} />
           ) : anzeige.turnier.modus === 'liga'
             ? anzeige.begegnungen.map((b, i) => {

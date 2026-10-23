@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CueDesk – Teamstand</title>
+  <link rel="icon" type="image/svg+xml" href="./img/favicon.svg">
+  <!-- Teamvergleich am Fernseher ("TV zeigt: Teamstand"): Teamstand gross,
+       darunter die freigegebenen Bloecke mit Ergebnissen und laufenden
+       Staenden. Gerechnet in src/teamvergleich.ts (teamstandAnzeige),
+       geliefert von der Anbindung unter tournament/teamstand. -->
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; background: #111; color: #fff; margin: 0; height: 100vh; overflow: hidden; }
+    #tv-viewport { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }
+    #tv-stage { width: 100vw; padding: 3vh 5vw; transform-origin: center center; }
+    .sub { text-align: center; color: #aaa; font-size: 2.6vh; margin-bottom: 2vh; }
+    .stand { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 3vw; }
+    .team { font-size: 5vh; font-weight: bold; padding: 1vh 2vw; border-radius: 12px; text-align: center; overflow-wrap: anywhere; }
+    .team-A { background: #c62828; }
+    .team-B { background: #1f5fae; }
+    .zahl { font-size: 14vh; font-weight: bold; line-height: 1; white-space: nowrap; }
+    .ergebnis { text-align: center; font-size: 3.4vh; font-weight: bold; margin: 1.5vh 0 3vh; color: #facc15; }
+    .ergebnis.offen { color: #aaa; font-weight: normal; }
+    table { width: 100%; border-collapse: collapse; }
+    td { padding: 1vh 1vw; font-size: 2.8vh; border-bottom: 1px solid #2a2a2a; }
+    tr.blockanfang td { border-top: 3px solid #555; }
+    td.block { color: #888; width: 12%; white-space: nowrap; }
+    td.art { color: #aaa; width: 12%; }
+    td.paar { width: 46%; }
+    td.paar .p1 { color: #ff6666; }
+    td.paar .p2 { color: #6699ff; }
+    td.paar .gegen { color: #666; margin: 0 0.6vw; }
+    td.stand-zelle { text-align: right; white-space: nowrap; }
+    .sieg { display: inline-block; margin-left: 1vw; padding: 0.2vh 0.8vw; border-radius: 6px; font-size: 2.2vh; }
+    .live { color: #22c55e; }
+    tr.entfallen td { color: #555; }
+    .empty { text-align: center; color: #666; font-size: 4vh; margin-top: 18vh; }
+  </style>
+</head>
+<body>
+
+  <div id="tv-viewport"><div id="tv-stage">
+    <div class="sub" id="sub"></div>
+    <div id="inhalt"></div>
+    <div class="empty" id="empty" style="display:none;">Gerade läuft kein Teamvergleich.</div>
+  </div></div>
+
+  <script type="module">
+    import { db, ref, onValue, starten } from "./js/anbindung.ts";
+    import { keepScreenAwake } from "./js/wake-lock.js";
+    import { startTvAutofit } from "./js/tv-autofit.js";
+
+    await starten();
+
+    // Namen kommen aus CueDesk - nie als HTML einsetzen
+    const esc = (t) => String(t == null ? '' : t).replace(/[&<>"]/g, (c) =>
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+    keepScreenAwake();
+
+    let overscanPct = 3;
+    const refit = startTvAutofit(document.getElementById('tv-stage'), () => overscanPct);
+    onValue(ref(db, 'system/tvSettings'), (snap) => {
+      const p = snap.val() && Number(snap.val().overscanPct);
+      overscanPct = Number.isFinite(p) ? p : 3;
+      refit();
+    });
+
+    // Umschaltung am Turnierbildschirm ("TV zeigt")
+    const PAGE_FOR = { auslosung: 'tv-Auslosung.html', live: 'tv.html', naechste: 'tv-Naechste.html', results: 'tv-Turnier-Ergebnis.html', spieltag: 'tv-Spieltag.html', teamstand: 'tv-Teamstand.html' };
+    onValue(ref(db, 'tournament/tvView'), (snap) => {
+      const target = PAGE_FOR[snap.val()] || 'tv.html';
+      if (target !== 'tv-Teamstand.html') window.location.href = target;
+    });
+
+    const subEl = document.getElementById('sub');
+    const inhaltEl = document.getElementById('inhalt');
+    const emptyEl = document.getElementById('empty');
+    const ART = { team: 'Team-Match', doppel: 'Doppel', einzel: 'Einzel' };
+
+    let teamstand = null;
+    let tische = null;
+
+    // Laufender Stand vom Tablet; nach einem Seitenwechsel stehen die Namen dort vertauscht
+    function liveText(m) {
+      if (!tische || m.status === 'beendet') return '';
+      const t = Object.values(tische).find((x) => x && x.tournamentMatchId === m.id);
+      if (!t) return m.tisch ? '● Tisch ' + esc(m.tisch) : '';
+      const s1 = Number(t.score1 ?? t.s1 ?? 0), s2 = Number(t.score2 ?? t.s2 ?? 0);
+      const getauscht = t.player1 === m.rechts && t.player2 === m.links;
+      return '● ' + (m.tisch ? 'Tisch ' + esc(m.tisch) + ' · ' : '') + (getauscht ? s2 + ' : ' + s1 : s1 + ' : ' + s2);
+    }
+
+    function zeichnen() {
+      const s = teamstand;
+      if (!s) {
+        subEl.textContent = '';
+        inhaltEl.innerHTML = '';
+        emptyEl.style.display = 'block';
+        refit();
+        return;
+      }
+      emptyEl.style.display = 'none';
+      subEl.textContent = 'Teamvergleich · Sieg bei ' + s.ziel + ' Punkten';
+      const ergebnis = s.sieger
+        ? '<div class="ergebnis">' + esc(s.teams[s.sieger]) + ' gewinnt ' + Math.max(s.a, s.b) + ' : ' + Math.min(s.a, s.b) + '</div>'
+        : '<div class="ergebnis offen">' + (s.a === s.b ? 'Gleichstand' : esc(s.a > s.b ? s.teams.A : s.teams.B) + ' führt') + '</div>';
+      const zeilen = s.bloecke.map((b) => b.matches.map((m, j) =>
+        '<tr class="' + [j === 0 ? 'blockanfang' : '', m.status === 'abgebrochen' ? 'entfallen' : ''].join(' ') + '">'
+        + '<td class="block">' + (j === 0 ? 'Block ' + b.nr : '') + '</td>'
+        + '<td class="art">' + (j === 0 ? ART[b.art] || '' : '') + '</td>'
+        + '<td class="paar"><span class="p1">' + esc(m.links) + '</span><span class="gegen">–</span><span class="p2">' + esc(m.rechts) + '</span></td>'
+        + '<td class="stand-zelle">'
+        + (m.status === 'abgebrochen' ? 'entfallen'
+          : m.stand && m.status === 'beendet' ? esc(m.stand)
+          : '<span class="live">' + liveText(m) + '</span>')
+        + (m.sieger ? '<span class="sieg team-' + m.sieger + '">✓ ' + esc(s.teams[m.sieger]) + '</span>' : '')
+        + '</td></tr>'
+      ).join('')).join('');
+      inhaltEl.innerHTML =
+        '<div class="stand"><span class="team team-A">' + esc(s.teams.A) + '</span>'
+        + '<span class="zahl">' + s.a + ' : ' + s.b + '</span>'
+        + '<span class="team team-B">' + esc(s.teams.B) + '</span></div>'
+        + ergebnis
+        + '<table><tbody>' + zeilen + '</tbody></table>';
+      refit();
+    }
+
+    onValue(ref(db, 'tournament/teamstand'), (snap) => { teamstand = snap.val(); zeichnen(); });
+    onValue(ref(db, 'tables'), (snap) => { tische = snap.val(); zeichnen(); });
+  </script>
+</body>
+</html>

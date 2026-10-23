@@ -69,7 +69,7 @@
     });
 
     // Umschaltung am Turnierbildschirm ("TV zeigt")
-    const PAGE_FOR = { auslosung: 'tv-Auslosung.html', live: 'tv.html', naechste: 'tv-Naechste.html', results: 'tv-Turnier-Ergebnis.html', spieltag: 'tv-Spieltag.html' };
+    const PAGE_FOR = { auslosung: 'tv-Auslosung.html', live: 'tv.html', naechste: 'tv-Naechste.html', results: 'tv-Turnier-Ergebnis.html', spieltag: 'tv-Spieltag.html', teamstand: 'tv-Teamstand.html' };
     onValue(ref(db, 'tournament/tvView'), (snap) => {
       const target = PAGE_FOR[snap.val()] || 'tv.html';
       if (target !== 'tv-Spieltag.html') window.location.href = target;

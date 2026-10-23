@@ -49,6 +49,10 @@
     .tv-player-list li:nth-child(even) { border-left-color: #ff4444; }
 
     .empty { text-align: center; color: #666; font-size: 4vh; margin-top: 18vh; }
+    /* Teamvergleich: Teamnamen in Rot und Blau */
+    .team-name { padding: 0.3vh 1vw; border-radius: 8px; color: #fff; }
+    .team-name.team-1 { background: #c62828; }
+    .team-name.team-2 { background: #1f5fae; }
   </style>
 </head>
 <body>
@@ -86,7 +90,7 @@
 
     // CueDesk: Umschaltung am Turnierbildschirm ("TV zeigt"). Die Seiten liegen
     // bei CueDesk alle im Ordner scoreboards.
-    const PAGE_FOR = { auslosung: 'tv-Auslosung.html', live: 'tv.html', naechste: 'tv-Naechste.html', results: 'tv-Turnier-Ergebnis.html', spieltag: 'tv-Spieltag.html' };
+    const PAGE_FOR = { auslosung: 'tv-Auslosung.html', live: 'tv.html', naechste: 'tv-Naechste.html', results: 'tv-Turnier-Ergebnis.html', spieltag: 'tv-Spieltag.html', teamstand: 'tv-Teamstand.html' };
     onValue(ref(db, 'tournament/tvView'), (snap) => {
       const target = PAGE_FOR[snap.val()] || 'tv.html';
       if (target !== 'tv-Auslosung.html') window.location.href = target;
@@ -98,8 +102,9 @@
     const emptyEl = document.getElementById('empty');
 
     // CueDesk: Die Tische waehlen die Spieler am Tablet selbst, Gruppen heissen A bis D
-    function tableBadge(mode, g) { return 'alle Tische'; }
-    function groupLabel(mode, g) { return mode === 'single' ? 'Hauptgruppe' : ('Gruppe ' + 'ABCD'.charAt(g - 1)); }
+    // Teamvergleich: Teamname statt Gruppe, Kapitaen statt Tisch-Hinweis
+    function tableBadge(mode, g, t) { return t && t.groupNames ? (t.captains && t.captains[g] ? 'Kapitän: ' + t.captains[g] : 'Team') : 'alle Tische'; }
+    function groupLabel(mode, g, t) { return t && t.groupNames && t.groupNames[g] ? t.groupNames[g] : (mode === 'single' ? 'Hauptgruppe' : ('Gruppe ' + 'ABCD'.charAt(g - 1))); }
     function layoutClass(n) { return n === 4 ? 'layout-four-groups' : (n === 2 ? 'layout-two-groups' : 'layout-single-group'); }
 
     onValue(ref(db, 'tournament/active'), (snap) => {
@@ -122,7 +127,9 @@
       Object.values(t.players).forEach(p => { if (groups[p.group]) groups[p.group].push(p.name); });
 
       // Kopfzeile
-      titleEl.innerHTML = `📺 Auslosung — <span class="highlight">${esc(t.discipline || '')}</span> (Race to ${t.raceTo || ''})`;
+      titleEl.innerHTML = t.groupNames
+        ? `📺 Teams — <span class="highlight">${esc(t.discipline || '')}</span>`
+        : `📺 Auslosung — <span class="highlight">${esc(t.discipline || '')}</span> (Race to ${t.raceTo || ''})`;
       // Symbol aus dem am Turnier eingefrorenen Schalter, nicht aus dem Namen -
       // sonst bekaeme eine selbst angelegte Art immer die Medaille.
       let sub = `🏆 ${esc(t.type || '')}`;
@@ -137,8 +144,8 @@
         const lis = groups[g].map(n => `<li>${esc(n)}</li>`).join('');
         html += `<div class="table-card">
             <div class="table-title">
-              <span>👥 ${groupLabel(t.mode, g)}</span>
-              <span class="game-badge">${tableBadge(t.mode, g)}</span>
+              <span class="${t.groupNames ? 'team-name team-' + g : ''}">👥 ${esc(groupLabel(t.mode, g, t))}</span>
+              <span class="game-badge">${esc(tableBadge(t.mode, g, t))}</span>
             </div>
             <ul class="tv-player-list">${lis}</ul>
           </div>`;

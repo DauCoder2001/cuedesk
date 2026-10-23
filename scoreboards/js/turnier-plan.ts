@@ -67,6 +67,9 @@ export type TabletTurnier = {
   schedule: Record<string, PlanEintrag>;
   // fuer die TV-Auslosung (Pool-TS: tournament/active)
   mode?: 'single' | 'two' | 'four';
+  // Teamvergleich: Teamnamen und Kapitaene statt "Gruppe A/B" (TV "Teams")
+  groupNames?: Record<number, string>;
+  captains?: Record<number, string | null>;
   type?: string;
   discipline?: string;
   eventDate?: string;

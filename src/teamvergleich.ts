@@ -179,3 +179,73 @@ export function einsaetze(plan: VorschlagMatch[]): Map<string, number> {
   plan.forEach((m) => [...m.a, ...m.b].forEach((id) => zahl.set(id, (zahl.get(id) ?? 0) + 1)));
   return zahl;
 }
+
+// ---------- Anzeige fuer Fernseher und Zuschauer ----------
+
+export type AnzeigePartie = StandPartie & {
+  runde: number | null;
+  paarung: number | null;
+  phase: string | null;
+  spieler_a: string | null;
+  spieler_b: string | null;
+  partner_a: string | null;
+  partner_b: string | null;
+  tisch_id: string | null;
+  beendet: string | null;
+};
+
+export type TeamstandMatch = {
+  id: string;
+  links: string;
+  rechts: string;
+  stand: string | null; // "5 : 3", sobald ein Ergebnis da ist
+  sieger: TeamSeite | null;
+  status: StandPartie['status'];
+  tisch: string | null;
+};
+
+export type TeamstandAnzeige = {
+  ziel: number;
+  teams: Record<TeamSeite, string>;
+  a: number;
+  b: number;
+  sieger: TeamSeite | null;
+  bloecke: { nr: number; art: MatchArt; matches: TeamstandMatch[] }[];
+};
+
+// Teamstand mit allen gezeigten Bloecken. Noch nicht freigegebene Bloecke
+// bleiben verborgen (die Kapitaene koennen dort noch tauschen).
+export function teamstandAnzeige(
+  partien: AnzeigePartie[],
+  e: Pick<TeamvergleichEinstellungen, 'ziel' | 'teams' | 'freigegeben'>,
+  name: (id: string) => string,
+  tischNummer: (tischId: string) => string | null = () => null
+): TeamstandAnzeige {
+  const ende = new Map(partien.map((p) => [p.id, p.beendet ?? '']));
+  const s = stand(partien, e.ziel, (p) => ende.get(p.id) ?? '');
+  const freigegeben = e.freigegeben ?? 0;
+  const seite = (erster: string | null, zweiter: string | null, team: string) =>
+    erster === null ? team : zweiter ? `${name(erster)} / ${name(zweiter)}` : name(erster);
+  const gezeigt = partien
+    .filter((p) => (p.runde ?? 1) <= freigegeben || p.status === 'beendet' || p.status === 'laeuft')
+    .sort((x, y) => (x.runde ?? 1) - (y.runde ?? 1) || (x.paarung ?? 0) - (y.paarung ?? 0));
+  const bloecke: TeamstandAnzeige['bloecke'] = [];
+  for (const p of gezeigt) {
+    const nr = p.runde ?? 1;
+    let block = bloecke.find((b) => b.nr === nr);
+    if (!block) {
+      block = { nr, art: (p.phase as MatchArt) ?? 'einzel', matches: [] };
+      bloecke.push(block);
+    }
+    block.matches.push({
+      id: p.id,
+      links: seite(p.spieler_a, p.partner_a, e.teams.A.name),
+      rechts: seite(p.spieler_b, p.partner_b, e.teams.B.name),
+      stand: p.ergebnis_a !== null && p.ergebnis_b !== null ? `${p.ergebnis_a} : ${p.ergebnis_b}` : null,
+      sieger: siegerVon(p),
+      status: p.status,
+      tisch: p.tisch_id && p.status !== 'beendet' ? tischNummer(p.tisch_id) : null
+    });
+  }
+  return { ziel: e.ziel, teams: { A: e.teams.A.name, B: e.teams.B.name }, a: s.a, b: s.b, sieger: s.sieger, bloecke };
+}
