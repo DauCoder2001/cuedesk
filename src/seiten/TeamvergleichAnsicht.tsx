@@ -9,6 +9,10 @@ import { laufenderStand, laufenderStandText } from '../live';
 import { hoechstwert, spielBeendet } from '../turnier';
 import type { MatchArt, TeamSeite, TeamvergleichEinstellungen, VorschlagMatch } from '../teamvergleich';
 import { DISZIPLIN_TEXT, STATUS_TEXT } from './Turniere';
+import LiveSchalter from './LiveSchalter';
+import ChatSchalter from './ChatSchalter';
+import OeffentlicherLink from './OeffentlicherLink';
+import { vereinsEinstellungen } from '../vereinseinstellungen';
 import type { TurnierEinstellungen } from './Turniere';
 import type { Partie, Person, Turnier, TurnierTeilnehmer } from '../datenbank.types';
 
@@ -450,6 +454,14 @@ export default function TeamvergleichAnsicht({
     await laden();
   }
 
+  // Live, Chat: wie in der Turnieransicht
+  async function einstellungenSetzen(aenderung: TurnierEinstellungen) {
+    if (!turnier) return;
+    const { error } = await supabase.from('turniere').update({ einstellungen: { ...einstellungen, ...aenderung } }).eq('id', turnier.id);
+    if (error) return setFehler(error.message);
+    await laden();
+  }
+
   async function tvSetzen(wert: NonNullable<TurnierEinstellungen['tvAnsicht']>) {
     if (!turnier) return;
     const { error } = await supabase.from('turniere').update({ einstellungen: { ...einstellungen, tvAnsicht: wert } }).eq('id', turnier.id);
@@ -677,6 +689,19 @@ export default function TeamvergleichAnsicht({
               <button type="button" className="gefahrknopf" title="Löscht das Turnier mit Teams und Spielplan. Braucht das Schutzwort." onClick={() => void loeschen()}>
                 Turnier löschen
               </button>
+            </div>
+          )}
+          {darfLeiten && turnier.status !== 'beendet' && (
+            <div className="kopfrechts">
+              <LiveSchalter an={einstellungen.live !== false} schalten={(an) => void einstellungenSetzen({ live: an })} />
+              {vereinsEinstellungen(verein?.einstellungen).chat && (
+                <ChatSchalter
+                  an={einstellungen.chat === true}
+                  gesperrt={einstellungen.live === false}
+                  schalten={(an) => void einstellungenSetzen({ chat: an })}
+                />
+              )}
+              <OeffentlicherLink turnierId={turnier.id} vereinId={turnier.verein_id} turnierDatum={turnier.datum} />
             </div>
           )}
         </div>
