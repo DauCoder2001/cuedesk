@@ -12,6 +12,7 @@ import { DISZIPLIN_TEXT, STATUS_TEXT } from './Turniere';
 import LiveSchalter from './LiveSchalter';
 import ChatSchalter from './ChatSchalter';
 import OeffentlicherLink from './OeffentlicherLink';
+import { andererLaufender, laeuftSchonText } from '../laufend';
 import { vereinsEinstellungen } from '../vereinseinstellungen';
 import type { TurnierEinstellungen } from './Turniere';
 import type { Partie, Person, Turnier, TurnierTeilnehmer } from '../datenbank.types';
@@ -339,6 +340,8 @@ export default function TeamvergleichAnsicht({
     if (!turnier) return;
     setFehler(null);
     if (partien.length === 0 || plan || planVeraltet) return setFehler('Erst den Spielplan übernehmen.');
+    const imWeg = await andererLaufender(supabase, turnier);
+    if (imWeg) return setFehler(laeuftSchonText(imWeg));
     if (
       !(await fragen(
         `${turnier.name} starten?\nBlock 1 (Team-Match) steht danach an den Tablets zur Auswahl. Teams und Spielplan sind dann fest; Namen lassen sich nur noch bei Matches tauschen, die noch nicht begonnen haben.`,

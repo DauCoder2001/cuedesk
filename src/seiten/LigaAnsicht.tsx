@@ -27,6 +27,7 @@ import SpieltagAendern from './SpieltagAendern';
 import LiveSchalter from './LiveSchalter';
 import ChatSchalter from './ChatSchalter';
 import OeffentlicherLink from './OeffentlicherLink';
+import { andererLaufender, laeuftSchonText } from '../laufend';
 import { vereinsEinstellungen } from '../vereinseinstellungen';
 import ZuruecksetzenDialog from './ZuruecksetzenDialog';
 import { useLaufendeStaende } from '../laufende-staende';
@@ -969,6 +970,10 @@ export default function LigaAnsicht({
   // Die Hinrunde setzt die Begegnung auf "laeuft" (Live, Chat, Tablets).
   async function rundeStarten(runde: 'hin' | 'rueck') {
     if (!turnier || !liga) return;
+    if (turnier.status === 'geplant') {
+      const imWeg = await andererLaufender(supabase, turnier);
+      if (imWeg) return setFehler(laeuftSchonText(imWeg));
+    }
     // Laeuft eine andere Begegnung des Spieltags noch, stehen an den Tablets
     // die Partien beider zur Auswahl (scoreboards/js/anbindung.ts). Ist sie
     // schon fertig gespielt, nur noch nicht abgeschlossen: Abschluss anbieten.
@@ -1040,7 +1045,10 @@ export default function LigaAnsicht({
   }
 
   async function wiederOeffnen() {
-    if (!turnier || !(await fragen('Spieltag wieder öffnen?', 'Wieder öffnen'))) return;
+    if (!turnier) return;
+    const imWeg = await andererLaufender(supabase, turnier);
+    if (imWeg) return setFehler(laeuftSchonText(imWeg));
+    if (!(await fragen('Spieltag wieder öffnen?', 'Wieder öffnen'))) return;
     const { error } = await supabase.from('turniere').update({ status: 'laeuft' }).eq('id', turnier.id);
     if (error) return setFehler(error.message);
     await laden();

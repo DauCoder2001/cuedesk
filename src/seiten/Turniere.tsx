@@ -18,6 +18,7 @@ import { Pflichthinweis, usePflicht } from '../pflicht';
 import { useUngespeichert, weichtAb } from '../ungespeichert';
 import { useRueckfrage } from '../rueckfrage';
 import { TEAM_VORGABE, ZIEL_GRENZEN } from '../teamvergleich';
+import { fuerTabletsZuAlt } from '../laufend';
 import type { TeamvergleichEinstellungen } from '../teamvergleich';
 import type { Disziplin, Mannschaft, Serie, Turnier, TurnierModus, TurnierStatus } from '../datenbank.types';
 
@@ -960,6 +961,12 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
                   <td>{(t.einstellungen as TurnierEinstellungen | null)?.modusOffen ? 'Modus offen' : MODUS_TEXT[t.modus]}</td>
                   <td className={stand.status === 'laeuft' ? 'livelaeuft' : ''}>
                     {stand.teilBeendet ? `${stand.teilBeendet}. Begegnung beendet` : STATUS_TEXT[stand.status]}
+                    {stand.status === 'laeuft' && fuerTabletsZuAlt(t.datum) && (
+                      <span className="hinweis" title="Die Tablets zeigen nur Turniere von heute und gestern. Ein vergessenes Turnier bitte abschließen.">
+                        {' '}
+                        · Tablets sehen es nicht mehr
+                      </span>
+                    )}
                   </td>
                 </tr>
               );

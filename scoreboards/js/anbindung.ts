@@ -656,7 +656,9 @@ async function turnierLaden(): Promise<void> {
     .eq('verein_id', v.vereinId)
     .in('status', ['laeuft', 'beendet'])
     .gte('datum', gestern)
-    .order('datum', { ascending: false });
+    .order('datum', { ascending: false })
+    // Gleiches Datum: das zuletzt angelegte (CueDesk laesst nur eins zugleich starten)
+    .order('erstellt_am', { ascending: false });
   const liste = kandidaten ?? [];
   const gefunden = liste.find((x) => x.status === 'laeuft') ?? liste.find((x) => x.status === 'beendet') ?? null;
   // Die Begegnungen in der Reihenfolge 1., Doppel, 2.; die erste traegt Name,

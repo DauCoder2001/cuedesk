@@ -14,6 +14,7 @@ import LiveSchalter from './LiveSchalter';
 import SpielerErsetzen from './SpielerErsetzen';
 import ChatSchalter from './ChatSchalter';
 import OeffentlicherLink from './OeffentlicherLink';
+import { andererLaufender, laeuftSchonText } from '../laufend';
 import Platz from './Platz';
 import { diffText, LEERE_BILANZ, turnierBilanz } from '../turnier-bilanz';
 import ZuruecksetzenDialog from './ZuruecksetzenDialog';
@@ -683,6 +684,8 @@ export default function TurnierAnsicht({
     if (!turnier) return;
     if (disziplinOffen) return setFehler('Erst die Disziplin festlegen, dann auslosen.');
     if (modusOffen) return setFehler('Erst den Modus festlegen, dann auslosen.');
+    const imWeg = await andererLaufender(supabase, turnier);
+    if (imWeg) return setFehler(laeuftSchonText(imWeg));
     if (mehrgruppig) {
       const [min, max] = grenzen;
       if (teilnehmer.length < min || teilnehmer.length > max) {
@@ -1620,7 +1623,10 @@ export default function TurnierAnsicht({
   }
 
   async function wiederOeffnen() {
-    if (!turnier || !(await fragen('Turnier wieder öffnen? Ergebnisse lassen sich dann wieder ändern.', 'Wieder öffnen'))) return;
+    if (!turnier) return;
+    const imWeg = await andererLaufender(supabase, turnier);
+    if (imWeg) return setFehler(laeuftSchonText(imWeg));
+    if (!(await fragen('Turnier wieder öffnen? Ergebnisse lassen sich dann wieder ändern.', 'Wieder öffnen'))) return;
     const { error } = await supabase.from('turniere').update({ status: 'laeuft' }).eq('id', turnier.id);
     if (error) return setFehler(error.message);
     await laden();
