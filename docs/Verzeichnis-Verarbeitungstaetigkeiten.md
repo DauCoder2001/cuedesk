@@ -31,7 +31,7 @@ Die Ausnahme für Betriebe unter 250 Beschäftigten (Art. 30 Abs. 5) greift nich
 | Daten | IP-Adresse, Zeitpunkt, aufgerufene Adresse, Browserkennung (Server-Protokolle) |
 | Empfänger | GitHub, Inc. (GitHub Pages) liefert Webseite und Anwendung aus; die Daten der Vereine laufen direkt zwischen Browser und Supabase und berühren GitHub nicht |
 | Drittland | GitHub, Inc.: USA; EU-US Data Privacy Framework [prüfen] |
-| Löschfrist | nach den Fristen von GitHub [prüfen] |
+| Löschfrist | Bestimmt GitHub. Eine feste Frist nennt GitHub nicht: Die IP-Adressen der Besucher werden zu Sicherheitszwecken protokolliert und laut Datenschutzerklärung von GitHub nur so lange aufbewahrt, wie Zweck und gesetzliche Pflichten es erfordern (nachgesehen am 23.10.2026). Der Betreiber hat keinen Zugriff auf die Protokolle und kann sie nicht löschen. |
 
 ### A2 Benutzerkonten und Anmeldung
 
