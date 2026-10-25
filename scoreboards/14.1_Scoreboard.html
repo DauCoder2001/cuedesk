@@ -271,6 +271,7 @@
     padding: 0.8vmin 1vmin 0.5vmin 1vmin;
     margin-bottom: 3vmin;   /* Abstand zur unteren Button-Leiste -> Baelle etwas hoeher */
     flex: 0 0 auto;
+    position: relative;   /* Bezug fuer die Null-Kugel */
     transition: opacity 0.2s ease;
     /* Ballgroesse skaliert mit der Breite -> alle 15 passen in eine Zeile (max 9vmin) */
     --bs: min(9vmin, calc((100vw - 4vmin) / 15 - 0.9vmin));
@@ -327,8 +328,14 @@
   }
 
   /* Null-Kugel: "kein Ball mehr auf dem Tisch" (alle 15 neu aufbauen).
-     Magenta kommt im Kugelsatz nicht vor; drei Kugelbreiten links abgesetzt von den Restkugeln. */
-  .b0  { --c: #e0218a; margin-right: calc(var(--bs) * 3); }
+     Magenta kommt im Kugelsatz nicht vor. Sie steht ausserhalb der Reihe, drei
+     Kugelbreiten links neben den Restkugeln; so bleiben diese in der Mitte.
+     --n (Zahl der Restkugeln) setzt drawBalls. */
+  .b0  {
+    --c: #e0218a;
+    position: absolute;
+    right: calc(50% + (var(--n) * var(--bs) + (var(--n) - 1) * 0.8vmin) / 2 + var(--bs) * 3);
+  }
   /* Poolfarben (an echte Kugelfarben angelehnt) */
   .b1  { --c: #f6c411; }
   .b2  { --c: #1958a8; }
@@ -1550,6 +1557,7 @@
 
     // Null-Kugel ab 4 Restkugeln: "alle Kugeln gefallen, auch die 15." (gilt ab 2 Kugeln)
     const mitNull = !state.locked && state.ballsLeft <= 4;
+    container.style.setProperty("--n", state.ballsLeft);
     for (let i = mitNull ? 0 : 1; i <= 15; i++) {
       if (i > state.ballsLeft) continue;
 
