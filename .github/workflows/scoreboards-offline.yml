@@ -3,10 +3,14 @@ name: Scoreboards offline
 # Baut die Offline-Fassung der Scoreboards (npm run offline, je Board eine
 # HTML-Datei) und legt sie in das Repository aus der Variable
 # SCOREBOARDS_ZIEL (DauCoder2001/scoreboards). Laeuft, wenn sich die
-# Scoreboards aendern, und auf Knopfdruck. GitHub Pages liefert sie unter
-# scoreboards.cuedesk.de aus (Datei CNAME, bei jedem Lauf neu geschrieben,
-# sonst ginge die Domain verloren); daucoder2001.github.io/scoreboards leitet
-# dorthin um. Bei IONOS: CNAME scoreboards -> daucoder2001.github.io.
+# Scoreboards aendern, und auf Knopfdruck.
+#
+# Eigene Domain scoreboards.cuedesk.de (bei IONOS: CNAME scoreboards ->
+# daucoder2001.github.io) ist vorbereitet, aber voruebergehend aus: Mit der
+# Datei CNAME leitet daucoder2001.github.io/scoreboards auf die Domain um,
+# und die Boards starten dort mit leerem Speicher. Zum Einschalten die Zeile
+# mit CNAME unten wieder aktivieren; sie muss bei jedem Lauf geschrieben
+# werden, sonst ginge die Domain verloren.
 #
 # Einmalig in GitHub (Settings -> Secrets and variables -> Actions):
 #   Variable SCOREBOARDS_ZIEL  DauCoder2001/scoreboards
@@ -69,7 +73,7 @@ jobs:
           cd ziel
           find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
           cp -a ../offline/. .
-          echo "$DOMAIN" > CNAME
+          # echo "$DOMAIN" > CNAME   # eigene Domain, voruebergehend aus (siehe oben)
           git add -A
           if git diff --cached --quiet; then
             echo "Keine Aenderung an der Offline-Fassung."
