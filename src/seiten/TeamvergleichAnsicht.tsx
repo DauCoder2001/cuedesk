@@ -69,6 +69,8 @@ export default function TeamvergleichAnsicht({
   const [fehler, setFehler] = useState<string | null>(null);
   const [meldung, setMeldung] = useState<string | null>(null);
   const [tische, setTische] = useState<Map<string, number>>(new Map());
+  // Aktive Tische wie auf der TV-Seite; bei 3 oder 5 gibt es "Live + Nächste"
+  const [aktiveTische, setAktiveTische] = useState(0);
   // Laufende Matches nach dem Sieg, die zu Ende gespielt werden duerfen
   const [zuEnde, setZuEnde] = useState<Set<string>>(new Set());
 
@@ -79,7 +81,7 @@ export default function TeamvergleichAnsicht({
       supabase.from('turnier_teilnehmer').select('*').eq('turnier_id', turnierId),
       supabase.from('personen').select('*').eq('verein_id', verein.id),
       supabase.from('partien').select('*').eq('turnier_id', turnierId).order('runde').order('paarung'),
-      supabase.from('tische').select('id, nummer').eq('verein_id', verein.id)
+      supabase.from('tische').select('id, nummer, aktiv').eq('verein_id', verein.id)
     ]);
     if (t.error) setFehler(t.error.message);
     setTurnier(t.data ?? null);
@@ -88,6 +90,7 @@ export default function TeamvergleichAnsicht({
     setPersonen(pe.data ?? []);
     setPartien(pa.data ?? []);
     setTische(new Map((ti.data ?? []).map((x) => [x.id, x.nummer])));
+    setAktiveTische((ti.data ?? []).filter((x) => x.aktiv).length);
   }, [verein, turnierId]);
 
   useEffect(() => {
@@ -738,6 +741,8 @@ export default function TeamvergleichAnsicht({
                 [
                   ['auslosung', 'Teams'],
                   ['live', 'Live-Tische'],
+                  // Bei 3 oder 5 Tischen bleibt im TV-Raster eine Kachel frei
+                  ...(aktiveTische === 3 || aktiveTische === 5 ? ([['livenaechste', 'Live + Nächste']] as const) : []),
                   ['naechste', 'Nächste Spiele'],
                   ['teamstand', 'Teamstand']
                 ] as const

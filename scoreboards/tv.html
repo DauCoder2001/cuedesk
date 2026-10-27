@@ -95,6 +95,34 @@
       margin-top: auto; 
     }
     .inactive { color: #555; font-size: 4vh; margin: auto; }
+    /* "TV zeigt: Live + Nächste" bei 3 oder 5 Tischen: die freie Kachel zeigt die
+       naechsten offenen Paarungen (wie tv-Naechste.html, aber kompakt) */
+    .naechste-karte { justify-content: flex-start; text-align: left; padding: 1.6vh 1.4vw; overflow: hidden; }
+    .naechste-karte .kopf { display: flex; justify-content: space-between; align-items: baseline; gap: 1vw; margin-bottom: 1.4vh; }
+    .naechste-karte .titel { color: #ddd; font-size: 3.2vh; font-weight: bold; white-space: nowrap; }
+    .naechste-karte .sub { color: #888; font-size: 1.7vh; text-align: right; }
+    .naechste-karte .liste { display: grid; gap: 1vh; }
+    .naechste-karte .spiel { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 1vw;
+                             background: #2c2c2c; border-radius: 8px; padding: 0.9vh 0.9vw; }
+    .naechste-karte .marke { display: inline-block; color: #fff; border-radius: 5px; padding: 0.3vh 0.6vw; font-size: 1.5vh; font-weight: bold; white-space: nowrap; }
+    .naechste-karte .gruppe-A { background: #2f9a76; }
+    .naechste-karte .gruppe-B { background: #3a7fbf; }
+    .naechste-karte .gruppe-C { background: #c95300; }
+    .naechste-karte .gruppe-D { background: #8a44ad; }
+    .naechste-karte .gruppe-neutral { background: #555; }
+    .naechste-karte .paar { font-size: 2.8vh; font-weight: bold; overflow-wrap: anywhere; }
+    /* .p1/.p2 der Tischkacheln (Zeilenbegrenzung, Ausrichtung) hier aufheben */
+    .naechste-karte .p1, .naechste-karte .p2 { display: inline; flex: none; font-size: inherit; text-align: left; overflow: visible; -webkit-line-clamp: unset; line-clamp: none; }
+    .naechste-karte .p1 { color: #ff4444; }
+    .naechste-karte .p2 { color: #4488ff; }
+    .naechste-karte .gegen { color: #666; margin: 0 0.5vw; }
+    .naechste-karte .zustand { font-size: 1.6vh; text-align: right; }
+    .naechste-karte .bereit { color: #22c55e; }
+    .naechste-karte .wartet { color: #e0b050; }
+    .naechste-karte .leer { color: #666; font-size: 3vh; margin: auto; text-align: center; }
+    /* 5 Tische (3x2): kleinere Kachel, kleinere Schrift */
+    .naechste-karte.klein .paar { font-size: 2.2vh; }
+    .naechste-karte.klein .titel { font-size: 2.6vh; }
   </style>
   <link rel="icon" type="image/svg+xml" href="./img/favicon.svg">
 </head>
@@ -108,6 +136,7 @@
     // Fernsehgeraet ist wie ein Tablet gekoppelt, nur ohne Tisch.
     import { db, ref, onValue, starten, tischNummern } from "./js/anbindung.ts";
     import { tischEnde } from "./js/board-regeln.ts";
+    import { naechsteSpiele } from "./js/turnier-plan.ts";
     import { keepScreenAwake } from "./js/wake-lock.js";
     import { startTvAutofit } from "./js/tv-autofit.js";
 
@@ -142,11 +171,62 @@
 
     // CueDesk: Umschaltung am Turnierbildschirm ("TV zeigt"). Die Seiten liegen
     // bei CueDesk alle im Ordner scoreboards.
-    const PAGE_FOR = { auslosung: 'tv-Auslosung.html', live: 'tv.html', naechste: 'tv-Naechste.html', results: 'tv-Turnier-Ergebnis.html', spieltag: 'tv-Spieltag.html', teamstand: 'tv-Teamstand.html', gruppenstand: 'tv-Gruppenstand.html', endplaetze: 'tv-Endplaetze.html' };
+    const PAGE_FOR = { auslosung: 'tv-Auslosung.html', live: 'tv.html', livenaechste: 'tv.html', naechste: 'tv-Naechste.html', results: 'tv-Turnier-Ergebnis.html', spieltag: 'tv-Spieltag.html', teamstand: 'tv-Teamstand.html', gruppenstand: 'tv-Gruppenstand.html', endplaetze: 'tv-Endplaetze.html' };
+    // "Live + Nächste": nur bei 3 oder 5 Tischen (dort bleibt im Raster eine
+    // Kachel frei) und nur, solange ein Turnier laeuft. Sonst wie "Live-Tische".
+    const freieKachel = nummern.length === 3 || nummern.length === 5;
+    let aktivesTurnier = null;
+    let tvView = null;
     onValue(ref(db, 'tournament/tvView'), (snap) => {
-      const target = PAGE_FOR[snap.val()] || 'tv.html';
+      tvView = snap.val();
+      const target = PAGE_FOR[tvView] || 'tv.html';
       if (target !== 'tv.html') window.location.href = target;
+      renderNaechste();
     });
+
+    onValue(ref(db, 'tournament/active'), (snap) => {
+      aktivesTurnier = snap.val();
+      renderNaechste();
+    });
+
+    function renderNaechste() {
+      let feld = document.getElementById('naechste-feld');
+      if (!(freieKachel && tvView === 'livenaechste' && aktivesTurnier)) {
+        if (feld) feld.remove();
+        return;
+      }
+      if (!feld) {
+        feld = document.createElement('div');
+        feld.id = 'naechste-feld';
+        feld.className = 'table-card naechste-karte' + (nummern.length === 5 ? ' klein' : '');
+        stage.append(feld);
+      }
+      const t = aktivesTurnier;
+      const plan = t.schedule || null;
+      const alle = plan ? Object.values(plan) : [];
+      const fertig = alle.filter((e) => e.status === 'completed').length;
+      const sub = [t.name, alle.length ? fertig + ' von ' + alle.length + ' beendet' : ''].filter(Boolean).join(' · ');
+      const spiele = naechsteSpiele(plan, nummern.length === 5 ? 4 : 6);
+      const farbe = (group) => {
+        const g = /^Gruppe ([A-D])\b/.exec(group || '');
+        return g ? 'gruppe-' + g[1] : 'gruppe-neutral';
+      };
+      const tischText = (n) => (n ? 'an Tisch ' + esc(n) : 'an einem anderen Tisch');
+      const liste = spiele.length === 0
+        ? '<div class="leer">' + (alle.some((e) => e.status === 'running') ? 'Alle Spiele zugeteilt' : 'Keine offenen Spiele') + '</div>'
+        : '<div class="liste">' + spiele.map(({ eintrag: e, belegt }) => {
+            const marke = [e.begegnung, e.group].filter(Boolean).join(' · ');
+            const zustand = belegt.length === 0
+              ? '<span class="bereit">bereit</span>'
+              : '<span class="wartet">' + belegt.map((b) => esc(b.name) + ' spielt ' + tischText(b.tisch)).join('<br>') + '</span>';
+            return '<div class="spiel">'
+              + '<span>' + (marke ? '<span class="marke ' + farbe(e.group) + '">' + esc(marke) + '</span>' : '') + '</span>'
+              + '<span class="paar"><span class="p1">' + esc(e.player1) + '</span><span class="gegen">–</span><span class="p2">' + esc(e.player2) + '</span></span>'
+              + '<span class="zustand">' + zustand + '</span>'
+              + '</div>';
+          }).join('') + '</div>';
+      feld.innerHTML = '<div class="kopf"><span class="titel">Nächste Spiele</span><span class="sub">' + esc(sub) + '</span></div>' + liste;
+    }
 
     // Turnierstatus mitlesen -> "Freies Spiel"-Badge waehrend eines Turniers
     let tournamentRunning = false;
