@@ -30,4 +30,4 @@ Die **Konsole** ist nur für Super-Admins, also den Betreiber von CueDesk. Sie g
 
 ## Scoreboards offline
 
-Die Offline-Fassung der Scoreboards (daucoder2001.github.io/scoreboards) entsteht automatisch: Nach jedem Push, der die Scoreboards ändert, baut der Workflow **Scoreboards offline** auf GitHub sie neu und legt sie ab.
+Die Offline-Fassung der Scoreboards (daucoder2001.github.io/scoreboards; scoreboards.cuedesk.de leitet über das Repo scoreboards-weiterleitung dorthin weiter) entsteht automatisch: Nach jedem Push, der die Scoreboards ändert, baut der Workflow **Scoreboards offline** auf GitHub sie neu und legt sie ab.

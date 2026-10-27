@@ -9,7 +9,8 @@ im Browser (localStorage) gespeichert.
 Scoreboards gehören in den Ordner `scoreboards/` von CueDesk.
 
 ## Nutzung
-`index.html` öffnen (bzw. die GitHub-Pages-Adresse aufrufen) und ein Scoreboard wählen:
+`index.html` öffnen (bzw. die GitHub-Pages-Adresse aufrufen; scoreboards.cuedesk.de leitet
+dorthin weiter) und ein Scoreboard wählen:
 
 - **8/9/10-Ball** → `index_pool.html`
 - **14.1 endlos** → `index141.html`
