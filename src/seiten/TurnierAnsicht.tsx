@@ -1402,10 +1402,25 @@ export default function TurnierAnsicht({
     await laden();
   }
 
+  // Phase zuruecksetzen: Gehen dabei Ergebnisse verloren (Spiel mit Ergebnis,
+  // laufend oder am Tisch), braucht es das Schutzwort wie beim einzelnen
+  // Spiel; frisch angesetzt reicht die einfache Rueckfrage.
+  function phasenSchutz(liste: TPartie[]): { text: string; optionen?: { schutzwort: string } } {
+    const n = liste.filter(
+      (p) => p.status !== 'geplant' || p.tisch_id !== null || p.ergebnis_a !== null || p.ergebnis_b !== null
+    ).length;
+    if (n === 0 || !verein) return { text: '' };
+    return {
+      text: `\n\nDabei gehen ${n === 1 ? '1 Spiel' : `${n} Spiele`} mit Ergebnis oder am Tisch verloren.`,
+      optionen: { schutzwort: verein.id }
+    };
+  }
+
   async function phase2Zuruecksetzen() {
     if (!turnier) return;
-    const frage = 'Platzierungsduelle zurücksetzen? Die Ergebnisse gehen verloren, die Gruppenphase bleibt erhalten.';
-    if (!(await fragen(frage, 'Zurücksetzen'))) return;
+    const schutz = phasenSchutz(duelle);
+    const frage = 'Platzierungsduelle zurücksetzen? Die Ergebnisse gehen verloren, die Gruppenphase bleibt erhalten.' + schutz.text;
+    if (!(await fragen(frage, 'Zurücksetzen', schutz.optionen))) return;
     const { error } = await supabase.from('partien').delete().eq('turnier_id', turnier.id).eq('phase', 'phase2');
     if (error) return setFehler(error.message);
     const neu = { ...einstellungen };
@@ -1514,8 +1529,11 @@ export default function TurnierAnsicht({
 
   async function koZuruecksetzen() {
     if (!turnier) return;
-    const frage = 'KO-Runde zurücksetzen? Setzliste und alle KO-Ergebnisse gehen verloren, die Platzierungsspiele ebenso. Die Gruppenphase bleibt erhalten.';
-    if (!(await fragen(frage, 'Zurücksetzen'))) return;
+    const schutz = phasenSchutz([...koPartien, ...p3Partien]);
+    const frage =
+      'KO-Runde zurücksetzen? Setzliste und alle KO-Ergebnisse gehen verloren, die Platzierungsspiele ebenso. Die Gruppenphase bleibt erhalten.' +
+      schutz.text;
+    if (!(await fragen(frage, 'Zurücksetzen', schutz.optionen))) return;
     const { error } = await supabase.from('partien').delete().eq('turnier_id', turnier.id).in('phase', ['ko', 'phase3']);
     if (error) return setFehler(error.message);
     const neu = { ...einstellungen };
@@ -1568,8 +1586,11 @@ export default function TurnierAnsicht({
 
   async function phase3Zuruecksetzen() {
     if (!turnier) return;
-    const frage = 'Platzierungsspiele zurücksetzen? Die Ergebnisse gehen verloren. Die unteren Plätze werden danach wieder aus der Gruppenwertung berechnet.';
-    if (!(await fragen(frage, 'Zurücksetzen'))) return;
+    const schutz = phasenSchutz(p3Partien);
+    const frage =
+      'Platzierungsspiele zurücksetzen? Die Ergebnisse gehen verloren. Die unteren Plätze werden danach wieder aus der Gruppenwertung berechnet.' +
+      schutz.text;
+    if (!(await fragen(frage, 'Zurücksetzen', schutz.optionen))) return;
     const { error } = await supabase.from('partien').delete().eq('turnier_id', turnier.id).eq('phase', 'phase3');
     if (error) return setFehler(error.message);
     const neu = { ...einstellungen };
@@ -2567,7 +2588,7 @@ export default function TurnierAnsicht({
                     </button>
                   )}
                   {bearbeitbar && einstellungen.phase2 && (
-                    <button type="button" title="Löscht die Platzierungsduelle, damit sie neu angesetzt werden können." className="gefahrknopf" onClick={() => void phase2Zuruecksetzen()}>
+                    <button type="button" title="Löscht die Platzierungsduelle, damit sie neu angesetzt werden können. Mit Ergebnissen braucht es das Schutzwort." className="gefahrknopf" onClick={() => void phase2Zuruecksetzen()}>
                       Duelle zurücksetzen
                     </button>
                   )}
@@ -2637,7 +2658,7 @@ export default function TurnierAnsicht({
                         </button>
                       )}
                       {bearbeitbar && koFest && (
-                        <button type="button" title="Löscht die KO-Runde, damit sie neu angesetzt werden kann." className="gefahrknopf" onClick={() => void koZuruecksetzen()}>
+                        <button type="button" title="Löscht die KO-Runde, damit sie neu angesetzt werden kann. Mit Ergebnissen braucht es das Schutzwort." className="gefahrknopf" onClick={() => void koZuruecksetzen()}>
                           KO-Runde zurücksetzen
                         </button>
                       )}
@@ -2691,7 +2712,7 @@ export default function TurnierAnsicht({
                           </button>
                         )}
                         {bearbeitbar && einstellungen.phase3 && (
-                          <button type="button" title="Löscht die Platzierungsspiele, damit sie neu angesetzt werden können." className="gefahrknopf" onClick={() => void phase3Zuruecksetzen()}>
+                          <button type="button" title="Löscht die Platzierungsspiele, damit sie neu angesetzt werden können. Mit Ergebnissen braucht es das Schutzwort." className="gefahrknopf" onClick={() => void phase3Zuruecksetzen()}>
                             Spiele zurücksetzen
                           </button>
                         )}

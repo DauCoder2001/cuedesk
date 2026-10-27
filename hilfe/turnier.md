@@ -50,6 +50,8 @@ Bis zur Auslosung lassen sich Name, Modus und Race über **Ändern** noch anpass
 
 Bei **Zwei Gruppen** startest du nach den Gruppenspielen die **Duelle**, bei **Gruppen mit KO-Runde** die **KO-Runde**. Kommt jemand zu spät, hilft **Spieler nachtragen**.
 
+**Duelle zurücksetzen**, **KO-Runde zurücksetzen** und **Spiele zurücksetzen** (Platzierungsspiele) löschen die ganze Phase, damit sie neu angesetzt werden kann. Hat dort schon ein Spiel ein Ergebnis oder läuft gerade, braucht es dafür das Schutzwort des Vereins; frisch angesetzt reicht die einfache Rückfrage.
+
 ## 5. Abschließen
 
 1. Sind alle Spiele gespielt, **Abschließen** klicken. Die Ergebnisse werden gesperrt; zählt das Turnier fürs Rating, wird es gleich neu berechnet.
