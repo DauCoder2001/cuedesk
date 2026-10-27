@@ -359,7 +359,8 @@
     align-items: flex-end;
     justify-content: space-between;
     gap: 1vmin;
-    padding: 0.4vmin 1.5vmin calc(1vmin + env(safe-area-inset-bottom)) 1.5vmin;   /* iOS: Home-Indikator freihalten */
+    /* unten 4vmin: ueber dem Rahmen von Wandhalterung oder Tabletaufsteller; iOS: Home-Indikator freihalten */
+    padding: 0.4vmin 1.5vmin calc(4vmin + env(safe-area-inset-bottom)) 1.5vmin;
     flex: 0 0 auto;
   }
   #bottom-bar button { margin: 0; }
