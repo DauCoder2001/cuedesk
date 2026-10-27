@@ -25,7 +25,8 @@ Die Vorgaben für neue Turniere (Race, Disziplin, Modus, Vorgabe) stellt der Ver
 
 ## 2. Teilnehmer eintragen
 
-- Im Feld **Mitglied suchen** Namen tippen und den Spieler wählen.
+- Am schnellsten geht es mit **Anwesende ankreuzen…**: Die Liste zeigt alle Mitglieder und Gäste, wer schon Teilnehmer ist, hat bereits einen Haken. Anhaken, wer da ist, und **Übernehmen** klicken. Wer den Haken verliert, wird dabei entfernt. Unten steht, wie viele ausgewählt sind und wie viele der Modus erlaubt. Ein neuer Gast lässt sich im Dialog gleich anlegen und ist dann angehakt.
+- Einzeln geht es im Feld **Mitglied suchen**: Namen tippen und den Spieler wählen.
 - Wer nicht im Verein ist, kommt über **Neuer Gast: Vor- und Nachname** und **Gast hinzufügen** dazu.
 - Haben sich Mitglieder über eine Ausschreibung angemeldet, stehen sie unter **Anmeldungen**; **Übernehmen** trägt sie als Teilnehmer ein.
 - Falsch eingetragen? **Entfernen** neben dem Namen.

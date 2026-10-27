@@ -135,6 +135,8 @@ export default function TurnierAnsicht({
   const [modusWahl, setModusWahl] = useState<WaehlbarerModus | null>(null);
   const [suche, setSuche] = useState('');
   const [gastName, setGastName] = useState('');
+  // Dialog "Anwesende ankreuzen": angehakte Personen, Suche, neuer Gast
+  const [ankreuzen, setAnkreuzen] = useState<{ ids: Set<string>; suche: string; gast: string } | null>(null);
   // Markierte Teilnehmer (hoechstens zwei): Ihre Partie wird im Spielplan
   // hervorgehoben. Nur Anzeige, nichts wird gespeichert.
   const [markiert, setMarkiert] = useState<string[]>([]);
@@ -648,6 +650,54 @@ export default function TurnierAnsicht({
       return null;
     }
     return data.id;
+  }
+
+  // Anwesende ankreuzen: Angehakte kommen dazu, wer den Haken verloren hat,
+  // wird entfernt. Eine Selbstanmeldung bleibt in der Anmeldeliste stehen.
+  async function anwesendeUebernehmen(ids: Set<string>) {
+    if (!turnier) return;
+    const vorher = new Set(teilnehmer.map((t) => t.person_id));
+    const neu = [...ids].filter((id) => !vorher.has(id));
+    const weg = [...vorher].filter((id) => !ids.has(id));
+    setFehler(null);
+    setArbeitet(true);
+    try {
+      if (neu.length > 0) {
+        const { error } = await supabase
+          .from('turnier_teilnehmer')
+          .upsert(
+            neu.map((id) => ({ turnier_id: turnier.id, person_id: id, verein_id: turnier.verein_id })),
+            { onConflict: 'turnier_id,person_id', ignoreDuplicates: true }
+          );
+        if (error) return setFehler(error.message);
+      }
+      if (weg.length > 0) {
+        const { error } = await supabase
+          .from('turnier_teilnehmer')
+          .delete()
+          .eq('turnier_id', turnier.id)
+          .in('person_id', weg);
+        if (error) return setFehler(error.message);
+      }
+      setAnkreuzen(null);
+      setMeldung(
+        neu.length === 0 && weg.length === 0
+          ? 'Teilnehmerliste unverändert.'
+          : `Teilnehmerliste übernommen: ${neu.length} dazu, ${weg.length} entfernt.`
+      );
+    } finally {
+      setArbeitet(false);
+      await laden();
+    }
+  }
+
+  // Neuer Gast im Dialog: anlegen und gleich anhaken
+  async function ankreuzGastAnlegen() {
+    if (!ankreuzen) return;
+    const id = await gastErzeugen(ankreuzen.gast);
+    if (!id) return;
+    await laden();
+    setAnkreuzen((a) => a && { ...a, gast: '', ids: new Set(a.ids).add(id) });
   }
 
   // ---------- Disziplin am Spieltag festlegen ----------
@@ -2206,6 +2256,15 @@ export default function TurnierAnsicht({
 
           {bearbeitbar && (
             <>
+              <div className="zeile">
+                <button
+                  type="button"
+                  title="Öffnet die Liste aller Mitglieder und Gäste zum Anhaken. Übernehmen fügt die Angehakten hinzu und entfernt, wer keinen Haken mehr hat."
+                  onClick={() => setAnkreuzen({ ids: new Set(teilnehmer.map((t) => t.person_id)), suche: '', gast: '' })}
+                >
+                  Anwesende ankreuzen…
+                </button>
+              </div>
               <div className="zeile raster">
                 <input placeholder="Mitglied suchen" value={suche} onChange={(e) => setSuche(e.target.value)} />
               </div>
@@ -2804,6 +2863,99 @@ export default function TurnierAnsicht({
       )}
 
       {rueckfrage}
+      {ankreuzen && (() => {
+        const filter = ankreuzen.suche.trim().toLowerCase();
+        const sichtbar = personen
+          .filter((p) => p.status !== 'ausgetreten')
+          .filter((p) => !filter || `${p.vorname} ${p.nachname} ${p.anzeigename ?? ''}`.toLowerCase().includes(filter))
+          .sort((a, b) => (a.anzeigename || personName(a)).localeCompare(b.anzeigename || personName(b), 'de'));
+        const umschalten = (id: string) =>
+          setAnkreuzen((a) => {
+            if (!a) return a;
+            const ids = new Set(a.ids);
+            if (ids.has(id)) ids.delete(id);
+            else ids.add(id);
+            return { ...a, ids };
+          });
+        const kaestchen = (liste: Person[]) => (
+          <div className="ankreuzraster">
+            {liste.map((p) => {
+              const an = ankreuzen.ids.has(p.id);
+              const voll = personName(p);
+              return (
+                <label key={p.id} className={an ? 'ankreuz an' : 'ankreuz'}>
+                  <input type="checkbox" checked={an} onChange={() => umschalten(p.id)} />
+                  <span>
+                    {p.anzeigename || voll}
+                    {p.anzeigename && p.anzeigename !== voll && <small>{voll}</small>}
+                  </span>
+                </label>
+              );
+            })}
+          </div>
+        );
+        const mitglieder = sichtbar.filter((p) => p.status !== 'gast');
+        const gaeste = sichtbar.filter((p) => p.status === 'gast');
+        const anzahl = ankreuzen.ids.size;
+        const grenzeText = modusOffen
+          ? 'Der Modus wird danach passend zur Zahl vorgeschlagen.'
+          : mehrgruppig
+            ? `${MODUS_TEXT[turnier.modus]}: ${grenzen[0]} bis ${grenzen[1]} Teilnehmer.`
+            : 'Mindestens 3 Teilnehmer.';
+        const passt = modusOffen || (mehrgruppig ? anzahl >= grenzen[0] && anzahl <= grenzen[1] : anzahl >= 3);
+        return (
+          <Modal breit abbrechen={() => !arbeitet && setAnkreuzen(null)}>
+            <h2>Anwesende ankreuzen</h2>
+            <p className="hinweis">
+              Wer angehakt ist, kommt in die Teilnehmerliste. Wer den Haken verliert, wird beim Übernehmen entfernt.
+            </p>
+            <input
+              placeholder="Suchen…"
+              value={ankreuzen.suche}
+              onChange={(e) => setAnkreuzen({ ...ankreuzen, suche: e.target.value })}
+            />
+            <div className="feldkopf">Mitglieder</div>
+            {mitglieder.length > 0 ? kaestchen(mitglieder) : <p className="hinweis">Kein Mitglied gefunden.</p>}
+            <div className="feldkopf">Gäste</div>
+            {gaeste.length > 0 && kaestchen(gaeste)}
+            <div className="zeile raster">
+              <input
+                placeholder="Neuer Gast: Vor- und Nachname"
+                value={ankreuzen.gast}
+                onChange={(e) => setAnkreuzen({ ...ankreuzen, gast: e.target.value })}
+              />
+              <button
+                type="button"
+                disabled={arbeitet}
+                title="Legt den Namen als Gast an und hakt ihn gleich an."
+                onClick={() => void ankreuzGastAnlegen()}
+              >
+                Gast hinzufügen
+              </button>
+            </div>
+            <div className="ankreuzfuss">
+              <div>
+                <strong className={passt ? 'gut' : 'fehler'}>{anzahl} ausgewählt</strong>
+                <div className="hinweis">{grenzeText}</div>
+              </div>
+              <div className="knopfpaar">
+                <button
+                  type="button"
+                  className="hauptaktion"
+                  disabled={arbeitet}
+                  title="Übernimmt die Haken in die Teilnehmerliste."
+                  onClick={() => void anwesendeUebernehmen(ankreuzen.ids)}
+                >
+                  Übernehmen
+                </button>
+                <button type="button" disabled={arbeitet} onClick={() => setAnkreuzen(null)}>
+                  Abbrechen
+                </button>
+              </div>
+            </div>
+          </Modal>
+        );
+      })()}
       {nachtrag && (
         <Modal abbrechen={() => setNachtrag(null)}>
           <h2>Spieler nachtragen</h2>

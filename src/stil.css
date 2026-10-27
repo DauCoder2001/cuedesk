@@ -663,3 +663,11 @@ button.aktivmarke { color: var(--gut); border-color: var(--gut); }
 .teamstand .hinweis { text-align: center; }
 .standzelle { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .ergebnisfelder { display: inline-flex; align-items: center; gap: 4px; }
+/* Dialog "Anwesende ankreuzen" (Turnier vor der Auslosung) */
+.ankreuzraster { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 6px; }
+.ankreuzraster .ankreuz { align-items: center; padding: 5px 8px; border: 1px solid transparent; border-radius: var(--radius); cursor: pointer; }
+.ankreuzraster .ankreuz input { margin-top: 0; }
+.ankreuzraster .ankreuz.an { background: var(--gut-hell); border-color: #9fd8c4; font-weight: 500; }
+.ankreuzraster .ankreuz.an small { font-weight: 400; }
+.ankreuzfuss { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; border-top: 1px solid var(--rand); padding-top: 10px; }
+.ankreuzfuss .gut { color: var(--gut); }
