@@ -63,6 +63,8 @@ import type { TurnierEinstellungen } from './Turniere';
 import type { Partie, Person, RatingQuelle, Turnier, TurnierAnmeldung, TurnierTeilnehmer } from '../datenbank.types';
 import { anmeldeLink, anmeldestand } from '../ausschreibung';
 import { Modal } from '../modal';
+import { REIHENFOLGE_TEXT, istGruppenrunde, rundenFolge, rundenSchluessel } from '../reihenfolge';
+import type { Reihenfolge } from '../reihenfolge';
 
 // Partien dieser Ansicht haben immer Spieler (Team-Matches gibt es nur im Teamvergleich)
 type TPartie = SpielerPartie<Partie>;
@@ -484,13 +486,19 @@ export default function TurnierAnsicht({
     return [...karte.values()].sort((a, b) => a.ordnung.localeCompare(b.ordnung));
   }, [partien]);
 
-  // Reihenfolge in der Spielplan-Liste: Gruppenrunden abwechselnd (A 1, B 1,
-  // A 2, B 2 ...), danach Duelle, KO-Runde und Platzierungsspiele
+  // Reihenfolge in der Spielplan-Liste: Gruppenrunden nach der Einstellung
+  // reihenfolge (abwechselnd A 1, B 1, A 2 ..., gleich verteilt oder laufend;
+  // src/reihenfolge.ts, dieselbe an Tablets und TV), danach Duelle, KO-Runde
+  // und Platzierungsspiele
+  const reihenfolge: Reihenfolge = einstellungen.reihenfolge ?? 'abwechselnd';
   const listenAbschnitte = useMemo(() => {
+    const folge = rundenFolge(partien.filter(istGruppenrunde), reihenfolge);
     const rang = (a: { zeile: string; ordnung: string; runde: number }) =>
-      istGruppenzeile(a.zeile) || a.zeile === '' ? `0${String(a.runde).padStart(3, '0')}${a.zeile}` : `1${a.ordnung}`;
+      istGruppenzeile(a.zeile) || a.zeile === ''
+        ? `0${String(folge.get(rundenSchluessel(a.zeile, a.runde)) ?? 0).padStart(3, '0')}`
+        : `1${a.ordnung}`;
     return [...abschnitte].sort((a, b) => rang(a).localeCompare(rang(b)));
-  }, [abschnitte]);
+  }, [abschnitte, partien, reihenfolge]);
 
   // Spielplan als Liste mit eigenem Scrollbalken; die Rundenknoepfe springen.
   // Beim Oeffnen steht die Liste bei der ersten Runde mit offenen Spielen.
@@ -2521,6 +2529,31 @@ export default function TurnierAnsicht({
             <section className="block">
               <div className="bearbeitenkopf">
                 <h2>Spielplan</h2>
+                {mehrgruppig && (
+                  <span className="kopfreihe">
+                    <span className="hinweis">Reihenfolge:</span>
+                    <span className="umschalter">
+                      {(
+                        [
+                          ['abwechselnd', 'Abwechselnd: A 1, B 1, A 2, B 2 … Die größere Gruppe spielt ihre letzten Runden allein (wie bisher).'],
+                          ['verteilt', 'Gleich verteilt: Die Runden der größeren Gruppe werden über das ganze Turnier verteilt, damit alle Gruppen fast gleichzeitig fertig werden. Bei gleich großen Gruppen wie „Abwechselnd“.'],
+                          ['laufend', 'Laufend: Die Gruppe mit den meisten offenen Spielen kommt zuerst. Die Reihenfolge passt sich dem Spieltempo an und kann sich während des Turniers ändern.']
+                        ] as const
+                      ).map(([wert, hilfe]) => (
+                        <button
+                          key={wert}
+                          type="button"
+                          className={reihenfolge === wert ? 'aktiv' : ''}
+                          disabled={!bearbeitbar}
+                          title={`${hilfe} Gilt für diese Liste, die Tablets und „Nächste Spiele“ am Fernseher; Ergebnisse und Paarungen bleiben.`}
+                          onClick={() => reihenfolge !== wert && void einstellungenSetzen({ reihenfolge: wert })}
+                        >
+                          {REIHENFOLGE_TEXT[wert]}
+                        </button>
+                      ))}
+                    </span>
+                  </span>
+                )}
                 {bearbeitbar && (
                   <button type="button" title="Nimmt die letzte Ergebnisänderung zurück, die hier gemacht wurde." onClick={() => void rueckgaengig()} disabled={stapel.length === 0}>
                     Rückgängig{stapel.length > 0 ? ` (${stapel.length})` : ''}
