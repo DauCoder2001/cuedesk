@@ -654,7 +654,7 @@
         <div class="stats">
           Run: <span id="run1">0</span> |
           HS: <span id="high1">0</span><br>
-          Ø: <span id="avg1">0.0</span> |
+          Ø: <span id="avg1">0,00</span> |
           Aufn.: <span id="inn1">0</span>
           <div class="fouls" id="fouls1"></div>
         </div>
@@ -679,7 +679,7 @@
         <div class="stats">
           Run: <span id="run2">0</span> |
           HS: <span id="high2">0</span><br>
-          Ø: <span id="avg2">0.0</span> |
+          Ø: <span id="avg2">0,00</span> |
           Aufn.: <span id="inn2">0</span>
           <div class="fouls" id="fouls2"></div>
         </div>
@@ -890,7 +890,7 @@
         <li><b>Run</b> – Punkte der <b>laufenden</b> Aufnahme. Läuft weiter, solange der Spieler am Tisch ist – auch über einen Neuaufbau hinweg – und springt beim Aufnahmewechsel zurück auf 0.</li>
         <li><b>HS</b> – <b>Höchstserie</b>: das beste Ergebnis einer <b>einzelnen</b> Aufnahme im laufenden Match. Foulpunkte derselben Aufnahme werden vorher abgezogen – 10 Bälle und danach ein Foul zählen als <b>9</b>. Im <b>📋 Protokoll</b> ist die HS gelb markiert.</li>
         <li><b>Aufn.</b> – Zahl der <b>beendeten</b> Aufnahmen. Die laufende zählt erst mit, wenn sie durch <b>Verschossen</b>, <b>Foul</b> oder <b>Sicherheit</b> endet.</li>
-        <li><b>Ø</b> – <b>Punkte ÷ beendete Aufnahmen</b>, auf eine Nachkommastelle gerundet. Die Punkte wachsen mit jeder Kugel, die Aufnahmen springen erst beim Wechsel – der Ø <b>steigt</b> deshalb während einer Serie und <b>fällt</b> beim Aufnahmewechsel wieder. Solange noch keine Aufnahme beendet ist, zeigt er einfach die bisherigen Punkte; durch Fouls kann er negativ werden.</li>
+        <li><b>Ø</b> – <b>Punkte ÷ beendete Aufnahmen</b>, auf zwei Nachkommastellen gerundet (wie in der 14.1-Statistik von CueDesk). Die Punkte wachsen mit jeder Kugel, die Aufnahmen springen erst beim Wechsel – der Ø <b>steigt</b> deshalb während einer Serie und <b>fällt</b> beim Aufnahmewechsel wieder. Solange noch keine Aufnahme beendet ist, zeigt er einfach die bisherigen Punkte; durch Fouls kann er negativ werden.</li>
         <li><b>Zielpunkte</b> – Mit dem Ball, der das Ziel erreicht, ist das Spiel aus. Werden mehr Kugeln angetippt als bis dahin nötig, zählt das Board nur bis zum Ziel – bei Ziel 100 und 99 Punkten also genau <b>einen</b> Ball, auch wenn die 8 angetippt wurde. So bleibt auch der Ø richtig.</li>
         <li><b>☰ Letzte Aufnahmen</b> – Der kleine Knopf über dem Doppelpunkt blendet an dessen Stelle eine kompakte Tabelle ein: die letzten drei Aufnahmen (die laufende zählt mit) und darunter die nächsten, noch leeren. <b>Gelb</b> und <b>Rot</b> markieren die beiden <b>letzten Aufnahmen des Matches</b> – sie erscheinen also erst, wenn das Aufnahmen-Limit in Sicht kommt.</li>
       </ul>
@@ -1552,6 +1552,11 @@
     save();
   }
 
+  // Durchschnitt (Punkte je beendete Aufnahme) wie in der 14.1-Statistik: zwei Stellen, Komma
+  function schnitt(punkte, aufn) {
+    return (punkte / (aufn || 1)).toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
   function drawBalls() {
     const container = document.getElementById("balls");
     container.innerHTML = "";
@@ -1640,8 +1645,8 @@
     document.getElementById("high2").textContent = state.high2;
     document.getElementById("inn1").textContent = state.inn1;
     document.getElementById("inn2").textContent = state.inn2;
-    document.getElementById("avg1").textContent = (state.s1 / (state.inn1 || 1)).toFixed(1);
-    document.getElementById("avg2").textContent = (state.s2 / (state.inn2 || 1)).toFixed(1);
+    document.getElementById("avg1").textContent = schnitt(state.s1, state.inn1);
+    document.getElementById("avg2").textContent = schnitt(state.s2, state.inn2);
     document.getElementById("targetScore").textContent = state.target;
     document.getElementById("targetInn").textContent = state.targetInn;
 
@@ -1729,7 +1734,7 @@
   }
 
   function playerSummary(name, score, hs, inn, color, atTable) {
-    const avg = (score / (inn || 1)).toFixed(1);
+    const avg = schnitt(score, inn);
     return '<div class="ls-p">' +
       '<div class="ls-name" style="color:' + color + '">' + escapeHtml(name) + '</div>' +
       '<div class="ls-score" style="color:' + color + '">' + score + '</div>' +
