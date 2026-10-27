@@ -425,6 +425,7 @@ export function onValue(verweis: Verweis, cb: Beobachter): () => void {
     verweis.pfad === 'tournament/tvView' ||
     verweis.pfad === 'tournament/spieltag' ||
     verweis.pfad === 'tournament/teamstand' ||
+    verweis.pfad === 'tournament/endplaetze' ||
     verweis.pfad === 'tournament_archive'
   ) {
     if (verbindung) void turnierBeobachten(verweis.pfad);
@@ -639,6 +640,17 @@ let tvAnsicht: string | null = null; // tournament/tvView
 let tvArchiv: Record<string, TvErgebnis> | null = null; // tournament_archive
 let tvSpieltag: TvSpieltag | null = null; // tournament/spieltag (Liga, TV "Spieltag-Ergebnis")
 let tvTeamstand: TeamstandAnzeige | null = null; // tournament/teamstand (Teamvergleich, TV "Teamstand")
+// tournament/endplaetze (Zwei Gruppen, Gruppen mit KO; TV "Endplaetze")
+export type TvEndplaetze = {
+  name: string;
+  datum: string;
+  vorlaeufig: boolean;
+  art: VorlaeufigeEndplaetze['art'];
+  beendet: number;
+  gesamt: number;
+  zeilen: (Omit<EndplatzZeile, 'personen'> & { namen: string[] })[];
+};
+let tvEndplaetze: TvEndplaetze | null = null;
 let turnierLaeuftSchon = false;
 let turnierZeitgeber: number | null = null;
 
@@ -671,6 +683,7 @@ async function turnierLaden(): Promise<void> {
     tvArchiv = null;
     tvSpieltag = null;
     tvTeamstand = null;
+    tvEndplaetze = null;
     return;
   }
 
@@ -800,6 +813,31 @@ async function turnierLaden(): Promise<void> {
         (id) => nummern.get(id) ?? null
       )
     : null;
+  // Gruppenstand: Fortschritt der Gruppenspiele; Endplaetze: vorlaeufig aus
+  // Duellen bzw. KO-Runde, gerechnet wie in der Turnieransicht
+  const gruppenspiele = partien.filter((p) => !p.phase || p.phase === 'gruppe');
+  tvArchiv[t.id].groupProgress = {
+    done: gruppenspiele.filter((p) => spielBeendet(p.ergebnis_a, p.ergebnis_b, p.race_to ?? einstellungen.raceTo ?? 0)).length,
+    total: gruppenspiele.length
+  };
+  const vorl = vorlaeufigeEndplaetze(
+    t.modus,
+    t.einstellungen as TurnierEinstellungen,
+    (teilnehmerAntwort.data ?? []).map((x) => ({ person_id: x.person_id as string, startnummer: x.startnummer, gruppe: x.gruppe })),
+    partien as unknown as EndplatzPartie[],
+    (id) => nummern.get(id) ?? null
+  );
+  tvEndplaetze = vorl
+    ? {
+        name: t.name,
+        datum: new Date(`${t.datum}T12:00:00`).toLocaleDateString('de-DE'),
+        vorlaeufig: t.status !== 'beendet',
+        art: vorl.art,
+        beendet: vorl.beendet,
+        gesamt: vorl.gesamt,
+        zeilen: vorl.zeilen.map(({ personen, ...z }) => ({ ...z, namen: personen.map(name) }))
+      }
+    : null;
 }
 
 // Liga-Spieltag fuer die TV-Anzeige "Spieltag-Ergebnis": alle Begegnungen
@@ -839,6 +877,7 @@ async function turnierAuffrischen() {
   melden('tournament_archive', tvArchiv);
   melden('tournament/spieltag', tvSpieltag);
   melden('tournament/teamstand', tvTeamstand);
+  melden('tournament/endplaetze', tvEndplaetze);
 }
 
 // Welcher Wert gehoert zu welchem Turnier-Pfad
@@ -848,6 +887,7 @@ function turnierWert(pfad: string): unknown {
   if (pfad === 'tournament/tvView') return tvAnsicht;
   if (pfad === 'tournament/spieltag') return tvSpieltag;
   if (pfad === 'tournament/teamstand') return tvTeamstand;
+  if (pfad === 'tournament/endplaetze') return tvEndplaetze;
   return tvArchiv;
 }
 
@@ -1180,6 +1220,10 @@ import {
 import { neueKennung } from './kennung';
 import { teamstandAnzeige } from '../../src/teamvergleich';
 import type { TeamstandAnzeige, TeamvergleichEinstellungen } from '../../src/teamvergleich';
+import { vorlaeufigeEndplaetze } from '../../src/endplaetze';
+import { spielBeendet } from '../../src/turnier';
+import type { EndplatzPartie, EndplatzZeile, VorlaeufigeEndplaetze } from '../../src/endplaetze';
+import type { TurnierEinstellungen } from '../../src/seiten/Turniere';
 import type { Gestartet, PlanEintrag, PlanPartie, TabletTeams, TabletTurnier, TvErgebnis, Verdeckt } from './turnier-plan';
 import { aufnahmenAusProtokoll, protokollAusAufnahmen } from './protokoll-141';
 import type { AufnahmeZeile, Zustand141 } from './protokoll-141';

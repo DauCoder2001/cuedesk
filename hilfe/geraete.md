@@ -33,7 +33,7 @@ War das Tablet vorher schon in Safari gekoppelt, steht es unter **Geräte** zwei
 
 Genauso wie ein Tablet, nur statt eines Tisches **Fernseher (TV-Ansicht)** wählen. Der Fernseher zeigt dann „Fernseher“ und öffnet nach 5 Sekunden von selbst die TV-Ansicht mit allen Tischen. Mit **Hier bleiben** lässt sich das anhalten.
 
-Was der Fernseher während eines Turniers zeigt (**Auslosung**, **Live-Tische**, **Ergebnis**), stellst du in der Turnieransicht unter **TV zeigt:** um.
+Was der Fernseher während eines Turniers zeigt (**Auslosung**, **Live-Tische**, **Nächste Spiele**, bei Gruppenturnieren **Gruppenstand** und **Endplätze**, **Ergebnis**), stellst du in der Turnieransicht unter **TV zeigt:** um.
 
 ## 4. Im Betrieb
 

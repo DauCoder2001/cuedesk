@@ -86,6 +86,8 @@ export type TvErgebnis = {
   groups: Record<string, { name: string; games: number; wins: number; losses: number; plus: number; minus: number }[]>;
   // Gruppenturniere nach dem Abschluss: die Endplaetze (dann ohne Gruppen)
   finalPlacement?: { place: number; name: string; score: string }[];
+  // Gruppenspiele beendet / gesamt (TV "Gruppenstand")
+  groupProgress?: { done: number; total: number };
 };
 
 export type TvTeilnehmer = { id: string; gruppe: string | null; endplatz: number | null };

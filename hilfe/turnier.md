@@ -35,7 +35,7 @@ Bis zur Auslosung lassen sich Name, Modus und Race über **Ändern** noch anpass
 ## 3. Auslosen und starten
 
 1. **Auslosen und starten** klicken. CueDesk lost die Startnummern bzw. Gruppen aus und legt den Spielplan an.
-2. Auf den Fernsehern erscheint automatisch die Auslosung. Über **TV zeigt:** schaltest du zwischen **Auslosung**, **Live-Tische** und **Ergebnis** um.
+2. Auf den Fernsehern erscheint automatisch die Auslosung. Über **TV zeigt:** schaltest du zwischen **Auslosung**, **Live-Tische**, **Nächste Spiele** und **Ergebnis** um. Bei Zwei Gruppen und Gruppen mit KO-Runde kommen **Gruppenstand** (die Gruppentabellen, solange das Turnier läuft mit „vorläufig“) und, sobald Duelle bzw. KO-Runde angesetzt sind, **Endplätze (vorläufig)** dazu: entschiedene Plätze fest, offene Spiele mit beiden Namen und laufende mit Tisch und Stand. **Ergebnis** zeigt nach dem Abschließen die festen Endplätze.
 
 ## 4. Spielen
 

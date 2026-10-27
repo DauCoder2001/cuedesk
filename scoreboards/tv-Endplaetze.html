@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CueDesk – Endplätze</title>
+  <link rel="icon" type="image/svg+xml" href="./img/favicon.svg">
+  <!-- "TV zeigt: Endplaetze" (Zwei Gruppen, Gruppen mit KO): die Endplaetze,
+       solange das Turnier laeuft mit "vorlaeufig". Entschiedene Plaetze fest,
+       offene Spiele als eine Zeile mit Platzbereich und beiden Namen, laufende
+       mit Tisch und Stand vom Tablet. Gerechnet in src/endplaetze.ts
+       (vorlaeufigeEndplaetze), geliefert unter tournament/endplaetze. -->
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; background: #111; color: #fff; margin: 0; height: 100vh; overflow: hidden; }
+    #tv-viewport { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }
+    #tv-stage { width: 100vw; padding: 3vh 4vw; transform-origin: center center; }
+    .tv-title { text-align: center; color: #888; font-size: 3.5vh; margin: 0 0 6px; font-weight: bold; text-transform: uppercase; letter-spacing: 2px; }
+    .tv-title .highlight { color: #38bdf8; }
+    .tv-sub { text-align: center; color: #aaa; font-size: 2.5vh; margin-bottom: 12px; }
+    .vorl { display: block; width: max-content; margin: 0 auto 2vh; background: #f2c200; color: #111; font-weight: bold; font-size: 2.2vh; padding: 0.4vh 1.2vw; border-radius: 2vh; }
+    table { width: 100%; border-collapse: collapse; }
+    th { background: #1f3b73; color: #fff; font-size: 2vh; text-transform: uppercase; padding: 10px 12px; text-align: center; }
+    th.left, td.left { text-align: left; padding-left: 18px; }
+    td { padding: 9px 12px; font-size: 2.8vh; border-bottom: 1px solid #2a2a2a; text-align: center; }
+    tr:nth-child(even) td { background: #191919; }
+    td.platz { width: 11%; font-weight: bold; white-space: nowrap; }
+    td.info { width: 30%; white-space: nowrap; }
+    tr.offen td { color: #aaa; }
+    tr.offen td.info.live { color: #22c55e; font-weight: bold; }
+    .res { color: #38bdf8; font-weight: bold; }
+    .medaille { display: block; margin: 0 auto; height: 4vh; width: auto; }
+    .empty { text-align: center; color: #666; font-size: 4vh; margin-top: 18vh; }
+  </style>
+</head>
+<body>
+
+  <div id="tv-viewport"><div id="tv-stage">
+    <div class="tv-title" id="title">🏆 Endplätze</div>
+    <div class="tv-sub" id="sub"></div>
+    <span class="vorl" id="vorl" style="display:none;">vorläufig</span>
+    <div id="inhalt"></div>
+    <div class="empty" id="empty" style="display:none;">Noch keine Endplätze: Duelle oder KO-Runde sind nicht angesetzt.</div>
+  </div></div>
+
+  <script type="module">
+    import { db, ref, onValue, starten } from "./js/anbindung.ts";
+    import { keepScreenAwake } from "./js/wake-lock.js";
+    import { startTvAutofit } from "./js/tv-autofit.js";
+
+    await starten();
+
+    // Namen kommen aus CueDesk - nie als HTML einsetzen
+    const esc = (t) => String(t == null ? '' : t).replace(/[&<>"]/g, (c) =>
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+    keepScreenAwake();
+
+    let overscanPct = 3;
+    const refit = startTvAutofit(document.getElementById('tv-stage'), () => overscanPct);
+    onValue(ref(db, 'system/tvSettings'), (snap) => {
+      const p = snap.val() && Number(snap.val().overscanPct);
+      overscanPct = Number.isFinite(p) ? p : 3;
+      refit();
+    });
+
+    // Umschaltung am Turnierbildschirm ("TV zeigt")
+    const PAGE_FOR = { auslosung: 'tv-Auslosung.html', live: 'tv.html', naechste: 'tv-Naechste.html', results: 'tv-Turnier-Ergebnis.html', spieltag: 'tv-Spieltag.html', teamstand: 'tv-Teamstand.html', gruppenstand: 'tv-Gruppenstand.html', endplaetze: 'tv-Endplaetze.html' };
+    onValue(ref(db, 'tournament/tvView'), (snap) => {
+      const target = PAGE_FOR[snap.val()] || 'tv.html';
+      if (target !== 'tv-Endplaetze.html') window.location.href = target;
+    });
+
+    const titleEl = document.getElementById('title');
+    const subEl = document.getElementById('sub');
+    const vorlEl = document.getElementById('vorl');
+    const inhaltEl = document.getElementById('inhalt');
+    const emptyEl = document.getElementById('empty');
+
+    // Plaetze 1-3 als Medaille wie auf der Ergebnis-Seite
+    const MEDAILLE = { 1: ['#f4c542', '#c99a1a', '#5a3d00'], 2: ['#d5d9de', '#9aa1a9', '#3c4248'], 3: ['#d99a5b', '#a8692e', '#5a2e0a'] };
+    function medal(p) {
+      const f = MEDAILLE[p];
+      if (!f) return p + '.';
+      return '<svg class="medaille" viewBox="0 0 24 30" role="img" aria-label="Platz ' + p + '">'
+        + '<path d="M6 0h5l2 9H8z" fill="#3b6fd8"/><path d="M13 0h5l-2 9h-5z" fill="#2c56b0"/>'
+        + '<circle cx="12" cy="19" r="9" fill="' + f[0] + '" stroke="' + f[1] + '" stroke-width="1.5"/>'
+        + '<text x="12" y="22.5" text-anchor="middle" font-size="10" font-weight="700" fill="' + f[2] + '">' + p + '</text></svg>';
+    }
+
+    let daten = null;
+    let tische = null;
+
+    // Laufender Stand vom Tablet; nach einem Seitenwechsel stehen die Namen dort vertauscht
+    function liveText(z) {
+      const t = tische && z.partieId ? Object.values(tische).find((x) => x && x.tournamentMatchId === z.partieId) : null;
+      if (!t) return z.tisch ? '● Tisch ' + esc(z.tisch) : '';
+      const s1 = Number(t.score1 ?? t.s1 ?? 0), s2 = Number(t.score2 ?? t.s2 ?? 0);
+      const getauscht = z.namen.length === 2 && t.player1 === z.namen[1] && t.player2 === z.namen[0];
+      return '● ' + (z.tisch ? 'Tisch ' + esc(z.tisch) + ' · ' : '') + (getauscht ? s2 + ' : ' + s1 : s1 + ' : ' + s2);
+    }
+
+    function zeichnen() {
+      const d = daten;
+      if (!d) {
+        titleEl.innerHTML = '🏆 Endplätze';
+        subEl.textContent = '';
+        vorlEl.style.display = 'none';
+        inhaltEl.innerHTML = '';
+        emptyEl.style.display = 'block';
+        refit();
+        return;
+      }
+      emptyEl.style.display = 'none';
+      titleEl.innerHTML = '🏆 <span class="highlight">' + esc(d.name) + '</span>';
+      subEl.textContent = (d.art === 'duelle' ? 'Platzierungsduelle' : 'KO-Runde') + ' · ' + d.beendet + ' von ' + d.gesamt + ' beendet';
+      vorlEl.style.display = d.vorlaeufig ? 'block' : 'none';
+      const zeilen = d.zeilen.map((z) => {
+        const platz = z.von === z.bis ? (z.offen ? z.von + '.' : medal(z.von)) : z.von + '.–' + z.bis + '.';
+        const namen = z.namen.length ? z.namen.map(esc).join(' · ') : 'noch offen';
+        let info;
+        if (z.offen) {
+          const live = liveText(z);
+          info = live ? '<td class="info live">' + live + '</td>' : '<td class="info">' + esc(z.info || 'offen') + '</td>';
+        } else {
+          info = '<td class="info' + (/^\d+ : \d+$/.test(z.info) ? ' res' : '') + '">' + esc(z.info) + '</td>';
+        }
+        return '<tr class="' + (z.offen ? 'offen' : '') + '"><td class="platz">' + platz + '</td><td class="left">' + namen + '</td>' + info + '</tr>';
+      }).join('');
+      inhaltEl.innerHTML = '<table><thead><tr><th>Platz</th><th class="left">Spieler</th><th>'
+        + (d.art === 'duelle' ? 'Duell' : 'Wie') + '</th></tr></thead><tbody>' + zeilen + '</tbody></table>';
+      refit();
+    }
+
+    onValue(ref(db, 'tournament/endplaetze'), (snap) => { daten = snap.val(); zeichnen(); });
+    onValue(ref(db, 'tables'), (snap) => { tische = snap.val(); zeichnen(); });
+  </script>
+</body>
+</html>

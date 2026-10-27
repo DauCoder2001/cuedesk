@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CueDesk – Gruppenstand</title>
+  <link rel="icon" type="image/svg+xml" href="./img/favicon.svg">
+  <!-- "TV zeigt: Gruppenstand" (Zwei Gruppen, Gruppen mit KO): die Gruppentabellen
+       wie auf der Ergebnis-Seite, aber immer, auch waehrend Duelle oder
+       KO-Runde laufen, mit "vorlaeufig" und dem Fortschritt der Gruppenspiele.
+       Daten aus tournament_archive (tvErgebnis, groupProgress). -->
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; background: #111; color: #fff; margin: 0; height: 100vh; overflow: hidden; }
+    /* Auto-Fit: der Inhalt in #tv-stage wird per JS passend auf den Bildschirm skaliert */
+    #tv-viewport { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }
+    #tv-stage { width: 100vw; padding: 3vh 2vw; transform-origin: center center; }
+    .tv-title { text-align: center; color: #888; font-size: 3.5vh; margin: 0 0 6px; font-weight: bold; text-transform: uppercase; letter-spacing: 2px; }
+    .tv-title .highlight { color: #38bdf8; }
+    .tv-sub { text-align: center; color: #aaa; font-size: 2.5vh; margin-bottom: 24px; }
+    h2.sec { color: #fff; font-size: 3vh; border-bottom: 2px solid #333; padding-bottom: 8px; margin: 26px 0 12px; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 18px; }
+    th { background: #1f3b73; color: #fff; font-size: 2vh; text-transform: uppercase; padding: 10px 12px; text-align: center; }
+    th.left, td.left { text-align: left; padding-left: 18px; }
+    td { padding: 9px 12px; font-size: 2.6vh; border-bottom: 1px solid #2a2a2a; text-align: center; }
+    tr:nth-child(even) td { background: #191919; }
+    .medal { font-size: 3vh; text-align: center; }
+    .medal .medaille { display: block; margin: 0 auto; height: 4vh; width: auto; }
+    .res { width: 18%; font-weight: bold; color: #38bdf8; }
+    .vorl { display: block; width: max-content; margin: -12px auto 16px; background: #f2c200; color: #111; font-weight: bold; font-size: 2.2vh; padding: 0.4vh 1.2vw; border-radius: 2vh; }
+    .empty { text-align: center; color: #666; font-size: 4vh; margin-top: 18vh; }
+  </style>
+</head>
+<body>
+
+  <div id="tv-viewport"><div id="tv-stage">
+    <div class="tv-title" id="title">👥 Gruppenstand</div>
+    <div class="tv-sub" id="sub"></div>
+    <span class="vorl" id="vorl" style="display:none;">vorläufig</span>
+    <div id="content"></div>
+    <div class="empty" id="empty" style="display:none;">Gerade läuft kein Gruppenturnier.</div>
+  </div></div>
+
+  <script type="module">
+    // CueDesk: Ergebnis des laufenden oder heute beendeten Turniers ueber die Anbindung
+    import { db, ref, onValue, starten } from "./js/anbindung.ts";
+    import { keepScreenAwake } from "./js/wake-lock.js";
+    import { startTvAutofit } from "./js/tv-autofit.js";
+
+    await starten();
+
+    // Namen kommen aus CueDesk - nie als HTML einsetzen
+    const esc = (t) => String(t == null ? '' : t).replace(/[&<>"]/g, (c) =>
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+    keepScreenAwake();   // Bildschirm im Kiosk-Betrieb anhalten (Anzeige ohne Interaktion)
+
+    // Auto-Fit + Overscan: Inhalt immer komplett einpassen; Rand kommt aus system/tvSettings.
+    let overscanPct = 3;
+    const refit = startTvAutofit(document.getElementById('tv-stage'), () => overscanPct);
+    onValue(ref(db, 'system/tvSettings'), (snap) => {
+      const p = snap.val() && Number(snap.val().overscanPct);
+      overscanPct = Number.isFinite(p) ? p : 3;
+      refit();
+    });
+
+    // CueDesk: Umschaltung am Turnierbildschirm ("TV zeigt"). Die Seiten liegen
+    // bei CueDesk alle im Ordner scoreboards.
+    const PAGE_FOR = { auslosung: 'tv-Auslosung.html', live: 'tv.html', naechste: 'tv-Naechste.html', results: 'tv-Turnier-Ergebnis.html', spieltag: 'tv-Spieltag.html', teamstand: 'tv-Teamstand.html', gruppenstand: 'tv-Gruppenstand.html', endplaetze: 'tv-Endplaetze.html' };
+    onValue(ref(db, 'tournament/tvView'), (snap) => {
+      const target = PAGE_FOR[snap.val()] || 'tv.html';
+      if (target !== 'tv-Gruppenstand.html') window.location.href = target;
+    });
+
+    const titleEl = document.getElementById('title');
+    const subEl   = document.getElementById('sub');
+    const contentEl = document.getElementById('content');
+    const emptyEl = document.getElementById('empty');
+    const vorlEl = document.getElementById('vorl');
+
+    // Plaetze 1-3 als Medaille wie in CueDesk (src/seiten/Platz.tsx)
+    const MEDAILLE = { 1: ['#f4c542', '#c99a1a', '#5a3d00'], 2: ['#d5d9de', '#9aa1a9', '#3c4248'], 3: ['#d99a5b', '#a8692e', '#5a2e0a'] };
+    function medal(p) {
+      const f = MEDAILLE[p];
+      if (!f) return '<strong>' + p + '.</strong>';
+      return '<svg class="medaille" viewBox="0 0 24 30" role="img" aria-label="Platz ' + p + '">'
+        + '<path d="M6 0h5l2 9H8z" fill="#3b6fd8"/><path d="M13 0h5l-2 9h-5z" fill="#2c56b0"/>'
+        + '<circle cx="12" cy="19" r="9" fill="' + f[0] + '" stroke="' + f[1] + '" stroke-width="1.5"/>'
+        + '<text x="12" y="22.5" text-anchor="middle" font-size="10" font-weight="700" fill="' + f[2] + '">' + p + '</text></svg>';
+    }
+
+    onValue(ref(db, 'tournament_archive'), (snap) => {
+      const data = snap.val();
+      if (!data) {
+        titleEl.innerHTML = '👥 Gruppenstand';
+        vorlEl.style.display = 'none';
+        subEl.textContent = '';
+        contentEl.innerHTML = '';
+        emptyEl.style.display = 'block';
+        refit();
+        return;
+      }
+      emptyEl.style.display = 'none';
+
+      // Neuestes Turnier (groesster endedAt)
+      const t = Object.values(data).sort((a, b) => (b.endedAt || 0) - (a.endedAt || 0))[0];
+
+      titleEl.innerHTML = `👥 <span class="highlight">${esc(t.type || '')}</span> · ${esc(t.discipline || '')} (Race to ${t.raceTo || ''})`;
+      const fort = t.groupProgress;
+      subEl.textContent = 'Gruppenstand' + (fort && fort.total ? ' · ' + fort.done + ' von ' + fort.total + ' Gruppenspielen beendet' : '');
+      // vorlaeufig, solange das Turnier laeuft (nach dem Abschluss gibt es finalPlacement)
+      vorlEl.style.display = t.finalPlacement ? 'none' : 'block';
+
+      let html = '';
+
+      // Immer die Gruppen, auch nach dem Abschluss
+      {
+        const groups = t.groups || {};
+        const groupKeys = Object.keys(groups);
+        groupKeys.forEach(g => {
+          const arrG = groups[g] ? Object.values(groups[g]) : [];
+          const rows = arrG.map((p, i) => {
+            const diff = (p.plus || 0) - (p.minus || 0);
+            return `<tr><td class="medal">${medal(i + 1)}</td><td class="left">${esc(p.name)}</td><td>${p.games || 0}</td>`
+              + `<td>${p.wins || 0}</td><td>${p.losses || 0}</td>`
+              + `<td>${p.plus || 0} : ${p.minus || 0} (${diff > 0 ? '+' + diff : diff})</td></tr>`;
+          }).join('');
+          const label = groupKeys.length > 1 ? ('Gruppe ' + g) : 'Tabelle';
+          html += `<h2 class="sec">👥 ${label}</h2>
+            <table><thead><tr><th>Platz</th><th class="left">Spieler</th><th>Spiele</th><th>Siege</th><th>Niederlagen</th><th>Kugeln / Punkte (Diff.)</th></tr></thead>
+            <tbody>${rows}</tbody></table>`;
+        });
+      }
+
+      contentEl.innerHTML = html;
+      refit();
+    });
+  </script>
+
+</body>
+</html>

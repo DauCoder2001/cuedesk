@@ -1977,6 +1977,11 @@ export default function TurnierAnsicht({
                   ['auslosung', 'Auslosung'],
                   ['live', 'Live-Tische'],
                   ['naechste', 'Nächste Spiele'],
+                  // Gruppenturniere: Gruppenstand ab dem Start, Endplaetze sobald Duelle bzw. KO-Runde angesetzt sind
+                  ...(mehrgruppig ? ([['gruppenstand', 'Gruppenstand']] as const) : []),
+                  ...((zwei && einstellungen.phase2) || (mitKo && koFest)
+                    ? ([['endplaetze', turnier.status === 'beendet' ? 'Endplätze' : 'Endplätze (vorläufig)']] as const)
+                    : []),
                   ['results', 'Ergebnis']
                 ] as const
               ).map(([wert, name]) => (
