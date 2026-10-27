@@ -699,10 +699,10 @@
       <button id="btn-back-141" type="button">↩ Zurück zum Turnier</button>
     </div>
     <div id="turn-actions">
-      <button id="missBtn" type="button" class="act-miss" onclick="missTurn()">➜ Verschossen</button>
-      <button id="foulBtn" type="button" class="act-foul" onclick="foul()">⚠ Foul −1</button>
-      <button id="breakFoulBtn" type="button" class="act-foul" onclick="breakFoul()">✖ Eröffnungsfoul −2</button>
-      <button id="safetyBtn" type="button" class="act-safety" onclick="safety()">🛡 Sicherheit</button>
+      <button id="missBtn" type="button" class="act-miss" onclick="missTurn()">Verschossen</button>
+      <button id="foulBtn" type="button" class="act-foul" onclick="foul()">Foul −1</button>
+      <button id="breakFoulBtn" type="button" class="act-foul" onclick="breakFoul()">Eröffnungsfoul −2</button>
+      <button id="safetyBtn" type="button" class="act-safety" onclick="safety()">Sicherheit</button>
     </div>
     <div class="bb-right">
       <button id="logBtn" type="button" onclick="openLog()">📋 Protokoll</button>
@@ -763,17 +763,17 @@
       <p>Liegen nur noch wenige Kugeln, erscheint links die pinke <b>Null-Kugel</b>: Tippe sie, wenn mit einem Stoß <b>alle restlichen Kugeln</b> gefallen sind – auch die 15. Kugel. Jede Kugel zählt einen Punkt, danach werden <b>alle 15 Kugeln</b> neu aufgebaut; im Protokoll steht dieses Rack mit <b>*</b>.</p>
       <h3>Aufnahme beenden</h3>
       <ul>
-        <li><b>➜ Verschossen</b> – regelgerechter Fehlversuch ohne Strafe; der Gegner kommt an die Aufnahme.</li>
-        <li><b>⚠ Foul −1</b> – Standardfoul: −1 Punkt, Wechsel. <b>Drei Fouls in Folge = zusätzlich −15.</b> Ab dem 2. Foul erscheint eine Warnung.</li>
-        <li><b>🛡 Sicherheit</b> – bewusst kein Treffer: 0 Punkte, Wechsel; versenkte Kugeln werden wieder aufgesetzt. Ein regelgerechter Sicherheitsstoß <b>bricht die Foulserie</b> – der Zähler geht auf 0.</li>
-        <li><b>✖ Eröffnungsfoul −2</b> – nur beim Anstoß: −2 Punkte; danach übernimmt der Gegner oder lässt wiederholen.</li>
+        <li><b>Verschossen</b> – regelgerechter Fehlversuch ohne Strafe; der Gegner kommt an die Aufnahme.</li>
+        <li><b>Foul −1</b> – Standardfoul: −1 Punkt, Wechsel. <b>Drei Fouls in Folge = zusätzlich −15.</b> Ab dem 2. Foul erscheint eine Warnung.</li>
+        <li><b>Sicherheit</b> – bewusst kein Treffer: 0 Punkte, Wechsel; versenkte Kugeln werden wieder aufgesetzt. Ein regelgerechter Sicherheitsstoß <b>bricht die Foulserie</b> – der Zähler geht auf 0.</li>
+        <li><b>Eröffnungsfoul −2</b> – nur beim Anstoß: −2 Punkte; danach übernimmt der Gegner oder lässt wiederholen.</li>
       </ul>
 
       <h3>Beim Anstoß: welcher Foul-Knopf?</h3>
       <p>Während des Eröffnungsstoßes stehen <b>beide</b> Foul-Knöpfe zur Wahl – sie bedeuten Verschiedenes:</p>
       <ul>
-        <li><b>✖ Eröffnungsfoul −2</b> – der <b>Anstoß selbst war ungültig</b>: keine Kugel versenkt <i>und</i> nicht genug Objektkugeln an eine Bande gelaufen. <b>−2 Punkte</b>, und es <b>zählt nicht</b> für die Drei-Foul-Regel – der Foulzähler bleibt stehen. Der Gegner übernimmt den Tisch oder lässt wiederholen; beim Wiederholen stößt <b>derselbe</b> Spieler erneut an.</li>
-        <li><b>⚠ Foul −1</b> – der <b>Anstoß war gültig</b>, dabei ist aber ein normales Foul passiert, typischerweise die <b>gefallene Weiße</b>. Nur <b>−1 Punkt</b>, dafür <b>zählt es</b> als erstes Foul der Serie. Der Gegner übernimmt den Tisch mit <b>Ball in Hand aus dem Kopffeld</b>.</li>
+        <li><b>Eröffnungsfoul −2</b> – der <b>Anstoß selbst war ungültig</b>: keine Kugel versenkt <i>und</i> nicht genug Objektkugeln an eine Bande gelaufen. <b>−2 Punkte</b>, und es <b>zählt nicht</b> für die Drei-Foul-Regel – der Foulzähler bleibt stehen. Der Gegner übernimmt den Tisch oder lässt wiederholen; beim Wiederholen stößt <b>derselbe</b> Spieler erneut an.</li>
+        <li><b>Foul −1</b> – der <b>Anstoß war gültig</b>, dabei ist aber ein normales Foul passiert, typischerweise die <b>gefallene Weiße</b>. Nur <b>−1 Punkt</b>, dafür <b>zählt es</b> als erstes Foul der Serie. Der Gegner übernimmt den Tisch mit <b>Ball in Hand aus dem Kopffeld</b>.</li>
       </ul>
       <p style="font-size:13px;color:#666;">Merke: Der härter bestrafte ungültige Anstoß schützt vor dem Foulzähler – der eigentlich gute Anstoß mit gefallener Weißer ist der klassische Beginn einer Foulserie.</p>
       <h3>Anstoß &amp; Seiten</h3>
@@ -888,7 +888,7 @@
       <ul>
         <li><b>Run</b> – Punkte der <b>laufenden</b> Aufnahme. Läuft weiter, solange der Spieler am Tisch ist – auch über einen Neuaufbau hinweg – und springt beim Aufnahmewechsel zurück auf 0.</li>
         <li><b>HS</b> – <b>Höchstserie</b>: das beste Ergebnis einer <b>einzelnen</b> Aufnahme im laufenden Match. Foulpunkte derselben Aufnahme werden vorher abgezogen – 10 Bälle und danach ein Foul zählen als <b>9</b>. Im <b>📋 Protokoll</b> ist die HS gelb markiert.</li>
-        <li><b>Aufn.</b> – Zahl der <b>beendeten</b> Aufnahmen. Die laufende zählt erst mit, wenn sie durch <b>➜ Verschossen</b>, <b>⚠ Foul</b> oder <b>🛡 Sicherheit</b> endet.</li>
+        <li><b>Aufn.</b> – Zahl der <b>beendeten</b> Aufnahmen. Die laufende zählt erst mit, wenn sie durch <b>Verschossen</b>, <b>Foul</b> oder <b>Sicherheit</b> endet.</li>
         <li><b>Ø</b> – <b>Punkte ÷ beendete Aufnahmen</b>, auf eine Nachkommastelle gerundet. Die Punkte wachsen mit jeder Kugel, die Aufnahmen springen erst beim Wechsel – der Ø <b>steigt</b> deshalb während einer Serie und <b>fällt</b> beim Aufnahmewechsel wieder. Solange noch keine Aufnahme beendet ist, zeigt er einfach die bisherigen Punkte; durch Fouls kann er negativ werden.</li>
         <li><b>Zielpunkte</b> – Mit dem Ball, der das Ziel erreicht, ist das Spiel aus. Werden mehr Kugeln angetippt als bis dahin nötig, zählt das Board nur bis zum Ziel – bei Ziel 100 und 99 Punkten also genau <b>einen</b> Ball, auch wenn die 8 angetippt wurde. So bleibt auch der Ø richtig.</li>
         <li><b>☰ Letzte Aufnahmen</b> – Der kleine Knopf über dem Doppelpunkt blendet an dessen Stelle eine kompakte Tabelle ein: die letzten drei Aufnahmen (die laufende zählt mit) und darunter die nächsten, noch leeren. <b>Gelb</b> und <b>Rot</b> markieren die beiden <b>letzten Aufnahmen des Matches</b> – sie erscheinen also erst, wenn das Aufnahmen-Limit in Sicht kommt.</li>
