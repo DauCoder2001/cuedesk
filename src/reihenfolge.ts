@@ -81,3 +81,61 @@ export function rundenFolge(partien: GruppenPartie[], art: Reihenfolge = 'abwech
   }
   return new Map(folge.map((r, i) => [rundenSchluessel(r.gruppe, r.runde), i]));
 }
+
+// Bei "laufend" bleiben die ersten drei offenen Spiele stehen, bis sie an
+// einem Tisch starten; erst die frei gewordenen Plaetze fuellt die aktuelle
+// Rechnung. Ab Platz 4 darf sich die Liste verschieben.
+export const FESTE_SPITZE = 3;
+
+type SpielPartie = GruppenPartie & {
+  id: string;
+  tisch_id?: string | null;
+  begonnen?: string | null;
+  beendet?: string | null;
+};
+
+// Platz jedes Gruppenspiels (Schluessel: Partie-ID), ab 0. Die Partien kommen
+// in Spielplan-Reihenfolge (Runde, Paarung); innerhalb einer Runde bleibt sie.
+// Gebraucht von der Spielplan-Liste, den Tablets und "Nächste Spiele".
+export function spielFolge(partien: SpielPartie[], art: Reihenfolge = 'abwechselnd'): Map<string, number> {
+  const spiele = partien.filter(istGruppenrunde);
+  const index = new Map(spiele.map((p, i) => [p.id, i]));
+  const ordnen = (status: (p: SpielPartie) => string) => {
+    const runden = rundenFolge(spiele.map((p) => ({ ...p, status: status(p) })), art);
+    const platz = (p: SpielPartie) => runden.get(rundenSchluessel(p.gruppe, p.runde)) ?? 0;
+    return [...spiele].sort((a, b) => platz(a) - platz(b) || (index.get(a.id) ?? 0) - (index.get(b.id) ?? 0));
+  };
+  const nummern = (liste: SpielPartie[]) => new Map(liste.map((p, i) => [p.id, i]));
+  if (art !== 'laufend') return nummern(ordnen((p) => p.status));
+
+  // Offen heisst: weder beendet noch abgebrochen noch an einem Tisch
+  const offenJetzt = (p: SpielPartie) => p.status !== 'beendet' && p.status !== 'abgebrochen' && !p.tisch_id;
+  // Die feste Spitze ergibt sich aus dem Verlauf (begonnen/beendet), damit
+  // jedes Geraet auch nach dem Neuladen dieselbe sieht. Ein zurueckgesetztes
+  // Spiel hat keine Zeitstempel mehr und reiht sich normal ein.
+  const zeit = (s: string | null | undefined) => (s ? Date.parse(s) : NaN);
+  const zeiten = [...new Set(spiele.flatMap((p) => [zeit(p.begonnen), zeit(p.beendet)]).filter((t) => Number.isFinite(t)))].sort((a, b) => a - b);
+  let spitze: string[] = [];
+  const schritt = (offen: (p: SpielPartie) => boolean, fertig: (p: SpielPartie) => boolean) => {
+    const istOffen = new Set(spiele.filter(offen).map((p) => p.id));
+    spitze = spitze.filter((id) => istOffen.has(id));
+    const nachfolger = ordnen((p) => (fertig(p) ? 'beendet' : 'geplant')).filter((p) => istOffen.has(p.id) && !spitze.includes(p.id));
+    spitze = [...spitze, ...nachfolger.slice(0, Math.max(0, FESTE_SPITZE - spitze.length)).map((p) => p.id)];
+  };
+  for (const t of [-Infinity, ...zeiten]) {
+    // Beendet ohne Zeitstempel (alter Stand): gilt von Anfang an als fertig
+    const fertig = (p: SpielPartie) => p.status === 'beendet' && (!p.beendet || zeit(p.beendet) <= t);
+    const gestartet = (p: SpielPartie) => zeit(p.begonnen) <= t;
+    schritt((p) => p.status !== 'abgebrochen' && !fertig(p) && !gestartet(p), fertig);
+  }
+  schritt(offenJetzt, (p) => p.status === 'beendet');
+
+  // Erst die nicht mehr offenen Spiele, dann die feste Spitze, dann der Rest
+  const jetzt = ordnen((p) => p.status);
+  const nachId = new Map(spiele.map((p) => [p.id, p]));
+  return nummern([
+    ...jetzt.filter((p) => !offenJetzt(p)),
+    ...spitze.map((id) => nachId.get(id) as SpielPartie),
+    ...jetzt.filter((p) => offenJetzt(p) && !spitze.includes(p.id))
+  ]);
+}

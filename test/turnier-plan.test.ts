@@ -56,11 +56,11 @@ describe('Spielplan fuer das Tablet', () => {
     expect(plan.p2).toMatchObject({ status: 'running', table: '2', startedAt: Date.parse('2026-09-22T18:00:00Z') });
   });
 
-  test('Eigene Reihenfolge der Gruppenrunden: Tablet-Auswahl und reihe folgen ihr', () => {
+  test('Eigene Reihenfolge der Gruppenspiele: Tablet-Auswahl und reihe folgen ihr', () => {
     const g = (id: string, gruppe: string, runde: number) => partie(id, 's', 'k', { gruppe, runde, phase: 'gruppe' });
     const partien = [g('a1', 'A', 1), g('b1', 'B', 1), g('a2', 'A', 2), g('b2', 'B', 2), g('a3', 'A', 3)];
     // B 1 vor A 1 und A 3 vor B 2
-    const folge = new Map([['B|1', 0], ['A|1', 1], ['A|2', 2], ['A|3', 3], ['B|2', 4]]);
+    const folge = new Map([['b1', 0], ['a1', 1], ['a2', 2], ['a3', 3], ['b2', 4]]);
     const plan = tabletSpielplan(partien, (id) => namen[id], () => null, null, undefined, folge);
     expect(Object.keys(plan)).toEqual(['b1', 'a1', 'a2', 'a3', 'b2']);
     expect(plan.a3.reihe! < plan.b2.reihe!).toBe(true);

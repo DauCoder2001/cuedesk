@@ -744,7 +744,7 @@ async function turnierLaden(): Promise<void> {
       e.liga?.ziele?.aufnahmen141,
       teams,
       // Eigene Reihenfolge der Gruppenrunden (Spielplan-Kopf in CueDesk)
-      e.reihenfolge && e.reihenfolge !== 'abwechselnd' ? rundenFolge(ihre, e.reihenfolge) : undefined
+      e.reihenfolge && e.reihenfolge !== 'abwechselnd' ? spielFolge(ihre, e.reihenfolge) : undefined
     );
     const kennung = begegnungKennung(b);
     for (const [id, eintrag] of Object.entries(plan)) {
@@ -1229,7 +1229,7 @@ import type { EndplatzPartie, EndplatzZeile, VorlaeufigeEndplaetze } from '../..
 import type { TurnierEinstellungen } from '../../src/seiten/Turniere';
 import type { Gestartet, PlanEintrag, PlanPartie, TabletTeams, TabletTurnier, TvErgebnis, Verdeckt } from './turnier-plan';
 import { aufnahmenAusProtokoll, protokollAusAufnahmen } from './protokoll-141';
-import { rundenFolge } from '../../src/reihenfolge';
+import { spielFolge } from '../../src/reihenfolge';
 import type { Reihenfolge } from '../../src/reihenfolge';
 import type { AufnahmeZeile, Zustand141 } from './protokoll-141';
 

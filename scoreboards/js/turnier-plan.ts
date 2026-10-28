@@ -6,7 +6,7 @@
 import { gruppenRangliste } from '../../src/gruppen';
 import { rangliste } from '../../src/turnier';
 import type { HandReihenfolge } from '../../src/turnier';
-import { istGruppenrunde, rundenSchluessel } from '../../src/reihenfolge';
+import { istGruppenrunde } from '../../src/reihenfolge';
 
 export type PlanPartie = {
   id: string;
@@ -192,12 +192,12 @@ export function tabletSpielplan(
   tischNummer: (tischId: string) => string | null,
   aufnahmen141?: number | null,
   teams?: TabletTeams,
-  folge?: Map<string, number> // Gruppenrunden umsortiert (src/reihenfolge.ts)
+  folge?: Map<string, number> // Platz je Gruppenspiel (spielFolge in src/reihenfolge.ts)
 ): Record<string, PlanEintrag> {
   const plan: Record<string, PlanEintrag> = {};
   // Reihenfolge wie im Spielplan (Runde, dann Paarung) - die Auswahl am
   // Tablet zeigt die Spiele in dieser Reihenfolge. Mit eigener Reihenfolge der
-  // Gruppenrunden stabil danach sortiert.
+  // Gruppenspiele stabil danach sortiert.
   const geordnet = folge
     ? partien.map((p, i) => ({ p, i })).sort((a, b) => listenRang(a.p, folge).localeCompare(listenRang(b.p, folge)) || a.i - b.i).map((x) => x.p)
     : partien;
@@ -256,11 +256,11 @@ export function tabletSpielplan(
 
 // Rang in der Spielplan-Liste (wie listenAbschnitte in TurnierAnsicht.tsx):
 // Gruppenrunden abwechselnd (A 1, B 1, A 2 ...) oder nach der Einstellung
-// reihenfolge (folge aus rundenFolge), danach Duelle, KO, Phase 3
-export function listenRang(p: Pick<PlanPartie, 'runde' | 'gruppe' | 'phase'>, folge?: Map<string, number>): string {
+// reihenfolge (folge aus spielFolge, je Partie), danach Duelle, KO, Phase 3
+export function listenRang(p: Pick<PlanPartie, 'runde' | 'gruppe' | 'phase'> & { id?: string }, folge?: Map<string, number>): string {
   const r = String(p.runde ?? 0).padStart(3, '0');
-  const platz = folge && istGruppenrunde(p) ? folge.get(rundenSchluessel(p.gruppe, p.runde)) : undefined;
-  if (platz !== undefined) return `0${String(platz).padStart(3, '0')}`;
+  const platz = folge && p.id !== undefined && istGruppenrunde(p) ? folge.get(p.id) : undefined;
+  if (platz !== undefined) return `0${String(platz).padStart(4, '0')}`;
   if (p.phase === 'phase2') return '1Z';
   if (p.phase === 'phase3') return '1Z3';
   if (p.phase === 'ko') return `1Y${r}`;

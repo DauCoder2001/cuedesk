@@ -63,7 +63,7 @@ import type { TurnierEinstellungen } from './Turniere';
 import type { Partie, Person, RatingQuelle, Turnier, TurnierAnmeldung, TurnierTeilnehmer } from '../datenbank.types';
 import { anmeldeLink, anmeldestand } from '../ausschreibung';
 import { Modal } from '../modal';
-import { REIHENFOLGE_TEXT, istGruppenrunde, rundenFolge, rundenSchluessel } from '../reihenfolge';
+import { REIHENFOLGE_TEXT, spielFolge } from '../reihenfolge';
 import type { Reihenfolge } from '../reihenfolge';
 
 // Partien dieser Ansicht haben immer Spieler (Team-Matches gibt es nur im Teamvergleich)
@@ -491,12 +491,17 @@ export default function TurnierAnsicht({
   // src/reihenfolge.ts, dieselbe an Tablets und TV), danach Duelle, KO-Runde
   // und Platzierungsspiele
   const reihenfolge: Reihenfolge = einstellungen.reihenfolge ?? 'abwechselnd';
+  // Eine Runde steht dort, wo ihr erstes offenes Spiel steht (fertige vorne);
+  // bei "laufend" kommt so die Runde mit der festen Spitze nach oben.
   const listenAbschnitte = useMemo(() => {
-    const folge = rundenFolge(partien.filter(istGruppenrunde), reihenfolge);
-    const rang = (a: { zeile: string; ordnung: string; runde: number }) =>
-      istGruppenzeile(a.zeile) || a.zeile === ''
-        ? `0${String(folge.get(rundenSchluessel(a.zeile, a.runde)) ?? 0).padStart(3, '0')}`
-        : `1${a.ordnung}`;
+    const folge = spielFolge(partien, reihenfolge);
+    const offen = (p: TPartie) => p.status !== 'beendet' && p.status !== 'abgebrochen' && !p.tisch_id;
+    const platz = (a: { partien: TPartie[] }) => {
+      const liste = a.partien.some(offen) ? a.partien.filter(offen) : a.partien;
+      return Math.min(...liste.map((p) => folge.get(p.id) ?? 0));
+    };
+    const rang = (a: { zeile: string; ordnung: string; runde: number; partien: TPartie[] }) =>
+      istGruppenzeile(a.zeile) || a.zeile === '' ? `0${String(platz(a)).padStart(4, '0')}` : `1${a.ordnung}`;
     return [...abschnitte].sort((a, b) => rang(a).localeCompare(rang(b)));
   }, [abschnitte, partien, reihenfolge]);
 
@@ -2537,7 +2542,7 @@ export default function TurnierAnsicht({
                         [
                           ['abwechselnd', 'Abwechselnd: A 1, B 1, A 2, B 2 … Die größere Gruppe spielt ihre letzten Runden allein (wie bisher).'],
                           ['verteilt', 'Gleich verteilt: Die Runden der größeren Gruppe werden über das ganze Turnier verteilt, damit alle Gruppen fast gleichzeitig fertig werden. Bei gleich großen Gruppen wie „Abwechselnd“.'],
-                          ['laufend', 'Laufend: Die Gruppe mit den meisten offenen Spielen kommt zuerst. Die Reihenfolge passt sich dem Spieltempo an und kann sich während des Turniers ändern.']
+                          ['laufend', 'Laufend: Die Gruppe mit den meisten offenen Spielen kommt zuerst. Die Reihenfolge passt sich dem Spieltempo an; die ersten drei offenen Spiele bleiben dabei stehen, bis sie an einem Tisch starten.']
                         ] as const
                       ).map(([wert, hilfe]) => (
                         <button
