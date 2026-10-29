@@ -31,4 +31,14 @@ describe('UI-Regeln', () => {
     }
     expect(ohneRot).toEqual([]);
   });
+
+  it('Entfernen-Knoepfe sind orange', () => {
+    const ohneOrange: string[] = [];
+    for (const q of quelle) {
+      for (const m of q.text.matchAll(/<button([^>]*)>\s*Entfernen\s*<\/button>/g)) {
+        if (!m[1].includes('entfernknopf')) ohneOrange.push(q.name);
+      }
+    }
+    expect(ohneOrange).toEqual([]);
+  });
 });

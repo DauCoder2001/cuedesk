@@ -595,7 +595,7 @@ export default function TeamvergleichAnsicht({
                     <button type="button" className="klein" title={`In ${tv.teams[anderes].name} verschieben`} onClick={() => void teamSetzen(id, anderes)}>
                       → {FARBE[anderes]}
                     </button>{' '}
-                    <button type="button" className="klein" title="Aus dem Team nehmen" onClick={() => void entfernen(id)}>
+                    <button type="button" className="klein entfernknopf" title="Aus dem Team nehmen" onClick={() => void entfernen(id)}>
                       ✕
                     </button>
                   </td>
@@ -822,7 +822,7 @@ export default function TeamvergleichAnsicht({
                       <button type="button" className="klein" onClick={() => void teamSetzen(id, 'B')}>
                         → {FARBE.B}
                       </button>{' '}
-                      <button type="button" className="klein" title="Aus dem Turnier nehmen" onClick={() => void entfernen(id)}>
+                      <button type="button" className="klein entfernknopf" title="Aus dem Turnier nehmen" onClick={() => void entfernen(id)}>
                         ✕
                       </button>
                     </td>

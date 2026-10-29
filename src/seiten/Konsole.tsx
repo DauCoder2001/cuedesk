@@ -438,7 +438,7 @@ export default function Konsole() {
                         {admins.length > 1 && (
                           <button
                             type="button"
-                            className="klein"
+                            className="klein gefahrknopf"
                             title="Die Rolle Vereins-Administrator entziehen. Einer muss bleiben."
                             aria-label={`${email(id)} als Vereins-Administrator entfernen`}
                             onClick={() => void adminEntfernen(v, id)}

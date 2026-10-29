@@ -56,7 +56,7 @@ export default function DoppelPlanFelder({
               <td>
                 <button
                   type="button"
-                  className="klein"
+                  className="klein entfernknopf"
                   title="Diese Doppel-Partie entfernen"
                   disabled={zeilen.length <= 1}
                   onClick={() => aendern(zeilen.filter((_, j) => j !== i))}

@@ -612,7 +612,7 @@ export default function Mannschaften() {
                       <td>{einsatz?.partien ?? 0}</td>
                       {darfVerwalten && (
                         <td>
-                          <button type="button" title="Nimmt den Spieler aus dem Kader dieser Mannschaft." onClick={() => void spielerEntfernen(k)}>
+                          <button type="button" className="entfernknopf" title="Nimmt den Spieler aus dem Kader dieser Mannschaft." onClick={() => void spielerEntfernen(k)}>
                             Entfernen
                           </button>
                         </td>

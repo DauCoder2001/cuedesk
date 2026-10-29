@@ -411,7 +411,7 @@ export default function System() {
             }}
           />
           {f.logo && (
-            <button type="button" title="Das Logo entfernen; dann steht wieder das Kürzel im Kästchen." onClick={() => setze({ logo: null })}>
+            <button type="button" className="entfernknopf" title="Das Logo entfernen; dann steht wieder das Kürzel im Kästchen." onClick={() => setze({ logo: null })}>
               Entfernen
             </button>
           )}
@@ -501,7 +501,7 @@ export default function System() {
               {a}{' '}
               <button
                 type="button"
-                className="klein"
+                className="klein entfernknopf"
                 title={`„${a}“ aus der Liste nehmen. Turniere mit dieser Art behalten ihre Bezeichnung.`}
                 aria-label={`„${a}“ entfernen`}
                 onClick={() => setze({ turnierarten: f.turnierarten.filter((x) => x !== a), art: f.art === a ? '' : f.art })}

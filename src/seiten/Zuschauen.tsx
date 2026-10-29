@@ -301,7 +301,7 @@ export default function Zuschauen({
                   {(eigener || leitung) && (
                     <button
                       type="button"
-                      className="klein"
+                      className="klein gefahrknopf"
                       title="Diesen Beitrag löschen"
                       aria-label={`Beitrag von ${b.name} löschen`}
                       onClick={() => void loeschen(b)}

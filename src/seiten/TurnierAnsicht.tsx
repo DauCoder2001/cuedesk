@@ -2204,7 +2204,7 @@ export default function TurnierAnsicht({
                       )}
                       <td className="rechts">
                         {bearbeitbar && (
-                          <button type="button" title="Nimmt den Spieler aus der Teilnehmerliste." onClick={() => void teilnehmerWeg(t.person_id)}>
+                          <button type="button" className="entfernknopf" title="Nimmt den Spieler aus der Teilnehmerliste." onClick={() => void teilnehmerWeg(t.person_id)}>
                             Entfernen
                           </button>
                         )}

@@ -580,6 +580,8 @@ tr.gespielt td { color: var(--text-leise); }
 tr.gespielt .zahlfeld { color: var(--text); }
 .marke.stichkampf { color: #854f0b; border-color: #e8cfa3; }
 .gefahrknopf { color: var(--fehler); border-color: #e7bcbc; white-space: nowrap; }
+/* Orange: aus einer Liste nehmen, laesst sich wieder hinzufuegen */
+.entfernknopf { color: #8a4f0b; border-color: #efc68a; white-space: nowrap; }
 /* Alle Dialoge (src/modal.tsx): natives <dialog> in der obersten Ebene; der Rahmen ist
    unsichtbar und bestimmt nur die Breite, das Aussehen kommt vom inneren .dialog */
 .modal { padding: 0; border: none; background: transparent; width: calc(100% - 32px); max-width: 520px; max-height: none; overflow: visible; color: inherit; }

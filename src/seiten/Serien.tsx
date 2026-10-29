@@ -466,7 +466,7 @@ export default function Serien() {
                     </td>
                     <td style={{ width: '140px' }}>{turnierDisziplinText(t)}</td>
                     <td className="rechts">
-                      <button type="button" title="Das Turnier zählt dann nicht mehr für diese Serie." className="klein" onClick={() => void turnierZuordnen(t.id, null)}>
+                      <button type="button" title="Das Turnier zählt dann nicht mehr für diese Serie." className="klein entfernknopf" onClick={() => void turnierZuordnen(t.id, null)}>
                         aus der Serie nehmen
                       </button>
                     </td>
