@@ -650,7 +650,7 @@ export default function System() {
       </section>
 
       <section className="block">
-        <h2>Daten exportieren / einlesen</h2>
+        <h2>Daten herunterladen / einlesen</h2>
         <p className="hinweis">
           Alle Daten des Vereins als Datei: Spieler, Einwilligungen mit Verlauf, Turniere mit Anmeldungen, Partien,
           14.1-Aufnahmen, Rating, Mannschaften, Tische, Tablets, Konten mit ihren Rollen und die Zustimmung zu

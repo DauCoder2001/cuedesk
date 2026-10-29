@@ -526,9 +526,11 @@ export default function Mannschaften() {
                   >
                     Ändern
                   </button>
-                  <button type="button" title="Löscht die Mannschaft mit ihrem Kader. Ihre Spieltage bleiben erhalten." className="gefahrknopf" onClick={() => void mannschaftLoeschen(m)}>
-                    Löschen
-                  </button>
+                  <span className="loeschgruppe">
+                    <button type="button" title="Löscht die Mannschaft mit ihrem Kader. Ihre Spieltage bleiben erhalten." className="gefahrknopf" onClick={() => void mannschaftLoeschen(m)}>
+                      Löschen
+                    </button>
+                  </span>
                 </div>
               )}
             </div>

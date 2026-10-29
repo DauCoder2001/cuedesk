@@ -709,9 +709,11 @@ export default function TeamvergleichAnsicht({
               <button type="button" title="Name, Datum, Disziplin, Ziel, Race to und Teamnamen ändern" onClick={aendern}>
                 Teamvergleich ändern
               </button>
-              <button type="button" className="gefahrknopf" title="Löscht den Teamvergleich mit Teams und Spielplan. Braucht das Schutzwort." onClick={() => void loeschen()}>
-                Teamvergleich löschen
-              </button>
+              <span className="loeschgruppe">
+                <button type="button" className="gefahrknopf" title="Löscht den Teamvergleich mit Teams und Spielplan. Braucht das Schutzwort." onClick={() => void loeschen()}>
+                  Teamvergleich löschen
+                </button>
+              </span>
             </div>
           )}
           {darfLeiten && turnier.status !== 'beendet' && (

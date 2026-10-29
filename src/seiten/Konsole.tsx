@@ -813,7 +813,7 @@ export default function Konsole() {
           <button type="button" title="Die Zahlen neu ermitteln" onClick={() => void neuZaehlen()} disabled={zaehlStand === 'zaehlt'}>
             {zaehlStand === 'zaehlt' ? 'Wird gezählt …' : 'Neu zählen'}
           </button>
-          <button type="button" title="Die angehakten Punkte endgültig löschen; vorher kommt eine Rückfrage" onClick={() => void aufraeumenAusfuehren()} disabled={arbeitet}>
+          <button type="button" className="gefahrknopf" title="Die angehakten Punkte endgültig löschen; vorher kommt eine Rückfrage" onClick={() => void aufraeumenAusfuehren()} disabled={arbeitet}>
             Ausgewählte aufräumen ({AUFRAEUMEN_ARTEN.filter((a) => auswahl.has(a.art)).reduce((n, a) => n + (aufraeumen?.[a.art] ?? 0), 0)})
           </button>
           {zaehlStand instanceof Date && (
@@ -893,8 +893,8 @@ export default function Konsole() {
           {superAdmins.map((k) => (
             <li key={k.id} className="zeile">
               <span>{k.email}{k.id === benutzer?.id ? ' (du)' : ''}</span>
-              <button type="button" className="klein" title="Die Rechte als Super-Admin entziehen" onClick={() => void superAdminSetzen(k.email ?? '', false)}>
-                entziehen
+              <button type="button" className="klein gefahrknopf" title="Die Rechte als Super-Admin entziehen" onClick={() => void superAdminSetzen(k.email ?? '', false)}>
+                Entziehen
               </button>
             </li>
           ))}

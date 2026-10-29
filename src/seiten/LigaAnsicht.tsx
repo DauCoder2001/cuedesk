@@ -1296,39 +1296,6 @@ export default function LigaAnsicht({
                 Wieder öffnen
               </button>
             )}
-            {istAdmin && (
-              <button
-                type="button"
-                title="Löscht Aufstellung, Partien und Ergebnisse dieser Begegnung; die Begegnung bleibt bestehen und lässt sich neu ausfüllen. Braucht das Schutzwort; stehen schon Ergebnisse drin, warnt die Rückfrage."
-                className="gefahrknopf"
-                onClick={() => void inhaltLoeschen()}
-                disabled={arbeitet}
-              >
-                Inhalt löschen
-              </button>
-            )}
-            {istAdmin && istDoppel && (
-              <button
-                type="button"
-                title="Entfernt nur diese Doppel-Begegnung mit ihren Partien. Die anderen Begegnungen bleiben; die 3. heißt danach wieder 2. Braucht das Schutzwort."
-                className="gefahrknopf"
-                onClick={() => void doppelEntfernen()}
-                disabled={arbeitet}
-              >
-                Doppel-Begegnung entfernen
-              </button>
-            )}
-            {istAdmin && (
-              <button
-                type="button"
-                title="Löscht den ganzen Spieltag: alle Begegnungen mit allen Partien und Ergebnissen. Vorher nennt eine Rückfrage, was verloren geht; sie braucht das Schutzwort."
-                className="gefahrknopf"
-                onClick={() => void spieltagLoeschen()}
-                disabled={arbeitet}
-              >
-                Spieltag löschen
-              </button>
-            )}
           </div>
           {bearbeitbar && turnier.status !== 'beendet' && (
             <LiveSchalter an={einstellungen.live !== false} schalten={(an) => void spieltagSetzen({ live: an })} />
@@ -1368,6 +1335,40 @@ export default function LigaAnsicht({
                 </button>
               ))}
             </span>
+          )}
+          {istAdmin && (
+            // Was verloren geht, steht abgesetzt ganz unten im Kopf
+            <div className="loeschgruppe">
+              <button
+                type="button"
+                title="Löscht Aufstellung, Partien und Ergebnisse dieser Begegnung; die Begegnung bleibt bestehen und lässt sich neu ausfüllen. Braucht das Schutzwort; stehen schon Ergebnisse drin, warnt die Rückfrage."
+                className="gefahrknopf"
+                onClick={() => void inhaltLoeschen()}
+                disabled={arbeitet}
+              >
+                Inhalt löschen
+              </button>
+              {istDoppel && (
+                <button
+                  type="button"
+                  title="Entfernt nur diese Doppel-Begegnung mit ihren Partien. Die anderen Begegnungen bleiben; die 3. heißt danach wieder 2. Braucht das Schutzwort."
+                  className="gefahrknopf"
+                  onClick={() => void doppelEntfernen()}
+                  disabled={arbeitet}
+                >
+                  Doppel-Begegnung entfernen
+                </button>
+              )}
+              <button
+                type="button"
+                title="Löscht den ganzen Spieltag: alle Begegnungen mit allen Partien und Ergebnissen. Vorher nennt eine Rückfrage, was verloren geht; sie braucht das Schutzwort."
+                className="gefahrknopf"
+                onClick={() => void spieltagLoeschen()}
+                disabled={arbeitet}
+              >
+                Spieltag löschen
+              </button>
+            </div>
           )}
           </div>
         </div>

@@ -31,7 +31,7 @@ Ein **Spieler** braucht kein Konto; ein **Konto** ist der Zugang einer Person zu
    - **Lesezugang**: sieht Live, Zuschauen und Chat, Ranglisten, Auswertung und Archiv und die eigene Statistik.
    - **Turnierleiter**: legt Turniere an und führt sie durch, koppelt Tablets.
    - **Sportwart**: wie Turnierleiter, dazu Spieler, Mannschaften und Einladungen.
-   - **Vereins-Administrator**: alles, auch System, Rollen und Daten exportieren und einlesen.
+   - **Vereins-Administrator**: alles, auch System, Rollen und Daten herunterladen und einlesen.
 3. Unter **Spieler zuordnen** das Konto mit dem passenden Spieler verknüpfen (**Verknüpfter Spieler**). Erst dann sieht die Person ihre eigene Statistik. In der Auswahl steht hinter jedem Spieler sein Status (Mitglied, Gast, Ausgetreten).
 
 ## 5. Tische und Geräte
@@ -46,5 +46,5 @@ Wer vorher mit Turnier light gearbeitet hat, liest dessen Datenbestand unter **S
 
 - **Chat**: auf der Seite System einschalten, wenn Mitglieder während eines Turniers schreiben sollen. Beiträge werden 1 Tag nach Turnierende gelöscht.
 - **Support-Zugang**: Braucht der Betreiber von CueDesk Einblick, um zu helfen, gebt ihr ihm hier für einige Tage Lesezugriff. Ändern kann er nichts.
-- **Daten exportieren**: Alle Vereinsdaten als Datei herunterladen, zum Beispiel einmal im Monat als eigene Sicherung.
+- **Daten herunterladen**: Alle Vereinsdaten als Datei sichern, zum Beispiel einmal im Monat als eigene Sicherung.
 - **Verträge**: zeigt, wann welcher Fassung zugestimmt wurde.

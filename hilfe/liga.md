@@ -62,4 +62,4 @@ In der Spaß-Liga kann zwischen 1. und 2. Begegnung eine Begegnung im Doppel ges
 - **Zurücksetzen** am Ende einer Partiezeile stellt die Partie wieder auf offen: Der Tisch wird frei, das Ergebnis und bei 14.1 das Aufnahme-Protokoll gelöscht, und das Tablet zeigt sie wieder in der Spielauswahl. Dafür braucht es das Schutzwort des Vereins.
 - **Inhalt löschen** leert die angezeigte Begegnung: Aufstellung, Partien und Ergebnisse sind weg, die Begegnung bleibt und lässt sich neu ausfüllen. Stehen schon Ergebnisse drin, warnt die Rückfrage davor.
 - **Spieltag löschen** entfernt alle Begegnungen komplett, auch eine Doppel-Begegnung (nur Vereins-Administrator).
-- Beide Knöpfe brauchen das Schutzwort des Vereins: Die Rückfrage hat dafür ein Feld für das Schutzwort und löscht erst, wenn das Wort stimmt.
+- Beide Knöpfe stehen abgesetzt ganz unten im Kopf rechts und brauchen das Schutzwort des Vereins: Die Rückfrage hat dafür ein Feld für das Schutzwort und löscht erst, wenn das Wort stimmt.

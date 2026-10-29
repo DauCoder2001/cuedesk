@@ -330,6 +330,11 @@ ul.schlicht { list-style: none; padding: 0; margin: 0; display: flex; flex-direc
 .knopfpaar.kopfaktionen { display: grid; grid-template-columns: repeat(3, auto); align-items: center; flex-shrink: 0; }
 .kopfaktionen button { font-size: 14px; padding: 5px 10px; white-space: nowrap; }
 .bearbeitenkopf .kopfaktionen .marke { margin-left: 0; font-size: 13px; white-space: nowrap; justify-self: center; }
+/* Loeschknoepfe abgesetzt hinter einer gestrichelten Linie, damit sie nicht neben dem naechsten Schritt stehen;
+   rechts im Kopf als eigene Zeile ganz unten */
+.loeschgruppe { display: flex; gap: 6px; align-items: center; margin-left: 10px; padding-left: 16px; border-left: 1px dashed #e7bcbc; }
+.kopfrechts .loeschgruppe { margin-left: 0; padding: 8px 0 0; border-left: 0; border-top: 1px dashed #e7bcbc; }
+.kopfrechts .loeschgruppe button { font-size: 14px; padding: 5px 10px; white-space: nowrap; }
 
 .einspaltig {
   background: var(--flaeche); border: 1px solid var(--rand); border-radius: 0 0 12px 12px;

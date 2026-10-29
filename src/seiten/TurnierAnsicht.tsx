@@ -1925,9 +1925,11 @@ export default function TurnierAnsicht({
             )}
             {/* In Vorbereitung darf die Turnierleitung loeschen, danach nur der Vereins-Admin */}
             {(turnier.status === 'geplant' ? bearbeitbar : istAdmin) && (
-              <button type="button" title="Löscht das Turnier mit allen Partien. Vorher kommt eine Rückfrage mit dem Schutzwort." className="gefahrknopf" onClick={() => void loeschen()}>
-                Turnier löschen
-              </button>
+              <span className="loeschgruppe">
+                <button type="button" title="Löscht das Turnier mit allen Partien. Vorher kommt eine Rückfrage mit dem Schutzwort." className="gefahrknopf" onClick={() => void loeschen()}>
+                  Turnier löschen
+                </button>
+              </span>
             )}
           </div>
         </div>

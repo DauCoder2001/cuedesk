@@ -13,7 +13,7 @@ import ExportStammdaten from './ExportStammdaten';
 // oder der Stammdaten aus einem CueDesk-Export (ExportStammdaten.tsx).
 // Die Datei wird nur im Browser gelesen; geschrieben wird erst auf Knopfdruck.
 
-// Eingebettet unter System → "Daten exportieren / einlesen" (nur
+// Eingebettet unter System → "Daten herunterladen / einlesen" (nur
 // Vereins-Administrator, wie der Export); schliessen klappt den Bereich zu.
 export default function Altdaten({ schliessen }: { schliessen: () => void }) {
   const { verein, darf } = useSitzung();

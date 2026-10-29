@@ -273,13 +273,22 @@ export default function Serien() {
   return (
     <div className="einspaltig">
       <section className="block">
+        {/* Wie bei Turnieren und Mannschaften: "Neu" oben rechts; was zur gewaehlten
+            Serie gehoert, steht rechts in der Zeile der Serien */}
         <div className="bearbeitenkopf">
-          <div className="knopfpaar" style={{ alignItems: 'center' }}>
-            <h2>Serienwertung</h2>
-            {darfVerwalten && !(formular && !formular.id) && (
-              <button type="button" title="Eine neue Serienwertung anlegen" onClick={neueSerie}>
-                Neue Serie
-              </button>
+          <h2>Serienwertung</h2>
+          {darfVerwalten && !(formular && !formular.id) && (
+            <button type="button" title="Eine neue Serienwertung anlegen" onClick={neueSerie}>
+              Neue Serie
+            </button>
+          )}
+        </div>
+        <div className="bearbeitenkopf">
+          <div className="filterzeile">
+            {serien.filter((s) => s.aktiv).map(serienKnopf)}
+            {serien.length === 0 && <span className="hinweis">Noch keine Serie angelegt.</span>}
+            {serien.length > 0 && !serien.some((s) => s.aktiv) && (
+              <span className="hinweis">Keine laufende Serie – die beendeten stehen unten unter „Abgelaufene Serien“.</span>
             )}
           </div>
           <div className="knopfpaar">
@@ -294,13 +303,6 @@ export default function Serien() {
               </button>
             )}
           </div>
-        </div>
-        <div className="filterzeile">
-          {serien.filter((s) => s.aktiv).map(serienKnopf)}
-          {serien.length === 0 && <span className="hinweis">Noch keine Serie angelegt.</span>}
-          {serien.length > 0 && !serien.some((s) => s.aktiv) && (
-            <span className="hinweis">Keine laufende Serie – die beendeten stehen unten unter „Abgelaufene Serien“.</span>
-          )}
         </div>
         {serie && !formular && (
           <p className="hinweis">

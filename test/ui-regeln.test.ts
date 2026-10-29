@@ -25,7 +25,7 @@ describe('UI-Regeln', () => {
   it('Verwerfen- und Loeschen-Knoepfe sind rot', () => {
     const ohneRot: string[] = [];
     for (const q of quelle) {
-      for (const m of q.text.matchAll(/<button([^>]*)>\s*(Verwerfen|Löschen)\s*<\/button>/g)) {
+      for (const m of q.text.matchAll(/<button([^>]*)>\s*(Verwerfen|Löschen|Entziehen)\s*<\/button>/g)) {
         if (!m[1].includes('gefahrknopf')) ohneRot.push(`${q.name}: ${m[2]}`);
       }
     }
@@ -40,5 +40,21 @@ describe('UI-Regeln', () => {
       }
     }
     expect(ohneOrange).toEqual([]);
+  });
+
+  it('Loeschknoepfe im Kopf stehen abgesetzt', () => {
+    // Nicht direkt neben dem naechsten Schritt (Abschliessen, Wieder oeffnen)
+    const ohneAbstand: string[] = [];
+    for (const [datei, knopf] of [
+      ['TurnierAnsicht.tsx', 'Turnier löschen'],
+      ['LigaAnsicht.tsx', 'Spieltag löschen'],
+      ['TeamvergleichAnsicht.tsx', 'Teamvergleich löschen'],
+      ['Mannschaften.tsx', 'Löschen']
+    ]) {
+      const text = quelle.find((q) => q.name === datei)?.text ?? '';
+      const stelle = text.search(new RegExp(`>\\s*${knopf}\\s*</button>`));
+      if (stelle < 0 || !text.slice(Math.max(0, stelle - 1500), stelle).includes('loeschgruppe')) ohneAbstand.push(`${datei}: ${knopf}`);
+    }
+    expect(ohneAbstand).toEqual([]);
   });
 });

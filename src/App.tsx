@@ -257,7 +257,7 @@ export default function App() {
       wert: 'system',
       name: 'System',
       sichtbar: darf('vereinsadmin'),
-      tipp: 'Einstellungen des Vereins: Name und Logo, Vorgaben für neue Turniere und Liga-Spieltage, Saisonbeginn, Schutzwort, Daten exportieren und einlesen.'
+      tipp: 'Einstellungen des Vereins: Name und Logo, Vorgaben für neue Turniere und Liga-Spieltage, Saisonbeginn, Schutzwort, Daten herunterladen und einlesen.'
     },
     // Ganz hinten: gilt fuer ganz CueDesk, nicht fuer den Verein
     {
