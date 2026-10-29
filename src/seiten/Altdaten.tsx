@@ -472,7 +472,7 @@ export default function Altdaten({ schliessen }: { schliessen: () => void }) {
             </label>
 
             <div className="zeile">
-              <button type="button" title="Schreibt den gelesenen Datenbestand in CueDesk." onClick={() => void uebernehmen()} disabled={laeuft}>
+              <button type="button" className="hauptaktion" title="Schreibt den gelesenen Datenbestand in CueDesk." onClick={() => void uebernehmen()} disabled={laeuft}>
                 {laeuft ? 'Wird übernommen' : 'Übernehmen'}
               </button>
               <span className="hinweis">

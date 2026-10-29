@@ -502,7 +502,7 @@ export default function Konsole() {
                         </small>
                         <div className="knopfpaar">
                           <button type="button" className="klein" title="Alle Daten des Vereins als Datei herunterladen" onClick={() => void exportieren(v)} disabled={arbeitet}>
-                            Export
+                            Daten herunterladen
                           </button>
                           {loeschStand(v) === 'bereit' && (
                             <button type="button" className="klein gefahrknopf" title="In 30 Tagen endgültig löschen" onClick={() => void loeschenVormerken(v)}>
@@ -510,7 +510,7 @@ export default function Konsole() {
                             </button>
                           )}
                           {loeschStand(v) === 'export_fehlt' && (
-                            <button type="button" className="klein gefahrknopf" title="Erst exportieren, dann lässt sich die Löschung vormerken" onClick={() => zeigeFehler(`Vor dem Löschen die Daten von „${v.name}“ exportieren.`)}>
+                            <button type="button" className="klein gefahrknopf" title="Erst die Daten herunterladen, dann lässt sich die Löschung vormerken" onClick={() => zeigeFehler(`Vor dem Löschen die Daten von „${v.name}“ herunterladen.`)}>
                               Löschen vormerken
                             </button>
                           )}
@@ -521,7 +521,7 @@ export default function Konsole() {
                           )}
                           {v.ist_test && (
                             <button type="button" className="klein gefahrknopf" title="Test-Verein ohne Frist löschen; der Name muss zur Bestätigung eingetippt werden" onClick={() => setSofortLoeschen({ id: v.id, name: '' })}>
-                              Sofort löschen
+                              Sofort löschen…
                             </button>
                           )}
                         </div>
@@ -577,11 +577,11 @@ export default function Konsole() {
                         Bearbeiten
                       </button>
                       <button type="button" title="Einen Vereins-Administrator per E-Mail einladen" onClick={() => setEinladen({ id: v.id, email: '' })}>
-                        Admin einladen
+                        Admin einladen…
                       </button>
                       {v.aktiv ? (
                         <button type="button" className="gefahrknopf" title="Den Verein sperren; es folgt die Frage nach dem Grund" onClick={() => setSperren({ id: v.id, grund: '' })}>
-                          Sperren
+                          Sperren…
                         </button>
                       ) : (
                         <button type="button" title="Die Sperre aufheben; eine vorgemerkte Löschung entfällt damit" onClick={() => void entsperren(v)}>

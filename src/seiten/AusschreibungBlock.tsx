@@ -70,7 +70,7 @@ export default function AusschreibungBlock({
   const knoepfe = (
     <span className="knopfpaar">
       <span className="hinweis">Ausschreibung geändert</span>
-      <button type="button" title="Die Angaben der Ausschreibung verwerfen" onClick={() => setEntwurf(gespeichert)}>
+      <button type="button" className="gefahrknopf" title="Die Angaben der Ausschreibung verwerfen" onClick={() => setEntwurf(gespeichert)}>
         Verwerfen
       </button>
       <button type="button" title="Die Angaben der Ausschreibung speichern" onClick={() => void sichern()}>

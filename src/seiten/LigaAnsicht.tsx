@@ -870,7 +870,7 @@ export default function LigaAnsicht({
 
   async function schutzAufheben() {
     if (!verein || !(await schutzwortPruefen(verein.id, passwort))) {
-      setFehler('Das Passwort stimmt nicht.');
+      setFehler('Das Schutzwort stimmt nicht.');
       return;
     }
     setFehler(null);
@@ -882,7 +882,7 @@ export default function LigaAnsicht({
   async function passwortPruefen() {
     if (!passwortFrage) return;
     if (!verein || !(await schutzwortPruefen(verein.id, passwort))) {
-      setFehler('Das Passwort stimmt nicht.');
+      setFehler('Das Schutzwort stimmt nicht.');
       return;
     }
     setFehler(null);
@@ -1217,7 +1217,7 @@ export default function LigaAnsicht({
                     setDoppelDialog(DOPPEL_ZEILEN_STANDARD.map((z) => ({ ...z })));
                   }}
                 >
-                  + Doppel-Begegnung
+                  + Doppel-Begegnung…
                 </button>
               )}
             </div>
@@ -1251,12 +1251,12 @@ export default function LigaAnsicht({
                 title="Name, Datum, Liga, Spieltag, Heimrecht, eigene Mannschaft und Gegner korrigieren – für alle Begegnungen dieses Spieltags. Nur in Vorbereitung."
                 onClick={() => setAendernOffen(true)}
               >
-                Spieltag ändern
+                Spieltag ändern…
               </button>
             )}
             {bearbeitbar && !istDoppel && (
               <button type="button" title="Den Spielbericht des Verbands einlesen und die Ergebnisse in diese Begegnung übernehmen. Vorher zeigt eine Vorschau jede Partie." onClick={() => setImportOffen(true)}>
-                Spielbericht einlesen
+                Spielbericht einlesen…
               </button>
             )}
             {bearbeitbar && !istDoppel && (
@@ -1276,7 +1276,7 @@ export default function LigaAnsicht({
                   );
                 }}
               >
-                Partien ändern
+                Partien ändern…
               </button>
             )}
             {bearbeitbar && (
@@ -1412,7 +1412,7 @@ export default function LigaAnsicht({
               </small>
               <span>
                 <button type="button" className="klein" title="Alle Begegnungen mit Aufstellung und Ergebnis als PDF, zum Drucken oder Weiterschicken" onClick={spielberichtPdf}>
-                  Spielbericht als PDF
+                  Spielbericht (PDF)
                 </button>
               </span>
             </div>
@@ -1561,7 +1561,7 @@ export default function LigaAnsicht({
                     <td key={seite} colSpan={seite === 'heim' ? 2 : 1}>
                       <button
                         type="button"
-                        title="Verborgene Aufstellungen sieht der Gegner nicht. Zum Zeigen wird das Passwort gebraucht."
+                        title="Verborgene Aufstellungen sieht der Gegner nicht. Zum Zeigen wird das Schutzwort gebraucht."
                         onClick={() =>
                           istVerdeckt(r.runde, seite)
                             ? setPasswortFrage({ runde: r.runde, seite })
@@ -1699,13 +1699,13 @@ export default function LigaAnsicht({
           <div className="zeile">
             <input
               type="password"
-              placeholder="Passwort"
+              placeholder="Schutzwort"
               value={passwort}
               autoFocus
               onChange={(e) => setPasswort(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && void schutzAufheben()}
             />
-            <button type="button" title="Mit dem Passwort den Schutz der Hinrunde aufheben" onClick={() => void schutzAufheben()}>
+            <button type="button" title="Mit dem Schutzwort den Schutz der Hinrunde aufheben" onClick={() => void schutzAufheben()}>
               Aufheben
             </button>
           </div>
@@ -1731,13 +1731,13 @@ export default function LigaAnsicht({
           <div className="zeile">
             <input
               type="password"
-              placeholder="Passwort"
+              placeholder="Schutzwort"
               value={passwort}
               autoFocus
               onChange={(e) => setPasswort(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && void passwortPruefen()}
             />
-            <button type="button" title="Mit dem Passwort die verborgene Aufstellung sichtbar machen" onClick={() => void passwortPruefen()}>
+            <button type="button" title="Mit dem Schutzwort die verborgene Aufstellung sichtbar machen" onClick={() => void passwortPruefen()}>
               Zeigen
             </button>
           </div>

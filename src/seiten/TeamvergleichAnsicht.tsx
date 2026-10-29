@@ -707,10 +707,10 @@ export default function TeamvergleichAnsicht({
                 Teamvergleich starten
               </button>
               <button type="button" title="Name, Datum, Disziplin, Ziel, Race to und Teamnamen ändern" onClick={aendern}>
-                Turnier ändern
+                Teamvergleich ändern
               </button>
-              <button type="button" className="gefahrknopf" title="Löscht das Turnier mit Teams und Spielplan. Braucht das Schutzwort." onClick={() => void loeschen()}>
-                Turnier löschen
+              <button type="button" className="gefahrknopf" title="Löscht den Teamvergleich mit Teams und Spielplan. Braucht das Schutzwort." onClick={() => void loeschen()}>
+                Teamvergleich löschen
               </button>
             </div>
           )}
@@ -934,7 +934,7 @@ export default function TeamvergleichAnsicht({
                 <button type="button" className={faellig('uebernehmen')} disabled={arbeitet} title="Legt die Matches an. Bis zum Start lässt sich der Plan weiter ändern." onClick={() => void planUebernehmen()}>
                   Spielplan übernehmen
                 </button>
-                <button type="button" disabled={arbeitet} title="Den Vorschlag verwerfen" onClick={() => setPlan(null)}>
+                <button type="button" className="gefahrknopf" disabled={arbeitet} title="Den Vorschlag verwerfen" onClick={() => setPlan(null)}>
                   Verwerfen
                 </button>
               </div>

@@ -15,8 +15,8 @@ Die **Konsole** ist nur für Super-Admins, also den Betreiber von CueDesk. Sie g
 ## Vereine verwalten
 
 - **Bearbeiten**: Name, Kurzname, Web-Adresse, Anschrift ändern.
-- **Sperren** mit Grund: Der Verein kommt nicht mehr in die Verwaltung, Tablets laufen nur noch offline. **Entsperren** hebt das auf.
-- **Löschen**: erst sperren, dann **Export** ziehen, dann **Löschen vormerken**. Nach 30 Tagen löscht ein nächtlicher Lauf den Verein; bis dahin lässt sich das mit **Löschung abbrechen** zurücknehmen. Test-Vereine lassen sich **Sofort löschen**.
+- **Sperren** mit Grund: Der Verein kommt nicht mehr in die Verwaltung, Tablets laufen nur noch offline. **Freigeben** hebt das auf.
+- **Löschen**: erst sperren, dann mit **Daten herunterladen** sichern, dann **Löschen vormerken**. Nach 30 Tagen löscht ein nächtlicher Lauf den Verein; bis dahin lässt sich das mit **Löschung abbrechen** zurücknehmen. Test-Vereine lassen sich **Sofort löschen**.
 - Hat ein Verein mehrere Administratoren, lässt sich einer mit ✕ entfernen; einer muss bleiben.
 
 ## Überblick

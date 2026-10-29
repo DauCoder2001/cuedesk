@@ -610,7 +610,7 @@ export default function Archiv() {
           </table>
         </Rollbereich>
         <p className="hinweis">
-          Ein Klick öffnet das Turnier mit Tabellen und Bericht als PDF.
+          Ein Klick öffnet das Turnier mit Tabellen und Turnierbericht (PDF).
           {personenSpalten.length > 0 && ' Die Spalten rechts zeigen den Endplatz, im Liga-Spieltag Siege : Niederlagen.'}
         </p>
       </section>

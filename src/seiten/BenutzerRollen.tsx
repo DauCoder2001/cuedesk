@@ -461,12 +461,12 @@ export default function BenutzerRollen({ start = null }: { start?: string | null
                     <button type="button" onClick={() => setEntziehenBestaetigen(false)}>
                       Abbrechen
                     </button>
-                    <button type="button" title="Entfernt alle Rollen dieses Kontos. Spieler und Ergebnisse bleiben." onClick={() => void zugangEntziehen()}>
+                    <button type="button" className="gefahrknopf" title="Entfernt alle Rollen dieses Kontos. Spieler und Ergebnisse bleiben." onClick={() => void zugangEntziehen()}>
                       Ja, entziehen
                     </button>
                   </div>
                 ) : (
-                  <button type="button" title="Diesem Konto den Zugang zum Verein entziehen. Es folgt eine Rückfrage." onClick={() => setEntziehenBestaetigen(true)}>
+                  <button type="button" className="gefahrknopf" title="Diesem Konto den Zugang zum Verein entziehen. Es folgt eine Rückfrage." onClick={() => setEntziehenBestaetigen(true)}>
                     Entziehen
                   </button>
                 )}

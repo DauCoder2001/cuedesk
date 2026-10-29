@@ -266,7 +266,7 @@ export default function ExportStammdaten({
         </label>
 
         <div className="zeile">
-          <button type="button" title="Schreibt die Stammdaten in CueDesk." onClick={() => void uebernehmen()} disabled={laeuft}>
+          <button type="button" className="hauptaktion" title="Schreibt die Stammdaten in CueDesk." onClick={() => void uebernehmen()} disabled={laeuft}>
             {laeuft ? 'Wird übernommen' : 'Übernehmen'}
           </button>
           <span className="hinweis">Ein zweiter Lauf legt nichts doppelt an.</span>

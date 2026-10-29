@@ -36,7 +36,7 @@ export default function ZuruecksetzenDialog(props: {
     setArbeitet(true);
     if (!(await schutzwortPruefen(props.vereinId, wort))) {
       setArbeitet(false);
-      setFehler('Das Passwort stimmt nicht.');
+      setFehler('Das Schutzwort stimmt nicht.');
       return;
     }
     const meldung = await partieZuruecksetzen(p);
@@ -61,13 +61,13 @@ export default function ZuruecksetzenDialog(props: {
       <div className="zeile">
         <input
           type="password"
-          placeholder="Passwort"
+          placeholder="Schutzwort"
           value={wort}
           autoFocus
           onChange={(e) => setWort(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && void zuruecksetzen()}
         />
-        <button type="button" title="Mit dem Passwort die Partie zurück auf offen stellen" onClick={() => void zuruecksetzen()}>
+        <button type="button" className="gefahrknopf" title="Mit dem Schutzwort die Partie zurück auf offen stellen" onClick={() => void zuruecksetzen()}>
           Zurücksetzen
         </button>
       </div>

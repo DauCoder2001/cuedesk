@@ -356,7 +356,7 @@ export default function System() {
   const speicherLeiste = (
         <div className="knopfpaar rechts">
           <Pflichthinweis hinweis={vereinPflicht.hinweis} />
-          <button type="button" title="Die Eingaben dieser Seite verwerfen." onClick={() => { zuruecksetzen(); vereinPflicht.zuruecksetzen(); setFehler(null); setMeldung(null); }}>
+          <button type="button" className="gefahrknopf" title="Die Eingaben dieser Seite verwerfen." onClick={() => { zuruecksetzen(); vereinPflicht.zuruecksetzen(); setFehler(null); setMeldung(null); }}>
             Verwerfen
           </button>
           <button type="button" title="Verein, Vorgaben und Saisonbeginn speichern." onClick={() => void speichern()} disabled={arbeitet}>
@@ -675,7 +675,7 @@ export default function System() {
             onClick={() => setEinlesen('daten')}
             disabled={einlesen !== null}
           >
-            Daten einlesen
+            Daten einlesen…
           </button>
           <button
             type="button"
@@ -683,7 +683,7 @@ export default function System() {
             onClick={() => setEinlesen('excel')}
             disabled={einlesen !== null}
           >
-            Excel-Serie einlesen
+            Excel-Serie einlesen…
           </button>
         </div>
       </section>

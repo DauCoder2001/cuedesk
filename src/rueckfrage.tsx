@@ -48,7 +48,7 @@ export function useRueckfrage(): [ReactNode, (text: string, ja?: string, optione
     setPrueft(true);
     const stimmt = await schutzwortPruefen(vereinId, wort);
     setPrueft(false);
-    if (!stimmt) return setFehler('Das Passwort stimmt nicht.');
+    if (!stimmt) return setFehler('Das Schutzwort stimmt nicht.');
     schliessen(true);
   }
 
@@ -61,7 +61,7 @@ export function useRueckfrage(): [ReactNode, (text: string, ja?: string, optione
           <div className="zeile">
             <input
               type="password"
-              placeholder="Passwort"
+              placeholder="Schutzwort"
               value={wort}
               autoFocus
               onChange={(e) => {

@@ -218,7 +218,7 @@ export default function Live() {
           <div className="zeile">
             <input
               type="password"
-              placeholder="Passwort"
+              placeholder="Schutzwort"
               value={wort}
               autoFocus
               onChange={(e) => setWort(e.target.value)}
@@ -334,7 +334,7 @@ export default function Live() {
   async function neuLadenAusloesen() {
     if (!frage) return;
     if (!verein || !(await schutzwortPruefen(verein.id, wort))) {
-      setFehler('Das Passwort stimmt nicht.');
+      setFehler('Das Schutzwort stimmt nicht.');
       return;
     }
     const betroffen = geraete.filter((g) => g.tisch_id === frage.id);
@@ -503,7 +503,7 @@ export function Tischkachel({
                 Ergebnis speichern
               </button>
             )}
-            <button type="button" className="klein" onClick={ungespeichert.verwerfen}>
+            <button type="button" className="klein gefahrknopf" onClick={ungespeichert.verwerfen}>
               Verwerfen
             </button>
           </span>

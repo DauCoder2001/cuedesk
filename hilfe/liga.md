@@ -53,7 +53,7 @@ In der Spaß-Liga kann zwischen 1. und 2. Begegnung eine Begegnung im Doppel ges
 
 - **Matchpunkte je Begegnung:** Wer mehr Partien gewinnt, bekommt 3 : 0, bei Gleichstand (z. B. 4 : 4, im Doppel 2 : 2) gibt es 1 : 1.
 - **Spieltag gesamt** im Kopf (ab zwei Begegnungen) zählt Partie- und Matchpunkte aller Begegnungen zusammen, immer aus Sicht der Heimmannschaft der 1. Begegnung; die Rückbegegnung wird dafür umgedreht. Beispiel: 2 : 6 (0 : 3), Doppel 2 : 2 (1 : 1), Rückbegegnung 4 : 4 (1 : 1) ergibt **8 : 12** Partiepunkte und **2 : 5** Matchpunkte. Eine Begegnung zählt bei den Matchpunkten erst, wenn alle ihre Partien entschieden sind; bis dahin steht dort „Zwischenstand“.
-- **Spielbericht als PDF** in derselben Kachel lädt den ganzen Spieltag als PDF herunter: Gesamtstand, Übersicht je Begegnung und alle Partien mit Aufstellung und Ergebnis – zum Drucken oder Weiterschicken.
+- **Spielbericht (PDF)** in derselben Kachel lädt den ganzen Spieltag als PDF herunter: Gesamtstand, Übersicht je Begegnung und alle Partien mit Aufstellung und Ergebnis – zum Drucken oder Weiterschicken.
 - Auf der Seite **Zuschauen** und auf dem **öffentlichen Link** steht dasselbe oben im Reiter **Turnier** als „Ergebnis des Spieltags“.
 - **Fernseher:** Im Kopf schaltet **TV: Live-Tische** / **TV: Spieltag-Ergebnis** um, was die Fernseher zeigen; das gilt für alle Begegnungen. Das Spieltag-Ergebnis zeigt groß den Gesamtstand, die Matchpunkte, den Sieger (vorher „Zwischenstand“) und je Begegnung eine Zeile. Beim Abschließen der letzten Begegnung stellt CueDesk die Fernseher von selbst auf das Spieltag-Ergebnis um.
 
@@ -62,4 +62,4 @@ In der Spaß-Liga kann zwischen 1. und 2. Begegnung eine Begegnung im Doppel ges
 - **Zurücksetzen** am Ende einer Partiezeile stellt die Partie wieder auf offen: Der Tisch wird frei, das Ergebnis und bei 14.1 das Aufnahme-Protokoll gelöscht, und das Tablet zeigt sie wieder in der Spielauswahl. Dafür braucht es das Schutzwort des Vereins.
 - **Inhalt löschen** leert die angezeigte Begegnung: Aufstellung, Partien und Ergebnisse sind weg, die Begegnung bleibt und lässt sich neu ausfüllen. Stehen schon Ergebnisse drin, warnt die Rückfrage davor.
 - **Spieltag löschen** entfernt alle Begegnungen komplett, auch eine Doppel-Begegnung (nur Vereins-Administrator).
-- Beide Knöpfe brauchen das Schutzwort des Vereins: Die Rückfrage hat dafür ein Passwortfeld und löscht erst, wenn das Wort stimmt.
+- Beide Knöpfe brauchen das Schutzwort des Vereins: Die Rückfrage hat dafür ein Feld für das Schutzwort und löscht erst, wenn das Wort stimmt.

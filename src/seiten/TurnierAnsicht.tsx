@@ -1910,7 +1910,7 @@ export default function TurnierAnsicht({
             )}
             {turnier.quelle !== 'import' && turnier.status !== 'geplant' && (
               <button type="button" title="Erstellt den Turnierbericht als PDF zum Drucken oder Weitergeben." onClick={berichtErzeugen}>
-                Bericht (PDF)
+                Turnierbericht (PDF)
               </button>
             )}
             {bearbeitbar && turnier.status === 'laeuft' && (
@@ -2408,7 +2408,7 @@ export default function TurnierAnsicht({
                       title="Nachzügler aufnehmen: bereits eingetragene Ergebnisse bleiben erhalten"
                       onClick={() => setNachtrag({ ziel: nachtragZiele[0], suche: '', gast: '' })}
                     >
-                      Spieler nachtragen
+                      Spieler nachtragen…
                     </button>
                   )}
                 </div>

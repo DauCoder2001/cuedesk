@@ -301,7 +301,7 @@ export default function SpielberichtImport({
 
       <div className="knopfpaar">
         {bericht && (
-          <button type="button" title="Schreibt die ausgewählten Partien in die Begegnung." onClick={() => void uebernehmen()} disabled={arbeitet}>
+          <button type="button" className="hauptaktion" title="Schreibt die ausgewählten Partien in die Begegnung." onClick={() => void uebernehmen()} disabled={arbeitet}>
             Übernehmen
           </button>
         )}

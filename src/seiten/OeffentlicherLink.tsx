@@ -90,7 +90,7 @@ export default function OeffentlicherLink({
     }
   }
 
-  const knopfText = !link ? 'Öffentlicher Link' : abgelaufen ? 'Öffentlicher Link: abgelaufen' : `Öffentlicher Link: bis ${tagText(link.gueltig_bis)}`;
+  const knopfText = !link ? 'Öffentlicher Link…' : abgelaufen ? 'Öffentlicher Link: abgelaufen' : `Öffentlicher Link: bis ${tagText(link.gueltig_bis)}`;
 
   return (
     <>

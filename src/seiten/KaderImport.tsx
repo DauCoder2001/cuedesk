@@ -358,7 +358,7 @@ export default function KaderImport({
             >
               Abbrechen
             </button>
-            <button type="button" title="Mannschaften und Spieler wie angezeigt speichern" onClick={() => void uebernehmen()} disabled={arbeitet}>
+            <button type="button" className="hauptaktion" title="Mannschaften und Spieler wie angezeigt speichern" onClick={() => void uebernehmen()} disabled={arbeitet}>
               {arbeitet ? 'Wird übernommen …' : 'Übernehmen'}
             </button>
           </div>

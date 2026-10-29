@@ -192,7 +192,7 @@ export default function TischeGeraete() {
                       />
                     </td>
                     <td className="rechts">
-                      <button type="button" title="Löscht den Tisch. Wird er noch gebraucht, stattdessen auf nicht aktiv schalten." onClick={() => void tischLoeschen(tisch)}>
+                      <button type="button" className="gefahrknopf" title="Löscht den Tisch. Wird er noch gebraucht, stattdessen auf nicht aktiv schalten." onClick={() => void tischLoeschen(tisch)}>
                         Löschen
                       </button>
                     </td>
