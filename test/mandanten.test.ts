@@ -2,6 +2,7 @@ import { describe, expect, test } from 'vitest';
 import {
   adresseAusName,
   aenderungText,
+  fehlerText,
   groesseText,
   homepageLink,
   ratingWarnung,
@@ -82,5 +83,11 @@ describe('Konsole: Warnungen', () => {
     expect(groesseText(17058963)).toBe('16,3 MB');
     expect(groesseText(512)).toBe('512 B');
     expect(groesseText(null)).toBe('–');
+  });
+
+  test('Verbindungsfehler verstaendlich melden', () => {
+    expect(fehlerText('TypeError: Failed to fetch')).toBe('Keine Verbindung zum Server. Bitte die Seite neu laden.');
+    expect(fehlerText('TypeError: Load failed')).toBe('Keine Verbindung zum Server. Bitte die Seite neu laden.');
+    expect(fehlerText('permission denied')).toBe('permission denied');
   });
 });

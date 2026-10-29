@@ -8,7 +8,9 @@ import {
   DATENBANK_GRENZE_BYTES,
   adresseAusName,
   aenderungText,
+  fehlerText,
   homepageLink,
+  istVerbindungsfehler,
   groesseText,
   ratingWarnung,
   sicherungsWarnung
@@ -134,23 +136,29 @@ export default function Konsole() {
   );
 
   const laden = useCallback(async () => {
+    // Funktionsaufrufe (POST) wiederholt der Browser nach einer abgebrochenen
+    // Verbindung nicht selbst; die drei lesen nur, ein zweiter Versuch ist harmlos
+    const nochmal = async (name: 'konsole_vereine' | 'konsole_datenbank' | 'aufraeumen_vorschau') => {
+      const antwort = await supabase.rpc(name);
+      return antwort.error && istVerbindungsfehler(antwort.error.message) ? supabase.rpc(name) : antwort;
+    };
     const [v, r, k, e, p, z, d, s, a] = await Promise.all([
       supabase.from('vereine').select('*').order('name'),
       supabase.from('benutzer_rollen').select('*').eq('rolle', 'vereinsadmin'),
       supabase.from('benutzer').select('*'),
       supabase.from('einladungen').select('*').is('angenommen_am', null),
       supabase.from('system_protokoll').select('*').order('zeit', { ascending: false }).limit(40),
-      supabase.rpc('konsole_vereine'),
-      supabase.rpc('konsole_datenbank'),
+      nochmal('konsole_vereine'),
+      nochmal('konsole_datenbank'),
       supabase.from('system_ereignisse').select('*').eq('art', 'sicherung').order('zeit', { ascending: false }).limit(1),
-      supabase.rpc('aufraeumen_vorschau')
+      nochmal('aufraeumen_vorschau')
     ]);
     const erster = [v, r, k, e, p, z, d, s, a].find((x) => x.error)?.error;
     setAufraeumen((a.data ?? null) as AufraeumenZahlen | null);
     setZahlen((z.data ?? []) as KonsoleVerein[]);
     setDatenbank((d.data ?? null) as KonsoleDatenbank | null);
     setSicherung(s.data?.[0] ?? null);
-    if (erster) setFehler(erster.message);
+    if (erster) setFehler(fehlerText(erster.message));
     setVereine(v.data ?? []);
     setRollen(r.data ?? []);
     setKonten(k.data ?? []);
@@ -174,7 +182,7 @@ export default function Konsole() {
   };
   const zeigeFehler = (text: string) => {
     setMeldung(null);
-    setFehler(text);
+    setFehler(fehlerText(text));
   };
 
   // Einladung des Vereins-Administrators ueber die Serverfunktion

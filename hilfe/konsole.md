@@ -28,6 +28,8 @@ Die **Konsole** ist nur für Super-Admins, also den Betreiber von CueDesk. Sie g
 - **Protokoll**: alle Aktionen der Super-Admins.
 - **Super-Admins**: weitere Super-Admins ernennen oder entfernen.
 
+Reißt beim Öffnen die Verbindung kurz ab, fragt die Konsole einmal selbst nach. Steht danach „Keine Verbindung zum Server“ da, die Seite neu laden.
+
 ## Scoreboards offline
 
 Die Offline-Fassung der Scoreboards (daucoder2001.github.io/scoreboards; scoreboards.cuedesk.de leitet über das Repo scoreboards-weiterleitung dorthin weiter) entsteht automatisch: Nach jedem Push, der die Scoreboards ändert, baut der Workflow **Scoreboards offline** auf GitHub sie neu und legt sie ab.

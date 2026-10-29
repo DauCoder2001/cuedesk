@@ -102,3 +102,13 @@ export function aenderungText(details: Record<string, unknown>): string {
     .map((k) => `${FELD_TEXT[k]}: ${wert(vorher[k])} → ${wert(nachher[k])}`)
     .join(' · ');
 }
+
+// Abfrage kam nie beim Server an (Verbindung abgebrochen). Der Browser meldet das
+// je nach Hersteller verschieden; supabase-js reicht den Text durch.
+export function istVerbindungsfehler(text: string | null | undefined): boolean {
+  return /Failed to fetch|NetworkError|Load failed|Network request failed/i.test(text ?? '');
+}
+
+export function fehlerText(text: string): string {
+  return istVerbindungsfehler(text) ? 'Keine Verbindung zum Server. Bitte die Seite neu laden.' : text;
+}
