@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { supabase } from '../supabase';
 import { useSitzung } from '../sitzung';
 import { Pflichthinweis, usePflicht } from '../pflicht';
@@ -76,6 +76,9 @@ export default function Konto() {
     };
   }, [benutzer]);
 
+  // Nach dem Schicken steht der Cursor gleich im Code-Feld
+  const codeFeld = useRef<HTMLInputElement>(null);
+
   async function codeAnfordern() {
     setFehler(null);
     setMeldung(null);
@@ -85,6 +88,7 @@ export default function Konto() {
     if (error) return setFehler(error.message);
     setCodeGeschickt(true);
     setMeldung(`Der Code ist unterwegs an ${benutzer?.email ?? 'deine E-Mail-Adresse'}.`);
+    window.setTimeout(() => codeFeld.current?.focus(), 0);
   }
 
   async function nameSpeichern() {
@@ -276,6 +280,7 @@ export default function Konto() {
               <label className="feld">
                 <span>Code aus der Mail</span>
                 <input
+                  ref={codeFeld}
                   required
                   inputMode="numeric"
                   autoComplete="one-time-code"
@@ -308,7 +313,14 @@ export default function Konto() {
               </label>
             </div>
             <div className="knopfpaar">
-              <button type="button" title="Das neue Passwort speichern" onClick={() => void speichern()} disabled={arbeitet}>
+              <button
+                type="button"
+                // Gruen, sobald alles eingetragen ist: dann fehlt nur noch das Speichern
+                className={code.trim() && neu && wiederholt ? 'faellig' : undefined}
+                title="Das neue Passwort speichern"
+                onClick={() => void speichern()}
+                disabled={arbeitet}
+              >
                 {arbeitet ? 'Wird gespeichert …' : 'Passwort speichern'}
               </button>
               <button type="button" title="Einen neuen Code anfordern" onClick={() => void codeAnfordern()} disabled={arbeitet}>
