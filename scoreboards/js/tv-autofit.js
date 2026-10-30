@@ -39,5 +39,28 @@ export function startTvAutofit(stage, getOverscan) {
 
   window.addEventListener('resize', fit);
   fit();
+  zeigerAusblenden();
   return fit;
+}
+
+/* Mauszeiger nach 3 s ohne Bewegung ausblenden. Auf dem Kiosk-TV setzt der
+   Compositor (z. B. labwc auf dem Pi) den Zeiger in die Bildmitte, auch ohne
+   angeschlossene Maus. Bei Bewegung erscheint er wieder. */
+const ZEIGER_PAUSE_MS = 3000;
+let zeigerAktiv = false;
+
+function zeigerAusblenden() {
+  if (zeigerAktiv) return;
+  zeigerAktiv = true;
+  const stil = document.createElement('style');
+  stil.textContent = 'html.tv-ohne-zeiger, html.tv-ohne-zeiger * { cursor: none !important; }';
+  document.head.appendChild(stil);
+  let timer = 0;
+  function bewegt() {
+    document.documentElement.classList.remove('tv-ohne-zeiger');
+    clearTimeout(timer);
+    timer = setTimeout(() => document.documentElement.classList.add('tv-ohne-zeiger'), ZEIGER_PAUSE_MS);
+  }
+  window.addEventListener('mousemove', bewegt, { passive: true });
+  bewegt();
 }

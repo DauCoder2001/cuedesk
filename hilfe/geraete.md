@@ -33,6 +33,8 @@ War das Tablet vorher schon in Safari gekoppelt, steht es unter **Geräte** zwei
 
 Genauso wie ein Tablet, nur statt eines Tisches **Fernseher (TV-Ansicht)** wählen. Der Fernseher zeigt dann „Fernseher“ und öffnet nach 5 Sekunden von selbst die TV-Ansicht mit allen Tischen. Mit **Hier bleiben** lässt sich das anhalten.
 
+Auf allen TV-Seiten verschwindet der Mauszeiger, wenn sich die Maus 3 Sekunden lang nicht bewegt. So steht auf einem Fernseher ohne Maus kein Zeiger mitten im Bild. Sobald die Maus bewegt wird, ist er wieder da.
+
 Was der Fernseher während eines Turniers zeigt (**Auslosung**, **Live-Tische**, bei 3 oder 5 Tischen **Live + Nächste**, **Nächste Spiele**, bei Gruppenturnieren **Gruppenstand** und **Endplätze**, **Ergebnis**), stellst du in der Turnieransicht unter **TV zeigt:** um.
 
 ## 4. Im Betrieb
