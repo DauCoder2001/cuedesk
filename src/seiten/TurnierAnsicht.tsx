@@ -8,6 +8,8 @@ import { prognose, prognoseText } from '../zeitprognose';
 import { berichtDateiname, berichtPdf, gruppenBerichtPdf } from '../turnierbericht';
 import type { BerichtBlock } from '../turnierbericht';
 import { herunterladen } from '../pdf';
+import { DATEI_MODI, dateiBauen, dateiHerunterladen, disziplinText, kennungVon, phaseText } from '../turnier-datei';
+import { VERSION } from '../version';
 import AusschreibungBlock from './AusschreibungBlock';
 import AuslosungTeilen from './AuslosungTeilen';
 import LiveSchalter from './LiveSchalter';
@@ -946,6 +948,41 @@ export default function TurnierAnsicht({
 
   const uhr = (ms: number) => new Date(ms).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
 
+  // Turnier-Datei fuer TurnierPilot oder einen anderen Verein (turnier-datei.ts)
+  function turnierDateiErzeugen() {
+    if (!turnier) return;
+    const gespielt = partien.filter((p) => p.status === 'beendet' && p.ergebnis_a !== null && p.ergebnis_b !== null);
+    dateiHerunterladen(
+      dateiBauen(`CueDesk ${VERSION}`, [
+        {
+          kennung: kennungVon(turnier),
+          name: turnier.name,
+          datum: turnier.datum,
+          disziplin: disziplinText(turnier.disziplin),
+          modus: turnier.modus,
+          teilnehmer: teilnehmer.map((t) => anzeige(t.person_id)),
+          ranking: teilnehmer
+            .filter((t) => t.endplatz !== null)
+            .sort((a, b) => (a.endplatz ?? 0) - (b.endplatz ?? 0))
+            .map((t) => ({ platz: t.endplatz ?? 0, name: anzeige(t.person_id) })),
+          partien: gespielt.map((p) => ({
+            a: anzeige(p.spieler_a),
+            b: anzeige(p.spieler_b),
+            satzA: p.ergebnis_a ?? 0,
+            satzB: p.ergebnis_b ?? 0,
+            vorgabeA: p.vorgabe_a,
+            vorgabeB: p.vorgabe_b,
+            // TurnierPilot braucht Race to; fehlt es, gilt der hoehere Stand
+            raceTo: p.race_to ?? Math.max(p.ergebnis_a ?? 0, p.ergebnis_b ?? 0),
+            phase: phaseText(p.phase, p.gruppe),
+            werten: p.rating_werten,
+            grund: p.rating_grund
+          }))
+        }
+      ])
+    );
+  }
+
   function berichtErzeugen() {
     if (!turnier) return;
     const mitRating = va.aktiv;
@@ -1710,6 +1747,16 @@ export default function TurnierAnsicht({
     await laden();
   }
 
+  // Eingelesene Turniere kommen ohne Rating ins Archiv; hier lassen sie sich
+  // nachtraeglich werten. Das Rating rechnet der naechtliche Lauf neu.
+  async function ratingWertenUmschalten() {
+    if (!turnier) return;
+    const { error } = await supabase.from('turniere').update({ rating_werten: !turnier.rating_werten }).eq('id', turnier.id);
+    if (error) return setFehler(error.message);
+    setMeldung(turnier.rating_werten ? 'Das Turnier zählt nicht mehr fürs Rating.' : 'Das Turnier zählt fürs Rating, ab dem nächtlichen Lauf.');
+    await laden();
+  }
+
   async function wiederOeffnen() {
     if (!turnier) return;
     const imWeg = await andererLaufender(supabase, turnier);
@@ -1913,6 +1960,16 @@ export default function TurnierAnsicht({
                 Turnierbericht (PDF)
               </button>
             )}
+            {turnier.status === 'beendet' && DATEI_MODI.includes(turnier.modus) && (
+              <button type="button" title="Das Turnier mit Endplätzen und allen Partien als Datei für TurnierPilot oder einen anderen Verein herunterladen. Spieler stehen darin nur mit ihren Namen." onClick={turnierDateiErzeugen}>
+                Turnier-Datei herunterladen
+              </button>
+            )}
+            {darfLeiten && turnier.quelle === 'import' && (
+              <button type="button" title={turnier.rating_werten ? 'Nimmt die Partien dieses Turniers aus dem Vereins-Rating.' : 'Lässt die Partien dieses Turniers ins Vereins-Rating eingehen, ab dem nächtlichen Lauf.'} onClick={() => void ratingWertenUmschalten()}>
+                {turnier.rating_werten ? 'Nicht fürs Rating werten' : 'Fürs Rating werten'}
+              </button>
+            )}
             {bearbeitbar && turnier.status === 'laeuft' && (
               <button type="button" title="Beendet das Turnier und sperrt die Ergebnisse. Zählt es fürs Rating, wird das Rating neu berechnet." onClick={() => void abschliessen()} disabled={arbeitet} className={faellig('abschliessen')}>
                 Abschließen
@@ -2008,7 +2065,9 @@ export default function TurnierAnsicht({
             )}
             {!turnier.rating_werten && (
               <p className="hinweis">
-                Keine Partie dieses Turniers zählt fürs Rating. So wurde es beim Anlegen des Turniers festgelegt.
+                {turnier.quelle === 'import'
+                  ? 'Keine Partie dieses Turniers zählt fürs Rating. Mit „Fürs Rating werten“ oben zählen sie ab dem nächtlichen Lauf.'
+                  : 'Keine Partie dieses Turniers zählt fürs Rating. So wurde es beim Anlegen des Turniers festgelegt.'}
               </p>
             )}
             {va.aktiv && turnier.quelle !== 'import' && hinweisKurzesRace && (

@@ -6,6 +6,7 @@ import DoppelPlanFelder, { DOPPEL_ZEILEN_STANDARD } from './DoppelPlanFelder';
 import type { DoppelZeile } from './DoppelPlanFelder';
 import TurnierAnsicht from './TurnierAnsicht';
 import TeamvergleichAnsicht from './TeamvergleichAnsicht';
+import TurnierDateiEinlesen from './TurnierDateiEinlesen';
 import Ausschreibungen from './Ausschreibungen';
 import { LIGEN, doppelBegegnungIds, doppelPlanAusEingabe, doppelVon, partnerVon, spieltagStand, zweiteBegegnungIds } from '../liga';
 import type { Ausspielziele, DoppelPartie, LigaKennung } from '../liga';
@@ -138,6 +139,8 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
   const [serien, setSerien] = useState<Serie[]>([]);
   const [offen, setOffen] = useState<string | null>(null);
   const [formular, setFormular] = useState(false);
+  // Turnier-Datei aus TurnierPilot oder einem anderen Verein einlesen
+  const [dateiEinlesen, setDateiEinlesen] = useState(false);
   // Turnier, das im Formular geaendert wird (null: neues Turnier)
   const [bearbeitet, setBearbeitet] = useState<Turnier | null>(null);
   const [rueckfrage, fragen] = useRueckfrage();
@@ -559,46 +562,60 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
         <div className="bearbeitenkopf">
           <h2>Turniere</h2>
           {darfLeiten && !formular && (
-            <button
-              type="button"
-              title="Ein neues Turnier oder einen Liga-Spieltag anlegen"
-              onClick={() => {
-                setBearbeitet(null);
-                // Vorgaben aus der Seite "System"
-                const t = vorgaben.turnier;
-                const race = String(t.raceTo);
-                setDisziplin(t.disziplin);
-                setModus(t.modus);
-                setRaceTo(race);
-                setRacePhase2(race);
-                setRaceKo({ R16: race, QF: race, SF: race, FIN: race, P3: race });
-                setVorgabeAn(t.vorgabe);
-                setStaerke(String(t.staerke ?? ratingStaerke));
-                setObergrenze(String(t.obergrenze));
-                setRatingWerten(t.ratingWerten);
-                setArt(t.art ?? '');
-                setChat(true);
-                setLive(true);
-                setTvZiel(String(TEAM_VORGABE.ziel));
-                setTvRace({ team: '5', doppel: '5', einzel: '5' });
-                setTvTeamA(TEAM_VORGABE.teams.A.name);
-                setTvTeamB(TEAM_VORGABE.teams.B.name);
-                setMitDoppel(false);
-                setDoppelZeilen(DOPPEL_ZEILEN_STANDARD.map((z) => ({ ...z })));
-                setLiga(vorgaben.liga.liga);
-                // Standard-Mannschaft nach Nummer im Mannschaftspass, sonst die erste der Saison
-                const rang = vorgaben.liga.mannschaftRang;
-                const standard = mannschaftenDerSaison.find((m) => m.rang === rang) ?? mannschaftenDerSaison[0];
-                setMannschaftId(standard?.id ?? '');
-                // Wie beim Waehlen: Die Mannschaft bringt ihre Liga mit
-                if (standard?.liga && standard.liga in LIGEN) setLiga(standard.liga as LigaKennung);
-                setFormular(true);
-              }}
-            >
-              Neues Turnier
-            </button>
+            <div className="knopfpaar">
+              <button
+                type="button"
+                title="Ein beendetes Turnier aus TurnierPilot oder einem anderen CueDesk-Verein ins Archiv übernehmen. Erst kommt eine Vorschau."
+                disabled={dateiEinlesen}
+                onClick={() => setDateiEinlesen(true)}
+              >
+                Turnier-Datei einlesen…
+              </button>
+              <button
+                type="button"
+                title="Ein neues Turnier oder einen Liga-Spieltag anlegen"
+                onClick={() => {
+                  setBearbeitet(null);
+                  // Vorgaben aus der Seite "System"
+                  const t = vorgaben.turnier;
+                  const race = String(t.raceTo);
+                  setDisziplin(t.disziplin);
+                  setModus(t.modus);
+                  setRaceTo(race);
+                  setRacePhase2(race);
+                  setRaceKo({ R16: race, QF: race, SF: race, FIN: race, P3: race });
+                  setVorgabeAn(t.vorgabe);
+                  setStaerke(String(t.staerke ?? ratingStaerke));
+                  setObergrenze(String(t.obergrenze));
+                  setRatingWerten(t.ratingWerten);
+                  setArt(t.art ?? '');
+                  setChat(true);
+                  setLive(true);
+                  setTvZiel(String(TEAM_VORGABE.ziel));
+                  setTvRace({ team: '5', doppel: '5', einzel: '5' });
+                  setTvTeamA(TEAM_VORGABE.teams.A.name);
+                  setTvTeamB(TEAM_VORGABE.teams.B.name);
+                  setMitDoppel(false);
+                  setDoppelZeilen(DOPPEL_ZEILEN_STANDARD.map((z) => ({ ...z })));
+                  setLiga(vorgaben.liga.liga);
+                  // Standard-Mannschaft nach Nummer im Mannschaftspass, sonst die erste der Saison
+                  const rang = vorgaben.liga.mannschaftRang;
+                  const standard = mannschaftenDerSaison.find((m) => m.rang === rang) ?? mannschaftenDerSaison[0];
+                  setMannschaftId(standard?.id ?? '');
+                  // Wie beim Waehlen: Die Mannschaft bringt ihre Liga mit
+                  if (standard?.liga && standard.liga in LIGEN) setLiga(standard.liga as LigaKennung);
+                  setFormular(true);
+                }}
+              >
+                Neues Turnier
+              </button>
+            </div>
           )}
         </div>
+
+        {dateiEinlesen && verein && !formular && (
+          <TurnierDateiEinlesen vereinId={verein.id} schliessen={() => setDateiEinlesen(false)} fertig={laden} />
+        )}
 
         {formular && (
           <div className="kasten" ref={pflicht.bereich}>

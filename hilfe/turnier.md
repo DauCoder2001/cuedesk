@@ -59,6 +59,19 @@ Bei **Zwei Gruppen** startest du nach den Gruppenspielen die **Duelle**, bei **G
 1. Sind alle Spiele gespielt, **Abschließen** klicken. Die Ergebnisse werden gesperrt; zählt das Turnier fürs Rating, wird es gleich neu berechnet.
 2. **Turnierbericht (PDF)** erzeugt Tabellen und Platzierungen zum Drucken oder Weitergeben.
 3. Muss noch etwas korrigiert werden, öffnet **Wieder öffnen** das Turnier erneut.
+4. **Turnier-Datei herunterladen** legt das beendete Turnier mit Endplätzen und allen Partien in eine Datei, zum Beispiel für TurnierPilot oder einen anderen Verein. Spieler stehen darin nur mit ihren Namen.
+
+## Turnier-Datei einlesen
+
+Ein Turnier, das mit TurnierPilot oder in einem anderen CueDesk-Verein gespielt wurde, kommt so ins Archiv:
+
+1. Auf der Seite **Turniere** oben rechts **Turnier-Datei einlesen** klicken und die Datei wählen.
+2. Die Vorschau zeigt jedes Turnier der Datei. Schon vorhandene Turniere werden erkannt und übersprungen, auch wenn sie vorher von hier stammten.
+3. Unter den Namen steht, wer daraus wird: ein vorhandener Spieler oder ein neuer Gast. Passt der Vorschlag nicht, den richtigen Spieler wählen.
+4. **Partien fürs Rating werten** ist zunächst aus; dann stehen die Partien nur im Archiv. **Einlesen** schreibt die Turniere.
+5. Das Turnier steht danach in der Liste mit der Marke „aus TurnierPilot“. Im Turnier schaltet **Fürs Rating werten** das Rating nachträglich ein (ab dem nächtlichen Lauf); einer Serie zuordnen geht unter **Serien**.
+
+Übertragen werden Einzelgruppe, Zwei Gruppen und Gruppen mit KO, nicht Liga-Spieltage und Teamvergleiche.
 
 ## Gut zu wissen
 
