@@ -212,6 +212,7 @@ export default function Konto() {
           <div className="knopfpaar">
             <button
               type="button"
+              className={nameGeaendert ? 'faellig' : undefined}
               title="Den Namen speichern"
               onClick={() => void nameSpeichern()}
               disabled={!nameGeaendert || nameArbeitet}
@@ -237,7 +238,7 @@ export default function Konto() {
               Vereins-Administrator.
             </p>
             <div className="knopfpaar">
-              <button type="button" title="Die Bestätigungsmails verschicken" onClick={() => void adresseAendern()} disabled={mailArbeitet}>
+              <button type="button" className={neueAdresse?.includes('@') && mailPflicht.vollstaendig ? 'faellig' : undefined} title="Die Bestätigungsmails verschicken" onClick={() => void adresseAendern()} disabled={mailArbeitet}>
                 {mailArbeitet ? 'Wird geschickt …' : 'Bestätigungsmails schicken'}
               </button>
               <button

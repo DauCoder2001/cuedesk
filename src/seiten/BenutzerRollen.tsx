@@ -269,7 +269,7 @@ export default function BenutzerRollen({ start = null }: { start?: string | null
           <>
             <div className="bearbeitenkopf">
               <h2>Einladen</h2>
-              <button type="button" title="Schickt eine Einladung mit Anmeldelink an diese Adresse." onClick={() => void einladen()} disabled={sendet}>
+              <button type="button" className={email.includes('@') && pflicht.vollstaendig ? 'faellig' : undefined} title="Schickt eine Einladung mit Anmeldelink an diese Adresse." onClick={() => void einladen()} disabled={sendet}>
                 {sendet ? 'Wird verschickt …' : 'Einladung schicken'}
               </button>
             </div>

@@ -60,9 +60,10 @@ export default function Personen({ kontoOeffnen }: { kontoOeffnen?: (kontoId: st
   // Gespeicherter Stand des offenen Spielers, zum Vergleich mit den Eingaben
   const [ursprung, setUrsprung] = useState<unknown>(null);
   const eingetippt = entwurf ? `${entwurf.vorname} ${entwurf.nachname}`.trim() : '';
+  const geaendert = entwurf !== null && darfAendern && weichtAb({ entwurf, intern }, ursprung);
   const wechselErlaubt = useUngespeichert(
     'personen',
-    entwurf !== null && darfAendern && weichtAb({ entwurf, intern }, ursprung),
+    geaendert,
     entwurf?.id ? `„${eingetippt}“` : eingetippt ? `Der neue Spieler „${eingetippt}“` : 'Der neue Spieler',
     () => speichern()
   );
@@ -444,7 +445,7 @@ export default function Personen({ kontoOeffnen }: { kontoOeffnen?: (kontoId: st
               {bearbeitbar && (
                 <div className="knopfpaar">
                   <Pflichthinweis hinweis={pflicht.hinweis} />
-                  <button type="button" title="Änderungen an diesem Spieler speichern" onClick={() => void speichern()}>
+                  <button type="button" className={geaendert && pflicht.vollstaendig ? 'faellig' : undefined} title="Änderungen an diesem Spieler speichern" onClick={() => void speichern()}>
                     Speichern
                   </button>
                 </div>

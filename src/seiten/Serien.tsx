@@ -358,7 +358,7 @@ export default function Serien() {
               </span>
             </label>
             <div className="knopfpaar">
-              <button type="button" title="Die Angaben zur Serie speichern" onClick={() => void speichern()}>
+              <button type="button" className={weichtAb(formular, ursprung) && pflicht.vollstaendig ? 'faellig' : undefined} title="Die Angaben zur Serie speichern" onClick={() => void speichern()}>
                 Speichern
               </button>
               <button

@@ -652,7 +652,7 @@ export default function Konsole() {
                           </span>
                         </label>
                         <div className="knopfpaar">
-                          <button type="button" title="Die Änderungen speichern" onClick={() => void vereinSpeichern()} disabled={arbeitet}>
+                          <button type="button" className={weichtAb(bearbeiten, bearbeitenAus(v)) && bearbeitenPflicht.vollstaendig ? 'faellig' : undefined} title="Die Änderungen speichern" onClick={() => void vereinSpeichern()} disabled={arbeitet}>
                             {arbeitet ? 'Wird gespeichert …' : 'Speichern'}
                           </button>
                           <button

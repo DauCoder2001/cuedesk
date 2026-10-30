@@ -266,7 +266,7 @@ export default function Live() {
           {fehler && <p className="fehler">{fehler}</p>}
           <div className="zeile">
             {offenFrage.art === 'speichern' ? (
-              <button type="button" disabled={arbeitet || !disziplin} onClick={() => void offenErledigen()}>
+              <button type="button" className="hauptaktion" disabled={arbeitet || !disziplin} onClick={() => void offenErledigen()}>
                 Speichern
               </button>
             ) : (

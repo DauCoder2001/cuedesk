@@ -40,6 +40,7 @@ import type { LigaSpiel } from '../liga';
 import type { TurnierEinstellungen } from './Turniere';
 import type { Mannschaft, MannschaftSpieler, Partie, Person, Turnier, TurnierTeilnehmer } from '../datenbank.types';
 import { Modal } from '../modal';
+import { useEtwasUngespeichert } from '../ungespeichert';
 
 // Ein Liga-Spieltag (Begegnung): Aufstellung, acht Einzelpartien, Partie- und
 // Matchpunkte, Abschluss. Die Regeln stehen in src/liga.ts, die Ergebnisse in
@@ -204,6 +205,8 @@ export default function LigaAnsicht({
   const { verein, darf } = useSitzung();
   const darfLeiten = darf('vereinsadmin', 'sportwart', 'turnierleiter');
   const istAdmin = darf('vereinsadmin');
+  // Ungespeicherte Eingaben gehen vor: dann ist Speichern gruen, kein Ablauf-Schritt
+  const ungespeichert = useEtwasUngespeichert();
 
   const [turnier, setTurnier] = useState<Turnier | null>(null);
   // Geladen, aber nicht (mehr) vorhanden - statt endlos "Laedt."
@@ -1148,7 +1151,7 @@ export default function LigaAnsicht({
       );
   const hinGespielt = fertigGespielt(partien.filter((p) => p.runde === 1));
   const naechsterSchritt: 'hin' | 'rueck' | 'abschliessen' | null =
-    turnier?.status === 'beendet' || spiele.length === 0
+    turnier?.status === 'beendet' || spiele.length === 0 || ungespeichert
       ? null
       : !gestartet.hin
         ? aufstellungKomplett('hin') && fehlerAufstellung.length === 0 ? 'hin' : null
@@ -1642,7 +1645,7 @@ export default function LigaAnsicht({
           <DoppelPlanFelder zeilen={planDialog} aendern={setPlanDialog} />
           {fehler && <p className="fehler">{fehler}</p>}
           <div className="zeile">
-            <button type="button" disabled={arbeitet} onClick={() => void planSpeichern()}>
+            <button type="button" className="hauptaktion" disabled={arbeitet} onClick={() => void planSpeichern()}>
               Speichern
             </button>
             <button type="button" disabled={arbeitet} onClick={() => setPlanDialog(null)}>

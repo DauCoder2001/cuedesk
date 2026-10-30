@@ -42,6 +42,19 @@ describe('UI-Regeln', () => {
     expect(ohneOrange).toEqual([]);
   });
 
+  it('Speichern ist im Formular gruen (wenn faellig), im Dialog blau', () => {
+    // Ausnahme: die Auswahl "Behalten / Speichern" beim Status-Wechsel eines Spielers
+    const ohneFarbe: string[] = [];
+    for (const q of quelle) {
+      for (const m of q.text.matchAll(/<button((?:=>|[^>])*)>([^<]*)<\/button>/g)) {
+        if (!/Speichern|speichern'|Anlegen'|Anmelden'|Anmeldelink schicken|Einladung schicken|Bestätigungsmails schicken/.test(m[2])) continue;
+        if (/Behalten|Abmelden/.test(m[2])) continue;
+        if (!/faellig|hauptaktion/.test(m[1])) ohneFarbe.push(`${q.name}: ${m[2].trim()}`);
+      }
+    }
+    expect(ohneFarbe).toEqual([]);
+  });
+
   it('Loeschknoepfe im Kopf stehen abgesetzt', () => {
     // Nicht direkt neben dem naechsten Schritt (Abschliessen, Wieder oeffnen)
     const ohneAbstand: string[] = [];

@@ -196,7 +196,7 @@ export default function SpieltagAendern({
           {gestartet && <p className="fehler">Der Spieltag läuft schon. Ändern geht nur in Vorbereitung.</p>}
           {fehler && <p className="fehler">{fehler}</p>}
           <div className="zeile">
-            <button type="button" disabled={arbeitet || gestartet} onClick={() => void speichern()}>
+            <button type="button" className="hauptaktion" disabled={arbeitet || gestartet} onClick={() => void speichern()}>
               Speichern
             </button>
             <button type="button" disabled={arbeitet} onClick={schliessen}>

@@ -15,6 +15,7 @@ type Wahl = 'speichern' | 'verwerfen' | 'zurueck';
 const Kontext = createContext<{
   melden: (schluessel: string, eintrag: Eintrag | null) => void;
   wechselErlaubt: () => Promise<boolean>;
+  offen: boolean;
 } | null>(null);
 
 // Text der Rueckfrage aus den Beschreibungen der offenen Formulare
@@ -34,6 +35,8 @@ export function UngespeichertBereich({ children }: { children: ReactNode }) {
   const eintraege = useRef(new Map<string, Eintrag>());
   const [frage, setFrage] = useState<string | null>(null);
   const antwort = useRef<((wahl: Wahl) => void) | null>(null);
+  // Gibt es irgendwo ungespeicherte Eingaben? Dann ist Speichern der naechste Schritt
+  const [offen, setOffen] = useState(false);
 
   useEffect(() => {
     const vorDemVerlassen = (e: BeforeUnloadEvent) => {
@@ -48,6 +51,7 @@ export function UngespeichertBereich({ children }: { children: ReactNode }) {
   const melden = useCallback((schluessel: string, eintrag: Eintrag | null) => {
     if (eintrag) eintraege.current.set(schluessel, eintrag);
     else eintraege.current.delete(schluessel);
+    setOffen(eintraege.current.size > 0);
   }, []);
 
   const wechselErlaubt = useCallback(async () => {
@@ -68,13 +72,14 @@ export function UngespeichertBereich({ children }: { children: ReactNode }) {
       }
     }
     eintraege.current.clear();
+    setOffen(false);
     return true;
   }, []);
 
   const waehlen = (wahl: Wahl) => antwort.current?.(wahl);
 
   return (
-    <Kontext.Provider value={{ melden, wechselErlaubt }}>
+    <Kontext.Provider value={{ melden, wechselErlaubt, offen }}>
       {children}
       {frage && (
         <Modal abbrechen={() => waehlen('zurueck')}>
@@ -100,6 +105,12 @@ export function UngespeichertBereich({ children }: { children: ReactNode }) {
 export function useWechsel(): () => Promise<boolean> {
   const k = useContext(Kontext);
   return k?.wechselErlaubt ?? (async () => true);
+}
+
+// Ungespeicherte Eingaben haben Vorrang: Solange es welche gibt, ist kein
+// anderer Ablauf-Schritt gruen (immer nur ein gruener Knopf).
+export function useEtwasUngespeichert(): boolean {
+  return useContext(Kontext)?.offen ?? false;
 }
 
 // Ein Formular meldet sich an, solange `geaendert` gilt. `speichern` muss

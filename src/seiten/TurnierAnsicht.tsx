@@ -28,7 +28,7 @@ import { useLaufendeStaende } from '../laufende-staende';
 import { modusOptionen, modusVorschlag } from '../modus-wahl';
 import type { WaehlbarerModus } from '../modus-wahl';
 import { laufenderStand, laufenderStandText } from '../live';
-import { useWechsel } from '../ungespeichert';
+import { useEtwasUngespeichert, useWechsel } from '../ungespeichert';
 import { angefangen, auslosen, bergerRunden, hoechstwert, rangliste, spielBeendet, spielZaehler, spielZaehlerText } from '../turnier';
 import type { Gleichstand, RanglistenPartie, Zeile } from '../turnier';
 import {
@@ -118,6 +118,8 @@ export default function TurnierAnsicht({
   const wechsel = useWechsel();
   const darfLeiten = darf('vereinsadmin', 'sportwart', 'turnierleiter');
   const istAdmin = darf('vereinsadmin');
+  // Ungespeicherte Eingaben gehen vor: dann ist Speichern gruen, kein Ablauf-Schritt
+  const ungespeichert = useEtwasUngespeichert();
 
   const [turnier, setTurnier] = useState<Turnier | null>(null);
   // Geladen, aber nicht (mehr) vorhanden - statt endlos "Laedt."
@@ -1872,7 +1874,7 @@ export default function TurnierAnsicht({
   // Naechster Schritt gruen hinterlegt (faellig), immer nur einer. Die
   // Platzierungsspiele bei Gruppen mit KO sind freiwillig und bleiben ohne.
   const naechsterSchritt: 'disziplin' | 'modus' | 'auslosen' | 'duelle' | 'ko' | 'abschliessen' | null =
-    !bearbeitbar
+    !bearbeitbar || ungespeichert
       ? null
       : turnier.status === 'geplant'
         ? disziplinOffen && festDisziplin

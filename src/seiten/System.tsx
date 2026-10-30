@@ -177,7 +177,8 @@ export default function System() {
         : null,
     [verein]
   );
-  useUngespeichert('system-verein', weichtAb(formular, gespeichert), 'Die Seite System', () => speichern());
+  const geaendert = weichtAb(formular, gespeichert);
+  useUngespeichert('system-verein', geaendert, 'Die Seite System', () => speichern());
   useUngespeichert('system-schutzwort', `${wort}${wortWieder}` !== '', 'Das neue Schutzwort', () => schutzwortAendern());
 
   const zuruecksetzen = useCallback(() => {
@@ -359,7 +360,7 @@ export default function System() {
           <button type="button" className="gefahrknopf" title="Die Eingaben dieser Seite verwerfen." onClick={() => { zuruecksetzen(); vereinPflicht.zuruecksetzen(); setFehler(null); setMeldung(null); }}>
             Verwerfen
           </button>
-          <button type="button" title="Verein, Vorgaben und Saisonbeginn speichern." onClick={() => void speichern()} disabled={arbeitet}>
+          <button type="button" className={geaendert && vereinPflicht.vollstaendig ? 'faellig' : undefined} title="Verein, Vorgaben und Saisonbeginn speichern." onClick={() => void speichern()} disabled={arbeitet}>
             {arbeitet ? 'Wird gespeichert …' : 'Speichern'}
           </button>
         </div>

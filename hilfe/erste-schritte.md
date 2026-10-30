@@ -44,6 +44,7 @@ Wer vorher mit Turnier light gearbeitet hat, liest dessen Datenbestand unter **S
 
 ## Später wichtig
 
+- **Grüner Knopf**: zeigt den nächsten Schritt, immer nur einen. Hast du etwas geändert, ist es **Speichern** (bzw. **Anlegen**), sobald alle Pflichtfelder ausgefüllt sind; solange etwas ungespeichert ist, wird kein anderer Schritt grün. In Turnier und Liga-Spieltag führt er sonst durch den Ablauf (Auslosen, Abschließen …). Blau ist das Bestätigen in einem Fenster, Rot heißt: Es geht etwas verloren.
 - **Chat**: auf der Seite System einschalten, wenn Mitglieder während eines Turniers schreiben sollen. Beiträge werden 1 Tag nach Turnierende gelöscht.
 - **Support-Zugang**: Braucht der Betreiber von CueDesk Einblick, um zu helfen, gebt ihr ihm hier für einige Tage Lesezugriff. Ändern kann er nichts.
 - **Daten herunterladen**: Alle Vereinsdaten als Datei sichern, zum Beispiel einmal im Monat als eigene Sicherung.

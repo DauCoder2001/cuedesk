@@ -131,6 +131,7 @@ export default function Anmeldung() {
             <label htmlFor="code">Code aus der Mail</label>
             <input
               id="code"
+              autoFocus
               inputMode="numeric"
               autoComplete="one-time-code"
               maxLength={12}
@@ -142,7 +143,7 @@ export default function Anmeldung() {
               }}
             />
             {fehler && <p className="fehler">{fehler}</p>}
-            <button type="submit" title="Mit dem Code aus der E-Mail anmelden" disabled={zustand === 'prueft'}>
+            <button type="submit" className={code.trim() ? 'faellig' : undefined} title="Mit dem Code aus der E-Mail anmelden" disabled={zustand === 'prueft'}>
               {zustand === 'prueft' ? 'Wird geprüft' : 'Anmelden'}
             </button>
             <button
@@ -183,7 +184,7 @@ export default function Anmeldung() {
               }}
             />
             {fehler && <p className="fehler">{fehler}</p>}
-            <button type="submit" title="Mit E-Mail-Adresse und Passwort anmelden" disabled={meldetAn}>
+            <button type="submit" className={email.includes('@') && passwort ? 'faellig' : undefined} title="Mit E-Mail-Adresse und Passwort anmelden" disabled={meldetAn}>
               {meldetAn ? 'Wird geprüft' : 'Anmelden'}
             </button>
             <button type="button" title="Stattdessen einen Anmeldelink per E-Mail bekommen" onClick={() => setArt('link')}>
@@ -209,7 +210,7 @@ export default function Anmeldung() {
               placeholder="z. B. name@beispiel.de"
             />
             {fehler && <p className="fehler">{fehler}</p>}
-            <button type="submit" title="Schickt einen Anmeldelink an diese Adresse" disabled={zustand === 'sendet'}>
+            <button type="submit" className={email.includes('@') ? 'faellig' : undefined} title="Schickt einen Anmeldelink an diese Adresse" disabled={zustand === 'sendet'}>
               {zustand === 'sendet' ? 'Wird gesendet' : 'Anmeldelink schicken'}
             </button>
             <button type="button" title="Mit einem Passwort anmelden, das du unter „Mein Konto“ festgelegt hast" onClick={() => setArt('passwort')}>

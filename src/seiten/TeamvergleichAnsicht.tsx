@@ -16,6 +16,7 @@ import { andererLaufender, laeuftSchonText } from '../laufend';
 import { vereinsEinstellungen } from '../vereinseinstellungen';
 import type { TurnierEinstellungen } from './Turniere';
 import type { Partie, Person, Turnier, TurnierTeilnehmer } from '../datenbank.types';
+import { useEtwasUngespeichert } from '../ungespeichert';
 
 // Teamvergleich (Mosconi-Format). Vorbereitung: Teams zusammenstellen,
 // Kapitaene festlegen, Spielplan vorschlagen lassen, anpassen und uebernehmen.
@@ -50,6 +51,8 @@ export default function TeamvergleichAnsicht({
   zurueckText?: string;
 }) {
   const { verein, darf } = useSitzung();
+  // Ungespeicherte Eingaben gehen vor: dann ist Speichern gruen, kein Ablauf-Schritt
+  const ungespeichert = useEtwasUngespeichert();
   const darfLeiten = darf('vereinsadmin', 'sportwart', 'turnierleiter');
   const [rueckfrage, fragen] = useRueckfrage();
 
@@ -502,7 +505,9 @@ export default function TeamvergleichAnsicht({
   const letzterBlock = partien.reduce((m, p) => Math.max(m, p.runde ?? 1), 0);
   const naechsterBlock = laeuftJetzt && !teamStand.sieger && freigegeben < letzterBlock ? freigegeben + 1 : null;
   // Der naechste Schritt wird gruen hervorgehoben (faellig), immer nur einer
-  const naechsterSchritt: 'vorschlag' | 'uebernehmen' | 'starten' | 'freigeben' | 'abschliessen' | null = vorbereitung
+  const naechsterSchritt: 'vorschlag' | 'uebernehmen' | 'starten' | 'freigeben' | 'abschliessen' | null = ungespeichert
+    ? null
+    : vorbereitung
     ? plan
       ? 'uebernehmen'
       : partien.length > 0 && !planVeraltet

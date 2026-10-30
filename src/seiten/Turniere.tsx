@@ -639,6 +639,7 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
                   </button>
                   <button
                     type="button"
+                    className={weichtAb(formularStand, ursprung) && pflicht.vollstaendig ? 'faellig' : undefined}
                     title={bearbeitet ? 'Die Änderungen speichern und zurück zum Turnier' : 'Legt das Turnier mit diesen Angaben an.'}
                     onClick={() => void anlegen()}
                   >

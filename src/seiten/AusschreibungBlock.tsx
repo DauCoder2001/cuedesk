@@ -73,7 +73,7 @@ export default function AusschreibungBlock({
       <button type="button" className="gefahrknopf" title="Die Angaben der Ausschreibung verwerfen" onClick={() => setEntwurf(gespeichert)}>
         Verwerfen
       </button>
-      <button type="button" title="Die Angaben der Ausschreibung speichern" onClick={() => void sichern()}>
+      <button type="button" className="faellig" title="Die Angaben der Ausschreibung speichern" onClick={() => void sichern()}>
         Speichern
       </button>
     </span>

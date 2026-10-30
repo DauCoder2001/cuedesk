@@ -5,8 +5,9 @@
 // gehoert zu genau einem Formular: `bereich` kommt an das umschliessende
 // Element, `pruefen()` an den Anfang der Absende-Funktion. Leere Pflichtfelder
 // werden dann rot umrandet und neben dem Knopf genannt; `melden()` zeigt dort
-// auch andere Hinweise des Formulars.
-import { useCallback, useRef, useState } from 'react';
+// auch andere Hinweise des Formulars. `vollstaendig` sagt, ob alle
+// Pflichtfelder ausgefuellt sind (fuer den gruenen Absende-Knopf).
+import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 
 // "Adresse (für spätere Vereinsseiten)" -> "Adresse"
 export function feldName(beschriftung: string): string {
@@ -24,6 +25,18 @@ type Feld = HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
 export function usePflicht<T extends HTMLElement = HTMLDivElement>() {
   const bereich = useRef<T>(null);
   const [hinweis, setHinweis] = useState<string | null>(null);
+  const [vollstaendig, setVollstaendig] = useState(false);
+
+  // Nach jedem Zeichnen nachsehen; neu gesetzt wird nur bei einer Aenderung
+  useLayoutEffect(() => {
+    const el = bereich.current;
+    const ok =
+      !el ||
+      ![...el.querySelectorAll<Feld>('input:required, select:required, textarea:required')].some(
+        (f) => !f.disabled && !f.value.trim()
+      );
+    if (ok !== vollstaendig) setVollstaendig(ok);
+  });
 
   const pruefen = useCallback((): boolean => {
     const el = bereich.current;
@@ -52,7 +65,7 @@ export function usePflicht<T extends HTMLElement = HTMLDivElement>() {
     setHinweis(null);
   }, []);
 
-  return { bereich, pruefen, melden, zuruecksetzen, hinweis };
+  return { bereich, pruefen, melden, zuruecksetzen, hinweis, vollstaendig };
 }
 
 // Steht neben dem Absende-Knopf: sonst "* Pflichtfeld", nach einem

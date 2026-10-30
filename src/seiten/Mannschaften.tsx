@@ -435,7 +435,7 @@ export default function Mannschaften() {
               </label>
             </div>
             <div className="knopfpaar">
-              <button type="button" title="Die Angaben zur Mannschaft speichern" onClick={() => void speichern()}>
+              <button type="button" className={weichtAb(formular, ursprung) && pflicht.vollstaendig ? 'faellig' : undefined} title="Die Angaben zur Mannschaft speichern" onClick={() => void speichern()}>
                 Speichern
               </button>
               <button
