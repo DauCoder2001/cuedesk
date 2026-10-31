@@ -13,7 +13,7 @@ import LiveSchalter from './LiveSchalter';
 import ChatSchalter from './ChatSchalter';
 import OeffentlicherLink from './OeffentlicherLink';
 import { andererLaufender, laeuftSchonText } from '../laufend';
-import { vereinsEinstellungen } from '../vereinseinstellungen';
+import { ratingAn, vereinsEinstellungen } from '../vereinseinstellungen';
 import type { TurnierEinstellungen } from './Turniere';
 import type { Partie, Person, Turnier, TurnierTeilnehmer } from '../datenbank.types';
 import { useEtwasUngespeichert } from '../ungespeichert';
@@ -450,7 +450,7 @@ export default function TeamvergleichAnsicht({
       setArbeitet(false);
       return setFehler(error.message);
     }
-    const mitRating = Boolean(tv.einzelFuersRating) && partien.some((p) => p.rating_werten && p.status === 'beendet');
+    const mitRating = ratingAn(verein) && Boolean(tv.einzelFuersRating) && partien.some((p) => p.rating_werten && p.status === 'beendet');
     const rating = mitRating ? await supabase.functions.invoke('rating', { body: { verein_id: turnier.verein_id } }) : null;
     setArbeitet(false);
     setMeldung(
@@ -737,8 +737,8 @@ export default function TeamvergleichAnsicht({
         </div>
         <p className="hinweis">
           {datumLang(turnier.datum)} · {DISZIPLIN_TEXT[turnier.disziplin]} · Teamvergleich · Sieg bei {tv.ziel} Punkten · Race to{' '}
-          {tv.race.team}/{tv.race.doppel}/{tv.race.einzel} (Team-Match/Doppel/Einzel) ·{' '}
-          {tv.einzelFuersRating ? 'Einzel zählen fürs Rating' : 'zählt nicht fürs Rating'}
+          {tv.race.team}/{tv.race.doppel}/{tv.race.einzel} (Team-Match/Doppel/Einzel)
+          {ratingAn(verein) && (tv.einzelFuersRating ? ' · Einzel zählen fürs Rating' : ' · zählt nicht fürs Rating')}
         </p>
         {darfLeiten && !vorbereitung && (
           <div className="zeile">

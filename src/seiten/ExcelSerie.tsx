@@ -14,6 +14,8 @@ import type { Abend, NamensWahl } from '../excel-serie';
 import { abendBlatt } from '../excel-raster';
 import { Modal } from '../modal';
 import { useRueckfrage } from '../rueckfrage';
+import { useSitzung } from '../sitzung';
+import { ratingAn } from '../vereinseinstellungen';
 
 // System -> "Excel-Serie einlesen": Abend-Dateien der alten Excel-Serien
 // (src/excel-serie.ts) als beendete Turniere einer angelegten Serie
@@ -41,6 +43,8 @@ export default function ExcelSerie({ vereinId, schliessen }: { vereinId: string;
   const [zuordnung, setZuordnung] = useState<Record<string, NamensWahl>>({});
   const [vorhanden, setVorhanden] = useState<Set<string>>(new Set());
   const [mitRating, setMitRating] = useState(true);
+  // Ohne Vereins-Rating kein Haken; gewertet wird im Hintergrund wie gewohnt
+  const vereinsRating = ratingAn(useSitzung().verein);
   // Vorhandene importierte Spieltage desselben Tages ersetzen (Korrektur)
   const [ersetzen, setErsetzen] = useState(false);
   const [rueckfrage, fragen] = useRueckfrage();
@@ -311,7 +315,7 @@ export default function ExcelSerie({ vereinId, schliessen }: { vereinId: string;
         partien += zeilen.length;
         melde(`${datumText(e.datum)}: ${teilnehmer.length} Teilnehmer, ${zeilen.length} Partien.`);
       }
-      melde(`Fertig: ${turniere} Spieltage mit ${partien} Partien übernommen.${mitRating && partien > 0 ? ' Das Rating unter Rating mit „Jetzt neu berechnen“ aktualisieren.' : ''}`);
+      melde(`Fertig: ${turniere} Spieltage mit ${partien} Partien übernommen.${vereinsRating && mitRating && partien > 0 ? ' Das Rating unter Rating mit „Jetzt neu berechnen“ aktualisieren.' : ''}`);
       setVorhanden((alt) => new Set([...alt, ...lesbar.map((e) => e.datum)]));
       setFertig(true);
     } catch (e) {
@@ -471,13 +475,15 @@ export default function ExcelSerie({ vereinId, schliessen }: { vereinId: string;
       {lesbar.length > 0 && (
         <section className="block">
           <h2>Übernehmen</h2>
-          <label className="ankreuz">
-            <input type="checkbox" checked={mitRating} onChange={(e) => setMitRating(e.target.checked)} />
-            <span>
-              Partien fürs Rating werten
-              <small>danach unter Rating „Jetzt neu berechnen“</small>
-            </span>
-          </label>
+          {vereinsRating && (
+            <label className="ankreuz">
+              <input type="checkbox" checked={mitRating} onChange={(e) => setMitRating(e.target.checked)} />
+              <span>
+                Partien fürs Rating werten
+                <small>danach unter Rating „Jetzt neu berechnen“</small>
+              </span>
+            </label>
+          )}
           <label className="ankreuz">
             <input type="checkbox" checked={ersetzen} onChange={(e) => setErsetzen(e.target.checked)} />
             <span>

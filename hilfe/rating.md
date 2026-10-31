@@ -1,9 +1,10 @@
 ---
-titel: Vereins-Rating und Ranglisten
+titel: Vereins-Rating
 rollen: alle
-seiten: rating, ranglisten, statistikPool, statistik141, serien
+seiten: rating
 reihenfolge: 60
 anhang: Ausführlich erklärt | vereins-rating-erklaert.pdf
+rating: ja
 ---
 Das Vereins-Rating zeigt die Spielstärke je Disziplin (8-, 9-, 10-Ball und Multi-Ball) als Zahl. Der Vereinsschnitt liegt bei 500; 100 Punkte Unterschied bedeuten die doppelte Chance, ein Rack zu gewinnen. Wie genau gerechnet wird und wie daraus die Vorgabe entsteht, steht im PDF **Ausführlich erklärt** oben rechts.
 
@@ -26,9 +27,6 @@ Die Vereinsleitung kann mit **Jetzt neu berechnen** sofort rechnen lassen, etwa 
 
 Wird ein Turnier **Mit Vorgabe (Handicap)** gespielt, bekommt der schwächere Spieler Sätze Vorsprung. Wie viele, ergibt sich aus dem Unterschied im Rating.
 
-## Ranglisten und Statistik
+## Rating ausschalten
 
-- **Ranglisten**: Siegquote, Bestenliste 14.1 (höchste Serie), Titel aus Turniersiegen und Podestplätzen, Vereinsserien.
-- **Serien**: Punkte aus den Platzierungen mehrerer Turniere, mit Streichergebnissen. Als Disziplin der Serie geht auch „am Spieltag festgelegt“; jedes Turnier zählt dann in seiner gespielten Disziplin fürs Rating, und unter **Turniere der Serie** steht bei jedem seine Disziplin.
-- **Pool-Statistik** und **14.1-Statistik**: Bilanz, Verlauf, Form und Gegner eines Spielers. Mitglieder sehen hier nur sich selbst.
-- **Auswertung und Archiv**: oben der **Saison-Überblick** (Spiele, Spielzeit an den Tischen, Ø Spieldauer, Turniere, aktivster Spieler, beste drei nach Siegen, Spielzeit je Tisch) zur gewählten Saison; „alle Saisons“ zeigt die Gesamtbilanz. Spieldauer gibt es nur für Spiele am Tablet, beim aktivsten und den besten Spielern stehen nur Mitglieder. Darunter alle beendeten Turniere und Partien, mit Filtern und dem direkten Vergleich zweier Spieler.
+Der Vereins-Administrator kann das Vereins-Rating auf der Seite **System** unter **Vereins-Rating** ausschalten. Dann sind die Seite Rating, alle Rating-Spalten, das Handicap und die Haken „fürs Rating“ ausgeblendet, auch dieses Hilfethema. Im Hintergrund wird weiter gewertet und gerechnet; wieder eingeschaltet, ist das Rating sofort vollständig da.

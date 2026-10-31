@@ -31,6 +31,9 @@ export type VereinsEinstellungen = {
   saisonbeginn: number; // Monat 1 bis 12
   // Chat fuer Zuschauer (Stufe 24); der Verein schaltet ihn bewusst ein
   chat: boolean;
+  // Vereins-Rating sichtbar. Aus: alles zum Rating und das Handicap sind
+  // ausgeblendet; gerechnet und gewertet wird im Hintergrund weiter.
+  rating: boolean;
 };
 
 export const STANDARD_EINSTELLUNGEN: VereinsEinstellungen = {
@@ -49,7 +52,8 @@ export const STANDARD_EINSTELLUNGEN: VereinsEinstellungen = {
   turnierarten: [],
   liga: { liga: 'kreisliga', mannschaftRang: null },
   saisonbeginn: 7,
-  chat: false
+  chat: false,
+  rating: true
 };
 
 const DISZIPLINEN: Disziplin[] = ['8-ball', '9-ball', '10-ball'];
@@ -119,8 +123,14 @@ export function vereinsEinstellungen(roh: unknown): VereinsEinstellungen {
       mannschaftRang: ganzeZahl(l.mannschaftRang, 1, 20)
     },
     saisonbeginn: ganzeZahl(e.saisonbeginn, 1, 12) ?? s.saisonbeginn,
-    chat: e.chat === true
+    chat: e.chat === true,
+    rating: e.rating !== false
   };
+}
+
+// Ist das Vereins-Rating sichtbar? Ohne Verein oder Einstellung: ja
+export function ratingAn(verein: { einstellungen?: unknown } | null | undefined): boolean {
+  return vereinsEinstellungen(verein?.einstellungen).rating;
 }
 
 // Kuerzel fuer das Kaestchen oben links, wenn es kein Logo gibt

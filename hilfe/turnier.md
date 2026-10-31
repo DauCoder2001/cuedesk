@@ -13,7 +13,7 @@ Ein Turnier läuft in vier Schritten: anlegen, Teilnehmer eintragen, auslosen, s
    Einzelgruppe (jeder gegen jeden), Zwei Gruppen mit Platzierungsduellen oder Gruppen mit KO-Runde.
 3. **Race to** festlegen. Bei Gruppen mit KO-Runde lässt sich das Race je Runde einstellen.
 4. Bei Bedarf **Mit Vorgabe (Handicap)** anhaken: Der schwächere Spieler startet mit Sätzen Vorsprung, berechnet aus dem Vereins-Rating.
-5. **Zählt für das Vereins-Rating** bleibt normalerweise an. Partien mit Gästen zählen nie.
+5. **Zählt für das Vereins-Rating** bleibt normalerweise an. Partien mit Gästen zählen nie. Hat der Verein das Vereins-Rating ausgeschaltet, fehlen die Punkte 4 und 5.
 6. **Live übertragen** bleibt normalerweise an: Solange das Turnier läuft, sehen Mitglieder und Fernseher die Spielstände aller Tische, auch freie Spiele.
 7. **Anlegen** klicken. Das Turnier öffnet sich.
 

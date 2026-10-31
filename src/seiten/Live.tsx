@@ -1,6 +1,7 @@
 import { useEffect, useState, type CSSProperties } from 'react';
 import { supabase } from '../supabase';
 import { useSitzung } from '../sitzung';
+import { ratingAn } from '../vereinseinstellungen';
 import { KEIN_LIVE_TEXT, dauerText, einzelspielAusStand, kachel, liveAktiv, nichtGespeichert } from '../live';
 import { schutzwortPruefen } from '../schutzwort';
 import { datumText } from '../auskunft';
@@ -246,7 +247,7 @@ export default function Live() {
             <>
               <p>
                 Gespeichert wird als Einzelspiel{offenFrage.k.laeuft ? ', abgebrochen, weil das Race nicht erreicht ist' : ''}.
-                Für das Rating zählt es nicht. Danach ist der Tisch frei.
+                {ratingAn(verein) && 'Für das Rating zählt es nicht. '}Danach ist der Tisch frei.
               </p>
               <div className="felder">
                 <label className="feld s">

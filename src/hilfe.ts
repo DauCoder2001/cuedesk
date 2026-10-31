@@ -26,6 +26,8 @@ export type Thema = {
   // Zusaetzliches Dokument zum Thema, Kopfzeile "anhang: Knopftext | datei.pdf";
   // die Datei liegt in public/hilfe/
   anhang?: { text: string; datei: string };
+  // Kopfzeile "rating: ja": nur sichtbar, wenn der Verein das Vereins-Rating verwendet
+  nurMitRating?: boolean;
   bloecke: Block[];
   roh: string; // Text ohne Kopf, fuer die Suche
 };
@@ -60,6 +62,7 @@ export function themaLesen(dateiname: string, inhalt: string): Thema {
     seiten: liste(kopf.seiten),
     reihenfolge: Number(kopf.reihenfolge) || 999,
     ...(anhangText && anhangDatei ? { anhang: { text: anhangText, datei: anhangDatei } } : {}),
+    ...(kopf.rating === 'ja' ? { nurMitRating: true } : {}),
     bloecke: bloecke(rumpf),
     roh: rumpf
   };
@@ -123,6 +126,11 @@ export const reinText = (t: Teil[]) => t.map((x) => x.text).join('');
 
 export function nachReihenfolge(themen: Thema[]): Thema[] {
   return [...themen].sort((a, b) => a.reihenfolge - b.reihenfolge || a.titel.localeCompare(b.titel, 'de'));
+}
+
+// Themen fuer diesen Verein: ohne Vereins-Rating fehlen die Rating-Themen
+export function themenMitRating(themen: Thema[], rating: boolean): Thema[] {
+  return rating ? themen : themen.filter((t) => !t.nurMitRating);
 }
 
 // Eigene Themen (passend zu den Rollen) zuerst, der Rest unter "Alle Themen"

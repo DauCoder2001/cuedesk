@@ -4,7 +4,7 @@ import { supabase } from '../supabase';
 import { useSitzung } from '../sitzung';
 import { personName } from '../namen';
 import { saisonAus } from '../mannschaften';
-import { vereinsEinstellungen } from '../vereinseinstellungen';
+import { ratingAn, vereinsEinstellungen } from '../vereinseinstellungen';
 import {
   archivFiltern,
   artOptionen,
@@ -54,6 +54,7 @@ async function alleZeilen<T>(abruf: (von: number, bis: number) => PromiseLike<{ 
 
 export default function Archiv() {
   const { verein } = useSitzung();
+  const mitRating = ratingAn(verein);
   const beginn = vereinsEinstellungen(verein?.einstellungen).saisonbeginn;
   const heute = new Date().toISOString().slice(0, 10);
 
@@ -497,7 +498,7 @@ export default function Archiv() {
                     <th className="rechts">Partien</th>
                     <th className="rechts">Siege</th>
                     <th className="rechts">Racks</th>
-                    <th className="rechts">Rating heute</th>
+                    {mitRating && <th className="rechts">Rating heute</th>}
                     <th className="rechts">14.1 GD</th>
                     <th className="rechts">14.1 HS</th>
                   </tr>
@@ -513,11 +514,13 @@ export default function Archiv() {
                         <td className="rechts">{d.partien}</td>
                         <td className="rechts">{paar(d.siegeA, d.siegeB)}</td>
                         <td className="rechts">{ist141 ? '–' : paar(d.racksA, d.racksB)}</td>
-                        <td className="rechts">
-                          {ist141 || (ratingA === undefined && ratingB === undefined)
-                            ? '–'
-                            : paar(ratingA ?? '–', ratingB ?? '–')}
-                        </td>
+                        {mitRating && (
+                          <td className="rechts">
+                            {ist141 || (ratingA === undefined && ratingB === undefined)
+                              ? '–'
+                              : paar(ratingA ?? '–', ratingB ?? '–')}
+                          </td>
+                        )}
                         <td className="rechts">{ist141 ? paar(zahl(d.gdA), zahl(d.gdB)) : '–'}</td>
                         <td className="rechts">{ist141 ? paar(d.hsA ?? '–', d.hsB ?? '–') : '–'}</td>
                       </tr>

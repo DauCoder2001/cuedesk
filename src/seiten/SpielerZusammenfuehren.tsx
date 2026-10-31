@@ -3,6 +3,8 @@ import { supabase } from '../supabase';
 import { personName } from '../namen';
 import { useRueckfrage } from '../rueckfrage';
 import type { Person } from '../datenbank.types';
+import { useSitzung } from '../sitzung';
+import { ratingAn } from '../vereinseinstellungen';
 
 // Spieler -> geoeffneter Spieler -> "Doppelten Eintrag übernehmen": ein
 // zweiter Eintrag derselben Person (z. B. aus einem Import) geht in diesem auf.
@@ -25,6 +27,7 @@ export default function SpielerZusammenfuehren({
   personen: Person[];
   fertig: () => Promise<void> | void;
 }) {
+  const mitRating = ratingAn(useSitzung().verein);
   const [weg, setWeg] = useState('');
   const [umfang, setUmfang] = useState<Umfang | null>(null);
   const [laeuft, setLaeuft] = useState(false);
@@ -87,7 +90,7 @@ export default function SpielerZusammenfuehren({
     const erg = (data ?? {}) as { turniere?: number; partien?: number };
     setMeldung(
       `Zusammengeführt: ${anzahl(erg.turniere ?? 0, 'Turnier', 'Turniere')} und ${anzahl(erg.partien ?? 0, 'Partie', 'Partien')} gehören jetzt zu ${personName(behalten)}. ` +
-        'Danach unter Rating „Jetzt neu berechnen“.'
+        (mitRating ? 'Danach unter Rating „Jetzt neu berechnen“.' : '')
     );
     setWeg('');
     await fertig();

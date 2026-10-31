@@ -18,13 +18,13 @@ import Mannschaften from './seiten/Mannschaften';
 import System from './seiten/System';
 import Konsole from './seiten/Konsole';
 import Konto from './seiten/Konto';
-import { vereinsKuerzel } from './vereinseinstellungen';
+import { ratingAn, vereinsKuerzel } from './vereinseinstellungen';
 import { useWechsel } from './ungespeichert';
 import { VERTRAG_FASSUNG } from './vertraege';
 import Vertragszustimmung from './seiten/Vertragszustimmung';
 import Zuschauen from './seiten/Zuschauen';
 import Hilfe from './seiten/Hilfe';
-import { themaZurSeite, themenFuer } from './hilfe';
+import { themaZurSeite, themenFuer, themenMitRating } from './hilfe';
 import { THEMEN } from './hilfe-texte';
 import { hoechsteRolle } from './rollen';
 
@@ -133,8 +133,9 @@ export default function App() {
     if (von === 'hilfe') return;
     void (async () => {
       if (!(await wechselErlaubt())) return;
-      const eigene = themenFuer(THEMEN, rollen, istSuperAdmin).eigene;
-      setHilfeThema(themaZurSeite(THEMEN, von, eigene)?.id ?? null);
+      const themen = themenMitRating(THEMEN, ratingAn(verein));
+      const eigene = themenFuer(themen, rollen, istSuperAdmin).eigene;
+      setHilfeThema(themaZurSeite(themen, von, eigene)?.id ?? null);
       setBereich('hilfe');
     })();
   };
@@ -214,7 +215,8 @@ export default function App() {
     {
       wert: 'rating',
       name: 'Rating',
-      sichtbar: true,
+      // Der Verein kann das Vereins-Rating auf der Seite System ausschalten
+      sichtbar: ratingAn(verein),
       tipp: 'Vereins-Rating je Disziplin. Die Lupe zeigt, welche Partien in den Wert eines Spielers eingegangen sind.'
     },
     {
@@ -233,7 +235,9 @@ export default function App() {
       wert: 'statistikPool',
       name: 'Pool-Statistik',
       sichtbar: true,
-      tipp: 'Bilanz, Rating-Verlauf, Form und Gegner eines Spielers in 8-, 9- und 10-Ball. Mitglieder sehen nur sich selbst.'
+      tipp: ratingAn(verein)
+        ? 'Bilanz, Rating-Verlauf, Form und Gegner eines Spielers in 8-, 9- und 10-Ball. Mitglieder sehen nur sich selbst.'
+        : 'Bilanz, Form und Gegner eines Spielers in 8-, 9- und 10-Ball. Mitglieder sehen nur sich selbst.'
     },
     {
       wert: 'statistik141',
@@ -257,7 +261,7 @@ export default function App() {
       wert: 'system',
       name: 'System',
       sichtbar: darf('vereinsadmin'),
-      tipp: 'Einstellungen des Vereins: Name und Logo, Vorgaben für neue Turniere und Liga-Spieltage, Saisonbeginn, Schutzwort, Daten herunterladen und einlesen.'
+      tipp: 'Einstellungen des Vereins: Name und Logo, Vorgaben für neue Turniere und Liga-Spieltage, Saisonbeginn, Schutzwort, Vereins-Rating an oder aus, Daten herunterladen und einlesen.'
     },
     // Ganz hinten: gilt fuer ganz CueDesk, nicht fuer den Verein
     {
@@ -412,7 +416,7 @@ export default function App() {
         {angezeigt === 'turniere' && <Turniere hervorheben={startAnmeldung} />}
         {angezeigt === 'mannschaften' && <Mannschaften />}
         {angezeigt === 'personen' && <Personen kontoOeffnen={kontoOeffnen} />}
-        {angezeigt === 'rating' && <Rating />}
+        {angezeigt === 'rating' && ratingAn(verein) && <Rating />}
         {angezeigt === 'serien' && <Serien />}
         {angezeigt === 'ranglisten' && <Ranglisten />}
         {angezeigt === 'archiv' && <Archiv />}

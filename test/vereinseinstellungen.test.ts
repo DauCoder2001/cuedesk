@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { STANDARD_EINSTELLUNGEN, turnierartFehler, vereinsEinstellungen, vereinsKuerzel } from '../src/vereinseinstellungen';
+import { STANDARD_EINSTELLUNGEN, ratingAn, turnierartFehler, vereinsEinstellungen, vereinsKuerzel } from '../src/vereinseinstellungen';
 import { saisonAus, saisonListe } from '../src/mannschaften';
 
 describe('Vereinseinstellungen', () => {
@@ -41,6 +41,14 @@ describe('Vereinseinstellungen', () => {
     expect(STANDARD_EINSTELLUNGEN.chat).toBe(false);
     expect(vereinsEinstellungen({ chat: true }).chat).toBe(true);
     expect(vereinsEinstellungen({ chat: 'ja' }).chat).toBe(false);
+  });
+
+  test('Vereins-Rating ist an, solange es nicht ausdruecklich aus ist', () => {
+    expect(STANDARD_EINSTELLUNGEN.rating).toBe(true);
+    expect(vereinsEinstellungen({ rating: false }).rating).toBe(false);
+    expect(vereinsEinstellungen({ rating: 'nein' }).rating).toBe(true);
+    expect(ratingAn(null)).toBe(true);
+    expect(ratingAn({ einstellungen: { rating: false } })).toBe(false);
   });
 
   test('unbrauchbare Werte fallen auf den Standard zurueck', () => {

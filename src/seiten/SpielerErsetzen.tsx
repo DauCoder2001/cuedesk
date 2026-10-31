@@ -3,6 +3,8 @@ import { supabase } from '../supabase';
 import { personName } from '../namen';
 import { useRueckfrage } from '../rueckfrage';
 import type { Person } from '../datenbank.types';
+import { useSitzung } from '../sitzung';
+import { ratingAn } from '../vereinseinstellungen';
 
 // Korrektur importierter Spieltage (quelle 'import', beendet): einen falsch
 // zugeordneten Spieler durch den richtigen ersetzen - Teilnahme mit Endplatz
@@ -30,6 +32,7 @@ export default function SpielerErsetzen({
   anzeige: (id: string) => string;
   fertig: () => Promise<void> | void;
 }) {
+  const mitRating = ratingAn(useSitzung().verein);
   const [alt, setAlt] = useState('');
   const [neu, setNeu] = useState('');
   const [laeuft, setLaeuft] = useState(false);
@@ -58,7 +61,7 @@ export default function SpielerErsetzen({
       if (b.error) throw new Error(b.error.message);
       const { error } = await supabase.from('turnier_teilnehmer').update({ person_id: neu }).eq('turnier_id', turnierId).eq('person_id', alt);
       if (error) throw new Error(error.message);
-      setMeldung(`Ersetzt: ${anzeige(alt)} → ${neuName}. Danach unter Rating „Jetzt neu berechnen“.`);
+      setMeldung(`Ersetzt: ${anzeige(alt)} → ${neuName}.${mitRating ? ' Danach unter Rating „Jetzt neu berechnen“.' : ''}`);
       setAlt('');
       setNeu('');
       await fertig();

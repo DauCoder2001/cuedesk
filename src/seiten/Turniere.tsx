@@ -13,7 +13,7 @@ import type { Ausspielziele, DoppelPartie, LigaKennung } from '../liga';
 import type { Ausschreibung } from '../ausschreibung';
 import { saisonAus } from '../mannschaften';
 import { importMarke } from '../importquelle';
-import { vereinsEinstellungen } from '../vereinseinstellungen';
+import { ratingAn, vereinsEinstellungen } from '../vereinseinstellungen';
 import { kurzesRaceHinweis } from '../vorgabe';
 import { Pflichthinweis, usePflicht } from '../pflicht';
 import { useUngespeichert, weichtAb } from '../ungespeichert';
@@ -134,6 +134,8 @@ const heute = () => new Date().toISOString().slice(0, 10);
 export default function Turniere({ hervorheben }: { hervorheben?: string | null }) {
   const { verein, darf } = useSitzung();
   const darfLeiten = darf('vereinsadmin', 'sportwart', 'turnierleiter');
+  // Ohne Vereins-Rating: kein Handicap, Rating-Haken ausgeblendet (gewertet wird weiter)
+  const mitRating = ratingAn(verein);
 
   const [turniere, setTurniere] = useState<Turnier[]>([]);
   const [serien, setSerien] = useState<Serie[]>([]);
@@ -326,7 +328,7 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
         : {}),
       vorgabe: {
         // In der Liga wird ohne Vorgabe gespielt (Ausschreibung, Abschnitt Modus)
-        aktiv: modus === 'liga' || istTeam ? false : vorgabeAn,
+        aktiv: modus === 'liga' || istTeam || !mitRating ? false : vorgabeAn,
         staerke: Math.min(100, Math.max(0, Number(staerke) || 0)),
         obergrenze: Math.max(0, Number(obergrenze) || 0)
       },
@@ -864,7 +866,7 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
                 {mitDoppel && <DoppelPlanFelder zeilen={doppelZeilen} aendern={setDoppelZeilen} />}
               </>
             )}
-            {modus !== 'liga' && !istTeam && (
+            {mitRating && modus !== 'liga' && !istTeam && (
             <label className="ankreuz">
               <input type="checkbox" checked={vorgabeAn} onChange={(e) => setVorgabeAn(e.target.checked)} />
               <span>
@@ -873,7 +875,7 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
               </span>
             </label>
             )}
-            {vorgabeAn && modus !== 'liga' && !istTeam && (
+            {mitRating && vorgabeAn && modus !== 'liga' && !istTeam && (
               <div className="felder">
                 <label className="feld">
                   <span>Ausgleich in Prozent</span>
@@ -885,7 +887,8 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
                 </label>
               </div>
             )}
-            {vorgabeAn && modus !== 'liga' && !istTeam && hinweisKurzesRace && <p className="hinweis">{hinweisKurzesRace}</p>}
+            {mitRating && vorgabeAn && modus !== 'liga' && !istTeam && hinweisKurzesRace && <p className="hinweis">{hinweisKurzesRace}</p>}
+            {mitRating && (
             <label className="ankreuz">
               <input type="checkbox" checked={ratingWerten} onChange={(e) => setRatingWerten(e.target.checked)} />
               <span>
@@ -899,6 +902,7 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
                 </small>
               </span>
             </label>
+            )}
             <label className="ankreuz">
               <input type="checkbox" checked={live} onChange={(e) => setLive(e.target.checked)} />
               <span>

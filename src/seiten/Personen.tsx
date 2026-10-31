@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../supabase';
 import { useSitzung } from '../sitzung';
+import { ratingAn } from '../vereinseinstellungen';
 import type { Person, PersonIntern, PersonenStatus } from '../datenbank.types';
 import { personName, kuerzelAus } from '../namen';
 import { useRueckfrage } from '../rueckfrage';
@@ -38,6 +39,7 @@ const STATUS_TEXT: Record<PersonenStatus, string> = {
 
 export default function Personen({ kontoOeffnen }: { kontoOeffnen?: (kontoId: string) => void }) {
   const { verein, darf, benutzer: ichSelbst } = useSitzung();
+  const mitRating = ratingAn(verein);
   const [rueckfrage, fragen] = useRueckfrage();
   const [kontoFrage, setKontoFrage] = useState<KontoFrage | null>(null);
   const darfSehen = darf('vereinsadmin', 'sportwart', 'turnierleiter');
@@ -530,6 +532,7 @@ export default function Personen({ kontoOeffnen }: { kontoOeffnen?: (kontoId: st
                       onChange={(e) => setIntern({ ...intern, austritt: e.target.value || null })}
                     />
                   </Feld>
+                  {mitRating && (
                   <Feld beschriftung="Rating-Startwert" breite="s">
                     <input
                       type="number"
@@ -546,6 +549,7 @@ export default function Personen({ kontoOeffnen }: { kontoOeffnen?: (kontoId: st
                       }
                     />
                   </Feld>
+                  )}
                   <Feld beschriftung="Pass-Nr. (BLVN)">
                     <input
                       value={intern.passnummer ?? ''}

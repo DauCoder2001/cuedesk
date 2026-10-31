@@ -28,7 +28,7 @@ import LiveSchalter from './LiveSchalter';
 import ChatSchalter from './ChatSchalter';
 import OeffentlicherLink from './OeffentlicherLink';
 import { andererLaufender, laeuftSchonText } from '../laufend';
-import { vereinsEinstellungen } from '../vereinseinstellungen';
+import { ratingAn, vereinsEinstellungen } from '../vereinseinstellungen';
 import ZuruecksetzenDialog from './ZuruecksetzenDialog';
 import { useLaufendeStaende } from '../laufende-staende';
 import { laufenderStand, laufenderStandText } from '../live';
@@ -205,6 +205,8 @@ export default function LigaAnsicht({
   const { verein, darf } = useSitzung();
   const darfLeiten = darf('vereinsadmin', 'sportwart', 'turnierleiter');
   const istAdmin = darf('vereinsadmin');
+  // Ohne Vereins-Rating: kein Rating-Schalter, keine Rating-Haken und -Hinweise
+  const mitRating = ratingAn(verein);
   // Ungespeicherte Eingaben gehen vor: dann ist Speichern gruen, kein Ablauf-Schritt
   const ungespeichert = useEtwasUngespeichert();
 
@@ -926,10 +928,10 @@ export default function LigaAnsicht({
     // Andere Begegnungen noch nicht angelegt oder schon fertig: dann ist das hier der Schluss
     const letzte = teile.filter((x) => x.id !== turnier.id).every((x) => x.status === 'beendet');
     const zusatz = letzte
-      ? turnier.rating_werten
+      ? mitRating && turnier.rating_werten
         ? '\nDamit ist der Spieltag komplett, das Rating wird neu berechnet.'
         : '\nDamit ist der Spieltag komplett.'
-      : turnier.rating_werten
+      : mitRating && turnier.rating_werten
         ? '\nDie Ergebnisse sind danach gesperrt. Ins Rating gehen sie beim nächtlichen Lauf ein, sofort erst mit dem Abschluss der anderen Begegnung.'
         : '\nDie Ergebnisse sind danach gesperrt.';
     if (!(await fragen(`${name} abschließen?${zusatz}`, 'Abschließen'))) return;
@@ -944,16 +946,16 @@ export default function LigaAnsicht({
     if (!letzte) {
       setArbeitet(false);
       setMeldung(
-        turnier.rating_werten
+        mitRating && turnier.rating_werten
           ? `${name} abgeschlossen. Ins Rating gehen die Ergebnisse heute Nacht ein, sofort erst mit dem Abschluss der anderen Begegnung.`
           : `${name} abgeschlossen.`
       );
       await laden();
       return;
     }
-    if (!turnier.rating_werten) {
+    if (!mitRating || !turnier.rating_werten) {
       setArbeitet(false);
-      setMeldung('Spieltag abgeschlossen. Er zählt nicht fürs Rating.');
+      setMeldung(mitRating ? 'Spieltag abgeschlossen. Er zählt nicht fürs Rating.' : 'Spieltag abgeschlossen.');
       await laden();
       return;
     }
@@ -1071,7 +1073,7 @@ export default function LigaAnsicht({
         ? (mitErgebnis === 1
             ? 'Achtung: In dieser Begegnung steht schon 1 Ergebnis. Es geht verloren.'
             : `Achtung: In dieser Begegnung stehen schon ${mitErgebnis} Ergebnisse. Sie gehen verloren.`) +
-          `${turnier.rating_werten ? ' Das Vereins-Rating wird heute Nacht ohne sie neu berechnet.' : ''}\n\n`
+          `${mitRating && turnier.rating_werten ? ' Das Vereins-Rating wird heute Nacht ohne sie neu berechnet.' : ''}\n\n`
         : '';
     const frage =
       `${warnung}Inhalt der ${begegnungName} löschen? Aufstellung, Partien und Ergebnisse werden entfernt, bei 14.1 auch das Aufnahme-Protokoll. ` +
@@ -1118,7 +1120,7 @@ export default function LigaAnsicht({
       .join('\n');
     const frage =
       `Den ganzen Spieltag „${spieltagName(turnier.name)}“ löschen? Das lässt sich nicht rückgängig machen.\n\n${zeilen}` +
-      (turnier.rating_werten ? '\n\nDas Vereins-Rating wird heute Nacht ohne diese Partien neu berechnet.' : '');
+      (mitRating && turnier.rating_werten ? '\n\nDas Vereins-Rating wird heute Nacht ohne diese Partien neu berechnet.' : '');
     if (!(await fragen(frage, 'Spieltag löschen', { schutzwort: verein.id }))) return;
     setArbeitet(true);
     const { error } = await supabase.from('turniere').delete().in('id', ids);
@@ -1234,11 +1236,11 @@ export default function LigaAnsicht({
             </p>
             {istDoppel && (
               <p className="hinweis">
-                Doppel zählen nicht fürs Rating und nicht in die Bilanz der Mannschaft. Partie- und Matchpunkte stehen nur
-                hier.
+                Doppel zählen nicht {mitRating ? 'fürs Rating und nicht ' : ''}in die Bilanz der Mannschaft. Partie- und
+                Matchpunkte stehen nur hier.
               </p>
             )}
-            {!turnier.rating_werten && !istDoppel && (
+            {mitRating && !turnier.rating_werten && !istDoppel && (
               <p className="hinweis">
                 Keine Partie dieses Spieltags zählt fürs Rating. Mit „Fürs Rating werten“ zählen die Partien, die rechts
                 angehakt sind.
@@ -1262,7 +1264,7 @@ export default function LigaAnsicht({
                 Spielbericht einlesen…
               </button>
             )}
-            {bearbeitbar && !istDoppel && (
+            {mitRating && bearbeitbar && !istDoppel && (
               <button type="button" title={turnier.rating_werten ? 'Nimmt die Partien dieses Spieltags aus dem Vereins-Rating.' : 'Lässt die Pool-Partien dieses Spieltags ins Vereins-Rating eingehen.'} onClick={() => void ratingUmschalten()}>
                 {turnier.rating_werten ? 'Nicht fürs Rating werten' : 'Fürs Rating werten'}
               </button>
@@ -1287,7 +1289,11 @@ export default function LigaAnsicht({
                 type="button"
                 // Gruen, sobald alle Partien gespielt sind: nur das Abschliessen fehlt noch
                 className={naechsterSchritt === 'abschliessen' ? 'faellig' : undefined}
-                title="Beendet diese Begegnung und sperrt ihre Ergebnisse. Ist die andere Begegnung schon abgeschlossen, wird das Rating sofort neu berechnet."
+                title={
+                  mitRating
+                    ? 'Beendet diese Begegnung und sperrt ihre Ergebnisse. Ist die andere Begegnung schon abgeschlossen, wird das Rating sofort neu berechnet.'
+                    : 'Beendet diese Begegnung und sperrt ihre Ergebnisse.'
+                }
                 onClick={() => void abschliessen()}
                 disabled={arbeitet}
               >
@@ -1553,6 +1559,7 @@ export default function LigaAnsicht({
                         return stand && t ? laufenderStandText(stand, tischNummern.get(t.tischId) ?? null) : null;
                       })()}
                       spieltagWertet={turnier.rating_werten}
+                      mitRating={mitRating}
                     />
                   );
                 })}
@@ -1612,7 +1619,7 @@ export default function LigaAnsicht({
           </div>
           <p className="hinweis">
             Der Name bekommt die Mannschaft angehängt, zum Beispiel „Meier ({liga.gegner})“. Gäste stehen in keiner
-            Rangliste, ihre Stärke zählt aber für das Rating deiner Spieler.
+            Rangliste{mitRating ? ', ihre Stärke zählt aber für das Rating deiner Spieler' : ''}.
           </p>
         </section>
       )}
@@ -1621,7 +1628,8 @@ export default function LigaAnsicht({
           <h2>Doppel-Begegnung hinzufügen</h2>
           <p>
             Sie wird als 2. Begegnung im Doppel gespielt, mit demselben Gegner und Heimrecht wie die 1. Begegnung. Die
-            bisherige 2. Begegnung wird zur 3. Doppel zählen nicht fürs Rating und nicht in die Bilanz der Mannschaft.
+            bisherige 2. Begegnung wird zur 3. Doppel zählen nicht {mitRating ? 'fürs Rating und nicht ' : ''}in die Bilanz der
+            Mannschaft.
           </p>
           <DoppelPlanFelder zeilen={doppelDialog} aendern={setDoppelDialog} />
           {fehler && <p className="fehler">{fehler}</p>}
@@ -1785,6 +1793,7 @@ function Spielzeile(props: {
   zuruecksetzen?: () => void;
   laufend: string | null; // laufender Stand am Tisch ("● Tisch 1 · 14 : 28 · Aufn. 1"), nur zum Ansehen
   spieltagWertet: boolean; // Schalter "Fürs Rating werten" des Spieltags
+  mitRating: boolean; // ohne Vereins-Rating keine Rating-Haken
 }) {
   const { spiel, partie } = props;
   const wert = (w: number | null | undefined) => (w === null || w === undefined ? '' : String(w));
@@ -1921,7 +1930,7 @@ function Spielzeile(props: {
             </span>{' '}
           </>
         )}
-        {props.doppel ? (
+        {!props.mitRating ? null : props.doppel ? (
           <span className="hinweis" title="Doppel gehen nie ins Rating ein">
             Doppel: kein Rating
           </span>

@@ -7,6 +7,7 @@ import { ratingVerlauf, statistikPool } from '../statistik-pool';
 import { DISZIPLIN_TEXT } from './Turniere';
 import type { PoolBilanz, PoolPartie, PoolZeile, VerlaufPunkt } from '../statistik-pool';
 import type { RatingPartie } from '../rating';
+import { ratingAn } from '../vereinseinstellungen';
 import type { Disziplin, Person, Serie } from '../datenbank.types';
 
 // Pool-Statistik einer Person: Bilanz aus den Partieergebnissen, Rating-
@@ -38,6 +39,8 @@ type TurnierZeile = { id: string; name: string; datum: string; serie_id: string 
 
 export default function StatistikPool() {
   const { sitzung, verein, darf } = useSitzung();
+  // Ohne Vereins-Rating: kein Rating, kein Verlauf, keine Erwartung aus dem Rating
+  const mitRating = ratingAn(verein);
   const alleSehen = darf('vereinsadmin', 'sportwart', 'turnierleiter');
 
   const [personen, setPersonen] = useState<Person[]>([]);
@@ -313,11 +316,13 @@ export default function StatistikPool() {
         <>
           <section className="block">
             <div className="kennzahlen">
-              <div>
-                <span>Rating {disziplin === 'alle' ? 'gesamt' : DISZIPLIN_TEXT[disziplin]}</span>
-                <strong>{ratingJetzt ?? '–'}</strong>
-                <small>{ratingStichtag ? `Stand vom ${datumKurz(ratingStichtag)}` : 'noch nicht berechnet'}</small>
-              </div>
+              {mitRating && (
+                <div>
+                  <span>Rating {disziplin === 'alle' ? 'gesamt' : DISZIPLIN_TEXT[disziplin]}</span>
+                  <strong>{ratingJetzt ?? '–'}</strong>
+                  <small>{ratingStichtag ? `Stand vom ${datumKurz(ratingStichtag)}` : 'noch nicht berechnet'}</small>
+                </div>
+              )}
               <div>
                 <span>Partien</span>
                 <strong>
@@ -332,26 +337,30 @@ export default function StatistikPool() {
                 </strong>
                 <small>{prozent(werte.gesamt.rackquote)}</small>
               </div>
-              <div>
-                <span>Gegen Erwartung</span>
-                <strong>{mitVorzeichen(werte.gesamt.gegenErwartung)}</strong>
-                <small>Racks gegenüber dem Rating</small>
-              </div>
+              {mitRating && (
+                <div>
+                  <span>Gegen Erwartung</span>
+                  <strong>{mitVorzeichen(werte.gesamt.gegenErwartung)}</strong>
+                  <small>Racks gegenüber dem Rating</small>
+                </div>
+              )}
             </div>
             <p className="hinweis">
               Gezählt werden Turnierpartien und Einzelspiele, auch gegen Gäste. Vorgabesätze zählen nicht als eigene
-              Leistung. Erwartet werden die Racks, die das Rating beider Spieler vorhersagt.
+              Leistung.{mitRating && ' Erwartet werden die Racks, die das Rating beider Spieler vorhersagt.'}
             </p>
           </section>
 
           <div className="turnierzweier">
-            <section className="block">
-              <h2>Rating-Verlauf</h2>
-              <Verlaufsbild punkte={verlauf} />
-              <p className="hinweis">
-                Ein Punkt je Spieltag, nachgerechnet wie das Vereins-Rating. Gäste und Einzelspiele zählen dabei nicht.
-              </p>
-            </section>
+            {mitRating && (
+              <section className="block">
+                <h2>Rating-Verlauf</h2>
+                <Verlaufsbild punkte={verlauf} />
+                <p className="hinweis">
+                  Ein Punkt je Spieltag, nachgerechnet wie das Vereins-Rating. Gäste und Einzelspiele zählen dabei nicht.
+                </p>
+              </section>
+            )}
 
             <section className="block">
               <h2>Form</h2>
@@ -386,12 +395,13 @@ export default function StatistikPool() {
             <Bilanztabelle
               zeilen={werte.jeDisziplin.map((d) => ({ name: DISZIPLIN_TEXT[d.disziplin as Disziplin] ?? d.disziplin, bilanz: d }))}
               erste="Disziplin"
+              mitRating={mitRating}
             />
           </section>
 
           <section className="block">
             <h2>Bilanz gegen Gegner</h2>
-            <Bilanztabelle zeilen={werte.gegner.map((g) => ({ name: g.name, bilanz: g }))} erste="Gegner" />
+            <Bilanztabelle zeilen={werte.gegner.map((g) => ({ name: g.name, bilanz: g }))} erste="Gegner" mitRating={mitRating} />
           </section>
 
           <section className="block">
@@ -404,7 +414,15 @@ export default function StatistikPool() {
   );
 }
 
-function Bilanztabelle({ zeilen, erste }: { zeilen: { name: string; bilanz: PoolBilanz }[]; erste: string }) {
+function Bilanztabelle({
+  zeilen,
+  erste,
+  mitRating
+}: {
+  zeilen: { name: string; bilanz: PoolBilanz }[];
+  erste: string;
+  mitRating: boolean; // Spalte "Gegen Erwartung" nur mit Vereins-Rating
+}) {
   return (
     <table className="tabelle kompakt">
       <thead>
@@ -414,7 +432,7 @@ function Bilanztabelle({ zeilen, erste }: { zeilen: { name: string; bilanz: Pool
           <th className="rechts">S : N</th>
           <th className="rechts">Siegquote</th>
           <th className="rechts">Racks</th>
-          <th className="rechts">Gegen Erwartung</th>
+          {mitRating && <th className="rechts">Gegen Erwartung</th>}
         </tr>
       </thead>
       <tbody>
@@ -429,7 +447,7 @@ function Bilanztabelle({ zeilen, erste }: { zeilen: { name: string; bilanz: Pool
             <td className="rechts">
               {z.bilanz.eigene} : {z.bilanz.fremde}
             </td>
-            <td className="rechts">{mitVorzeichen(z.bilanz.gegenErwartung)}</td>
+            {mitRating && <td className="rechts">{mitVorzeichen(z.bilanz.gegenErwartung)}</td>}
           </tr>
         ))}
       </tbody>

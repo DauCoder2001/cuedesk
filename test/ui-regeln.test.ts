@@ -55,6 +55,20 @@ describe('UI-Regeln', () => {
     expect(ohneFarbe).toEqual([]);
   });
 
+  it('Rating und Handicap erscheinen nur mit Vereins-Rating', () => {
+    // Ausnahmen: die Seite Rating (nur im Menue, wenn an), der Schalter selbst,
+    // ein Prop von aussen, Auskunft ueber gespeicherte Daten, Konsole und Datenimport
+    const ausnahmen = ['Rating.tsx', 'System.tsx', 'AuslosungTeilen.tsx', 'Konto.tsx', 'Konsole.tsx', 'Altdaten.tsx', 'ExportStammdaten.tsx'];
+    const ohneSchalter = quelle
+      .filter((q) => !ausnahmen.includes(q.name))
+      .filter((q) => {
+        const ohneKommentare = q.text.replace(/^\s*\/\/.*$/gm, '').replace(/^import .*$/gm, '');
+        return /Rating|Handicap/.test(ohneKommentare) && !q.text.includes('ratingAn(');
+      })
+      .map((q) => q.name);
+    expect(ohneSchalter).toEqual([]);
+  });
+
   it('Loeschknoepfe im Kopf stehen abgesetzt', () => {
     // Nicht direkt neben dem naechsten Schritt (Abschliessen, Wieder oeffnen)
     const ohneAbstand: string[] = [];

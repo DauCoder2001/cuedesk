@@ -59,7 +59,7 @@ import {
 } from '../ko';
 import type { KoRunde, Leistung } from '../ko';
 import KoBaum from './KoBaum';
-import { vereinsEinstellungen } from '../vereinseinstellungen';
+import { ratingAn, vereinsEinstellungen } from '../vereinseinstellungen';
 import { DISZIPLIN_TEXT, MODUS_TEXT, STATUS_TEXT } from './Turniere';
 import type { TurnierEinstellungen } from './Turniere';
 import type { Partie, Person, RatingQuelle, Turnier, TurnierAnmeldung, TurnierTeilnehmer } from '../datenbank.types';
@@ -118,6 +118,8 @@ export default function TurnierAnsicht({
   const wechsel = useWechsel();
   const darfLeiten = darf('vereinsadmin', 'sportwart', 'turnierleiter');
   const istAdmin = darf('vereinsadmin');
+  // Ohne Vereins-Rating: keine Rating-Spalte, kein Handicap, keine Rating-Hinweise
+  const mitRating = ratingAn(verein);
   // Ungespeicherte Eingaben gehen vor: dann ist Speichern gruen, kein Ablauf-Schritt
   const ungespeichert = useEtwasUngespeichert();
 
@@ -163,6 +165,7 @@ export default function TurnierAnsicht({
       return false;
     }
   });
+  const zeigeRating = mitRating && !ratingAus;
   function ratingUmschalten() {
     const neu = !ratingAus;
     setRatingAus(neu);
@@ -293,7 +296,9 @@ export default function TurnierAnsicht({
   const modusOffen = Boolean(einstellungen.modusOffen);
   const turnierarten = vereinsEinstellungen(verein?.einstellungen).turnierarten;
   const raceTo = einstellungen.raceTo ?? 5;
-  const va = einstellungen.vorgabe ?? { aktiv: false, staerke: 75, obergrenze: 0 };
+  // Das Handicap haengt am Rating: ohne Vereins-Rating gibt es keine Vorgabe
+  const vaGespeichert = einstellungen.vorgabe ?? { aktiv: false, staerke: 75, obergrenze: 0 };
+  const va = mitRating ? vaGespeichert : { ...vaGespeichert, aktiv: false };
 
   // Startnummern-Reihenfolge (Position 0 = Startnummer 1)
   const aufstellung = useMemo(
@@ -1714,7 +1719,9 @@ export default function TurnierAnsicht({
     if (offeneSpiele > 0) return setFehler(`Es sind noch ${offeneSpiele} Spiele offen.`);
     const offen = mehrgruppig ? [] : tabelle.gleichstaende.filter((g) => !g.entschieden);
     if (offen.length > 0 && !(await fragen('Ein Stichkampf ist noch nicht entschieden. Trotzdem abschließen?'))) return;
-    const frage = 'Turnier abschließen?\nEndplätze werden gespeichert, das Rating wird neu berechnet.';
+    const frage = mitRating
+      ? 'Turnier abschließen?\nEndplätze werden gespeichert, das Rating wird neu berechnet.'
+      : 'Turnier abschließen?\nEndplätze werden gespeichert.';
     if (!(await fragen(frage, 'Abschließen'))) return;
     setArbeitet(true);
     const plaetze: [string, number][] = zwei
@@ -1744,7 +1751,11 @@ export default function TurnierAnsicht({
     const rating = await supabase.functions.invoke('rating', { body: { verein_id: turnier.verein_id } });
     setArbeitet(false);
     setMeldung(
-      rating.error ? 'Turnier abgeschlossen. Das Rating wird heute Nacht neu berechnet.' : 'Turnier abgeschlossen, Rating neu berechnet.'
+      !mitRating
+        ? 'Turnier abgeschlossen.'
+        : rating.error
+          ? 'Turnier abgeschlossen. Das Rating wird heute Nacht neu berechnet.'
+          : 'Turnier abgeschlossen, Rating neu berechnet.'
     );
     await laden();
   }
@@ -1967,7 +1978,7 @@ export default function TurnierAnsicht({
                 Turnier-Datei herunterladen
               </button>
             )}
-            {darfLeiten && turnier.quelle === 'import' && (
+            {mitRating && darfLeiten && turnier.quelle === 'import' && (
               <button type="button" title={turnier.rating_werten ? 'Nimmt die Partien dieses Turniers aus dem Vereins-Rating.' : 'Lässt die Partien dieses Turniers ins Vereins-Rating eingehen, ab dem nächtlichen Lauf.'} onClick={() => void ratingWertenUmschalten()}>
                 {turnier.rating_werten ? 'Nicht fürs Rating werten' : 'Fürs Rating werten'}
               </button>
@@ -2065,7 +2076,7 @@ export default function TurnierAnsicht({
                 )}
               </div>
             )}
-            {!turnier.rating_werten && (
+            {mitRating && !turnier.rating_werten && (
               <p className="hinweis">
                 {turnier.quelle === 'import'
                   ? 'Keine Partie dieses Turniers zählt fürs Rating. Mit „Fürs Rating werten“ oben zählen sie ab dem nächtlichen Lauf.'
@@ -2185,6 +2196,7 @@ export default function TurnierAnsicht({
 
       {darfLeiten && turnier.status !== 'geplant' && turnier.quelle !== 'import' && aufstellung.length > 0 && (
         <AuslosungTeilen
+          ratingErlaubt={mitRating}
           daten={{
             name: turnier.name,
             datum: turnier.datum,
@@ -2446,13 +2458,13 @@ export default function TurnierAnsicht({
                   <p className="hinweis">
                     {grenzen[0]} bis {grenzen[1]} Teilnehmer. Beim Auslosen kommen gesetzte Spieler in ihre Gruppe, alle
                     übrigen werden verteilt; geht die Zahl nicht auf, bekommen die vorderen Gruppen einen Spieler mehr. Der
-                    Spielplan entsteht je Gruppe, die Ratings werden eingefroren. Gäste starten mit 500.
+                    Spielplan entsteht je Gruppe{mitRating ? ', die Ratings werden eingefroren. Gäste starten mit 500.' : '.'}
                   </p>
                 </>
               ) : (
                 <p className="hinweis">
-                  Beim Auslosen werden die Startnummern zufällig vergeben, der Spielplan entsteht und die Ratings werden
-                  eingefroren. Gäste starten mit 500.
+                  Beim Auslosen werden die Startnummern zufällig vergeben und der Spielplan entsteht
+                  {mitRating ? '; die Ratings werden eingefroren. Gäste starten mit 500.' : '.'}
                 </p>
               )}
             </>
@@ -2475,13 +2487,15 @@ export default function TurnierAnsicht({
                     </button>
                   )}
                 </div>
-                <button
-                  type="button"
-                  title={ratingAus ? 'Rating-Spalte wieder anzeigen.' : 'Rating-Spalte auf diesem Gerät ausblenden, die Vorgaben bleiben.'}
-                  onClick={ratingUmschalten}
-                >
-                  {ratingAus ? 'Rating einblenden' : 'Rating ausblenden'}
-                </button>
+                {mitRating && (
+                  <button
+                    type="button"
+                    title={ratingAus ? 'Rating-Spalte wieder anzeigen.' : 'Rating-Spalte auf diesem Gerät ausblenden, die Vorgaben bleiben.'}
+                    onClick={ratingUmschalten}
+                  >
+                    {ratingAus ? 'Rating einblenden' : 'Rating ausblenden'}
+                  </button>
+                )}
               </div>
               <table className="tabelle kompakt voll">
                 <thead>
@@ -2492,7 +2506,7 @@ export default function TurnierAnsicht({
                       ✓
                     </th>
                     {mehrgruppig && <th>Gruppe</th>}
-                    {!ratingAus && <th className="rechts">Rating</th>}
+                    {zeigeRating && <th className="rechts">Rating</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -2535,7 +2549,7 @@ export default function TurnierAnsicht({
                           {t.gesetzt && <span className="marke">gesetzt</span>}
                         </td>
                       )}
-                      {!ratingAus && (
+                      {zeigeRating && (
                         <td className="rechts">
                           {t.rating_quelle && QUELLE_KURZ[t.rating_quelle] && (
                             <span className={`marke vorne quelle-${t.rating_quelle}`}>{QUELLE_KURZ[t.rating_quelle]}</span>
@@ -2585,7 +2599,7 @@ export default function TurnierAnsicht({
                   </button>
                 </div>
               )}
-              {!ratingAus && (
+              {zeigeRating && (
                 <p className="hinweis">
                   {irgendeinErgebnis
                     ? `Ratings eingefroren am ${turnier.eingefroren_am ? zeitText(turnier.eingefroren_am) : '–'}.`
@@ -2669,7 +2683,7 @@ export default function TurnierAnsicht({
                                 {rundenMarke(a)}
                               </span>
                             </th>
-                            <th className="rechts">Vorgabe</th>
+                            {mitRating && <th className="rechts">Vorgabe</th>}
                             <th className="rechts">Stand</th>
                             <th>Status</th>
                             <th></th>
@@ -2688,6 +2702,7 @@ export default function TurnierAnsicht({
                               laufend={laufendText(p)}
                               bearbeitbar={bearbeitbar && !(istGruppenspiel(p) && mehrgruppig && gruppenGesperrt) && !koGesperrt(p)}
                               mitVerlauf={darfLeiten}
+                              mitVorgabe={mitRating}
                               speichern={(x, y) => void ergebnisSetzen(p, x, y)}
                               verlauf={() => void verlaufZeigen(p)}
                               zuruecksetzen={darfLeiten ? () => setRuecksetzPartie(p) : undefined}
@@ -3330,6 +3345,7 @@ function Spielzeile(props: {
   laufend: string | null; // laufender Stand am Tisch ("● Tisch 1 · 2 : 1"), nur zum Ansehen
   bearbeitbar: boolean;
   mitVerlauf: boolean; // die Aenderungsliste duerfen nur Leitungsrollen lesen
+  mitVorgabe: boolean; // ohne Vereins-Rating keine Spalte Vorgabe
   speichern: (a: number | null, b: number | null) => void;
   verlauf: () => void;
   zuruecksetzen?: () => void; // nur Leitungsrollen
@@ -3396,7 +3412,7 @@ function Spielzeile(props: {
       <td>
         {props.nameA} – {props.nameB}
       </td>
-      <td className="rechts hinweis">{vorgabeText}</td>
+      {props.mitVorgabe && <td className="rechts hinweis">{vorgabeText}</td>}
       <td className="rechts">
         {feld(a, setA, p.vorgabe_a)} : {feld(b, setB, p.vorgabe_b)}
       </td>

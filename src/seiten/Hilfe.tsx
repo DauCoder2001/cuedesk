@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react';
 import { useSitzung } from '../sitzung';
 import { herunterladen } from '../pdf';
-import { dateiName, handbuchPdf, handoutPdf, suchen, themenFuer } from '../hilfe';
-import { THEMEN } from '../hilfe-texte';
+import { dateiName, handbuchPdf, handoutPdf, suchen, themenFuer, themenMitRating } from '../hilfe';
+import { THEMEN as ALLE_THEMEN } from '../hilfe-texte';
+import { ratingAn } from '../vereinseinstellungen';
 import type { Block, Teil, Thema } from '../hilfe';
 
 // Hilfe (Knopf "?" oben rechts): Themen nach Rolle, Suche, Handout je Thema
@@ -59,7 +60,9 @@ function Bloecke({ bloecke }: { bloecke: Block[] }) {
 
 export default function Hilfe({ startThema }: { startThema: string | null }) {
   const { verein, rollen, istSuperAdmin } = useSitzung();
-  const { eigene, weitere } = useMemo(() => themenFuer(THEMEN, rollen, istSuperAdmin), [rollen, istSuperAdmin]);
+  // Ohne Vereins-Rating fehlt das Thema Rating, auch im Handbuch und in der Suche
+  const THEMEN = useMemo(() => themenMitRating(ALLE_THEMEN, ratingAn(verein)), [verein]);
+  const { eigene, weitere } = useMemo(() => themenFuer(THEMEN, rollen, istSuperAdmin), [THEMEN, rollen, istSuperAdmin]);
   const [offen, setOffen] = useState<string>(startThema ?? eigene[0]?.id ?? THEMEN[0]?.id ?? '');
   const [begriff, setBegriff] = useState('');
   const [alleZeigen, setAlleZeigen] = useState(false);

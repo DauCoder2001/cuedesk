@@ -85,6 +85,7 @@ type Formular = {
   mannschaftRang: string; // leer: erste der Saison
   saisonbeginn: number;
   chat: boolean;
+  rating: boolean;
 };
 
 // Bild auf 128 x 128 Pixel verkleinern (Seitenverhaeltnis bleibt, Rand durchsichtig)
@@ -140,7 +141,8 @@ function ausEinstellungen(
     liga: e.liga.liga,
     mannschaftRang: e.liga.mannschaftRang === null ? '' : String(e.liga.mannschaftRang),
     saisonbeginn: e.saisonbeginn,
-    chat: e.chat
+    chat: e.chat,
+    rating: e.rating
   };
 }
 
@@ -284,7 +286,8 @@ export default function System() {
       turnierarten: f.turnierarten,
       liga: { liga: f.liga, mannschaftRang: zahl(f.mannschaftRang) },
       saisonbeginn: f.saisonbeginn,
-      chat: f.chat
+      chat: f.chat,
+      rating: f.rating
     };
     setArbeitet(true);
     const { error } = await supabase
@@ -445,14 +448,19 @@ export default function System() {
               <option value="10-ball">10-Ball</option>
             </select>
           </label>
-          <label className="feld">
-            <span>Ausgleich in Prozent (leer: {rating?.staerke_prozent ?? 75} aus dem Rating)</span>
-            <input inputMode="numeric" value={f.staerke} onChange={(e) => setze({ staerke: e.target.value })} />
-          </label>
-          <label className="feld">
-            <span>Höchstens Sätze Vorgabe (0 = ohne Grenze)</span>
-            <input inputMode="numeric" value={f.obergrenze} onChange={(e) => setze({ obergrenze: e.target.value })} />
-          </label>
+          {/* Handicap und Rating nur mit Vereins-Rating */}
+          {f.rating && (
+            <label className="feld">
+              <span>Ausgleich in Prozent (leer: {rating?.staerke_prozent ?? 75} aus dem Rating)</span>
+              <input inputMode="numeric" value={f.staerke} onChange={(e) => setze({ staerke: e.target.value })} />
+            </label>
+          )}
+          {f.rating && (
+            <label className="feld">
+              <span>Höchstens Sätze Vorgabe (0 = ohne Grenze)</span>
+              <input inputMode="numeric" value={f.obergrenze} onChange={(e) => setze({ obergrenze: e.target.value })} />
+            </label>
+          )}
           <label className="feld">
             <span>Turnierart</span>
             <select value={f.art} onChange={(e) => setze({ art: e.target.value })}>
@@ -465,14 +473,18 @@ export default function System() {
             </select>
           </label>
         </div>
-        <label className="ankreuz">
-          <input type="checkbox" checked={f.vorgabe} onChange={(e) => setze({ vorgabe: e.target.checked })} />
-          <span>Mit Vorgabe (Handicap)</span>
-        </label>
-        <label className="ankreuz">
-          <input type="checkbox" checked={f.ratingWerten} onChange={(e) => setze({ ratingWerten: e.target.checked })} />
-          <span>Zählt für das Vereins-Rating</span>
-        </label>
+        {f.rating && (
+          <label className="ankreuz">
+            <input type="checkbox" checked={f.vorgabe} onChange={(e) => setze({ vorgabe: e.target.checked })} />
+            <span>Mit Vorgabe (Handicap)</span>
+          </label>
+        )}
+        {f.rating && (
+          <label className="ankreuz">
+            <input type="checkbox" checked={f.ratingWerten} onChange={(e) => setze({ ratingWerten: e.target.checked })} />
+            <span>Zählt für das Vereins-Rating</span>
+          </label>
+        )}
 
         <div className="feldkopf">Modus am Turniertag</div>
         <p className="hinweis">
@@ -721,6 +733,22 @@ export default function System() {
       </section>
 
       <section className="block">
+        <h2>Vereins-Rating</h2>
+        <label className="ankreuz" title="Aus: Seite Rating, Rating-Spalten, Handicap und die Haken „fürs Rating“ sind ausgeblendet. Das Rating rechnet im Hintergrund weiter.">
+          <input type="checkbox" checked={f.rating} onChange={(e) => setze({ rating: e.target.checked })} />
+          <span>
+            Vereins-Rating verwenden
+            <small>
+              Ohne Haken ist alles zum Rating ausgeblendet: Seite Rating, Rating-Spalten, Handicap (Vorgabe) und die
+              Haken „fürs Rating“. Im Hintergrund wird weiter gewertet und gerechnet; wieder eingeschaltet, ist das
+              Rating sofort vollständig da.
+            </small>
+          </span>
+        </label>
+      </section>
+
+      {f.rating && (
+      <section className="block">
         <h2>Rating-Rechenwerte</h2>
         <p className="hinweis">
           Mit diesen Werten rechnet CueDesk das Vereins-Rating. Sie lassen sich hier nicht ändern: Jede Änderung würde alle
@@ -743,6 +771,7 @@ export default function System() {
             : 'Für deinen Verein gelten die Standardwerte.'}
         </p>
       </section>
+      )}
     </div>
   );
 }

@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { supabase } from '../supabase';
 import { nameZerlegen, personName } from '../namen';
 import type { Person } from '../datenbank.types';
+import { useSitzung } from '../sitzung';
+import { ratingAn } from '../vereinseinstellungen';
 import { DATEI_MODI, altIdsZu, dateiLesen, disziplinAusText, eigeneId, namenVon, phaseAusText } from '../turnier-datei';
 import type { DateiTurnier } from '../turnier-datei';
 
@@ -28,6 +30,8 @@ export default function TurnierDateiEinlesen({
   const [personen, setPersonen] = useState<Person[]>([]);
   const [zuordnung, setZuordnung] = useState<Record<string, string>>({});
   const [werten, setWerten] = useState(false);
+  // Ohne Vereins-Rating gibt es den Haken nicht; die Turniere kommen ungewertet ins Archiv
+  const mitRating = ratingAn(useSitzung().verein);
   const [laeuft, setLaeuft] = useState(false);
   const [fehler, setFehler] = useState<string | null>(null);
   const [ergebnis, setErgebnis] = useState<string | null>(null);
@@ -285,7 +289,7 @@ export default function TurnierDateiEinlesen({
       )}
 
       <div className="knopfpaar rechts">
-        {neue.length > 0 && (
+        {mitRating && neue.length > 0 && (
           <label className="haken" title="Ohne Haken stehen die Partien nur im Archiv. Werten lässt sich später im Turnier mit „Fürs Rating werten“.">
             <input type="checkbox" checked={werten} onChange={(e) => setWerten(e.target.checked)} disabled={laeuft} />
             <span>Partien fürs Rating werten</span>
