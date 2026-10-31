@@ -390,6 +390,7 @@ export type RatingEinstellungen = {
   gewicht: number;
   staerke_prozent: number;
   vereinsschnitt: number;
+  neustart: string | null; // Rating neu begonnen ab diesem Tag, aeltere Partien zaehlen nicht
 };
 
 export type RatingStand = {
@@ -498,6 +499,10 @@ export type Database = {
       geraet_tisch_setzen: { Args: { p_tisch: string | null }; Returns: undefined };
       schutzwort_stimmt: { Args: { p_verein: string; p_wort: string }; Returns: boolean };
       schutzwort_setzen: { Args: { p_verein: string; p_wort: string }; Returns: undefined };
+      rating_neustart: {
+        Args: { p_verein: string; p_datum: string | null; p_startwerte_leeren: boolean; p_wort: string };
+        Returns: undefined;
+      };
       meine_vereine: { Args: Record<string, never>; Returns: MeinVerein[] };
       support_freigeben: { Args: { p_verein: string; p_tage: number }; Returns: string };
       support_beenden: { Args: { p_verein: string }; Returns: undefined };

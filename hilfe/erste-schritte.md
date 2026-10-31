@@ -47,6 +47,6 @@ Wer vorher mit Turnier light gearbeitet hat, liest dessen Datenbestand unter **S
 - **Grüner Knopf**: zeigt den nächsten Schritt, immer nur einen. Hast du etwas geändert, ist es **Speichern** (bzw. **Anlegen**), sobald alle Pflichtfelder ausgefüllt sind; solange etwas ungespeichert ist, wird kein anderer Schritt grün. In Turnier und Liga-Spieltag führt er sonst durch den Ablauf (Auslosen, Abschließen …). Blau ist das Bestätigen in einem Fenster, Rot heißt: Es geht etwas verloren.
 - **Chat**: auf der Seite System einschalten, wenn Mitglieder während eines Turniers schreiben sollen. Beiträge werden 1 Tag nach Turnierende gelöscht.
 - **Support-Zugang**: Braucht der Betreiber von CueDesk Einblick, um zu helfen, gebt ihr ihm hier für einige Tage Lesezugriff. Ändern kann er nichts.
-- **Vereins-Rating**: lässt sich auf der Seite System ausschalten, wenn der Verein ohne Rating und Handicap spielen will. Dann ist alles zum Rating ausgeblendet; gerechnet wird im Hintergrund weiter.
+- **Vereins-Rating**: lässt sich auf der Seite System ausschalten, wenn der Verein ohne Rating und Handicap spielen will. Dann ist alles zum Rating ausgeblendet; gerechnet wird im Hintergrund weiter. Dort lässt sich das Rating auch ab einem Tag neu beginnen (mit Schutzwort).
 - **Daten herunterladen**: Alle Vereinsdaten als Datei sichern, zum Beispiel einmal im Monat als eigene Sicherung.
 - **Verträge**: zeigt, wann welcher Fassung zugestimmt wurde.

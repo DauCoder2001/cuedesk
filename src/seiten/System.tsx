@@ -15,6 +15,7 @@ import type { Vereinsangaben } from '../vereinsangaben';
 import { homepageLink } from '../mandanten';
 import { useUngespeichert, weichtAb } from '../ungespeichert';
 import { STANDARD_EINSTELLUNGEN } from '../rating';
+import { Modal } from '../modal';
 import Altdaten from './Altdaten';
 import ExcelSerie from './ExcelSerie';
 
@@ -47,6 +48,11 @@ const RATING_STANDARD: RatingWerte = {
   gewicht: STANDARD_EINSTELLUNGEN.gewicht,
   staerke_prozent: 75
 };
+
+// "2026-10-31" wird zu "31.10.2026"
+function tagText(iso: string): string {
+  return iso.split('-').reverse().join('.');
+}
 
 // Die Rechenwerte mit einer Zeile Erklaerung, wie im Abschnitt "Rating-Rechenwerte"
 function ratingZeilen(r: RatingWerte): [string, string, string][] {
@@ -169,6 +175,13 @@ export default function System() {
   const [artFehler, setArtFehler] = useState<string | null>(null);
   const vereinPflicht = usePflicht();
   const schutzPflicht = usePflicht<HTMLElement>();
+  // Rating neu beginnen: gespeicherter Neustart-Tag (null: keiner) und der Dialog dazu
+  const [neustart, setNeustart] = useState<string | null>(null);
+  const [neustartDialog, setNeustartDialog] = useState<'setzen' | 'aufheben' | null>(null);
+  const [neustartTag, setNeustartTag] = useState('');
+  const [startwerteLeeren, setStartwerteLeeren] = useState(false);
+  const [neustartWort, setNeustartWort] = useState('');
+  const neustartPflicht = usePflicht();
 
   // Gespeicherter Stand, wie ihn die Datenbank liefert - zugleich Ausgangspunkt
   // des Formulars und Vergleich fuer "noch nicht gespeichert"
@@ -207,6 +220,7 @@ export default function System() {
           .limit(1)
       ]);
       setRating((r.data as RatingWerte | null) ?? null);
+      setNeustart(r.data?.neustart ?? null);
       setMannschaften(m.data ?? []);
       setFreigabe(f.data?.[0] ?? null);
       // Zustimmungen zu Nutzungsbedingungen und AVV, neueste zuerst
@@ -353,6 +367,49 @@ export default function System() {
     setFehler(null);
     setMeldung('Schutzwort geändert. Es gilt ab sofort für „Tablet neu laden“, „Aufstellung zeigen“, „Zurücksetzen“ einer Partie und das Löschen von Turnieren und Spieltagen.');
     return true;
+  }
+
+  function neustartOeffnen(art: 'setzen' | 'aufheben') {
+    setNeustartTag(new Date().toLocaleDateString('sv-SE')); // heute als JJJJ-MM-TT
+    setStartwerteLeeren(false);
+    setNeustartWort('');
+    neustartPflicht.zuruecksetzen();
+    setNeustartDialog(art);
+  }
+
+  // Neustart setzen oder aufheben (Schutzwort prueft der Server), danach sofort
+  // neu rechnen, damit Rating, Turniere und Statistik den neuen Stand zeigen
+  async function ratingNeustart() {
+    if (!verein || !neustartDialog) return;
+    if (!neustartPflicht.pruefen()) return;
+    const aufheben = neustartDialog === 'aufheben';
+    if (!aufheben && neustartTag > new Date().toLocaleDateString('sv-SE')) {
+      return neustartPflicht.melden('Der Neustart darf nicht in der Zukunft liegen.');
+    }
+    setArbeitet(true);
+    const { error } = await supabase.rpc('rating_neustart', {
+      p_verein: verein.id,
+      p_datum: aufheben ? null : neustartTag,
+      p_startwerte_leeren: !aufheben && startwerteLeeren,
+      p_wort: neustartWort
+    });
+    if (error) {
+      setArbeitet(false);
+      return neustartPflicht.melden(error.message);
+    }
+    const rechnung = await supabase.functions.invoke('rating', { body: { verein_id: verein.id } });
+    setArbeitet(false);
+    setNeustart(aufheben ? null : neustartTag);
+    setNeustartDialog(null);
+    setFehler(null);
+    setMeldung(
+      (aufheben
+        ? 'Neustart aufgehoben. Das Rating zählt wieder alle gewerteten Partien.'
+        : `Rating zurückgesetzt. Es zählen nur noch Partien ab dem ${tagText(neustartTag)}.`) +
+        (rechnung.error || rechnung.data?.fehler
+          ? ' Das Neuberechnen hat nicht geklappt; es geschieht heute Nacht oder mit „Jetzt neu berechnen“ auf der Seite Rating.'
+          : ' Das Rating ist neu berechnet.')
+    );
   }
 
 
@@ -771,6 +828,104 @@ export default function System() {
             : 'Für deinen Verein gelten die Standardwerte.'}
         </p>
       </section>
+      )}
+
+      {f.rating && (
+      <section className="block">
+        <h2>Rating neu beginnen</h2>
+        <p className="hinweis">
+          {neustart
+            ? `Neustart seit ${tagText(neustart)}: Partien davor zählen nicht fürs Rating.`
+            : 'Das Rating zählt alle gewerteten Partien.'}{' '}
+          Nach einem Neustart fangen alle wieder beim Rating-Startwert (Seite Spieler) oder beim Vereinsschnitt an.
+          Turniere, Ergebnisse und Statistik bleiben erhalten.
+        </p>
+        <div className="zeile">
+          <span className="loeschgruppe">
+            <button
+              type="button"
+              className="gefahrknopf"
+              title="Das Rating ab einem Tag neu beginnen: Ältere Partien zählen nicht mehr, alle starten beim Rating-Startwert oder beim Vereinsschnitt. Fragt nach dem Schutzwort; lässt sich wieder aufheben."
+              onClick={() => neustartOeffnen('setzen')}
+            >
+              Rating zurücksetzen…
+            </button>
+            {neustart && (
+              <button
+                type="button"
+                title="Den Neustart zurücknehmen: Das Rating zählt wieder alle gewerteten Partien. Gelöschte Startwerte kommen nicht zurück. Fragt nach dem Schutzwort."
+                onClick={() => neustartOeffnen('aufheben')}
+              >
+                Neustart aufheben…
+              </button>
+            )}
+          </span>
+        </div>
+      </section>
+      )}
+
+      {neustartDialog && (
+        <Modal abbrechen={() => !arbeitet && setNeustartDialog(null)} bereich={neustartPflicht.bereich}>
+          <h2>{neustartDialog === 'aufheben' ? 'Neustart aufheben' : 'Rating zurücksetzen'}</h2>
+          <p>
+            {neustartDialog === 'aufheben'
+              ? `Seit ${tagText(neustart ?? '')} zählen nur neuere Partien. Danach zählt das Rating wieder alle gewerteten Partien und wird sofort neu berechnet.`
+              : 'Partien vor dem gewählten Tag zählen nicht mehr fürs Rating. Alle fangen wieder beim Rating-Startwert oder beim Vereinsschnitt an; bis 100 Racks gilt das Rating als vorläufig. Die Partien selbst bleiben unverändert.'}
+          </p>
+          {neustartDialog === 'setzen' && (
+            <>
+              <label className="feld" title="Ab diesem Tag zählen Partien wieder fürs Rating. Heute oder ein früherer Tag, etwa der Saisonbeginn.">
+                <span>Neustart ab</span>
+                <input
+                  type="date"
+                  required
+                  max={new Date().toLocaleDateString('sv-SE')}
+                  value={neustartTag}
+                  onChange={(e) => setNeustartTag(e.target.value)}
+                />
+              </label>
+              <label className="ankreuz" title="Löscht die unter Spieler eingetragenen Rating-Startwerte. Ohne Haken bleiben sie und gelten als Ausgangswert nach dem Neustart.">
+                <input type="checkbox" checked={startwerteLeeren} onChange={(e) => setStartwerteLeeren(e.target.checked)} />
+                <span>
+                  Rating-Startwerte der Spieler ebenfalls leeren
+                  <small>Dann fangen alle beim Vereinsschnitt an. Einzelne Startwerte lassen sich danach unter Spieler neu eintragen.</small>
+                </span>
+              </label>
+            </>
+          )}
+          <label className="feld" title="Das Schutzwort des Vereins (Seite System, Abschnitt Schutzwort).">
+            <span>Schutzwort</span>
+            <input
+              type="password"
+              required
+              value={neustartWort}
+              onChange={(e) => {
+                setNeustartWort(e.target.value);
+                neustartPflicht.melden(null);
+              }}
+              onKeyDown={(e) => e.key === 'Enter' && void ratingNeustart()}
+            />
+          </label>
+          <div className="knopfpaar rechts">
+            <Pflichthinweis hinweis={neustartPflicht.hinweis} />
+            <button type="button" title="Nichts ändern und den Dialog schließen." onClick={() => setNeustartDialog(null)} disabled={arbeitet}>
+              Abbrechen
+            </button>
+            <button
+              type="button"
+              className="gefahrknopf"
+              title={
+                neustartDialog === 'aufheben'
+                  ? 'Neustart aufheben und das Rating sofort neu berechnen.'
+                  : 'Rating ab dem gewählten Tag neu beginnen und sofort neu berechnen.'
+              }
+              onClick={() => void ratingNeustart()}
+              disabled={arbeitet}
+            >
+              {arbeitet ? 'Rechnet …' : neustartDialog === 'aufheben' ? 'Neustart aufheben' : 'Zurücksetzen'}
+            </button>
+          </div>
+        </Modal>
       )}
     </div>
   );

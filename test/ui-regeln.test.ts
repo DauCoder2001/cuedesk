@@ -76,7 +76,8 @@ describe('UI-Regeln', () => {
       ['TurnierAnsicht.tsx', 'Turnier löschen'],
       ['LigaAnsicht.tsx', 'Spieltag löschen'],
       ['TeamvergleichAnsicht.tsx', 'Teamvergleich löschen'],
-      ['Mannschaften.tsx', 'Löschen']
+      ['Mannschaften.tsx', 'Löschen'],
+      ['System.tsx', 'Rating zurücksetzen…']
     ]) {
       const text = quelle.find((q) => q.name === datei)?.text ?? '';
       const stelle = text.search(new RegExp(`>\\s*${knopf}\\s*</button>`));

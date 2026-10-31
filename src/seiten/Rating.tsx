@@ -47,6 +47,7 @@ export default function Rating() {
 
   const [ansicht, setAnsicht] = useState('gesamt');
   const [stichtag, setStichtag] = useState<string | null>(null);
+  const [neustart, setNeustart] = useState<string | null>(null); // System: Rating neu beginnen
   const [stand, setStand] = useState<RatingStand[]>([]);
   const [personen, setPersonen] = useState<Person[]>([]);
   const [offen, setOffen] = useState<string | null>(null);
@@ -57,6 +58,8 @@ export default function Rating() {
 
   const laden = useCallback(async () => {
     if (!verein) return;
+    const { data: einst } = await supabase.from('rating_einstellungen').select('neustart').eq('verein_id', verein.id).maybeSingle();
+    setNeustart(einst?.neustart ?? null);
     const { data: neuester } = await supabase
       .from('rating_stand')
       .select('stichtag')
@@ -201,6 +204,11 @@ export default function Rating() {
           {stichtag
             ? `Stand vom ${new Date(stichtag).toLocaleDateString('de-DE')}. Vereinsschnitt 500, 100 Punkte Unterschied bedeuten die doppelte Rack-Gewinnchance.`
             : 'Noch nicht gerechnet.'}
+          {neustart && (
+            <span title="Der Vereins-Administrator hat das Rating auf der Seite System neu begonnen. Ältere Partien bleiben im Archiv und in der Statistik, zählen aber nicht fürs Rating.">
+              {' '}Neu begonnen am {neustart.split('-').reverse().join('.')}: Partien davor zählen nicht.
+            </span>
+          )}
         </p>
 
         <div className="filterzeile">

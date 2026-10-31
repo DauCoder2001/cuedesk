@@ -14,6 +14,7 @@ Das Vereins-Rating zeigt die Spielstärke je Disziplin (8-, 9-, 10-Ball und Mult
 - **Nicht** zählen: Einzelspiele ohne Turnier, Partien mit Gästen in Vereinsturnieren und 14.1. Im Liga-Spieltag zählen auch Partien gegen Spieler anderer Vereine.
 - Wer noch wenige Racks gespielt hat, startet beim Vereinsschnitt oder beim **Rating-Startwert**, den die Vereinsleitung eintragen kann.
 - Neu berechnet wird jede Nacht und beim Abschließen eines Turniers.
+- Hat der Verein das Rating neu begonnen, zählen nur Partien ab diesem Tag (siehe unten). Die Seite Rating nennt dann den Tag.
 
 ## Rating ansehen
 
@@ -26,6 +27,17 @@ Die Vereinsleitung kann mit **Jetzt neu berechnen** sofort rechnen lassen, etwa 
 ## Vorgabe (Handicap)
 
 Wird ein Turnier **Mit Vorgabe (Handicap)** gespielt, bekommt der schwächere Spieler Sätze Vorsprung. Wie viele, ergibt sich aus dem Unterschied im Rating.
+
+## Rating neu beginnen
+
+Der Vereins-Administrator kann das Rating auf der Seite **System** unter **Rating neu beginnen** zurücksetzen, etwa zum Saisonbeginn.
+
+1. **Rating zurücksetzen** anklicken.
+2. Den Tag wählen, ab dem Partien wieder zählen (heute oder früher).
+3. Wer bei null anfangen will, setzt den Haken **Rating-Startwerte der Spieler ebenfalls leeren**. Ohne Haken bleiben die Startwerte und gelten als Ausgangswert.
+4. Mit dem Schutzwort bestätigen. Das Rating wird sofort neu berechnet.
+
+Danach fängt jeder beim Rating-Startwert an (Seite Spieler), sonst beim Wert aus seinen anderen Disziplinen, sonst beim Vereinsschnitt 500. Bis 100 Racks seit dem Neustart gilt das Rating als vorläufig. Turniere, Ergebnisse und Statistik bleiben erhalten. **Neustart aufheben** (ebenfalls mit Schutzwort) zählt wieder alle gewerteten Partien; geleerte Startwerte kommen dabei nicht zurück.
 
 ## Rating ausschalten
 
