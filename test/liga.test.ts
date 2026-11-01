@@ -16,17 +16,26 @@ describe('Spielplan einer Begegnung', () => {
   test('acht Partien, Reihenfolge und Ausspielziele der Bezirksliga', () => {
     const spiele = spielplan(LIGEN.bezirksliga.ziele);
     expect(spiele).toHaveLength(8);
-    // In der Rueckrunde dreht sich die Reihenfolge nach dem 14.1 um
+    // Hin- und Rueckrunde in derselben Reihenfolge
     expect(spiele.map((s) => s.disziplin)).toEqual([
       '14-1', '8-ball', '9-ball', '10-ball',
-      '14-1', '10-ball', '9-ball', '8-ball'
+      '14-1', '8-ball', '9-ball', '10-ball'
     ]);
     expect(spiele.map((s) => s.runde)).toEqual(['hin', 'hin', 'hin', 'hin', 'rueck', 'rueck', 'rueck', 'rueck']);
     // aus der Ausschreibung: 75 Punkte/25 Aufnahmen, 8-Ball 4, 9-Ball 6, 10-Ball 5
     expect(spiele[0]).toMatchObject({ nr: 1, ziel: 75, aufnahmen: 25 });
     expect(spiele.slice(1, 4).map((s) => s.ziel)).toEqual([4, 6, 5]);
-    expect(spiele[5].ziel).toBe(5); // Rueckrunde Partie 6 ist 10-Ball
-    expect(spiele[7].ziel).toBe(4); // Partie 8 ist 8-Ball
+    expect(spiele[5].ziel).toBe(4); // Rueckrunde Partie 6 ist 8-Ball
+    expect(spiele[7].ziel).toBe(5); // Partie 8 ist 10-Ball
+  });
+
+  test('alte Spieltage behalten die gedrehte Rueckrunde', () => {
+    const spiele = spielplan(LIGEN.bezirksliga.ziele, true);
+    expect(spiele.map((s) => s.disziplin)).toEqual([
+      '14-1', '8-ball', '9-ball', '10-ball',
+      '14-1', '10-ball', '9-ball', '8-ball'
+    ]);
+    expect(spiele[5].ziel).toBe(5);
   });
 
   test('jede Liga hat ihre eigenen Ziele', () => {
@@ -96,12 +105,12 @@ describe('Aufstellung', () => {
   });
 
   test('Auswahl sperrt Spieler derselben Runde und derselben Disziplin', () => {
-    // Hinrunde: 1 14.1 a, 2 8-Ball b, 3 9-Ball c; Rueckrunde: 6 10-Ball d
-    const plan = { 1: 'a', 2: 'b', 3: 'c', 4: null, 5: null, 6: 'd', 7: null, 8: null };
+    // Hinrunde: 1 14.1 a, 2 8-Ball b, 3 9-Ball c; Rueckrunde: 8 10-Ball d
+    const plan = { 1: 'a', 2: 'b', 3: 'c', 4: null, 5: null, 6: null, 7: null, 8: 'd' };
     // Spiel 4 (10-Ball, Hinrunde): a, b, c schon in der Runde, d hat 10-Ball schon
     expect([...gesperrteSpieler(spiele, plan, 4)].sort()).toEqual(['a', 'b', 'c', 'd']);
-    // Spiel 8 (8-Ball, Rueckrunde): d in der Runde, b hat 8-Ball schon
-    expect([...gesperrteSpieler(spiele, plan, 8)].sort()).toEqual(['b', 'd']);
+    // Spiel 6 (8-Ball, Rueckrunde): d in der Runde, b hat 8-Ball schon
+    expect([...gesperrteSpieler(spiele, plan, 6)].sort()).toEqual(['b', 'd']);
     // Der eigene Eintrag sperrt sich nicht selbst
     expect(gesperrteSpieler(spiele, plan, 1).has('a')).toBe(false);
   });

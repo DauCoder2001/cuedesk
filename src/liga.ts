@@ -1,8 +1,8 @@
 // Liga-Spieltage (BLVN, Bezirk Osnabrueck-Huntegau, Saison 2026/27).
 //
 // Eine Mannschaftsbegegnung besteht aus acht Einzelpartien. Hin- und
-// Rueckrunde spielen jeweils 14.1-endlos, 8-Ball, 9-Ball und 10-Ball; im
-// Rueckspiel wechselt das Heimrecht. Gewertet wird mit Partiepunkten (8:0 bis
+// Rueckrunde spielen jeweils 14.1-endlos, 8-Ball, 9-Ball und 10-Ball in
+// derselben Reihenfolge; im Rueckspiel wechselt das Heimrecht. Gewertet wird mit Partiepunkten (8:0 bis
 // 0:8) und Matchpunkten (3:0 / 1:1 / 0:3).
 //
 // Reine Rechnung ohne Datenbank, abgesichert durch test/liga.test.ts. Die
@@ -57,17 +57,17 @@ export type LigaSpiel = {
   aufnahmen: number | null; // nur 14.1
 };
 
-// Hinrunde: 14.1, 8-, 9-, 10-Ball. In der Rueckrunde dreht sich die
-// Reihenfolge nach dem 14.1 um (so stehen es auch die Spielberichte des
-// Verbands: 14/1e, 10-Ball, 9-Ball, 8-Ball).
+// Hin- und Rueckrunde: 14.1, 8-, 9-, 10-Ball. Bis 01.11.2026 drehte CueDesk
+// die Rueckrunde nach dem 14.1 um (14.1, 10-, 9-, 8-Ball); Spieltage, die so
+// schon Rueckrunden-Partien hatten, tragen rueckGedreht und behalten das.
 const REIHENFOLGE: LigaDisziplin[] = ['14-1', '8-ball', '9-ball', '10-ball'];
-const REIHENFOLGE_RUECK: LigaDisziplin[] = ['14-1', '10-ball', '9-ball', '8-ball'];
+const REIHENFOLGE_GEDREHT: LigaDisziplin[] = ['14-1', '10-ball', '9-ball', '8-ball'];
 
 // Der feste Ablauf einer Begegnung (Ausschreibung Abschnitt "Modus")
-export function spielplan(ziele: Ausspielziele): LigaSpiel[] {
+export function spielplan(ziele: Ausspielziele, rueckGedreht = false): LigaSpiel[] {
   const spiele: LigaSpiel[] = [];
   (['hin', 'rueck'] as Runde[]).forEach((runde, r) => {
-    (runde === 'hin' ? REIHENFOLGE : REIHENFOLGE_RUECK).forEach((disziplin, i) => {
+    (runde === 'rueck' && rueckGedreht ? REIHENFOLGE_GEDREHT : REIHENFOLGE).forEach((disziplin, i) => {
       spiele.push({
         nr: r * 4 + i + 1,
         runde,

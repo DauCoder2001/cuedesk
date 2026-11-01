@@ -267,7 +267,7 @@ export default function LigaAnsicht({
     const geladeneLiga = (t.data?.einstellungen as TurnierEinstellungen | null)?.liga;
     const halb: Record<number, Wahl> = {};
     if (geladeneLiga) {
-      const plan = geladeneLiga.art === 'doppel' ? doppelSpielplan(geladeneLiga.doppelPlan ?? []) : spielplan(geladeneLiga.ziele);
+      const plan = geladeneLiga.art === 'doppel' ? doppelSpielplan(geladeneLiga.doppelPlan ?? []) : spielplan(geladeneLiga.ziele, geladeneLiga.rueckGedreht);
       plan.forEach((s) => {
         const gemerkt = geladeneLiga.aufstellung?.[String(s.nr)];
         const hatPartie = (p.data ?? []).some((x) => x.runde === (s.runde === 'hin' ? 1 : 2) && x.paarung === s.paarung);
@@ -365,7 +365,7 @@ export default function LigaAnsicht({
   const liga = einstellungen.liga ? { ...einstellungen.liga, begegnung: einstellungen.liga.begegnung ?? 1 } : undefined;
   const istDoppel = liga?.art === 'doppel';
   const spiele = useMemo(
-    () => (liga ? (liga.art === 'doppel' ? doppelSpielplan(liga.doppelPlan ?? []) : spielplan(liga.ziele)) : []),
+    () => (liga ? (liga.art === 'doppel' ? doppelSpielplan(liga.doppelPlan ?? []) : spielplan(liga.ziele, liga.rueckGedreht)) : []),
     [liga]
   );
   // Nummer im Umschalter (mit Doppel-Begegnung wird die gespeicherte 2. zur 3.)

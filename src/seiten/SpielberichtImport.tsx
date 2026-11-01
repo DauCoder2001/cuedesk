@@ -36,7 +36,7 @@ export default function SpielberichtImport({
   fertig
 }: {
   turnier: Turnier;
-  liga: { heim: boolean; gegner: string; eigene: string; ziele: Ausspielziele };
+  liga: { heim: boolean; gegner: string; eigene: string; ziele: Ausspielziele; rueckGedreht?: boolean };
   personen: Person[];
   partien: Partie[];
   schliessen: () => void;
@@ -52,7 +52,7 @@ export default function SpielberichtImport({
 
   const mitglieder = useMemo(() => personen.filter((p) => p.status !== 'gast'), [personen]);
   const gaeste = useMemo(() => personen.filter((p) => p.status === 'gast'), [personen]);
-  const plan = useMemo(() => spielplan(liga.ziele), [liga.ziele]);
+  const plan = useMemo(() => spielplan(liga.ziele, liga.rueckGedreht), [liga.ziele, liga.rueckGedreht]);
 
   // Im Bericht steht Heim links. Unsere Seite hängt vom Heimrecht ab.
   const zeilen: Zeile[] = useMemo(() => {
@@ -143,10 +143,13 @@ export default function SpielberichtImport({
 
         const spieler_a = liga.heim ? unsererId : gegnerId;
         const spieler_b = liga.heim ? gegnerId : unsererId;
-        const spiel = plan.find((s) => s.runde === p.runde && s.paarung === p.paarung);
-        const vorhanden = partien.find(
-          (x) => x.runde === (p.runde === 'hin' ? 1 : 2) && x.paarung === p.paarung
-        );
+        // Zugeordnet wird ueber die Disziplin: Der Bericht kann die Rueckrunde
+        // in anderer Reihenfolge fuehren als der Spieltag (8-, 9-, 10-Ball oder umgekehrt)
+        const spiel =
+          plan.find((s) => s.runde === p.runde && s.disziplin === p.disziplin) ??
+          plan.find((s) => s.runde === p.runde && s.paarung === p.paarung);
+        const paarung = spiel?.paarung ?? p.paarung;
+        const vorhanden = partien.find((x) => x.runde === (p.runde === 'hin' ? 1 : 2) && x.paarung === paarung);
         const satz = {
           spieler_a,
           spieler_b,
@@ -170,7 +173,7 @@ export default function SpielberichtImport({
               datum: turnier.datum,
               phase: p.runde,
               runde: p.runde === 'hin' ? 1 : 2,
-              paarung: p.paarung,
+              paarung,
               race_to: spiel?.ziel ?? null,
               vorgabe_a: 0,
               vorgabe_b: 0,

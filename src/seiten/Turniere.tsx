@@ -87,6 +87,8 @@ export type TurnierEinstellungen = {
     eigene: string; // Name der eigenen Mannschaft
     mannschaft_id?: string | null; // gemeldete Mannschaft, fuer Kader und Saisonuebersicht
     ziele: Ausspielziele;
+    // Alter Stand (bis 01.11.2026): Rueckrunde 14.1, 10-, 9-, 8-Ball statt wie die Hinrunde
+    rueckGedreht?: boolean;
     // Ein Spieltag besteht aus zwei Begegnungen am selben Tag; in der zweiten
     // wechselt das Heimrecht (BLVN, 2er-Spieltage).
     begegnung: 1 | 2;

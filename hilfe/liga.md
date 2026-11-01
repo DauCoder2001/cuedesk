@@ -20,6 +20,7 @@ Ein Liga-Spieltag besteht immer aus zwei Begegnungen gegen dieselbe Mannschaft, 
 
 ## 3. Aufstellung
 
+- Hin- und Rückrunde spielen jeweils vier Partien in derselben Reihenfolge: 14.1-endlos, 8-Ball, 9-Ball, 10-Ball (Nr. 1 bis 4 und 5 bis 8). Spieltage, deren Rückrunde vor November 2026 schon gespielt wurde, zeigen dort weiter die alte Reihenfolge 14.1, 10-, 9-, 8-Ball.
 - Je Partie für beide Seiten den Spieler wählen. CueDesk prüft die Regeln (niemand zweimal in einer Runde, dieselbe Disziplin nicht doppelt) und bietet gesperrte Spieler nicht an.
 - Spieler der Gastmannschaft legst du unter **Gegnerische Spieler** mit **Als Gast anlegen** an.
 - **Aufstellung verbergen** versteckt die eigene Aufstellung vor dem Gegner. Zum Zeigen braucht es das Schutzwort des Vereins.

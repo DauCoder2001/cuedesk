@@ -34,7 +34,7 @@ export type SpieltagBericht = {
 
 const DISZIPLIN: Record<string, string> = { '14-1': '14.1-endlos', '8-ball': '8-Ball', '9-ball': '9-Ball', '10-ball': '10-Ball' };
 
-type Liga = { ziele?: Ausspielziele; doppelPlan?: DoppelPartie[]; art?: 'doppel' };
+type Liga = { ziele?: Ausspielziele; rueckGedreht?: boolean; doppelPlan?: DoppelPartie[]; art?: 'doppel' };
 const ligaVon = (t: Turnier) => ((t.einstellungen ?? {}) as { liga?: Liga }).liga ?? {};
 
 function disziplinText(s: LigaSpiel): string {
@@ -57,7 +57,7 @@ export function spieltagBerichtDaten(
   const berichtBegegnungen = begegnungen.map((b, i): BerichtBegegnung => {
     const liga = ligaVon(b);
     const doppel = istDoppelBegegnung(b);
-    const plan = doppel ? doppelSpielplan(liga.doppelPlan ?? []) : liga.ziele ? spielplan(liga.ziele) : [];
+    const plan = doppel ? doppelSpielplan(liga.doppelPlan ?? []) : liga.ziele ? spielplan(liga.ziele, liga.rueckGedreht) : [];
     const eigene = partien.filter(mitSpielern).filter((p) => p.turnier_id === b.id);
     const zeile = (s: LigaSpiel): BerichtPartie => {
       const p = eigene.find((x) => x.runde === (s.runde === 'hin' ? 1 : 2) && x.paarung === s.paarung);
