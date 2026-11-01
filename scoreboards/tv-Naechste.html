@@ -18,20 +18,24 @@
     .kopf { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 3vh; }
     .titel { color: #ddd; font-size: 4.5vh; font-weight: bold; }
     .sub { color: #888; font-size: 2.4vh; }
-    .liste { display: grid; gap: 1.6vh; }
-    .spiel { display: grid; grid-template-columns: 30vw minmax(0, 1fr) auto; align-items: center; gap: 2vw;
+    .liste { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.6vh; }
+    .spiel { display: flex; flex-wrap: wrap; align-items: center; column-gap: 2vw; row-gap: 0.8vh;
              background: #222; border-radius: 12px; padding: 2.2vh 2vw; }
+    .links { display: flex; align-items: center; gap: 2vw; flex: 0 1 auto; min-width: 0; }
+    .markenfeld { flex: 0 0 30vw; }
     .marke { display: inline-block; color: #fff; border-radius: 6px; padding: 0.5vh 1vw; font-size: 2.2vh; font-weight: bold; white-space: nowrap; }
     .gruppe-A { background: #2f9a76; }
     .gruppe-B { background: #3a7fbf; }
     .gruppe-C { background: #c95300; }
     .gruppe-D { background: #8a44ad; }
     .gruppe-neutral { background: #555; }
-    .paar { font-size: 4.4vh; font-weight: bold; overflow-wrap: anywhere; }
+    .paar { font-size: 4.4vh; font-weight: bold; min-width: 0; }
+    /* Namen nie im Wort trennen; zu lang fuer eine Zeile: Umbruch nur am Strich */
+    .p1, .p2 { white-space: nowrap; }
     .p1 { color: #ff4444; }
     .p2 { color: #4488ff; }
     .gegen { color: #666; margin: 0 1vw; }
-    .zustand { font-size: 2.6vh; text-align: right; }
+    .zustand { font-size: 2.6vh; text-align: right; margin-left: auto; }
     .bereit { color: #22c55e; }
     .wartet { color: #e0b050; }
     .fuss { margin-top: 3vh; color: #888; font-size: 2.4vh; }
@@ -112,10 +116,12 @@
         const zustand = belegt.length === 0
           ? '<span class="bereit">bereit</span>'
           : '<span class="wartet">' + belegt.map((b) => esc(b.name) + ' spielt ' + tischText(b.tisch)).join('<br>') + '</span>';
-        return '<div class="spiel">'
-          + '<span>' + (marke ? '<span class="marke ' + farbe(e.group) + '">' + esc(marke) + '</span>' : '') + '</span>'
+        // Marke und Namen bleiben zusammen; der Hinweis rutscht in eine zweite Zeile,
+        // wenn er nicht mehr daneben passt (Namen werden nie im Wort getrennt)
+        return '<div class="spiel"><span class="links">'
+          + '<span class="markenfeld">' + (marke ? '<span class="marke ' + farbe(e.group) + '">' + esc(marke) + '</span>' : '') + '</span>'
           + '<span class="paar"><span class="p1">' + esc(e.player1) + '</span><span class="gegen">–</span><span class="p2">' + esc(e.player2) + '</span></span>'
-          + '<span class="zustand">' + zustand + '</span>'
+          + '</span><span class="zustand">' + zustand + '</span>'
           + '</div>';
       }).join('');
 
