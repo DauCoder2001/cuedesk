@@ -61,12 +61,12 @@
     }
     .p1, .p2 {
       flex: 1;
+      min-width: 0;
       /* Lange Namen sauber umbrechen statt das Layout zu sprengen */
       font-size: clamp(2.2vh, 4vh, 4.5vh);
       line-height: 1.1;
+      /* nur zwischen Woertern; ein einzelnes zu langes Wort notfalls trennen */
       overflow-wrap: break-word;
-      word-break: break-word;
-      hyphens: auto;
       /* Maximal 3 Zeilen, danach "..." */
       display: -webkit-box;
       -webkit-line-clamp: 3;
@@ -76,18 +76,19 @@
     }
     .p1 { color: #ff4444; text-align: right; }
     .p2 { color: #4488ff; text-align: left; }
+    /* Spielstand etwas kleiner und enger, damit die Namen meist in eine Zeile passen */
     .score { 
-      font-size: 10vh; 
+      font-size: 7.5vh; 
       display: flex; 
       justify-content: center; 
       align-items: center; 
       flex: 0 0 auto;
-      margin: 0 20px; 
+      margin: 0 1vw; 
       background: #000;
-      padding: 10px 20px;
+      padding: 0.6vh 0.8vw;
       border-radius: 10px;
     }
-    .score span { padding: 0 15px; }
+    .score span { padding: 0 0.5vw; }
     .colon { color: #555; }
     .stats { 
       font-size: 2.5vh; 
