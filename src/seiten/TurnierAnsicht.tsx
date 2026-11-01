@@ -2253,10 +2253,12 @@ export default function TurnierAnsicht({
                         {anzeige(t.person_id)}
                         {person(t.person_id)?.status === 'gast' && <span className="marke">Gast</span>}
                       </td>
-                      <td className="rechts">
-                        {QUELLE_KURZ[r.quelle] && <span className={`marke vorne quelle-${r.quelle}`}>{QUELLE_KURZ[r.quelle]}</span>}
-                        {r.wert}
-                      </td>
+                      {mitRating && (
+                        <td className="rechts">
+                          {QUELLE_KURZ[r.quelle] && <span className={`marke vorne quelle-${r.quelle}`}>{QUELLE_KURZ[r.quelle]}</span>}
+                          {r.wert}
+                        </td>
+                      )}
                       {mehrgruppig && (
                         <td className="rechts">
                           {bearbeitbar ? (
