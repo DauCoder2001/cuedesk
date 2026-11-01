@@ -7,6 +7,9 @@ import type { Anzeige, SpieltagGesamt } from '../zuschauen';
 import { ART_NAME, teamstandAnzeige } from '../teamvergleich';
 import type { TeamstandAnzeige, TeamvergleichEinstellungen } from '../teamvergleich';
 import type { Partie, Tisch, Turnier, TurnierTeilnehmer } from '../datenbank.types';
+import { vorlaeufigeEndplaetze } from '../endplaetze';
+import type { EndplatzPartie, VorlaeufigeEndplaetze } from '../endplaetze';
+import type { TurnierEinstellungen } from './Turniere';
 
 // Ergebnis des ganzen Liga-Spieltags: Gesamtstand und je Begegnung eine Zeile,
 // alles aus Sicht der Heimmannschaft der 1. Begegnung
@@ -97,6 +100,57 @@ function TeamBlock({ s }: { s: TeamstandAnzeige }) {
 
 export type Stand = { zustand: unknown; aktualisiert: string };
 
+// Endtabelle aus Platzierungsduellen (Zwei Gruppen) bzw. KO-Runde und
+// Platzierungsspielen, gerechnet wie die TV-Anzeige "Endplaetze"
+function EndtabelleBlock({
+  e,
+  beendet,
+  laufend,
+  name
+}: {
+  e: VorlaeufigeEndplaetze;
+  beendet: boolean;
+  laufend: Set<string>; // Partien, die gerade am Tisch gespielt werden
+  name: (id: string) => string;
+}) {
+  return (
+    <div className="zuschauenblock">
+      <h3>{beendet ? 'Endtabelle' : 'Endtabelle (vorläufig)'}</h3>
+      {!beendet && (
+        <p className="hinweis">
+          {e.art === 'duelle' ? 'Platzierungsduelle' : 'KO-Runde'}: {e.beendet} von {e.gesamt} beendet
+        </p>
+      )}
+      <table className="tabelle">
+        <thead>
+          <tr>
+            <th title="Platz in der Endtabelle; offene Spiele entscheiden zwei oder mehr Plätze">Platz</th>
+            <th>Name</th>
+            <th className="rechts" title={e.art === 'duelle' ? 'Ergebnis des Platzierungsduells' : 'Wie der Platz zustande kam'}>
+              {e.art === 'duelle' ? 'Duell' : 'Wie'}
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {e.zeilen.map((z) => (
+            <tr key={`${z.von}-${z.bis}`}>
+              <td>{z.von === z.bis ? `${z.von}.` : `${z.von}.–${z.bis}.`}</td>
+              <td>{z.personen.length ? z.personen.map(name).join(' – ') : <span className="hinweis">noch offen</span>}</td>
+              <td className={z.offen ? 'rechts hinweis' : 'rechts'}>
+                {z.offen
+                  ? z.partieId && laufend.has(z.partieId)
+                    ? `läuft${z.tisch ? ` · Tisch ${z.tisch}` : ''}`
+                    : z.info || 'offen'
+                  : z.info}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 const uhrzeit = (iso: string) => new Date(iso).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
 const DISZIPLIN_TEXT: Record<string, string> = { '8-ball': '8-Ball', '9-ball': '9-Ball', '10-ball': '10-Ball' };
 
@@ -178,6 +232,16 @@ export function TurnierTeil({
   // "A – B", im Doppel "A / B – C / D", ohne Vereinszusatz wie am Tablet
   const paarung = (p: Partie) => paarungText(p, name, teamstand?.teams);
   const gesamt = anzeige?.turnier.modus === 'liga' ? spieltagGesamt(anzeige.begegnungen, partien, vereinName) : null;
+  // Zwei Gruppen / Gruppen mit KO: erst wenn die Duelle bzw. die KO-Runde angesetzt sind
+  const endplaetze = anzeige
+    ? vorlaeufigeEndplaetze(
+        anzeige.turnier.modus,
+        (anzeige.turnier.einstellungen ?? {}) as TurnierEinstellungen,
+        teilnehmer.filter((t) => t.turnier_id === anzeige.turnier.id),
+        partien.filter((p) => p.turnier_id === anzeige.turnier.id) as unknown as EndplatzPartie[],
+        (id) => (tischNummer(id) !== undefined ? String(tischNummer(id)) : null)
+      )
+    : null;
 
   return (
     <section>
@@ -186,6 +250,7 @@ export function TurnierTeil({
       ) : (
         <>
           <h2>{anzeige.begegnungen[0].name}</h2>
+          {endplaetze && <EndtabelleBlock e={endplaetze} beendet={anzeige.turnier.status === 'beendet'} laufend={new Set(lage.laufend.map((p) => p.id))} name={name} />}
           {teamstand ? (
             <TeamBlock s={teamstand} />
           ) : anzeige.turnier.modus === 'liga' && gesamt ? (
