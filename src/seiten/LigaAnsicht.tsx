@@ -1992,7 +1992,7 @@ function Bemerkung({ text, bearbeitbar, speichern }: { text: string; bearbeitbar
       Bemerkungen
       <textarea
         ref={feld}
-        rows={2}
+        rows={3}
         maxLength={1000}
         value={wert}
         placeholder="z. B. Spielbeginn 20:15, Partie 4 mit Verspätung"
