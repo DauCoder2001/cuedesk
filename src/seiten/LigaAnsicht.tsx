@@ -1600,7 +1600,7 @@ export default function LigaAnsicht({
                     <label
                       key={seite}
                       className="ankreuz"
-                      title={`${name} tritt in der ${r.titel} nur mit drei Spielern an: Partie ${nr}* bleibt auf ihrer Seite leer und zählt kampflos für den Gegner. Treten beide Mannschaften zu dritt an, entfällt die Partie.`}
+                      title={`${name} tritt in der ${r.titel} nur mit drei Spielern an: Partie ${nr}* bleibt auf ihrer Seite leer und zählt kampflos für den Gegner (${r.runde === 'hin' ? 'Ausspielziel zu null' : 'nur der Spielpunkt'}). Treten beide Mannschaften zu dritt an, entfällt die Partie.`}
                     >
                       <input type="checkbox" checked={an} disabled={arbeitet} onChange={(e) => void drittSetzen(r.runde, seite, e.target.checked)} />
                       {name} zu dritt
@@ -1995,8 +1995,8 @@ function Bemerkung({ text, bearbeitbar, speichern }: { text: string; bearbeitbar
         rows={3}
         maxLength={1000}
         value={wert}
-        placeholder="z. B. Spielbeginn 20:15, Partie 4 mit Verspätung"
-        title="Bemerkungen zur Begegnung, wie im Spielbericht. Gespeichert beim Verlassen des Felds; sie stehen auch im Spielbericht (PDF)."
+        placeholder="Ersatzspieler (namentlich), Verspätungen, Proteste"
+        title="Bemerkungen zur Begegnung, wie im Spielbericht. Laut BLVN-STO Pool gehören hierher: Ersatzspieler namentlich (2.2.3), Verspätungen und Proteste (2.3.7), bei Protest „Protest folgt“ vor der Unterschrift (2.4.3). Gespeichert beim Verlassen des Felds; sie stehen auch im Spielbericht (PDF)."
         onChange={(e) => setWert(e.target.value)}
         onBlur={() => wert.trim() !== text && speichern(wert.trim())}
       />
@@ -2112,7 +2112,7 @@ function Spielzeile(props: {
   return (
     <>
     <tr ref={zeile} className={gestrichen ? 'gestrichen' : fertig || kampflos ? 'gespielt' : ''}>
-      <td title={props.stern ? 'Entfällt bei Antritt mit drei Spielern (STO 2.5.5)' : undefined}>
+      <td title={props.stern ? 'Entfällt bei Antritt mit drei Spielern (BLVN-STO Pool 2.5.5)' : undefined}>
         {spiel.nr}
         {props.stern ? '*' : ''}
       </td>
@@ -2151,8 +2151,12 @@ function Spielzeile(props: {
       <td className="rechts">
         {gestrichen ? (
           <span title="Beide Mannschaften treten zu dritt an: Die Partie entfällt ohne Wertung.">entfällt</span>
+        ) : kampflos?.nurPunkt ? (
+          <span title="Der Gegner tritt zu dritt an: Die Partie zählt kampflos nur mit dem Spielpunkt, ohne Punkte, Höchstserie und Aufnahmen (BLVN-STO Pool 2.5.5).">
+            kampflos
+          </span>
         ) : kampflos ? (
-          <span title="Der Gegner tritt zu dritt an: Die Partie zählt kampflos mit dem Ausspielziel.">
+          <span title="Der Gegner tritt zu dritt an: Die Partie zählt kampflos mit dem Ausspielziel zu null (BLVN-STO Pool 2.5.5).">
             {kampflos.heim} : {kampflos.gast} <small>kampflos</small>
           </span>
         ) : props.bearbeitbar && partie ? (

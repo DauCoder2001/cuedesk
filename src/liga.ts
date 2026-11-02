@@ -106,12 +106,14 @@ export type LigaErgebnis = {
   gast: number | null;
   gewertet?: boolean; // false: gestrichene Partie ohne Wertung
   kampflos?: boolean; // Gegner trat zu dritt an
+  nurPunkt?: boolean; // kampflos nur mit Spielpunkt 1 : 0, ohne Ergebnis (14.1, Rueckrunde)
 };
 
-// Partie mit * bei drei Spielern (STO 2.5.5): Tritt nur eine Mannschaft zu
-// dritt an, gewinnt die andere kampflos mit Ausspielziel : 0 (14.1 Punkteziel,
-// sonst Gewinnsaetze). Treten beide zu dritt an, entfaellt die Partie ohne
-// Wertung. Eine gespeicherte Partie gibt es dafuer nicht; ihr Eintrag wird
+// Partie mit * bei drei Spielern (BLVN-STO Pool 2.5.5): Tritt nur eine
+// Mannschaft zu dritt an, gewinnt die andere kampflos, in der Hinrunde
+// (10-Ball) mit Ausspielziel : 0, in der Rueckrunde (14.1) nur mit Spielpunkt
+// 1 : 0 ohne Gesamtpunkte, Hoechstserie und Aufnahmen. Treten beide zu dritt
+// an, entfaellt die Partie ohne Wertung. Eine gespeicherte Partie gibt es dafuer nicht; ihr Eintrag wird
 // ersetzt.
 export function drittWertung(ergebnisse: LigaErgebnis[], dritt: Dritt | undefined, ziele: Ausspielziele | undefined): LigaErgebnis[] {
   let aus = ergebnisse;
@@ -119,12 +121,18 @@ export function drittWertung(ergebnisse: LigaErgebnis[], dritt: Dritt | undefine
     const lage = drittLage(dritt, runde);
     if (lage === 'keine') return;
     const nr = drittNr(runde);
-    const ziel = ziele ? (runde === 'hin' ? ziele['10-ball'] : ziele.punkte141) : 1;
+    const ziel = ziele && runde === 'hin' ? ziele['10-ball'] : 1;
     aus = aus.filter((e) => e.nr !== nr);
     aus.push(
       lage === 'beide'
         ? { nr, heim: null, gast: null, gewertet: false }
-        : { nr, heim: lage === 'gast' ? ziel : 0, gast: lage === 'heim' ? ziel : 0, kampflos: true }
+        : {
+            nr,
+            heim: lage === 'gast' ? ziel : 0,
+            gast: lage === 'heim' ? ziel : 0,
+            kampflos: true,
+            ...(runde === 'rueck' ? { nurPunkt: true } : {})
+          }
     );
   });
   return aus;

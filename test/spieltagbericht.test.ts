@@ -123,6 +123,10 @@ describe('Spielbericht des Spieltags', () => {
     expect(rueck.partien[0]).toMatchObject({ nr: '5*', heim: '– zu dritt –', gast: '– zu dritt –', ergebnis: 'entfällt', punkte: '–' });
     expect(b.begegnungen[0].partiepunkte).toEqual([1, 1]);
     expect(b.begegnungen[0].bemerkung).toBe('Beginn 20:15');
+    // 14.1 in der Rueckrunde: nur Spielpunkt, kein Ergebnis
+    const z3 = turnier('z3', { heim: true, ziele, dritt: { rueck: { heim: true } } });
+    const b3 = spieltagBerichtDaten([z3, z2], [], 'Verein', name, '')!;
+    expect(b3.begegnungen[0].runden[1].partien[0]).toMatchObject({ nr: '5*', heim: '– zu dritt –', ergebnis: 'kampflos', punkte: '0 : 1' });
     expect(new TextDecoder('latin1').decode(spieltagBerichtPdf(b).slice(0, 5))).toBe('%PDF-');
   });
 

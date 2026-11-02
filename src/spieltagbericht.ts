@@ -29,7 +29,7 @@ export type BerichtBegegnung = {
   partiepunkte: [number, number]; // Heim zuerst
   matchpunkte: [number, number] | null;
   runden: { name: string; partien: BerichtPartie[] }[];
-  mitStern: boolean; // Einzel-Begegnung: Hinweis zu * (STO 2.5.5) darunter
+  mitStern: boolean; // Einzel-Begegnung: Hinweis zu * (BLVN-STO Pool 2.5.5) darunter
   bemerkung: string;
 };
 export type SpieltagBericht = {
@@ -83,7 +83,8 @@ export function spieltagBerichtDaten(
     const eigene = partien.filter(mitSpielern).filter((p) => p.turnier_id === b.id);
     const zeile = (s: LigaSpiel): BerichtPartie => {
       const nr = !doppel && entfaelltBeiDritt(s.nr) ? `${s.nr}*` : String(s.nr);
-      // Zu dritt: keine Partie, kampflos Ausspielziel : 0 oder ganz entfallen
+      // Zu dritt: keine Partie, kampflos (10-Ball Ausspielziel : 0, 14.1 nur
+      // Spielpunkt) oder ganz entfallen (BLVN-STO Pool 2.5.5)
       const lage = !doppel && s.nr === drittNr(s.runde) ? drittLage(liga.dritt, s.runde) : 'keine';
       if (lage !== 'keine') {
         const gemerkt = liga.aufstellung?.[String(s.nr)];
@@ -93,7 +94,14 @@ export function spieltagBerichtDaten(
           disziplin: disziplinText(s),
           heim: lage === 'heim' || lage === 'beide' ? leer : gemerkt?.heim ? name(gemerkt.heim) : '',
           gast: lage === 'gast' || lage === 'beide' ? leer : gemerkt?.gast ? name(gemerkt.gast) : '',
-          ergebnis: lage === 'beide' ? 'entfällt' : lage === 'heim' ? `0 : ${s.ziel} kampflos` : `${s.ziel} : 0 kampflos`,
+          ergebnis:
+            lage === 'beide'
+              ? 'entfällt'
+              : s.runde === 'rueck'
+                ? 'kampflos'
+                : lage === 'heim'
+                  ? `0 : ${s.ziel} kampflos`
+                  : `${s.ziel} : 0 kampflos`,
           punkte: lage === 'beide' ? '–' : lage === 'heim' ? '0 : 1' : '1 : 0'
         };
       }
@@ -149,7 +157,7 @@ const paar = (x: [number, number] | null) => (x ? `${x[0]} : ${x[1]}` : '–');
 // Partiepunkt einer gespielten Partie, Heim zuerst
 export const partiePunkt = (heim: number, gast: number) => (heim > gast ? '1 : 0' : gast > heim ? '0 : 1' : '0 : 0');
 
-export const STERN_HINWEIS = '* Bei Antritt mit drei Spielern entfällt Partie Nr. 4 bzw. Nr. 5 (STO 2.5.5).';
+export const STERN_HINWEIS = '* Bei Antritt mit drei Spielern entfällt Partie Nr. 4 bzw. Nr. 5 (BLVN-STO Pool 2.5.5).';
 
 export function spieltagBerichtPdf(b: SpieltagBericht): Uint8Array {
   const dok = neuesDokument();

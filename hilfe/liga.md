@@ -27,10 +27,10 @@ Ein Liga-Spieltag besteht immer aus zwei Begegnungen gegen dieselbe Mannschaft, 
 
 ### Zu dritt
 
-Tritt eine Mannschaft nur mit drei Spielern an, entfällt je Runde eine Partie: in der Hinrunde Nr. 4 (10-Ball), in der Rückrunde Nr. 5 (14.1). Beide tragen in der Tabelle ein * (STO 2.5.5).
+Tritt eine Mannschaft nur mit drei Spielern an, entfällt je Runde eine Partie: in der Hinrunde Nr. 4 (10-Ball), in der Rückrunde Nr. 5 (14.1). Beide tragen in der Tabelle ein * (BLVN-STO Pool 2.5.5).
 
 - Im Kopf jeder Runde steht für beide Mannschaften ein Haken **zu dritt**, zum Beispiel „PBC Muster 1 zu dritt“. Mit dem Haken bleibt die Seite dieser Mannschaft in der Partie mit * leer („– zu dritt –“), und die Partie kommt nicht an die Tablets.
-- Tritt nur eine Mannschaft zu dritt an, gewinnt die andere die Partie kampflos mit dem Ausspielziel, zum Beispiel 4 : 0 im 10-Ball oder 40 : 0 im 14.1. Ihren Spieler trägst du wie gewohnt ein.
+- Tritt nur eine Mannschaft zu dritt an, gewinnt die andere die Partie kampflos: im 10-Ball (Hinrunde) zu null mit dem Ausspielziel, zum Beispiel 4 : 0, im 14.1 (Rückrunde) nur mit dem Spielpunkt 1 : 0, ohne Punkte, Höchstserie und Aufnahmen. Ihren Spieler trägst du wie gewohnt ein.
 - Treten beide zu dritt an, entfällt die Partie ohne Wertung.
 - Ist die Partie schon aufgestellt, nimmt der Haken den Spieler dieser Mannschaft wieder heraus. Läuft sie schon oder hat sie ein Ergebnis, erst **Zurücksetzen**.
 
@@ -42,7 +42,7 @@ Tritt eine Mannschaft nur mit drei Spielern an, entfällt je Runde eine Partie: 
 - Die Ergebnisse kommen von den Tablets oder werden in der Tabelle eingetragen, von Hand auch für eine noch nicht gestartete Runde.
 - Die Spalte **Punkte** zeigt den Partiepunkt (1 : 0 für den Sieger), unter jeder Runde stehen ihre Partiepunkte.
 - **14.1-Zeile:** Unter jeder 14.1-Partie stehen die Aufnahmen (die benötigten Aufnahmen des Gewinners), die Höchstserie (HS) beider Spieler und daraus der Generaldurchschnitt (GD = Punkte geteilt durch Aufnahmen). Am Tablet gespielt, füllt CueDesk die Zeile selbst. Sonst trägst du Aufnahmen und HS von Hand ein, sobald das Ergebnis steht; gespeichert wird beim Verlassen der Zeile.
-- Unter der Rückrunde stehen wie im Spielbericht des Verbands der **Endstand**, das Feld **Bemerkungen** (gespeichert beim Verlassen des Felds) und der Hinweis zu *.
+- Unter der Rückrunde stehen wie im Spielbericht des Verbands der **Endstand**, das Feld **Bemerkungen** (gespeichert beim Verlassen des Felds; laut STO gehören Ersatzspieler namentlich, Verspätungen und Proteste hinein) und der Hinweis zu *.
 - **Spielbericht einlesen** übernimmt die Ergebnisse aus dem Spielbericht des Verbands; vorher zeigt CueDesk, was sich ändert.
 - **Live an** / **Live aus** im Kopf gilt für beide Begegnungen: Bei Live an sehen Mitglieder und Fernseher die Spielstände, solange der Spieltag läuft. Darunter schaltet **Chat an** / **Chat aus** den Chat für beide Begegnungen (nur, wenn der Verein den Chat eingeschaltet hat). Bei **Live aus** gibt es keinen Chat; nach **Live an** ist er wieder so wie vorher. **Öffentlicher Link** darunter gibt den ganzen Spieltag als Link ohne Anmeldung frei (wie beim Turnier, siehe dort).
 - **Fürs Rating werten** entscheidet, ob die Partien dieses Spieltags ins Vereins-Rating eingehen. 14.1 zählt nie.

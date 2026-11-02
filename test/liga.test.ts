@@ -52,7 +52,7 @@ describe('Spielplan einer Begegnung', () => {
   });
 });
 
-describe('Zu dritt (STO 2.5.5)', () => {
+describe('Zu dritt (BLVN-STO Pool 2.5.5)', () => {
   const ziele = LIGEN.kreisklasse.ziele; // 14.1 auf 40, 10-Ball auf 4
   const sieben = [1, 2, 3, 5, 6, 7, 8].map((nr) => ({ nr, heim: 4, gast: 1 }));
 
@@ -63,11 +63,11 @@ describe('Zu dritt (STO 2.5.5)', () => {
     expect(drittLage({ rueck: { heim: true, gast: true } }, 'rueck')).toBe('beide');
   });
 
-  test('nur eine Mannschaft zu dritt: die andere gewinnt kampflos mit Ausspielziel : 0', () => {
+  test('nur eine Mannschaft zu dritt: 10-Ball kampflos zu null, 14.1 nur Spielpunkt', () => {
     // wie im Spielbericht PBC Bassum 3 gegen BC Dissen 7: Gast zu dritt
     const e = drittWertung(sieben, { hin: { gast: true }, rueck: { gast: true } }, ziele);
     expect(e.find((x) => x.nr === 4)).toEqual({ nr: 4, heim: 4, gast: 0, kampflos: true });
-    expect(e.find((x) => x.nr === 5)).toEqual({ nr: 5, heim: 40, gast: 0, kampflos: true });
+    expect(e.find((x) => x.nr === 5)).toEqual({ nr: 5, heim: 1, gast: 0, kampflos: true, nurPunkt: true });
     expect(wertung(e).partiepunkte).toEqual([8, 0]);
     expect(wertung(e).entschieden).toBe(true);
   });
