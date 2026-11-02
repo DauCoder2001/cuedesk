@@ -121,7 +121,7 @@ export type EndZeile<T> = {
 export function endtabelleZweiGruppen<T>(
   a: T[],
   b: T[],
-  staende: { standA: Stand; standB: Stand }[],
+  staende: { standA: Stand; standB: Stand; raceTo?: number | null }[], // raceTo: im Lauf geaendertes Race des Duells
   raceTo: number
 ): EndZeile<T>[] {
   const { duelle, spielfrei } = phase2Paare(a, b);
@@ -130,7 +130,7 @@ export function endtabelleZweiGruppen<T>(
     const s1 = staende[i]?.standA ?? null;
     const s2 = staende[i]?.standB ?? null;
     const gueltig = s1 !== null && s2 !== null;
-    const entschieden = spielBeendet(s1, s2, raceTo);
+    const entschieden = spielBeendet(s1, s2, staende[i]?.raceTo ?? raceTo);
     let [sieger, verlierer, ws, ls] = [x, y, gueltig ? (s1 as number) : 0, gueltig ? (s2 as number) : 0];
     if (entschieden && (s2 as number) > (s1 as number)) [sieger, verlierer, ws, ls] = [y, x, s2 as number, s1 as number];
     zeilen.push({ wer: sieger, platz: 2 * i + 1, gruppenplatz: i + 1, ergebnis: `${ws} : ${ls}`, offen: !entschieden, spielfrei: false });
@@ -147,6 +147,22 @@ export function endtabelleZweiGruppen<T>(
     });
   });
   return zeilen;
+}
+
+// Duelle mit abweichendem Race fuer die Ueberschrift: "Duell 1–2: 5, Duell 4: 2".
+// Aufeinanderfolgende Duelle mit demselben Race werden zusammengefasst.
+export function raceAusnahmen(duelle: { paarung: number | null; race_to: number | null }[], race: number): string {
+  const abweichend = duelle
+    .filter((d) => d.paarung !== null && d.race_to !== null && d.race_to !== race)
+    .map((d) => ({ nr: d.paarung as number, race: d.race_to as number }))
+    .sort((x, y) => x.nr - y.nr);
+  const teile: { von: number; bis: number; race: number }[] = [];
+  abweichend.forEach((d) => {
+    const letzte = teile[teile.length - 1];
+    if (letzte && letzte.bis + 1 === d.nr && letzte.race === d.race) letzte.bis = d.nr;
+    else teile.push({ von: d.nr, bis: d.nr, race: d.race });
+  });
+  return teile.map((t) => `Duell ${t.von === t.bis ? t.von : `${t.von}–${t.bis}`}: ${t.race}`).join(', ');
 }
 
 // ---------- Spieler nachtragen ----------

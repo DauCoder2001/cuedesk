@@ -52,6 +52,8 @@ Bis zur Auslosung lassen sich Name, Modus und Race über **Ändern** noch anpass
 
 Bei **Zwei Gruppen** startest du nach den Gruppenspielen die **Duelle**, bei **Gruppen mit KO-Runde** die **KO-Runde**. Kommt jemand zu spät, hilft **Spieler nachtragen**.
 
+**Race to ändern…** im Kopf der Platzierungsduelle bzw. der KO-Runde ändert das Race auch noch im laufenden Turnier. Bei Zwei Gruppen gilt der Wert vor dem Start für alle Duelle, danach je Duell, zum Beispiel Race to 5 nur für die Duelle um Platz 1–2 und 3–4; die Überschrift zeigt dann „Race to 3, Duell 1–2: 5“. Bei Gruppen mit KO-Runde geht es je Runde (Achtelfinale bis Finale, das Spiel um Platz 3 mit dem Halbfinale, Platzierungsspiele). Was schon läuft oder beendet ist, bleibt, wie es ist: Ein Duell bzw. eine Runde ist gesperrt, sobald dort gespielt wird. Die Tablets übernehmen das neue Race beim Spielstart; mit Vorgabe wird sie neu berechnet.
+
 **Duelle zurücksetzen**, **KO-Runde zurücksetzen** und **Spiele zurücksetzen** (Platzierungsspiele) löschen die ganze Phase, damit sie neu angesetzt werden kann. Hat dort schon ein Spiel ein Ergebnis oder läuft gerade, braucht es dafür das Schutzwort des Vereins; frisch angesetzt reicht die einfache Rückfrage.
 
 ## 5. Abschließen

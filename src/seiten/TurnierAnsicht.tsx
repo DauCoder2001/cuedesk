@@ -36,6 +36,7 @@ import {
   gruppenRangliste,
   nachtragenPlan,
   phase2Paare,
+  raceAusnahmen,
   verteilen,
   zielGroessen,
   zuVieleGesetzt
@@ -65,6 +66,7 @@ import type { TurnierEinstellungen } from './Turniere';
 import type { Partie, Person, RatingQuelle, Turnier, TurnierAnmeldung, TurnierTeilnehmer } from '../datenbank.types';
 import { anmeldeLink, anmeldestand } from '../ausschreibung';
 import { Modal } from '../modal';
+import { Pflichthinweis, usePflicht } from '../pflicht';
 import { REIHENFOLGE_TEXT, spielFolge } from '../reihenfolge';
 import type { Reihenfolge } from '../reihenfolge';
 
@@ -151,6 +153,9 @@ export default function TurnierAnsicht({
   // hervorgehoben. Nur Anzeige, nichts wird gespeichert.
   const [markiert, setMarkiert] = useState<string[]>([]);
   const [tausch, setTausch] = useState<{ raus: string; von: string; nach: string } | null>(null);
+  // "Race to aendern": Duelle (Zwei Gruppen) bzw. Runden (Gruppen mit KO), Feld je Schluessel
+  const [raceDialog, setRaceDialog] = useState<Record<string, string> | null>(null);
+  const racePflicht = usePflicht();
   const [nachtrag, setNachtrag] = useState<{ ziel: string; suche: string; gast: string } | null>(null);
   const [verlauf, setVerlauf] = useState<{ partie: TPartie; zeilen: Aenderungszeile[] } | null>(null);
   const [stapel, setStapel] = useState<Rueckgaengig[]>([]);
@@ -336,6 +341,8 @@ export default function TurnierAnsicht({
   const duelle = useMemo(() => partien.filter((p) => p.phase === 'phase2').sort(nachPaarung), [partien]);
   const koPartien = useMemo(() => partien.filter((p) => p.phase === 'ko'), [partien]);
   const p3Partien = useMemo(() => partien.filter((p) => p.phase === 'phase3').sort(nachPaarung), [partien]);
+  // Race der Duelle mit den im Lauf geaenderten: "Race to 3, Duell 1–2: 5"
+  const duelleRace = [`Race to ${race2}`, raceAusnahmen(duelle, race2)].filter(Boolean).join(', ');
 
   // Gruppenmitglieder als Positionen der Startliste; die Startnummern sind je
   // Gruppe fortlaufend vergeben, die Reihenfolge ist damit die der Auslosung.
@@ -399,7 +406,7 @@ export default function TurnierAnsicht({
   const koStaende = useCallback(
     (liste: TPartie[]) => (id: string, p1: string, p2: string) => {
       const x = liste.find((p) => p.phase === 'ko' && p.gruppe === id && p.spieler_a === p1 && p.spieler_b === p2);
-      return x ? { s1: x.ergebnis_a ?? x.vorgabe_a, s2: x.ergebnis_b ?? x.vorgabe_b } : { s1: null, s2: null };
+      return x ? { s1: x.ergebnis_a ?? x.vorgabe_a, s2: x.ergebnis_b ?? x.vorgabe_b, race: x.race_to } : { s1: null, s2: null };
     },
     []
   );
@@ -440,7 +447,7 @@ export default function TurnierAnsicht({
             race: race3,
             staende: phase3Paare(p3.reihung).paare.map((_, i) => {
               const d = p3Partien.find((x) => x.paarung === i + 1);
-              return { s1: d ? d.ergebnis_a ?? d.vorgabe_a : null, s2: d ? d.ergebnis_b ?? d.vorgabe_b : null };
+              return { s1: d ? d.ergebnis_a ?? d.vorgabe_a : null, s2: d ? d.ergebnis_b ?? d.vorgabe_b : null, race: d?.race_to ?? null };
             })
           }
         : null
@@ -466,7 +473,7 @@ export default function TurnierAnsicht({
       p2.B,
       p2.A.slice(0, Math.min(p2.A.length, p2.B.length)).map((_, i) => {
         const d = duelle.find((x) => x.paarung === i + 1);
-        return { standA: d ? d.ergebnis_a ?? d.vorgabe_a : null, standB: d ? d.ergebnis_b ?? d.vorgabe_b : null };
+        return { standA: d ? d.ergebnis_a ?? d.vorgabe_a : null, standB: d ? d.ergebnis_b ?? d.vorgabe_b : null, raceTo: d?.race_to ?? null };
       }),
       race2
     );
@@ -1051,7 +1058,7 @@ export default function TurnierAnsicht({
     const bloecke: BerichtBlock[] = [];
     let kopf: string;
     if (zwei) {
-      kopf = `Zwei-Gruppen-Modus · ${DISZIPLIN_TEXT[turnier.disziplin]} · Race to ${raceTo} (Gruppenphase) / ${race2} (Platzierungsduelle) · ${aufstellung.length} Teilnehmer · ${datumText}${zeit}${handicap}`;
+      kopf = `Zwei-Gruppen-Modus · ${DISZIPLIN_TEXT[turnier.disziplin]} · Race to ${raceTo} (Gruppenphase) / ${race2} (Platzierungsduelle${raceAusnahmen(duelle, race2) ? `; ${raceAusnahmen(duelle, race2)}` : ''}) · ${aufstellung.length} Teilnehmer · ${datumText}${zeit}${handicap}`;
       if (einstellungen.phase2) {
         bloecke.push({
           art: 'tabelle',
@@ -1082,7 +1089,7 @@ export default function TurnierAnsicht({
         });
         bloecke.push({
           art: 'tabelle',
-          titel: `Platzierungsduelle (Race to ${race2})`,
+          titel: `Platzierungsduelle (${duelleRace})`,
           neueSeite: true,
           spalten: [
             { text: 'Spieler 1', align: 'rechts' },
@@ -1510,6 +1517,103 @@ export default function TurnierAnsicht({
     await einstellungenSetzen({ phase2: p2 });
     setArbeitet(false);
     springen('P2');
+    await laden();
+  }
+
+  // ---------- Race to im Lauf aendern ----------
+
+  // Eine Partie laesst sich nur aendern, solange sie nicht am Tisch liegt und
+  // kein Ergebnis hat: Das Tablet uebernimmt das Race beim Spielstart.
+  const ruhtNoch = (p: TPartie) => !begonnen(p) && p.status === 'geplant' && p.tisch_id === null;
+  // KO-Partie -> Runde im Dialog; das Spiel um Platz 3 gehoert zum Halbfinale
+  const raceRundeVon = (p: TPartie): KoRunde | 'P3' | null => {
+    if (p.phase === 'phase3') return 'P3';
+    const r = koSpiele(feld).find((k) => k.id === p.gruppe)?.runde;
+    return r === 'BRO' ? 'SF' : r ?? null;
+  };
+  type RaceZeile = { schluessel: string; text: string; plaetze: string; wert: number; gesperrt: string | null };
+  // Zwei Gruppen: vor dem Start ein Wert fuer alle Duelle, danach je Duell.
+  // Gruppen mit KO: je Runde; eine Runde ist gesperrt, sobald dort gespielt wird.
+  const raceZeilen = (): RaceZeile[] => {
+    if (zwei) {
+      if (!einstellungen.phase2) return [{ schluessel: 'alle', text: 'Alle Duelle', plaetze: '', wert: race2, gesperrt: null }];
+      return duelle.map((d) => ({
+        schluessel: d.id,
+        text: `Duell ${d.paarung} · ${anzeige(d.spieler_a)} – ${anzeige(d.spieler_b)}`,
+        plaetze: `${2 * (d.paarung ?? 1) - 1}–${2 * (d.paarung ?? 1)}`,
+        wert: d.race_to ?? race2,
+        gesperrt: ruhtNoch(d) ? null : d.status === 'beendet' ? 'beendet' : 'läuft'
+      }));
+    }
+    const runden: [KoRunde | 'P3', string][] = [
+      ...(feld >= 16 ? [['R16', 'Achtelfinale'] as [KoRunde, string]] : []),
+      ...(feld >= 8 ? [['QF', 'Viertelfinale'] as [KoRunde, string]] : []),
+      ['SF', 'Halbfinale und Spiel um Platz 3'],
+      ['FIN', 'Finale'],
+      ['P3', 'Platzierungsspiele']
+    ];
+    return runden.map(([r, text]) => ({
+      schluessel: r,
+      text,
+      plaetze: '',
+      wert: r === 'P3' ? race3 : raceFuer(r),
+      gesperrt: [...koPartien, ...p3Partien].some((p) => raceRundeVon(p) === r && !ruhtNoch(p)) ? 'hat begonnen' : null
+    }));
+  };
+
+  function raceOeffnen() {
+    racePflicht.zuruecksetzen();
+    setRaceDialog(Object.fromEntries(raceZeilen().map((z) => [z.schluessel, String(z.wert)])));
+  }
+
+  async function raceSpeichern() {
+    if (!turnier || !raceDialog) return;
+    if (!racePflicht.pruefen()) return;
+    const neu = new Map(raceZeilen().filter((z) => !z.gesperrt).map((z) => [z.schluessel, Number(raceDialog[z.schluessel])]));
+    if ([...neu.values()].some((n) => !Number.isInteger(n) || n < 1 || n > 99)) {
+      return racePflicht.melden('Race to muss eine ganze Zahl von 1 bis 99 sein.');
+    }
+    setArbeitet(true);
+    const werte = ratingWerte();
+    // Die Bedingungen gelten auch in der Datenbank: Hat ein Tablet die Partie
+    // inzwischen gestartet, bleibt sie unveraendert
+    const partieSetzen = async (p: TPartie, race: number) => {
+      if (p.race_to === race) return null;
+      const [vA, vB] = vorgabePaar(werte.get(p.spieler_a) ?? 500, werte.get(p.spieler_b) ?? 500, race);
+      const { error } = await supabase
+        .from('partien')
+        .update({ race_to: race, vorgabe_a: vA, vorgabe_b: vB })
+        .eq('id', p.id)
+        .eq('status', 'geplant')
+        .is('tisch_id', null)
+        .is('ergebnis_a', null)
+        .is('ergebnis_b', null);
+      return error;
+    };
+    let fehler: { message: string } | null = null;
+    if (zwei && !einstellungen.phase2) {
+      await einstellungenSetzen({ racePhase2: neu.get('alle') });
+    } else if (zwei) {
+      for (const d of duelle) {
+        const r = neu.get(d.id);
+        if (r !== undefined) fehler = (await partieSetzen(d, r)) ?? fehler;
+      }
+    } else {
+      const bisher = einstellungen.raceKo ?? {};
+      await einstellungenSetzen({
+        raceKo: { R16: neu.get('R16') ?? bisher.R16, QF: neu.get('QF') ?? bisher.QF, SF: neu.get('SF') ?? bisher.SF, FIN: neu.get('FIN') ?? bisher.FIN },
+        racePhase3: neu.get('P3') ?? einstellungen.racePhase3
+      });
+      for (const p of [...koPartien, ...p3Partien]) {
+        const runde = raceRundeVon(p);
+        const r = runde ? neu.get(runde) : undefined;
+        if (r !== undefined) fehler = (await partieSetzen(p, r)) ?? fehler;
+      }
+    }
+    setArbeitet(false);
+    if (fehler) return racePflicht.melden(fehler.message);
+    setRaceDialog(null);
+    setMeldung('Race to geändert.');
     await laden();
   }
 
@@ -2769,10 +2873,15 @@ export default function TurnierAnsicht({
               {zwei && (
               <section className="block">
                 <div className="bearbeitenkopf">
-                  <h2>Platzierungsduelle (Race to {race2})</h2>
+                  <h2>Platzierungsduelle ({duelleRace})</h2>
                   {bearbeitbar && !einstellungen.phase2 && (
                     <button type="button" title="Setzt die Platzierungsduelle an. Geht erst, wenn alle Gruppenspiele beendet sind." className={faellig('duelle')} onClick={() => void phase2Starten()} disabled={arbeitet || offeneGruppenspiele > 0}>
                       Duelle starten
+                    </button>
+                  )}
+                  {bearbeitbar && (
+                    <button type="button" title="Race to der Platzierungsduelle ändern. Vor dem Start gilt es für alle Duelle, danach je Duell; laufende und beendete Duelle bleiben, wie sie sind." onClick={raceOeffnen} disabled={arbeitet}>
+                      Race to ändern…
                     </button>
                   )}
                   {bearbeitbar && einstellungen.phase2 && (
@@ -2843,6 +2952,11 @@ export default function TurnierAnsicht({
                       {bearbeitbar && !koFest && (
                         <button type="button" title="Setzt die KO-Runde aus den Gruppentabellen an. Geht erst, wenn alle Gruppenspiele beendet sind." className={faellig('ko')} onClick={() => void koStarten()} disabled={arbeitet || offeneGruppenspiele > 0 || weiter === null}>
                           KO-Runde starten
+                        </button>
+                      )}
+                      {bearbeitbar && (
+                        <button type="button" title="Race to je Runde ändern (Achtelfinale bis Finale, Platzierungsspiele). Runden, in denen schon gespielt wird, bleiben, wie sie sind." onClick={raceOeffnen} disabled={arbeitet}>
+                          Race to ändern…
                         </button>
                       )}
                       {bearbeitbar && koFest && (
@@ -3153,6 +3267,68 @@ export default function TurnierAnsicht({
           <button type="button" onClick={() => setNachtrag(null)}>
             Abbrechen
           </button>
+        </Modal>
+      )}
+      {raceDialog && (
+        <Modal abbrechen={() => !arbeitet && setRaceDialog(null)} bereich={racePflicht.bereich}>
+          <h2>Race to ändern</h2>
+          <p className="hinweis">
+            {zwei
+              ? einstellungen.phase2
+                ? 'Je Duell. Laufende und beendete Duelle bleiben, wie sie sind; die Tablets übernehmen das neue Race beim Spielstart.'
+                : 'Gilt für alle Duelle, wenn sie gestartet werden. Danach lässt es sich je Duell ändern.'
+              : 'Je Runde. Eine Runde, in der schon gespielt wird, bleibt, wie sie ist; die Tablets übernehmen das neue Race beim Spielstart.'}
+            {va.aktiv ? ' Die Vorgaben werden dazu neu berechnet.' : ''}
+          </p>
+          <table className="tabelle kompakt">
+            <thead>
+              <tr>
+                <th>{zwei ? 'Duell' : 'Runde'}</th>
+                {zwei && einstellungen.phase2 && <th title="Plätze, die dieses Duell entscheidet">Plätze</th>}
+                <th className="rechts">Race to</th>
+              </tr>
+            </thead>
+            <tbody>
+              {raceZeilen().map((z) => (
+                <tr key={z.schluessel}>
+                  <td>{z.text}</td>
+                  {zwei && einstellungen.phase2 && <td>{z.plaetze}</td>}
+                  <td className="rechts">
+                    {z.gesperrt ? (
+                      <span className="hinweis" title="Lässt sich nicht mehr ändern, weil hier schon gespielt wird.">
+                        {z.wert} · {z.gesperrt}
+                      </span>
+                    ) : (
+                      <input
+                        className="zahlfeld"
+                        type="number"
+                        min={1}
+                        max={99}
+                        required
+                        aria-label={`Race to ${z.text}`}
+                        title="Gewonnene Spiele, die zum Sieg nötig sind"
+                        value={raceDialog[z.schluessel] ?? ''}
+                        onChange={(e) => {
+                          racePflicht.melden(null);
+                          setRaceDialog({ ...raceDialog, [z.schluessel]: e.target.value });
+                        }}
+                        onKeyDown={(e) => e.key === 'Enter' && void raceSpeichern()}
+                      />
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <div className="knopfpaar rechts">
+            <Pflichthinweis hinweis={racePflicht.hinweis} />
+            <button type="button" title="Nichts ändern und den Dialog schließen." onClick={() => setRaceDialog(null)} disabled={arbeitet}>
+              Abbrechen
+            </button>
+            <button type="button" className="hauptaktion" title="Das neue Race to speichern." onClick={() => void raceSpeichern()} disabled={arbeitet}>
+              Übernehmen
+            </button>
+          </div>
         </Modal>
       )}
       {tausch && (

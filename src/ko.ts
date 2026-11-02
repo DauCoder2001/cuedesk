@@ -190,10 +190,11 @@ export type KoStandSpiel<T> = {
 };
 
 // Baum aufloesen: wer spielt wo, wer ist weiter (v74 resolveKO). staende
-// liefert je Spiel den Stand aus Sicht von p1 und p2.
+// liefert je Spiel den Stand aus Sicht von p1 und p2, dazu das Race der
+// angelegten Partie (im Lauf geaendert); sonst gilt das Race der Runde.
 export function koAufloesen<T>(
   ko: KoFest<T>,
-  staende: (spiel: string, p1: T, p2: T) => { s1: Stand; s2: Stand },
+  staende: (spiel: string, p1: T, p2: T) => { s1: Stand; s2: Stand; race?: number | null },
   raceFuer: (runde: KoRunde) => number
 ): Record<string, KoStandSpiel<T>> {
   const paare = erstrundenPaare(ko.gruppenzahl, ko.option, ko.weiter);
@@ -221,9 +222,10 @@ export function koAufloesen<T>(
       l1 = `${qa.nimmt === 'w' ? 'Sieger' : 'Verlierer'} ${a.spiel.kurz}`;
       l2 = `${qb.nimmt === 'w' ? 'Sieger' : 'Verlierer'} ${b.spiel.kurz}`;
     }
-    const race = raceFuer(s.runde);
     const bereit = p1 !== null && p2 !== null;
-    const { s1, s2 } = bereit ? staende(s.id, p1 as T, p2 as T) : { s1: null, s2: null };
+    const stand = bereit ? staende(s.id, p1 as T, p2 as T) : { s1: null, s2: null, race: null };
+    const { s1, s2 } = stand;
+    const race = stand.race ?? raceFuer(s.runde);
     const fertig = bereit && spielBeendet(s1, s2, race);
     res[s.id] = {
       spiel: s,
@@ -300,7 +302,7 @@ export function endtabelleKo<T>(
   leistung: Map<T, Leistung>,
   gruppen: T[][],
   ordnung: (x: T) => number,
-  phase3: { reihung: T[]; abPlatz: number; staende: { s1: Stand; s2: Stand }[]; race: number } | null
+  phase3: { reihung: T[]; abPlatz: number; staende: { s1: Stand; s2: Stand; race?: number | null }[]; race: number } | null
 ): EndZeileKo<T>[] {
   const zeilen: EndZeileKo<T>[] = [];
   const paar = (m: KoStandSpiel<T>, wieSieger: string, wieVerlierer: string, p1: number, p2: number) => {
@@ -341,9 +343,9 @@ export function endtabelleKo<T>(
   if (phase3) {
     const { paare, solo } = phase3Paare(phase3.reihung);
     paare.forEach(([a, b], i) => {
-      const { s1, s2 } = phase3.staende[i] ?? { s1: null, s2: null };
+      const { s1, s2, race } = phase3.staende[i] ?? { s1: null, s2: null };
       const platz = phase3.abPlatz + 2 * i;
-      if (spielBeendet(s1, s2, phase3.race)) {
+      if (spielBeendet(s1, s2, race ?? phase3.race)) {
         const aGewinnt = (s1 as number) > (s2 as number);
         zeilen.push({ platz, wer: aGewinnt ? a : b, wie: 'Sieger Platzierungsspiel', offen: false, zeigePlatz: true });
         zeilen.push({ platz: platz + 1, wer: aGewinnt ? b : a, wie: 'Platzierungsspiel', offen: false, zeigePlatz: true });

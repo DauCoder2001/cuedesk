@@ -58,7 +58,7 @@ export function vorlaeufigeEndplaetze(
 ): VorlaeufigeEndplaetze | null {
   const raceTo = e.raceTo ?? 0;
   const stand = (p: EndplatzPartie | undefined) =>
-    p ? { s1: p.ergebnis_a ?? p.vorgabe_a, s2: p.ergebnis_b ?? p.vorgabe_b } : { s1: null, s2: null };
+    p ? { s1: p.ergebnis_a ?? p.vorgabe_a, s2: p.ergebnis_b ?? p.vorgabe_b, race: p.race_to } : { s1: null, s2: null, race: null };
   // Offenes Spiel zu genau diesen Spielern (ausser Gruppenspielen)
   const partieVon = (wer: string[]) =>
     wer.length === 2
@@ -88,7 +88,7 @@ export function vorlaeufigeEndplaetze(
       p2.B,
       p2.A.slice(0, Math.min(p2.A.length, p2.B.length)).map((_, i) => {
         const d = duelle.find((x) => x.paarung === i + 1);
-        return { standA: d ? d.ergebnis_a ?? d.vorgabe_a : null, standB: d ? d.ergebnis_b ?? d.vorgabe_b : null };
+        return { standA: d ? d.ergebnis_a ?? d.vorgabe_a : null, standB: d ? d.ergebnis_b ?? d.vorgabe_b : null, raceTo: d?.race_to ?? null };
       }),
       race2
     );

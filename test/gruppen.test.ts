@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, test } from 'vitest';
-import { endtabelleZweiGruppen, gruppenRangliste, nachtragenPlan, phase2Paare, verteilen, zielGroessen, zuVieleGesetzt } from '../src/gruppen';
+import { endtabelleZweiGruppen, gruppenRangliste, nachtragenPlan, phase2Paare, raceAusnahmen, verteilen, zielGroessen, zuVieleGesetzt } from '../src/gruppen';
 import { bergerRunden } from '../src/turnier';
 import type { RanglistenPartie } from '../src/turnier';
 
@@ -241,5 +241,23 @@ describe.skipIf(!existsSync(V64))('Vergleich mit Turnierplan Gruppen v64', () =>
         erwartet.map((z) => [z.idx, z.place, z.groupPlace, z.result, z.open, z.bye])
       );
     }
+  });
+});
+
+describe('Race der Platzierungsduelle im Lauf geaendert', () => {
+  test('ein Duell mit eigenem Race ist erst bei dessen Ziel entschieden', () => {
+    // Duell 1 auf Race 5 gestellt: 3 : 1 ist noch offen, Duell 2 (Race 3) entschieden
+    const e = endtabelleZweiGruppen(['a1', 'a2'], ['b1', 'b2'], [
+      { standA: 3, standB: 1, raceTo: 5 },
+      { standA: 1, standB: 3 }
+    ], 3);
+    expect(e.map((z) => [z.wer, z.platz, z.offen])).toEqual([
+      ['a1', 1, true], ['b1', 2, true], ['b2', 3, false], ['a2', 4, false]
+    ]);
+  });
+  test('Ueberschrift fasst aufeinanderfolgende Duelle zusammen', () => {
+    const d = (paarung: number, race_to: number) => ({ paarung, race_to });
+    expect(raceAusnahmen([d(1, 5), d(2, 5), d(3, 3), d(4, 2)], 3)).toBe('Duell 1–2: 5, Duell 4: 2');
+    expect(raceAusnahmen([d(1, 3), d(2, 3)], 3)).toBe('');
   });
 });

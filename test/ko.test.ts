@@ -67,6 +67,25 @@ describe('KO-Einstellungen', () => {
   });
 });
 
+describe('Race im Lauf geaendert', () => {
+  test('eine Partie mit eigenem Race ist erst bei dessen Ziel fertig', () => {
+    const ko = { seeds: ['a', 'b', 'c', 'd'], option: 1, gruppenzahl: 2, weiter: 2, reihung: { A: ['a', 'c'], B: ['b', 'd'] } };
+    // Alle Halbfinals 3 : 1; eines auf Race 5 gestellt, das andere nach Runde (Race 3)
+    let erstes = true;
+    const baum = koAufloesen(
+      ko,
+      () => {
+        const race = erstes ? 5 : null;
+        erstes = false;
+        return { s1: 3, s2: 1, race };
+      },
+      () => 3
+    );
+    const halbfinale = Object.values(baum).filter((m) => m.spiel.runde === 'SF');
+    expect(halbfinale.map((m) => [m.race, m.fertig])).toEqual([[5, false], [3, true]]);
+  });
+});
+
 describe.skipIf(!existsSync(V74))('Vergleich mit Turnierplan KO v74', () => {
   const quelle = existsSync(V74) ? readFileSync(V74, 'utf8') : '';
 
