@@ -138,6 +138,24 @@ export function drittWertung(ergebnisse: LigaErgebnis[], dritt: Dritt | undefine
   return aus;
 }
 
+// 14.1 kennt kein Unentschieden (BLVN-STO Pool 1.3.14): Bei Gleichstand am
+// Aufnahmen-Limit wird um je 5 Aufnahmen verlaengert, bis einer das Ziel
+// erreicht oder mehr Punkte hat. Ueber dem Limit endet eine Partie also nur
+// mit dem Ziel oder genau nach einer Verlaengerung (Limit + 5, + 10 ...).
+export const VERLAENGERUNG_141 = 5;
+
+export function ergebnis141Fehler(heim: number | null, gast: number | null): string | null {
+  if (heim === null || gast === null || heim !== gast) return null;
+  return 'Im 14.1 gibt es kein Unentschieden (BLVN-STO Pool 1.3.14). Bei Gleichstand wird um je 5 Aufnahmen verlängert – bitte den Endstand nach der Verlängerung eintragen.';
+}
+
+export function aufnahmen141Fehler(aufnahmen: number, limit: number | null, siegerPunkte: number, ziel: number): string | null {
+  if (!limit || aufnahmen <= limit || siegerPunkte >= ziel) return null;
+  if ((aufnahmen - limit) % VERLAENGERUNG_141 === 0) return null;
+  const naechste = limit + Math.ceil((aufnahmen - limit) / VERLAENGERUNG_141) * VERLAENGERUNG_141;
+  return `Über ${limit} Aufnahmen nur mit Verlängerung um je ${VERLAENGERUNG_141} (also ${limit + VERLAENGERUNG_141}, ${limit + 2 * VERLAENGERUNG_141} …) oder wenn der Gewinner das Ziel von ${ziel} Punkten erreicht hat – hier etwa ${naechste}?`;
+}
+
 // 14.1-Zeile unter der Partie (Formular P-01): eine Aufnahmenzahl, die des
 // Gewinners, und daraus der Generaldurchschnitt (GD) beider Spieler.
 // Kennzahlen aus partien_141 (Tablet, eingelesener Spielbericht oder von Hand).

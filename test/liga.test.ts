@@ -1,10 +1,12 @@
 import { describe, expect, test } from 'vitest';
 import {
   LIGEN,
+  aufnahmen141Fehler,
   aufstellungPruefen,
   drittLage,
   drittWertung,
   entfaelltBeiDritt,
+  ergebnis141Fehler,
   gesperrteSpieler,
   partnerVon,
   spielplan,
@@ -206,5 +208,22 @@ describe('Spieltag aus zwei Begegnungen', () => {
     expect(spieltagStand('geplant', 'beendet')).toEqual({ status: 'geplant', teilBeendet: 2 });
     expect(spieltagStand('beendet', 'beendet')).toEqual({ status: 'beendet', teilBeendet: null });
     expect(spieltagStand('abgebrochen', 'abgebrochen')).toEqual({ status: 'abgebrochen', teilBeendet: null });
+  });
+});
+
+describe('14.1 ohne Unentschieden (BLVN-STO Pool 1.3.14)', () => {
+  test('gleiches Ergebnis wird abgelehnt', () => {
+    expect(ergebnis141Fehler(38, 38)).toMatch(/kein Unentschieden/);
+    expect(ergebnis141Fehler(40, 38)).toBeNull();
+    expect(ergebnis141Fehler(null, null)).toBeNull();
+  });
+
+  test('ueber dem Limit nur nach Verlaengerung oder mit erreichtem Ziel', () => {
+    expect(aufnahmen141Fehler(25, 25, 38, 60)).toBeNull();
+    expect(aufnahmen141Fehler(30, 25, 44, 60)).toBeNull();
+    expect(aufnahmen141Fehler(35, 25, 44, 60)).toBeNull();
+    expect(aufnahmen141Fehler(27, 25, 60, 60)).toBeNull(); // Ziel in der Verlaengerung
+    expect(aufnahmen141Fehler(27, 25, 44, 60)).toMatch(/etwa 30/);
+    expect(aufnahmen141Fehler(40, null, 10, 60)).toBeNull();
   });
 });

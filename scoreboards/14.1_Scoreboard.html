@@ -891,6 +891,7 @@
         <li><b>Run</b> – Punkte der <b>laufenden</b> Aufnahme. Läuft weiter, solange der Spieler am Tisch ist – auch über einen Neuaufbau hinweg – und springt beim Aufnahmewechsel zurück auf 0.</li>
         <li><b>HS</b> – <b>Höchstserie</b>: das beste Ergebnis einer <b>einzelnen</b> Aufnahme im laufenden Match. Foulpunkte derselben Aufnahme werden vorher abgezogen – 10 Bälle und danach ein Foul zählen als <b>9</b>. Im <b>📋 Protokoll</b> ist die HS gelb markiert.</li>
         <li><b>Aufn.</b> – Zahl der <b>beendeten</b> Aufnahmen. Die laufende zählt erst mit, wenn sie durch <b>Verschossen</b>, <b>Foul</b> oder <b>Sicherheit</b> endet.</li>
+        <li><b>Aufnahmen-Limit</b> – Haben beide Spieler ihre Aufnahmen bis zum Limit gespielt, endet das Spiel; es gewinnt, wer mehr Punkte hat. <b>Bei Gleichstand gibt es kein Unentschieden</b> (BLVN-STO Pool 1.3.14): Das Board verlängert um <b>5 Aufnahmen</b> und zeigt das neue Limit oben an – so oft, bis einer das Ziel erreicht oder nach der Verlängerung vorne liegt.</li>
         <li><b>Ø</b> – <b>Punkte ÷ beendete Aufnahmen</b>, auf zwei Nachkommastellen gerundet (wie in der 14.1-Statistik von CueDesk). Die Punkte wachsen mit jeder Kugel, die Aufnahmen springen erst beim Wechsel – der Ø <b>steigt</b> deshalb während einer Serie und <b>fällt</b> beim Aufnahmewechsel wieder. Solange noch keine Aufnahme beendet ist, zeigt er einfach die bisherigen Punkte; durch Fouls kann er negativ werden.</li>
         <li><b>Zielpunkte</b> – Mit dem Ball, der das Ziel erreicht, ist das Spiel aus. Werden mehr Kugeln angetippt als bis dahin nötig, zählt das Board nur bis zum Ziel – bei Ziel 100 und 99 Punkten also genau <b>einen</b> Ball, auch wenn die 8 angetippt wurde. So bleibt auch der Ø richtig.</li>
         <li><b>☰ Letzte Aufnahmen</b> – Der kleine Knopf über dem Doppelpunkt blendet an dessen Stelle eine kompakte Tabelle ein: die letzten drei Aufnahmen (die laufende zählt mit) und darunter die nächsten, noch leeren. <b>Gelb</b> und <b>Rot</b> markieren die beiden <b>letzten Aufnahmen des Matches</b> – sie erscheinen also erst, wenn das Aufnahmen-Limit in Sicht kommt.</li>
@@ -1176,6 +1177,18 @@
     const inningsReached = state.targetInn > 0 && state.inn1 >= state.targetInn && state.inn2 >= state.targetInn;
     if (!pointsReached && !inningsReached) return;   // weder Punkteziel noch Aufnahmen-Limit erreicht
 
+    // Kein Unentschieden (BLVN-STO Pool 1.3.14): Gleichstand am Aufnahmen-Limit
+    // verlaengert um je 5 Aufnahmen, bis einer das Ziel erreicht oder vorne liegt.
+    if (!pointsReached && state.s1 === state.s2) {
+      const alt = state.targetInn;
+      state.targetInn += 5;
+      save();
+      render();
+      alert("Gleichstand nach " + alt + " Aufnahmen (" + state.s1 + " : " + state.s2 + ")\n" +
+            "Verlängerung um 5 Aufnahmen – neues Limit: " + state.targetInn);
+      return;
+    }
+
     // Beim Punkteziel ist die entscheidende Aufnahme noch OFFEN und wuerde spurlos
     // verschwinden: buildProtocol() zeigt die Live-Zeile nur solange nicht gesperrt ist.
     // Sie wird daher hier abgeschlossen - damit taucht sie im Protokoll auf und zaehlt
@@ -1195,7 +1208,7 @@
     state.locked = true;
     state.endedAt = Date.now();   // Spielzeit einfrieren
 
-    // Sieger = mehr Punkte; bei Erreichen des Aufnahmen-Limits ist auch Unentschieden moeglich.
+    // Sieger = mehr Punkte; Unentschieden nur noch ohne Aufnahmen-Limit (praktisch nie).
     if (state.s1 > state.s2) {
       state.winnerText = "Spiel beendet – Gewinner: " + state.player1;
     } else if (state.s2 > state.s1) {

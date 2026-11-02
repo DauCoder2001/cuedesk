@@ -5,6 +5,7 @@ import { personName } from '../namen';
 import { useRueckfrage } from '../rueckfrage';
 import {
   LIGEN,
+  aufnahmen141Fehler,
   aufstellungPruefen,
   doppelPlanAendern,
   doppelPlanAusEingabe,
@@ -14,6 +15,7 @@ import {
   drittNr,
   drittWertung,
   entfaelltBeiDritt,
+  ergebnis141Fehler,
   fertigGespielt,
   gesperrteSpieler,
   mehrfachImDoppel,
@@ -711,6 +713,8 @@ export default function LigaAnsicht({
   async function ergebnisSetzen(s: LigaSpiel, heimWert: number | null, gastWert: number | null) {
     const p = partieVon(s);
     if (!p) return setFehler('Erst beide Spieler eintragen.');
+    const gleich = s.disziplin === '14-1' ? ergebnis141Fehler(heimWert, gastWert) : null;
+    if (gleich) return setFehler(`Partie ${s.nr}: ${gleich}`);
     const ergebnis_a = heimWert;
     const ergebnis_b = gastWert;
     const leer = ergebnis_a === null || ergebnis_b === null;
@@ -990,9 +994,9 @@ export default function LigaAnsicht({
   async function kennzahlenSetzen(s: LigaSpiel, aufnahmen: number | null, hsHeim: number | null, hsGast: number | null) {
     const p = partieVon(s);
     if (!p || !turnier) return;
-    if (aufnahmen !== null && s.aufnahmen && aufnahmen > s.aufnahmen) {
-      return setFehler(`Partie ${s.nr}: höchstens ${s.aufnahmen} Aufnahmen.`);
-    }
+    const zuViele =
+      aufnahmen === null ? null : aufnahmen141Fehler(aufnahmen, s.aufnahmen, Math.max(p.ergebnis_a ?? 0, p.ergebnis_b ?? 0), s.ziel);
+    if (zuViele) return setFehler(`Partie ${s.nr}: ${zuViele}`);
     setFehler(null);
     const { error } =
       aufnahmen === null && hsHeim === null && hsGast === null
@@ -2315,7 +2319,7 @@ function Zeile141(props: {
       <td colSpan={6}>
         {vonHand ? (
           <>
-            Aufn. {feld(aufn, setAufn, `Benötigte Aufnahmen des Gewinners (höchstens ${props.spiel.aufnahmen ?? '–'})`)} · HS{' '}
+            Aufn. {feld(aufn, setAufn, `Benötigte Aufnahmen des Gewinners (Limit ${props.spiel.aufnahmen ?? '–'}; bei Gleichstand am Limit je 5 Aufnahmen Verlängerung)`)} · HS{' '}
             {feld(hsHeim, setHsHeim, 'Höchstserie Heim')} | {feld(hsGast, setHsGast, 'Höchstserie Gast')} · GD{' '}
             {gd(partie.ergebnis_a)} | {gd(partie.ergebnis_b)}
           </>
