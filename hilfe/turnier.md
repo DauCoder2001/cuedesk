@@ -54,7 +54,7 @@ Bis zur Auslosung lassen sich Name, Modus und Race über **Ändern** noch anpass
 
 Bei **Zwei Gruppen** startest du nach den Gruppenspielen die **Duelle**, bei **Gruppen mit KO-Runde** die **KO-Runde**. Kommt jemand zu spät, hilft **Spieler nachtragen**.
 
-**Race to ändern…** im Kopf der Platzierungsduelle bzw. der KO-Runde ändert das Race auch noch im laufenden Turnier. Bei Zwei Gruppen gilt der Wert vor dem Start für alle Duelle, danach je Duell, zum Beispiel Race to 5 nur für die Duelle um Platz 1–2 und 3–4; die Überschrift zeigt dann „Race to 3, Duell 1–2: 5“. Bei Gruppen mit KO-Runde geht es je Runde (Achtelfinale bis Finale, das Spiel um Platz 3 mit dem Halbfinale, Platzierungsspiele). Was schon läuft oder beendet ist, bleibt, wie es ist: Ein Duell bzw. eine Runde ist gesperrt, sobald dort gespielt wird. Die Tablets übernehmen das neue Race beim Spielstart; mit Vorgabe wird sie neu berechnet.
+**Race to ändern…** im Kopf der Platzierungsduelle bzw. der KO-Runde ändert das Race auch noch im laufenden Turnier. Bei Zwei Gruppen gilt der Wert vor dem Start für alle Duelle, danach je Duell, zum Beispiel Race to 5 nur für die Duelle um Platz 1–2 und 3–4; die Überschrift zeigt dann „Race to 3, Duell 1–2: 5“. Bei Gruppen mit KO-Runde geht es je Runde (Achtelfinale bis Finale, das Spiel um Platz 3 mit dem Halbfinale, Platzierungsspiele). Der Knopf im Kopf der KO-Runde zeigt alle Runden; dazu hat jede Runde, in der noch nicht gespielt wird, einen eigenen Knopf **Race to ändern** neben ihrer Überschrift, der nur diese Runde zeigt. Was schon läuft oder beendet ist, bleibt, wie es ist: Ein Duell bzw. eine Runde ist gesperrt, sobald dort gespielt wird. Die Tablets übernehmen das neue Race beim Spielstart; mit Vorgabe wird sie neu berechnet.
 
 **Duelle zurücksetzen**, **KO-Runde zurücksetzen** und **Platzierungsspiele zurücksetzen** löschen die ganze Phase, damit sie neu angesetzt werden kann. Hat dort schon ein Spiel ein Ergebnis oder läuft gerade, braucht es dafür das Schutzwort des Vereins; frisch angesetzt reicht die einfache Rückfrage.
 
@@ -65,7 +65,7 @@ Bei **Gruppen mit KO-Runde** gibt es eine freiwillige Zusatzrunde für alle, die
 - Die Spieler werden nach ihrer Gruppenleistung gereiht und spielen ihre Plätze paarweise aus: der Erste gegen den Zweiten, der Dritte gegen den Vierten und so fort. Jeder bestreitet genau ein Spiel.
 - Bei ungerader Anzahl bleibt der Letzte ohne Gegner und behält seinen Platz.
 - **Platzierungsspiele starten** setzt die Spiele an; die Rückfrage nennt die Plätze, um die es geht, zum Beispiel 9 bis 14. Im Spielplan stehen sie unter „Platzierungsspiele“, die Tablets bieten sie wie alle anderen Spiele an.
-- Das Race to legst du beim Anlegen fest (Race to Platzierungsspiele). Danach änderst du es mit **Race to ändern** im Kopf der KO-Runde in der Zeile Platzierungsspiele, solange dort noch nicht gespielt wird.
+- Das Race to legst du beim Anlegen fest (Race to Platzierungsspiele). Danach änderst du es mit **Race to ändern** neben der Überschrift Platzierungsspiele (oder im Kopf der KO-Runde), solange dort noch nicht gespielt wird.
 - Ohne Start bleibt es bei der Gruppenwertung: Die unteren Plätze der Endtabelle ergeben sich aus der Gruppenleistung.
 - **Platzierungsspiele zurücksetzen** löscht die Spiele wieder; mit Ergebnissen braucht es das Schutzwort.
 

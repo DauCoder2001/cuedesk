@@ -45,6 +45,7 @@ import {
   KO_GRUPPEN,
   KO_MAX,
   KO_MIN,
+  KO_RUNDEN_NAME,
   endtabelleKo,
   folgespiele,
   koAufloesen,
@@ -156,6 +157,8 @@ export default function TurnierAnsicht({
   const [tausch, setTausch] = useState<{ raus: string; von: string; nach: string } | null>(null);
   // "Race to aendern": Duelle (Zwei Gruppen) bzw. Runden (Gruppen mit KO), Feld je Schluessel
   const [raceDialog, setRaceDialog] = useState<Record<string, string> | null>(null);
+  // Knopf an einer einzelnen Runde: Dialog nur mit deren Zeilen (null = alle)
+  const [raceNur, setRaceNur] = useState<string[] | null>(null);
   const racePflicht = usePflicht();
   const [nachtrag, setNachtrag] = useState<{ ziel: string; suche: string; gast: string } | null>(null);
   const [verlauf, setVerlauf] = useState<{ partie: TPartie; zeilen: Aenderungszeile[] } | null>(null);
@@ -1562,15 +1565,19 @@ export default function TurnierAnsicht({
     }));
   };
 
-  function raceOeffnen() {
+  // Zeilen des offenen Dialogs: alle oder nur die der gewaehlten Runde
+  const raceSichtbar = () => raceZeilen().filter((z) => !raceNur || raceNur.includes(z.schluessel));
+
+  function raceOeffnen(nur: string[] | null = null) {
     racePflicht.zuruecksetzen();
+    setRaceNur(nur);
     setRaceDialog(Object.fromEntries(raceZeilen().map((z) => [z.schluessel, String(z.wert)])));
   }
 
   async function raceSpeichern() {
     if (!turnier || !raceDialog) return;
     if (!racePflicht.pruefen()) return;
-    const neu = new Map(raceZeilen().filter((z) => !z.gesperrt).map((z) => [z.schluessel, Number(raceDialog[z.schluessel])]));
+    const neu = new Map(raceSichtbar().filter((z) => !z.gesperrt).map((z) => [z.schluessel, Number(raceDialog[z.schluessel])]));
     if ([...neu.values()].some((n) => !Number.isInteger(n) || n < 1 || n > 99)) {
       return racePflicht.melden('Race to muss eine ganze Zahl von 1 bis 99 sein.');
     }
@@ -2877,7 +2884,7 @@ export default function TurnierAnsicht({
                   <div className="kopflinks">
                     <h2>Platzierungsduelle ({duelleRace})</h2>
                     {bearbeitbar && (
-                      <button type="button" title="Race to der Platzierungsduelle ändern. Vor dem Start gilt es für alle Duelle, danach je Duell; laufende und beendete Duelle bleiben, wie sie sind." onClick={raceOeffnen} disabled={arbeitet}>
+                      <button type="button" title="Race to der Platzierungsduelle ändern. Vor dem Start gilt es für alle Duelle, danach je Duell; laufende und beendete Duelle bleiben, wie sie sind." onClick={() => raceOeffnen()} disabled={arbeitet}>
                         Race to ändern…
                       </button>
                     )}
@@ -2954,7 +2961,7 @@ export default function TurnierAnsicht({
                       <div className="kopflinks">
                         <h2>KO-Runde ({feld} Spieler)</h2>
                         {bearbeitbar && (
-                          <button type="button" title="Race to je Runde ändern (Achtelfinale bis Finale, Platzierungsspiele). Runden, in denen schon gespielt wird, bleiben, wie sie sind." onClick={raceOeffnen} disabled={arbeitet}>
+                          <button type="button" title="Race to je Runde ändern (Achtelfinale bis Finale, Platzierungsspiele). Runden, in denen schon gespielt wird, bleiben, wie sie sind." onClick={() => raceOeffnen()} disabled={arbeitet}>
                             Race to ändern…
                           </button>
                         )}
@@ -2995,6 +3002,16 @@ export default function TurnierAnsicht({
                           feld={feld}
                           anzeige={anzeige}
                           raceFuer={raceFuer}
+                          raceKnopf={(runden) => {
+                            // Dialog-Zeilen der Runde; das Spiel um Platz 3 laeuft mit dem Halbfinale
+                            const nur: string[] = [...new Set(runden.map((r) => (r === 'BRO' ? 'SF' : r)))];
+                            const offen = raceZeilen().some((z) => nur.includes(z.schluessel) && !z.gesperrt);
+                            return bearbeitbar && offen ? (
+                              <button type="button" title={`Race to für ${runden.map((r) => KO_RUNDEN_NAME[r]).join(' und ')} ändern. Gilt für Spiele, die noch nicht begonnen haben.`} onClick={() => raceOeffnen(nur)} disabled={arbeitet}>
+                                Race to ändern…
+                              </button>
+                            ) : null;
+                          }}
                           gesperrt={(id) => {
                             const x = koPartien.find((k) => k.gruppe === id);
                             return x !== undefined && koGesperrt(x);
@@ -3020,6 +3037,11 @@ export default function TurnierAnsicht({
                               'Optionale Zusatzrunde für alle, die die KO-Runde nicht erreicht haben. Sie werden nach der Gruppenleistung gereiht und spielen ihre Plätze paarweise aus: der Erste gegen den Zweiten, der Dritte gegen den Vierten und so fort. Jeder bestreitet genau ein Spiel; bei ungerader Anzahl bleibt der Letzte ohne Gegner und behält seinen Platz.\nOhne Start bleibt es bei der Berechnung aus der Gruppenwertung.'
                             }
                           />
+                          {bearbeitbar && raceZeilen().some((z) => z.schluessel === 'P3' && !z.gesperrt) && (
+                            <button type="button" title="Race to der Platzierungsspiele ändern. Gilt für Spiele, die noch nicht begonnen haben." onClick={() => raceOeffnen(['P3'])} disabled={arbeitet}>
+                              Race to ändern…
+                            </button>
+                          )}
                         </div>
                         {bearbeitbar && !einstellungen.phase3 && nichtImKo.length >= 2 && (
                           <button type="button" title="Setzt die Platzierungsspiele für alle an, die nicht in der KO-Runde stehen." onClick={() => void phase3Starten()} disabled={arbeitet}>
@@ -3302,7 +3324,7 @@ export default function TurnierAnsicht({
               </tr>
             </thead>
             <tbody>
-              {raceZeilen().map((z) => (
+              {raceSichtbar().map((z) => (
                 <tr key={z.schluessel}>
                   <td>{z.text}</td>
                   {zwei && einstellungen.phase2 && <td>{z.plaetze}</td>}

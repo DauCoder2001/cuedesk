@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { koSpiele, KO_RUNDEN_NAME } from '../ko';
 import type { KoRunde, KoStandSpiel } from '../ko';
 
@@ -18,6 +19,7 @@ export default function KoBaum(props: {
   anzeige: (id: string) => string;
   raceFuer: (runde: KoRunde) => number;
   gesperrt: (spielId: string) => boolean;
+  raceKnopf?: (runden: KoRunde[]) => ReactNode; // "Race to ändern…" neben der Rundenueberschrift
 }) {
   const spiele = koSpiele(props.feld);
   return (
@@ -29,9 +31,12 @@ export default function KoBaum(props: {
           .join(' · ');
         return (
           <div key={r.titel} className="koblock">
-            <h3>
-              {r.titel} <span className="hinweis">{race}</span>
-            </h3>
+            <div className="kopflinks">
+              <h3>
+                {r.titel} <span className="hinweis">{race}</span>
+              </h3>
+              {props.raceKnopf?.(r.runden)}
+            </div>
             <table className="tabelle kompakt">
               <tbody>
                 {liste.map((s) => {
