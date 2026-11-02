@@ -20,13 +20,15 @@ import {
   gesperrteSpieler,
   mehrfachImDoppel,
   spielplan,
+  stammspielerPruefen,
   wertung,
   zeile141
 } from '../liga';
 import DoppelPlanFelder, { DOPPEL_ZEILEN_STANDARD } from './DoppelPlanFelder';
 import type { DoppelZeile } from './DoppelPlanFelder';
 import type { DoppelPartie } from '../liga';
-import { kaderHinweise } from '../mannschaften';
+import { einsatzHinweise, kaderHinweise } from '../mannschaften';
+import type { EinsatzTag } from '../mannschaften';
 import { schutzwortPruefen } from '../schutzwort';
 import { STATUS_TEXT } from './Turniere';
 import SpielberichtImport from './SpielberichtImport';
@@ -229,6 +231,9 @@ export default function LigaAnsicht({
   const [personen, setPersonen] = useState<Person[]>([]);
   const [mannschaften, setMannschaften] = useState<Mannschaft[]>([]);
   const [kader, setKader] = useState<MannschaftSpieler[]>([]);
+  // Einsaetze der eigenen Spieler in den anderen Einzel-Begegnungen der
+  // Saison (Festspielregel und Wochenende, BLVN-STO Pool 2.2.4/2.2.5)
+  const [einsatzTage, setEinsatzTage] = useState<EinsatzTag[]>([]);
   // Alle Begegnungen des Spieltags in der angezeigten Reihenfolge (mit
   // Doppel-Begegnung: 1., 2. = Doppel, 3.)
   const [teile, setTeile] = useState<SpieltagTeil[]>([]);
@@ -298,6 +303,44 @@ export default function LigaAnsicht({
   useEffect(() => {
     void laden();
   }, [laden]);
+
+  const mannschaftId = (turnier?.einstellungen as TurnierEinstellungen | null)?.liga?.mannschaft_id ?? null;
+  useEffect(() => {
+    const eigene = mannschaften.find((m) => m.id === mannschaftId);
+    if (!verein || !eigene) return setEinsatzTage([]);
+    const derSaison = new Set(mannschaften.filter((m) => m.saison === eigene.saison).map((m) => m.id));
+    let aktiv = true;
+    void (async () => {
+      const { data: tage } = await supabase
+        .from('turniere')
+        .select('id, datum, einstellungen')
+        .eq('verein_id', verein.id)
+        .eq('modus', 'liga')
+        .neq('id', turnierId);
+      const begegnungen = (tage ?? [])
+        .map((t) => ({ ...t, liga: (t.einstellungen as TurnierEinstellungen | null)?.liga }))
+        .filter((t) => t.liga?.mannschaft_id && derSaison.has(t.liga.mannschaft_id) && t.liga.art !== 'doppel');
+      const ids = begegnungen.map((t) => t.id);
+      const { data: ihre } = ids.length
+        ? await supabase.from('partien').select('turnier_id, spieler_a, spieler_b').in('turnier_id', ids)
+        : { data: [] as Pick<Partie, 'turnier_id' | 'spieler_a' | 'spieler_b'>[] };
+      if (!aktiv) return;
+      setEinsatzTage(
+        begegnungen.flatMap((t) => {
+          const heim = t.liga?.heim ?? true;
+          // Partien und noch halbe Aufstellungen (Spieler ohne Partie)
+          const spieler = [
+            ...(ihre ?? []).filter((p) => p.turnier_id === t.id).map((p) => (heim ? p.spieler_a : p.spieler_b)),
+            ...Object.values(t.liga?.aufstellung ?? {}).map((a) => (heim ? a.heim : a.gast))
+          ].filter((id): id is string => Boolean(id));
+          return [...new Set(spieler)].map((person) => ({ datum: t.datum, mannschaft_id: t.liga?.mannschaft_id as string, person_id: person }));
+        })
+      );
+    })();
+    return () => {
+      aktiv = false;
+    };
+  }, [verein, turnierId, mannschaftId, mannschaften]);
 
   // Ergebnisse und Tischwahl von den Tablets sofort uebernehmen (wie in der
   // Turnieransicht). Nur die Partien neu lesen, damit eine halb gewaehlte
@@ -540,9 +583,22 @@ export default function LigaAnsicht({
     }
     const plan: Record<number, string | null> = {};
     spiele.forEach((s) => (plan[s.nr] = unsererSpieler(s)));
-    return aufstellungPruefen(spiele, plan, (id) => anzeige(id));
+    const fehler = aufstellungPruefen(spiele, plan, (id) => anzeige(id));
+    // Mindestens 2 Stammspieler je Runde; die eigene zu-dritt-Partie entfaellt
+    const eigene = mannschaften.find((m) => m.id === liga?.mannschaft_id);
+    if (eigene) {
+      const stamm = new Set(kader.filter((k) => k.mannschaft_id === eigene.id && k.stammspieler).map((k) => k.person_id));
+      const unsere = wirSindHeim ? 'heim' : 'gast';
+      fehler.push(
+        ...stammspielerPruefen(spiele, plan, stamm, eigene.name, (s) => {
+          const lage = drittBei(s);
+          return lage === 'beide' || lage === unsere;
+        })
+      );
+    }
+    return fehler;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [spiele, partien, wahl, anzeige, wirSindHeim]);
+  }, [spiele, partien, wahl, anzeige, wirSindHeim, mannschaften, kader, liga?.mannschaft_id, liga?.dritt]);
 
   // Doppel: Spieler in mehreren Doppeln (erlaubt, die Tablets starten sie
   // nacheinander). Verborgene Seiten bleiben aussen vor, sonst verriete der
@@ -565,15 +621,19 @@ export default function LigaAnsicht({
     // Kaderregeln gelten fuer die Einzel-Begegnungen; das Doppel ist Spass
     if (!eigene || spiele.length === 0 || istDoppel) return [];
     const derSaison = mannschaften.filter((m) => m.saison === eigene.saison);
-    return kaderHinweise({
+    const grundlage = {
       mannschaft: { id: eigene.id, name: eigene.name, rang: eigene.rang },
       aufgestellt: spiele.map((s) => unsererSpieler(s)).filter((id): id is string => Boolean(id)),
       kader: kader.filter((k) => derSaison.some((m) => m.id === k.mannschaft_id)),
       mannschaften: derSaison.map((m) => ({ id: m.id, name: m.name, rang: m.rang })),
-      name: (id) => anzeige(id)
-    });
+      name: (id: string) => anzeige(id)
+    };
+    return [
+      ...kaderHinweise(grundlage),
+      ...(turnier ? einsatzHinweise({ ...grundlage, datum: turnier.datum, andere: einsatzTage }) : [])
+    ];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mannschaften, kader, spiele, partien, wahl, anzeige, liga?.mannschaft_id, wirSindHeim]);
+  }, [mannschaften, kader, spiele, partien, wahl, anzeige, liga?.mannschaft_id, wirSindHeim, einsatzTage, turnier?.datum]);
 
   // Kader der gewaehlten Mannschaft: steht in den eigenen Auswahllisten oben,
   // alle anderen Mitglieder darunter (Aushilfe bleibt moeglich)

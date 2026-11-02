@@ -151,3 +151,109 @@ export function stammspielerHinweis(anzahl: number, soll = 4): string | null {
   if (anzahl === 0) return `Noch kein Stammspieler gemeldet (${soll} sind üblich).`;
   return `Erst ${anzahl} von ${soll} Stammspielern gemeldet.`;
 }
+
+// ---------- Einsatzregeln der BLVN-STO Pool ----------
+
+// Ein Liga-Einsatz eines eigenen Spielers: Datum und Mannschaft (Einzel-
+// Begegnungen; das Doppel zaehlt nicht).
+export type EinsatzTag = { datum: string; mannschaft_id: string; person_id: string };
+
+// Ersatzspieler einer Mannschaft sind Spieler aus numerisch darunter liegenden
+// Mannschaften (2.2.2): nicht im Kader dieser Mannschaft, aber in dem einer
+// unteren.
+export function istErsatz(person: string, mannschaft: MannschaftKurz, kader: KaderEintrag[], mannschaften: MannschaftKurz[]): boolean {
+  const eigene = kader.filter((k) => k.person_id === person);
+  if (eigene.some((k) => k.mannschaft_id === mannschaft.id)) return false;
+  return eigene.some((k) => (mannschaften.find((m) => m.id === k.mannschaft_id)?.rang ?? 0) > mannschaft.rang);
+}
+
+// Mit dem 3. Einsatz als Ersatzspieler ist ein Spieler in der Mannschaft
+// festgespielt, in der er zuletzt eingesetzt wurde (2.2.4); 1 Spieltag = 1
+// Einsatz, gezaehlt wird also nach Datum. Zurueck: Person -> Mannschaft.
+export function festgespielt(
+  tage: EinsatzTag[],
+  kader: KaderEintrag[],
+  mannschaften: MannschaftKurz[]
+): Map<string, string> {
+  const ergebnis = new Map<string, string>();
+  const jePerson = new Map<string, EinsatzTag[]>();
+  tage.forEach((t) => {
+    const m = mannschaften.find((x) => x.id === t.mannschaft_id);
+    if (!m || !istErsatz(t.person_id, m, kader, mannschaften)) return;
+    jePerson.set(t.person_id, [...(jePerson.get(t.person_id) ?? []), t]);
+  });
+  jePerson.forEach((liste, person) => {
+    const sortiert = [...liste].sort((a, b) => a.datum.localeCompare(b.datum));
+    const daten: string[] = [];
+    for (const t of sortiert) {
+      if (!daten.includes(t.datum)) daten.push(t.datum);
+      if (daten.length === 3) {
+        ergebnis.set(person, t.mannschaft_id);
+        break;
+      }
+    }
+  });
+  return ergebnis;
+}
+
+// Samstag und Sonntag desselben Wochenendes (2.2.5); an Werktagen nur der Tag
+const tagVerschoben = (datum: string, tage: number) => {
+  const d = new Date(`${datum}T12:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + tage);
+  return d.toISOString().slice(0, 10);
+};
+export function wochenende(datum: string): string[] {
+  const tag = new Date(`${datum}T12:00:00Z`).getUTCDay();
+  if (tag === 6) return [datum, tagVerschoben(datum, 1)];
+  if (tag === 0) return [tagVerschoben(datum, -1), datum];
+  return [datum];
+}
+
+const WOCHENTAG = ['So.', 'Mo.', 'Di.', 'Mi.', 'Do.', 'Fr.', 'Sa.'];
+const tagText = (datum: string) => {
+  const d = new Date(`${datum}T12:00:00Z`);
+  return `${WOCHENTAG[d.getUTCDay()]}, ${datum.slice(8, 10)}.${datum.slice(5, 7)}.`;
+};
+
+// Hinweise zu Festspielregel und Wochenende fuer eine Begegnung. andere: die
+// Einsaetze der uebrigen Einzel-Begegnungen der Saison (ohne diese).
+export function einsatzHinweise(args: {
+  mannschaft: MannschaftKurz;
+  datum: string;
+  aufgestellt: string[];
+  andere: EinsatzTag[];
+  kader: KaderEintrag[];
+  mannschaften: MannschaftKurz[];
+  name: (id: string) => string;
+}): string[] {
+  const { mannschaft, datum, andere, kader, mannschaften, name } = args;
+  const hinweise: string[] = [];
+  const mannschaftName = (id: string) => mannschaften.find((m) => m.id === id)?.name ?? '?';
+  const personen = [...new Set(args.aufgestellt.filter(Boolean))];
+  const vorher = festgespielt(andere, kader, mannschaften);
+  const mitDieser = festgespielt(
+    [...andere, ...personen.map((person) => ({ datum, mannschaft_id: mannschaft.id, person_id: person }))],
+    kader,
+    mannschaften
+  );
+  const wochenendTage = wochenende(datum);
+  personen.forEach((person) => {
+    const fest = vorher.get(person);
+    if (fest && fest !== mannschaft.id) {
+      hinweise.push(`${name(person)} ist in ${mannschaftName(fest)} festgespielt (3 Einsätze als Ersatzspieler) und darf hier nicht mehr antreten.`);
+    } else if (!fest && mitDieser.get(person) === mannschaft.id) {
+      hinweise.push(`${name(person)} hilft hier zum 3. Mal aus und ist danach in ${mannschaft.name} festgespielt.`);
+    }
+    const anderswo = andere
+      .filter((t) => t.person_id === person && t.mannschaft_id !== mannschaft.id && wochenendTage.includes(t.datum))
+      .sort((a, b) => a.datum.localeCompare(b.datum))[0];
+    if (anderswo) {
+      const text =
+        anderswo.datum < datum
+          ? `hat am ${tagText(anderswo.datum)} schon für ${mannschaftName(anderswo.mannschaft_id)} gespielt`
+          : `steht am ${tagText(anderswo.datum)} auch für ${mannschaftName(anderswo.mannschaft_id)} im Plan`;
+      hinweise.push(`${name(person)} ${text} (am selben Wochenende nur eine Mannschaft, STO 2.2.5).`);
+    }
+  });
+  return hinweise;
+}

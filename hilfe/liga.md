@@ -10,7 +10,7 @@ Ein Liga-Spieltag besteht immer aus zwei Begegnungen gegen dieselbe Mannschaft, 
 
 1. Reiter **Mannschaften** öffnen, Saison wählen und die Mannschaft anlegen: Name, Liga, Staffel und **Nummer im Pass**.
 2. Unter **Kader** über **Spieler wählen** die Spieler aufnehmen; **Stammspieler** und **Kapitän** markieren.
-3. Die Saisonübersicht zeigt später Partiepunkte, Matchpunkte und Einsätze.
+3. Die Saisonübersicht zeigt später Partiepunkte, Matchpunkte und Einsätze. Wer aus einer unteren Mannschaft dreimal (an drei Spieltagen) ausgeholfen hat, ist dort festgespielt (BLVN-STO Pool 2.2.4); das steht dann im Kader neben dem Namen.
 
 ## 2. Spieltag anlegen
 
@@ -22,6 +22,7 @@ Ein Liga-Spieltag besteht immer aus zwei Begegnungen gegen dieselbe Mannschaft, 
 
 - Hin- und Rückrunde spielen jeweils vier Partien in derselben Reihenfolge: 14.1-endlos, 8-Ball, 9-Ball, 10-Ball (Nr. 1 bis 4 und 5 bis 8). Spieltage, deren Rückrunde vor November 2026 schon gespielt wurde, zeigen dort weiter die alte Reihenfolge 14.1, 10-, 9-, 8-Ball.
 - Je Partie für beide Seiten den Spieler wählen. CueDesk prüft die Regeln (niemand zweimal in einer Runde, dieselbe Disziplin nicht doppelt) und bietet gesperrte Spieler nicht an.
+- Für die eigene Mannschaft weisen gelbe Hinweise auf die Einsatzregeln der BLVN-STO Pool hin, ohne etwas zu sperren: weniger als 2 Stammspieler in einer besetzten Runde (2.5.4), der 3. Einsatz als Ersatzspieler und wer schon in einer anderen Mannschaft festgespielt ist (2.2.4), und wer am selben Wochenende schon für eine andere Mannschaft spielt (2.2.5). Das Doppel zählt dabei nicht mit.
 - Spieler der Gastmannschaft legst du unter **Gegnerische Spieler** mit **Als Gast anlegen** an.
 - **Aufstellung verbergen** versteckt die eigene Aufstellung vor dem Gegner. Zum Zeigen braucht es das Schutzwort des Vereins.
 

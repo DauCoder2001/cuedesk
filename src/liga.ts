@@ -249,6 +249,30 @@ export function aufstellungPruefen(
   return fehler;
 }
 
+// Je Runde mindestens 2 Stammspieler der eigenen Mannschaft (BLVN-STO Pool
+// 2.5.4 a). Geprueft erst, wenn die Runde besetzt ist; die Partie, die zu
+// dritt auf unserer Seite entfaellt, zaehlt dabei als besetzt.
+export function stammspielerPruefen(
+  spiele: LigaSpiel[],
+  spielerJeSpiel: Record<number, string | null>,
+  stamm: Set<string>,
+  mannschaft: string,
+  entfaellt: (s: LigaSpiel) => boolean = () => false
+): string[] {
+  const fehler: string[] = [];
+  (['hin', 'rueck'] as Runde[]).forEach((runde) => {
+    const inRunde = spiele.filter((s) => s.runde === runde && !entfaellt(s));
+    if (inRunde.length === 0 || !inRunde.every((s) => spielerJeSpiel[s.nr])) return;
+    const anzahl = new Set(inRunde.map((s) => spielerJeSpiel[s.nr] as string).filter((id) => stamm.has(id))).size;
+    if (anzahl < 2) {
+      fehler.push(
+        `In der ${runde === 'hin' ? 'Hinrunde' : 'Rückrunde'} ${anzahl === 1 ? 'steht nur 1 Stammspieler' : 'steht kein Stammspieler'} von ${mannschaft} (mindestens 2, STO 2.5.4).`
+      );
+    }
+  });
+  return fehler;
+}
+
 // Wer fuer ein Spiel nicht mehr in Frage kommt: schon in derselben Runde
 // eingesetzt oder dieselbe Disziplin schon in der anderen Runde. Gilt fuer
 // jede Seite fuer sich; die Auswahllisten bieten diese Spieler nicht an.

@@ -4,7 +4,7 @@ import { useSitzung } from '../sitzung';
 import { personName } from '../namen';
 import { useRueckfrage } from '../rueckfrage';
 import { LIGEN, drittWertung, istDoppelBegegnung, wertung } from '../liga';
-import { einsaetze, saisonAus, saisonBilanz, saisonListe, stammspielerHinweis } from '../mannschaften';
+import { einsaetze, festgespielt, saisonAus, saisonBilanz, saisonListe, stammspielerHinweis } from '../mannschaften';
 import { vereinsEinstellungen } from '../vereinseinstellungen';
 import { Pflichthinweis, usePflicht } from '../pflicht';
 import { useUngespeichert, weichtAb } from '../ungespeichert';
@@ -180,6 +180,29 @@ export default function Mannschaften() {
   );
   const einsatzVon = (person: string, mannschaft: string) =>
     einsatzliste.find((e) => e.person_id === person && e.mannschaft_id === mannschaft) ?? null;
+
+  // Festgespielt nach dem 3. Einsatz als Ersatzspieler (BLVN-STO Pool 2.2.4);
+  // nur Einzel-Begegnungen, 1 Spieltag = 1 Einsatz
+  const fest = useMemo(() => {
+    const imJahr = mannschaften.filter((m) => m.saison === saison);
+    const tage = spieltageDerSaison.flatMap((t) => {
+      const liga = (t.einstellungen as TurnierEinstellungen)?.liga;
+      if (!liga?.mannschaft_id || liga.art === 'doppel') return [];
+      const spieler = partienVon(t)
+        .flatMap((p) => [p.spieler_a, p.spieler_b])
+        .filter((id): id is string => Boolean(id) && eigeneIds.has(id));
+      return [...new Set(spieler)].map((person) => ({ datum: t.datum, mannschaft_id: liga.mannschaft_id as string, person_id: person }));
+    });
+    return festgespielt(
+      tage,
+      kader.filter((k) => imJahr.some((m) => m.id === k.mannschaft_id)),
+      imJahr.map((m) => ({ id: m.id, name: m.name, rang: m.rang }))
+    );
+  }, [mannschaften, saison, spieltageDerSaison, partienVon, eigeneIds, kader]);
+  const festText = (person: string) => {
+    const id = fest.get(person);
+    return id ? `festgespielt in ${mannschaften.find((m) => m.id === id)?.name ?? '?'}` : null;
+  };
 
   if (!verein) return null;
 
@@ -587,7 +610,17 @@ export default function Mannschaften() {
                   const einsatz = einsatzVon(k.person_id, m.id);
                   return (
                     <tr key={k.id}>
-                      <td>{anzeige(k.person_id)}</td>
+                      <td>
+                        {anzeige(k.person_id)}
+                        {fest.has(k.person_id) && fest.get(k.person_id) !== m.id && (
+                          <>
+                            {' '}
+                            <span className="hinweis" title="Nach dem 3. Einsatz als Ersatzspieler darf er nur noch dort antreten (BLVN-STO Pool 2.2.4).">
+                              {festText(k.person_id)}
+                            </span>
+                          </>
+                        )}
+                      </td>
                       <td>
                         <input
                           type="checkbox"
@@ -630,7 +663,11 @@ export default function Mannschaften() {
                 {aushilfen.map((e) => (
                   <tr key={`aus-${e.person_id}`}>
                     <td>
-                      {anzeige(e.person_id)} <span className="hinweis">Aushilfe, nicht im Kader</span>
+                      {anzeige(e.person_id)}{' '}
+                      <span className="hinweis">
+                        Aushilfe, nicht im Kader
+                        {fest.get(e.person_id) === m.id && ' · festgespielt (3 Einsätze als Ersatzspieler, STO 2.2.4)'}
+                      </span>
                     </td>
                     <td></td>
                     <td></td>

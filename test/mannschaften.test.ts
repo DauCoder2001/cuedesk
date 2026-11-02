@@ -1,11 +1,15 @@
 import { describe, expect, test } from 'vitest';
 import {
   einsaetze,
+  einsatzHinweise,
+  festgespielt,
+  istErsatz,
   kaderHinweise,
   saisonAus,
   saisonBilanz,
   saisonListe,
-  stammspielerHinweis
+  stammspielerHinweis,
+  wochenende
 } from '../src/mannschaften';
 import type { KaderEintrag, MannschaftKurz } from '../src/mannschaften';
 
@@ -155,5 +159,59 @@ describe('Stammspieler', () => {
     expect(stammspielerHinweis(4)).toBeNull();
     expect(stammspielerHinweis(2)).toBe('Erst 2 von 4 Stammspielern gemeldet.');
     expect(stammspielerHinweis(0)).toBe('Noch kein Stammspieler gemeldet (4 sind üblich).');
+  });
+});
+
+describe('Einsatzregeln (BLVN-STO Pool 2.2)', () => {
+  const tag = (datum: string, mannschaft_id: string, person_id: string) => ({ datum, mannschaft_id, person_id });
+
+  test('Ersatzspieler kommen aus unteren Mannschaften', () => {
+    expect(istErsatz('c', mannschaften[0], kader, mannschaften)).toBe(true);
+    expect(istErsatz('a', mannschaften[0], kader, mannschaften)).toBe(false);
+    expect(istErsatz('a', mannschaften[1], kader, mannschaften)).toBe(false); // von oben: kein Ersatz
+    expect(istErsatz('x', mannschaften[0], kader, mannschaften)).toBe(false); // in keinem Kader
+  });
+
+  test('festgespielt mit dem 3. Spieltag als Ersatz, wo zuletzt eingesetzt', () => {
+    const tage = [
+      tag('2026-09-05', 'm1', 'c'),
+      tag('2026-09-05', 'm1', 'c'), // gleicher Spieltag: ein Einsatz
+      tag('2026-09-19', 'm2', 'c'),
+      tag('2026-10-03', 'm3', 'c'), // eigene Mannschaft: kein Ersatz
+      tag('2026-10-10', 'm2', 'c')
+    ];
+    expect(festgespielt(tage.slice(0, 4), kader, mannschaften).has('c')).toBe(false);
+    expect(festgespielt(tage, kader, mannschaften).get('c')).toBe('m2');
+  });
+
+  test('Wochenende', () => {
+    expect(wochenende('2026-11-07')).toEqual(['2026-11-07', '2026-11-08']); // Sa.
+    expect(wochenende('2026-11-08')).toEqual(['2026-11-07', '2026-11-08']); // So.
+    expect(wochenende('2026-11-05')).toEqual(['2026-11-05']); // Do.
+  });
+
+  test('Hinweise: 3. Einsatz, festgespielt und Wochenende', () => {
+    const grund = { kader, mannschaften, name };
+    // C hilft zum 3. Mal in der Ersten aus
+    expect(
+      einsatzHinweise({ ...grund, mannschaft: mannschaften[0], datum: '2026-10-10', aufgestellt: ['c'], andere: [tag('2026-09-05', 'm1', 'c'), tag('2026-09-19', 'm2', 'c')] })
+    ).toEqual(['C hilft hier zum 3. Mal aus und ist danach in Erste festgespielt.']);
+    // in der Zweiten festgespielt, soll in der Ersten ran
+    expect(
+      einsatzHinweise({
+        ...grund,
+        mannschaft: mannschaften[0],
+        datum: '2026-10-21',
+        aufgestellt: ['c'],
+        andere: [tag('2026-09-05', 'm2', 'c'), tag('2026-09-19', 'm2', 'c'), tag('2026-10-03', 'm2', 'c')]
+      })
+    ).toEqual(['C ist in Zweite festgespielt (3 Einsätze als Ersatzspieler) und darf hier nicht mehr antreten.']);
+    // Sa. Dritte, So. Erste
+    expect(
+      einsatzHinweise({ ...grund, mannschaft: mannschaften[0], datum: '2026-11-08', aufgestellt: ['c'], andere: [tag('2026-11-07', 'm3', 'c')] })
+    ).toEqual(['C hat am Sa., 07.11. schon für Dritte gespielt (am selben Wochenende nur eine Mannschaft, STO 2.2.5).']);
+    expect(
+      einsatzHinweise({ ...grund, mannschaft: mannschaften[2], datum: '2026-11-07', aufgestellt: ['c'], andere: [tag('2026-11-08', 'm1', 'c')] })
+    ).toEqual(['C steht am So., 08.11. auch für Erste im Plan (am selben Wochenende nur eine Mannschaft, STO 2.2.5).']);
   });
 });

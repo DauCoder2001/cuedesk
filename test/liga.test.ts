@@ -11,6 +11,7 @@ import {
   partnerVon,
   spielplan,
   spieltagStand,
+  stammspielerPruefen,
   wertung,
   zeile141,
   zweiteBegegnungIds
@@ -225,5 +226,26 @@ describe('14.1 ohne Unentschieden (BLVN-STO Pool 1.3.14)', () => {
     expect(aufnahmen141Fehler(27, 25, 60, 60)).toBeNull(); // Ziel in der Verlaengerung
     expect(aufnahmen141Fehler(27, 25, 44, 60)).toMatch(/etwa 30/);
     expect(aufnahmen141Fehler(40, null, 10, 60)).toBeNull();
+  });
+});
+
+describe('Stammspieler je Runde (BLVN-STO Pool 2.5.4 a)', () => {
+  const spiele = spielplan(LIGEN.bezirksliga.ziele);
+  const voll = (ids: string[]) => Object.fromEntries(spiele.map((s, i) => [s.nr, ids[i] ?? null]));
+
+  test('weniger als 2 Stammspieler in einer vollen Runde', () => {
+    const stamm = new Set(['a', 'b']);
+    expect(stammspielerPruefen(spiele, voll(['a', 'x', 'y', 'z', 'a', 'b', 'x', 'y']), stamm, 'Erste')).toEqual([
+      'In der Hinrunde steht nur 1 Stammspieler von Erste (mindestens 2, STO 2.5.4).'
+    ]);
+    expect(stammspielerPruefen(spiele, voll(['x', 'y', 'z', 'w']), stamm, 'Erste')).toEqual([
+      'In der Hinrunde steht kein Stammspieler von Erste (mindestens 2, STO 2.5.4).'
+    ]);
+  });
+
+  test('halbe Runde wird nicht geprueft, zu dritt zaehlt die entfallende Partie als besetzt', () => {
+    const stamm = new Set(['a']);
+    expect(stammspielerPruefen(spiele, voll(['a', 'x', 'y']), stamm, 'Erste')).toEqual([]);
+    expect(stammspielerPruefen(spiele, voll(['a', 'x', 'y']), stamm, 'Erste', (s) => s.nr === 4)).toHaveLength(1);
   });
 });
