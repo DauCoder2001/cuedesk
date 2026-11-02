@@ -3,7 +3,7 @@ import { supabase } from '../supabase';
 import { useSitzung } from '../sitzung';
 import { personName } from '../namen';
 import { useRueckfrage } from '../rueckfrage';
-import { LIGEN, istDoppelBegegnung, wertung } from '../liga';
+import { LIGEN, drittWertung, istDoppelBegegnung, wertung } from '../liga';
 import { einsaetze, saisonAus, saisonBilanz, saisonListe, stammspielerHinweis } from '../mannschaften';
 import { vereinsEinstellungen } from '../vereinseinstellungen';
 import { Pflichthinweis, usePflicht } from '../pflicht';
@@ -131,12 +131,17 @@ export default function Mannschaften() {
   const ergebnisVon = useCallback(
     (t: Turnier) => {
       const liga = (t.einstellungen as TurnierEinstellungen)?.liga;
+      // Zu dritt: die Partie mit * zaehlt kampflos oder entfaellt
       const roh = wertung(
-        partienVon(t).map((p) => ({
-          nr: ((p.runde ?? 1) - 1) * 4 + (p.paarung ?? 1),
-          heim: p.ergebnis_a,
-          gast: p.ergebnis_b
-        }))
+        drittWertung(
+          partienVon(t).map((p) => ({
+            nr: ((p.runde ?? 1) - 1) * 4 + (p.paarung ?? 1),
+            heim: p.ergebnis_a,
+            gast: p.ergebnis_b
+          })),
+          liga?.art === 'doppel' ? undefined : liga?.dritt,
+          liga?.ziele
+        )
       );
       // Heim steht auf Seite A; spielen wir auswaerts, drehen sich die Zahlen.
       const drehen = !(liga?.heim ?? true);

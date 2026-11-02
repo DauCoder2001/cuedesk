@@ -1,17 +1,27 @@
 // Spielbericht eines ganzen Liga-Spieltags als PDF (zum Drucken oder
 // Weiterschicken): Gesamtstand aller Begegnungen, dann je Begegnung Hin-,
-// Rueckrunde bzw. Doppel mit Aufstellung und Ergebnis. Die Daten stellt
+// Rueckrunde bzw. Doppel mit Aufstellung und Ergebnis, aufgebaut wie das
+// Formular P-01 (Punkte je Partie, 14.1-Zeile, * bei drei Spielern,
+// Bemerkungen). Die Daten stellt
 // spieltagBerichtDaten aus Turnieren und Partien zusammen (getestet in
 // test/spieltagbericht.test.ts), gezeichnet wird mit src/pdf.ts.
 
-import { bauen, neuesDokument, PDF_BREITE, PDF_RAND, absatz, tabelle, text, ueberschrift } from './pdf';
-import { doppelSpielplan, istDoppelBegegnung, spielplan } from './liga';
+import { bauen, neuesDokument, PDF_BREITE, PDF_RAND, absatz, fliesstext, tabelle, text, ueberschrift } from './pdf';
+import { doppelSpielplan, drittLage, drittNr, entfaelltBeiDritt, istDoppelBegegnung, spielplan, zeile141 } from './liga';
 import { ligaStand, spieltagGesamt } from './zuschauen';
-import type { Ausspielziele, DoppelPartie, LigaSpiel } from './liga';
-import type { Partie, Turnier } from './datenbank.types';
+import type { Ausspielziele, DoppelPartie, Dritt, LigaSpiel } from './liga';
+import type { Partie, Partie141, Turnier } from './datenbank.types';
 import { mitSpielern } from './partie-spieler';
 
-export type BerichtPartie = { nr: number; disziplin: string; heim: string; gast: string; ergebnis: string };
+export type BerichtPartie = {
+  nr: string; // mit * bei der Partie, die bei drei Spielern entfaellt
+  disziplin: string;
+  heim: string;
+  gast: string;
+  ergebnis: string;
+  punkte: string; // Partiepunkt "1 : 0", Heim zuerst
+  zeile141?: { aufnahmen: string; heim: string; gast: string }; // Aufn., HS und GD unter der 14.1-Partie
+};
 export type BerichtBegegnung = {
   titel: string; // "1. Begegnung", "2. Begegnung · Doppel"
   heim: string;
@@ -19,6 +29,8 @@ export type BerichtBegegnung = {
   partiepunkte: [number, number]; // Heim zuerst
   matchpunkte: [number, number] | null;
   runden: { name: string; partien: BerichtPartie[] }[];
+  mitStern: boolean; // Einzel-Begegnung: Hinweis zu * (STO 2.5.5) darunter
+  bemerkung: string;
 };
 export type SpieltagBericht = {
   titel: string;
@@ -34,7 +46,15 @@ export type SpieltagBericht = {
 
 const DISZIPLIN: Record<string, string> = { '14-1': '14.1-endlos', '8-ball': '8-Ball', '9-ball': '9-Ball', '10-ball': '10-Ball' };
 
-type Liga = { ziele?: Ausspielziele; rueckGedreht?: boolean; doppelPlan?: DoppelPartie[]; art?: 'doppel' };
+type Liga = {
+  ziele?: Ausspielziele;
+  rueckGedreht?: boolean;
+  doppelPlan?: DoppelPartie[];
+  art?: 'doppel';
+  dritt?: Dritt;
+  aufstellung?: Record<string, { heim?: string | null; gast?: string | null }>;
+  bemerkung?: string;
+};
 const ligaVon = (t: Turnier) => ((t.einstellungen ?? {}) as { liga?: Liga }).liga ?? {};
 
 function disziplinText(s: LigaSpiel): string {
@@ -42,13 +62,15 @@ function disziplinText(s: LigaSpiel): string {
   return `${DISZIPLIN[s.disziplin] ?? s.disziplin} ${ziel}`;
 }
 
-// begegnungen in Spielreihenfolge (1., Doppel, 3.); name: Person -> Anzeigename
+// begegnungen in Spielreihenfolge (1., Doppel, 3.); name: Person -> Anzeigename;
+// kennzahlen: 14.1-Werte je Partie (partien_141), soweit geladen
 export function spieltagBerichtDaten(
   begegnungen: Turnier[],
   partien: Partie[],
   vereinName: string,
   name: (id: string) => string,
-  kopf: string
+  kopf: string,
+  kennzahlen: Map<string, Partie141> = new Map()
 ): SpieltagBericht | null {
   const gesamt = spieltagGesamt(begegnungen, partien, vereinName);
   if (!gesamt) return null;
@@ -60,13 +82,35 @@ export function spieltagBerichtDaten(
     const plan = doppel ? doppelSpielplan(liga.doppelPlan ?? []) : liga.ziele ? spielplan(liga.ziele, liga.rueckGedreht) : [];
     const eigene = partien.filter(mitSpielern).filter((p) => p.turnier_id === b.id);
     const zeile = (s: LigaSpiel): BerichtPartie => {
+      const nr = !doppel && entfaelltBeiDritt(s.nr) ? `${s.nr}*` : String(s.nr);
+      // Zu dritt: keine Partie, kampflos Ausspielziel : 0 oder ganz entfallen
+      const lage = !doppel && s.nr === drittNr(s.runde) ? drittLage(liga.dritt, s.runde) : 'keine';
+      if (lage !== 'keine') {
+        const gemerkt = liga.aufstellung?.[String(s.nr)];
+        const leer = '– zu dritt –';
+        return {
+          nr,
+          disziplin: disziplinText(s),
+          heim: lage === 'heim' || lage === 'beide' ? leer : gemerkt?.heim ? name(gemerkt.heim) : '',
+          gast: lage === 'gast' || lage === 'beide' ? leer : gemerkt?.gast ? name(gemerkt.gast) : '',
+          ergebnis: lage === 'beide' ? 'entfällt' : lage === 'heim' ? `0 : ${s.ziel} kampflos` : `${s.ziel} : 0 kampflos`,
+          punkte: lage === 'beide' ? '–' : lage === 'heim' ? '0 : 1' : '1 : 0'
+        };
+      }
       const p = eigene.find((x) => x.runde === (s.runde === 'hin' ? 1 : 2) && x.paarung === s.paarung);
+      const fertig = p && p.status === 'beendet' && p.ergebnis_a !== null && p.ergebnis_b !== null ? p : null;
+      const k = p && s.disziplin === '14-1' ? kennzahlen.get(p.id) : undefined;
+      const z = k && p ? zeile141(p.ergebnis_a, p.ergebnis_b, k) : null;
       return {
-        nr: s.nr,
+        nr,
         disziplin: disziplinText(s),
         heim: p ? seite(p.spieler_a, p.partner_a, doppel) : '',
         gast: p ? seite(p.spieler_b, p.partner_b, doppel) : '',
-        ergebnis: p && p.status === 'beendet' && p.ergebnis_a !== null && p.ergebnis_b !== null ? `${p.ergebnis_a} : ${p.ergebnis_b}` : ''
+        ergebnis: fertig ? `${fertig.ergebnis_a} : ${fertig.ergebnis_b}` : '',
+        punkte: fertig ? partiePunkt(fertig.ergebnis_a as number, fertig.ergebnis_b as number) : '',
+        ...(z
+          ? { zeile141: { aufnahmen: `Aufn. ${z.aufnahmen}`, heim: `HS ${z.hsHeim} · GD ${z.gdHeim}`, gast: `HS ${z.hsGast} · GD ${z.gdGast}` } }
+          : {})
       };
     };
     const runden = doppel
@@ -82,7 +126,9 @@ export function spieltagBerichtDaten(
       gast: s.gast,
       partiepunkte: s.partiepunkte,
       matchpunkte: s.matchpunkte,
-      runden
+      runden,
+      mitStern: !doppel,
+      bemerkung: doppel ? '' : (liga.bemerkung ?? '').replace(/\s+/g, ' ').trim()
     };
   });
   return {
@@ -99,6 +145,11 @@ export function spieltagBerichtDaten(
 }
 
 const paar = (x: [number, number] | null) => (x ? `${x[0]} : ${x[1]}` : '–');
+
+// Partiepunkt einer gespielten Partie, Heim zuerst
+export const partiePunkt = (heim: number, gast: number) => (heim > gast ? '1 : 0' : gast > heim ? '0 : 1' : '0 : 0');
+
+export const STERN_HINWEIS = '* Bei Antritt mit drei Spielern entfällt Partie Nr. 4 bzw. Nr. 5 (STO 2.5.5).';
 
 export function spieltagBerichtPdf(b: SpieltagBericht): Uint8Array {
   const dok = neuesDokument();
@@ -140,11 +191,24 @@ export function spieltagBerichtPdf(b: SpieltagBericht): Uint8Array {
           { text: 'Disziplin', align: 'links' },
           { text: `${bg.heim} (Heim)`, align: 'links' },
           { text: `${bg.gast} (Gast)`, align: 'links' },
-          { text: 'Ergebnis', align: 'mitte' }
+          { text: 'Ergebnis', align: 'mitte' },
+          { text: 'Punkte', align: 'mitte' }
         ],
-        r.partien.map((p) => [String(p.nr), p.disziplin, p.heim, p.gast, p.ergebnis])
+        // 14.1: Aufnahmen, Hoechstserie und GD in einer eigenen Zeile darunter
+        r.partien.flatMap((p) => [
+          [p.nr, p.disziplin, p.heim, p.gast, p.ergebnis, p.punkte],
+          ...(p.zeile141 ? [['', p.zeile141.aufnahmen, p.zeile141.heim, p.zeile141.gast, '', '']] : [])
+        ])
       );
     });
+    if (bg.mitStern) {
+      absatz(dok, `Endstand ${paar(bg.partiepunkte)}`);
+      if (bg.bemerkung) {
+        fliesstext(dok, `Bemerkungen: ${bg.bemerkung}`, 8.5);
+        dok.y -= 4;
+      }
+      absatz(dok, STERN_HINWEIS);
+    }
   });
   return bauen(dok, b.titel);
 }

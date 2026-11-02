@@ -2,12 +2,15 @@ import { describe, expect, test } from 'vitest';
 import {
   LIGEN,
   aufstellungPruefen,
+  drittLage,
+  drittWertung,
   entfaelltBeiDritt,
   gesperrteSpieler,
   partnerVon,
   spielplan,
   spieltagStand,
   wertung,
+  zeile141,
   zweiteBegegnungIds
 } from '../src/liga';
 import type { SpieltagTeil } from '../src/liga';
@@ -46,6 +49,61 @@ describe('Spielplan einer Begegnung', () => {
 
   test('zu dritt entfallen Partie 4 und 5', () => {
     expect([1, 2, 3, 4, 5, 6, 7, 8].filter(entfaelltBeiDritt)).toEqual([4, 5]);
+  });
+});
+
+describe('Zu dritt (STO 2.5.5)', () => {
+  const ziele = LIGEN.kreisklasse.ziele; // 14.1 auf 40, 10-Ball auf 4
+  const sieben = [1, 2, 3, 5, 6, 7, 8].map((nr) => ({ nr, heim: 4, gast: 1 }));
+
+  test('Lage je Runde', () => {
+    expect(drittLage(undefined, 'hin')).toBe('keine');
+    expect(drittLage({ hin: { gast: true } }, 'hin')).toBe('gast');
+    expect(drittLage({ hin: { gast: true } }, 'rueck')).toBe('keine');
+    expect(drittLage({ rueck: { heim: true, gast: true } }, 'rueck')).toBe('beide');
+  });
+
+  test('nur eine Mannschaft zu dritt: die andere gewinnt kampflos mit Ausspielziel : 0', () => {
+    // wie im Spielbericht PBC Bassum 3 gegen BC Dissen 7: Gast zu dritt
+    const e = drittWertung(sieben, { hin: { gast: true }, rueck: { gast: true } }, ziele);
+    expect(e.find((x) => x.nr === 4)).toEqual({ nr: 4, heim: 4, gast: 0, kampflos: true });
+    expect(e.find((x) => x.nr === 5)).toEqual({ nr: 5, heim: 40, gast: 0, kampflos: true });
+    expect(wertung(e).partiepunkte).toEqual([8, 0]);
+    expect(wertung(e).entschieden).toBe(true);
+  });
+
+  test('Heim zu dritt: Punkt fuer den Gast', () => {
+    const e = drittWertung([], { hin: { heim: true } }, ziele);
+    expect(e).toEqual([{ nr: 4, heim: 0, gast: 4, kampflos: true }]);
+  });
+
+  test('beide zu dritt: Partie entfaellt ohne Wertung, auch eine angelegte', () => {
+    const e = drittWertung([...sieben, { nr: 4, heim: null, gast: null }], { hin: { heim: true, gast: true } }, ziele);
+    const w = wertung(e);
+    expect(w.partiepunkte).toEqual([7, 0]); // sieben gewertete Partien, Nr. 4 entfaellt
+    expect(w.offen).toBe(0);
+    expect(w.entschieden).toBe(true);
+  });
+
+  test('ohne Haken bleibt alles, wie es ist', () => {
+    expect(drittWertung(sieben, undefined, ziele)).toBe(sieben);
+  });
+});
+
+describe('14.1-Zeile', () => {
+  test('Aufnahmen des Gewinners, GD beider Spieler daraus', () => {
+    // Spielbericht: 14 : 34, Aufn. 20, HS 4/9, GD 0,70/1,70
+    const z = zeile141(14, 34, { aufnahmen_a: 20, aufnahmen_b: 20, hoechstserie_a: 4, hoechstserie_b: 9 });
+    expect(z).toEqual({ aufnahmen: 20, hsHeim: 4, hsGast: 9, gdHeim: '0,70', gdGast: '1,70' });
+  });
+
+  test('verschiedene Aufnahmen: die des Gewinners zaehlt', () => {
+    expect(zeile141(40, 33, { aufnahmen_a: 18, aufnahmen_b: 17, hoechstserie_a: 12, hoechstserie_b: 9 }).aufnahmen).toBe(18);
+    expect(zeile141(30, 40, { aufnahmen_a: 18, aufnahmen_b: 17, hoechstserie_a: 12, hoechstserie_b: 9 }).aufnahmen).toBe(17);
+  });
+
+  test('ohne Aufnahmen kein GD', () => {
+    expect(zeile141(10, 5, { aufnahmen_a: 0, aufnahmen_b: 0, hoechstserie_a: 0, hoechstserie_b: 0 }).gdHeim).toBe('–');
   });
 });
 

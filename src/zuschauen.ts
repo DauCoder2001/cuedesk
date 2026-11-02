@@ -6,7 +6,8 @@
 import { rangliste } from './turnier';
 import { gruppenRangliste } from './gruppen';
 import { KO_GRUPPEN, standardGruppenzahl } from './ko';
-import { doppelVon, istDoppelBegegnung, partnerVon, wertung } from './liga';
+import { doppelVon, drittWertung, istDoppelBegegnung, partnerVon, wertung } from './liga';
+import type { Ausspielziele, Dritt } from './liga';
 import type { RanglistenPartie } from './turnier';
 import type { Partie, Turnier, TurnierTeilnehmer } from './datenbank.types';
 import { mitSpielern } from './partie-spieler';
@@ -24,6 +25,8 @@ type Einstellungen = {
     gegner?: string;
     art?: 'doppel';
     haupt?: string;
+    dritt?: Dritt;
+    ziele?: Ausspielziele;
   };
 };
 const einstellungenVon = (t: Turnier) => (t.einstellungen ?? {}) as Einstellungen;
@@ -124,19 +127,25 @@ export type LigaStand = {
   matchpunkte: [number, number] | null; // erst wenn alle Partien entschieden sind
 };
 
-// Stand einer Begegnung; gezaehlt werden nur beendete Partien (Heim = Seite A)
+// Stand einer Begegnung; gezaehlt werden nur beendete Partien (Heim = Seite A).
+// Tritt eine Mannschaft zu dritt an, zaehlt die Partie mit * kampflos
+// (drittWertung in src/liga.ts).
 export function ligaStand(begegnung: Turnier, partien: Partie[], vereinName: string): LigaStand {
   const liga = einstellungenVon(begegnung).liga ?? {};
   const eigene = liga.eigene || vereinName;
   const gegner = liga.gegner || 'Gegner';
   const w = wertung(
-    partien
-      .filter((p) => p.turnier_id === begegnung.id)
-      .map((p) => ({
-        nr: ((p.runde ?? 1) - 1) * 4 + (p.paarung ?? 1),
-        heim: p.status === 'beendet' ? p.ergebnis_a : null,
-        gast: p.status === 'beendet' ? p.ergebnis_b : null
-      }))
+    drittWertung(
+      partien
+        .filter((p) => p.turnier_id === begegnung.id)
+        .map((p) => ({
+          nr: ((p.runde ?? 1) - 1) * 4 + (p.paarung ?? 1),
+          heim: p.status === 'beendet' ? p.ergebnis_a : null,
+          gast: p.status === 'beendet' ? p.ergebnis_b : null
+        })),
+      liga.art === 'doppel' ? undefined : liga.dritt,
+      liga.ziele
+    )
   );
   const wirHeim = liga.heim ?? true;
   return {

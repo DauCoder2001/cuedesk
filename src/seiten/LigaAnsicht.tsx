@@ -10,11 +10,16 @@ import {
   doppelPlanAusEingabe,
   doppelSeitePruefen,
   doppelSpielplan,
+  drittLage,
+  drittNr,
+  drittWertung,
+  entfaelltBeiDritt,
   fertigGespielt,
   gesperrteSpieler,
   mehrfachImDoppel,
   spielplan,
-  wertung
+  wertung,
+  zeile141
 } from '../liga';
 import DoppelPlanFelder, { DOPPEL_ZEILEN_STANDARD } from './DoppelPlanFelder';
 import type { DoppelZeile } from './DoppelPlanFelder';
@@ -34,11 +39,11 @@ import { useLaufendeStaende } from '../laufende-staende';
 import { laufenderStand, laufenderStandText } from '../live';
 import { zuruecksetzbar } from '../partie-zuruecksetzen';
 import { spieltagGesamt } from '../zuschauen';
-import { spieltagBerichtDaten, spieltagBerichtDateiname, spieltagBerichtPdf } from '../spieltagbericht';
+import { STERN_HINWEIS, partiePunkt, spieltagBerichtDaten, spieltagBerichtDateiname, spieltagBerichtPdf } from '../spieltagbericht';
 import { herunterladen } from '../pdf';
-import type { LigaSpiel } from '../liga';
+import type { LigaErgebnis, LigaSpiel, Runde } from '../liga';
 import type { TurnierEinstellungen } from './Turniere';
-import type { Mannschaft, MannschaftSpieler, Partie, Person, Turnier, TurnierTeilnehmer } from '../datenbank.types';
+import type { Mannschaft, MannschaftSpieler, Partie, Partie141, Person, Turnier, TurnierTeilnehmer } from '../datenbank.types';
 import { Modal } from '../modal';
 import { useEtwasUngespeichert } from '../ungespeichert';
 
@@ -89,7 +94,9 @@ export async function andereBegegnungAnlegen(
     begegnung: nummer,
     partner: turnier.id,
     doppel: undefined,
-    doppelPlan: undefined
+    doppelPlan: undefined,
+    dritt: undefined,
+    bemerkung: undefined
   };
   const { data, error } = await supabase
     .from('turniere')
@@ -134,6 +141,8 @@ export async function doppelBegegnungAnlegen(
     quelle: undefined,
     partner: undefined,
     doppel: undefined,
+    dritt: undefined,
+    bemerkung: undefined,
     begegnung: 1 as const,
     art: 'doppel' as const,
     haupt: erste.id,
@@ -338,6 +347,39 @@ export default function LigaAnsicht({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [teileIds, turnierId, turnier?.status]);
 
+  // 14.1-Kennzahlen (Aufnahmen, Hoechstserien) der 14.1-Partien des Spieltags,
+  // fuer die 14.1-Zeile und den Spielbericht. Neu gelesen, sobald sich eine
+  // Partie aendert; die Tablets schreiben sie kurz nach dem Ergebnis, daher
+  // ein zweites Mal nach zwei Sekunden.
+  const [kennzahlen, setKennzahlen] = useState<Map<string, Partie141>>(new Map());
+  const [kennzahlenNeu, setKennzahlenNeu] = useState(0);
+  const stand141 = [...partien, ...(spieltag?.partien ?? [])]
+    .filter((p) => p.disziplin === '14-1')
+    .map((p) => `${p.id}:${p.status}:${p.ergebnis_a}:${p.ergebnis_b}`)
+    .join(',');
+  useEffect(() => {
+    const ids = stand141 ? stand141.split(',').map((x) => x.split(':')[0]) : [];
+    if (ids.length === 0) {
+      setKennzahlen(new Map());
+      return;
+    }
+    let vorbei = false;
+    const lesen = () =>
+      void supabase
+        .from('partien_141')
+        .select('*')
+        .in('partie_id', ids)
+        .then(({ data }) => {
+          if (!vorbei && data) setKennzahlen(new Map(data.map((k) => [k.partie_id, k])));
+        });
+    lesen();
+    const spaeter = window.setTimeout(lesen, 2000);
+    return () => {
+      vorbei = true;
+      window.clearTimeout(spaeter);
+    };
+  }, [stand141, kennzahlenNeu]);
+
   // Laufender Stand am Tisch neben dem (noch leeren) Ergebnis
   const laufendeStaende = useLaufendeStaende(verein?.id);
   const [tischNummern, setTischNummern] = useState<Map<string, number>>(new Map());
@@ -430,13 +472,22 @@ export default function LigaAnsicht({
 
   const ergebnisse = useMemo(
     () =>
-      spiele.map((s) => {
-        const p = partieVon(s);
-        // Der Rating-Haken einer Partie ändert die Partiepunkte nicht
-        return { nr: s.nr, heim: p?.ergebnis_a ?? null, gast: p?.ergebnis_b ?? null };
-      }),
-    [spiele, partieVon]
+      drittWertung(
+        spiele.map((s) => {
+          const p = partieVon(s);
+          // Der Rating-Haken einer Partie ändert die Partiepunkte nicht
+          return { nr: s.nr, heim: p?.ergebnis_a ?? null, gast: p?.ergebnis_b ?? null };
+        }),
+        // Zu dritt: Partie mit * kampflos oder entfallen (nicht im Doppel)
+        liga?.art === 'doppel' ? undefined : liga?.dritt,
+        liga?.ziele
+      ),
+    [spiele, partieVon, liga?.art, liga?.dritt, liga?.ziele]
   );
+  // Zu dritt in dieser Runde? (nur Einzel-Begegnungen)
+  const drittIn = (runde: Runde) => (istDoppel ? 'keine' : drittLage(liga?.dritt, runde));
+  // Lage fuer ein Spiel: nur die Partie mit * ist betroffen
+  const drittBei = (s: LigaSpiel) => (s.nr === drittNr(s.runde) ? drittIn(s.runde) : 'keine');
   const punkte = useMemo(() => wertung(ergebnisse), [ergebnisse]);
 
   // Spieltag gesamt (ab zwei Begegnungen), aus Sicht der Heimmannschaft der 1. Begegnung
@@ -459,7 +510,7 @@ export default function LigaAnsicht({
       year: 'numeric'
     });
     const kopf = `${tag} · ${verein.name} · erstellt am ${new Date().toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' })}`;
-    const daten = spieltagBerichtDaten(spieltagTurniere, spieltagPartien, verein.name, anzeige, kopf);
+    const daten = spieltagBerichtDaten(spieltagTurniere, spieltagPartien, verein.name, anzeige, kopf, kennzahlen);
     if (!daten) return;
     herunterladen(spieltagBerichtPdf(daten), spieltagBerichtDateiname(daten.titel, turnier.datum));
   }
@@ -873,6 +924,93 @@ export default function LigaAnsicht({
     setTurnier({ ...turnier, einstellungen: neu });
   }
 
+  // Mannschaft tritt in einer Runde nur zu dritt an (Formular P-01, STO
+  // 2.5.5): Ihre Seite der Partie mit * bleibt leer, die Partie zaehlt
+  // kampflos fuer den Gegner oder entfaellt, wenn beide zu dritt sind
+  // (drittWertung in src/liga.ts). Eine schon angelegte Partie wird dafuer
+  // aufgeloest; der Spieler der anderen Seite bleibt eingetragen.
+  async function drittSetzen(runde: Runde, seite: 'heim' | 'gast', an: boolean) {
+    if (!turnier || !liga) return;
+    const s = spiele.find((x) => x.nr === drittNr(runde));
+    if (!s) return;
+    const p = partieVon(s);
+    if (an && p) {
+      if (p.tisch_id || p.status !== 'geplant' || p.ergebnis_a !== null || p.ergebnis_b !== null) {
+        return setFehler(
+          `Partie ${s.nr} läuft schon oder hat ein Ergebnis. Erst zurücksetzen, dann „zu dritt“ anhaken.`
+        );
+      }
+      const { error } = await supabase.from('partien').delete().eq('id', p.id);
+      if (error) return setFehler(error.message);
+    }
+    setFehler(null);
+    const { data } = await supabase.from('turniere').select('einstellungen').eq('id', turnier.id).maybeSingle();
+    const aktuell = (data?.einstellungen ?? {}) as TurnierEinstellungen;
+    if (!aktuell.liga) return;
+    const dritt = {
+      ...(aktuell.liga.dritt ?? {}),
+      [runde]: { ...(aktuell.liga.dritt?.[runde] ?? {}), [seite]: an }
+    };
+    const aufstellung = { ...(aktuell.liga.aufstellung ?? {}) };
+    if (an) {
+      const bleibt = { heim: seite === 'heim' ? null : heimSpieler(s), gast: seite === 'gast' ? null : gastSpieler(s) };
+      if (bleibt.heim || bleibt.gast) aufstellung[String(s.nr)] = bleibt;
+      else delete aufstellung[String(s.nr)];
+    }
+    const { error } = await supabase
+      .from('turniere')
+      .update({ einstellungen: { ...aktuell, liga: { ...aktuell.liga, dritt, aufstellung } } })
+      .eq('id', turnier.id);
+    if (error) return setFehler(error.message);
+    setWahl((bisher) => {
+      const neu = { ...bisher };
+      delete neu[s.nr];
+      return neu;
+    });
+    await laden();
+  }
+
+  // Bemerkungen zur Begegnung (Formular P-01), gespeichert beim Verlassen des Felds
+  async function bemerkungSpeichern(text: string) {
+    if (!turnier) return;
+    const { data } = await supabase.from('turniere').select('einstellungen').eq('id', turnier.id).maybeSingle();
+    const aktuell = (data?.einstellungen ?? {}) as TurnierEinstellungen;
+    if (!aktuell.liga || (aktuell.liga.bemerkung ?? '') === text) return;
+    const { error } = await supabase
+      .from('turniere')
+      .update({ einstellungen: { ...aktuell, liga: { ...aktuell.liga, bemerkung: text || undefined } } })
+      .eq('id', turnier.id);
+    if (error) return setFehler(error.message);
+    await laden();
+  }
+
+  // 14.1 von Hand: Aufnahmen (eine Zahl, die des Gewinners, fuer beide
+  // Spieler wie beim eingelesenen Spielbericht) und Hoechstserien. Alles leer
+  // loescht die Angaben. Vom Tablet gespielte Partien bleiben unberuehrt.
+  async function kennzahlenSetzen(s: LigaSpiel, aufnahmen: number | null, hsHeim: number | null, hsGast: number | null) {
+    const p = partieVon(s);
+    if (!p || !turnier) return;
+    if (aufnahmen !== null && s.aufnahmen && aufnahmen > s.aufnahmen) {
+      return setFehler(`Partie ${s.nr}: höchstens ${s.aufnahmen} Aufnahmen.`);
+    }
+    setFehler(null);
+    const { error } =
+      aufnahmen === null && hsHeim === null && hsGast === null
+        ? await supabase.from('partien_141').delete().eq('partie_id', p.id)
+        : await supabase.from('partien_141').upsert({
+            partie_id: p.id,
+            verein_id: turnier.verein_id,
+            ziel_punkte: s.ziel,
+            ziel_aufnahmen: s.aufnahmen ?? 0,
+            aufnahmen_a: aufnahmen ?? 0,
+            aufnahmen_b: aufnahmen ?? 0,
+            hoechstserie_a: hsHeim ?? 0,
+            hoechstserie_b: hsGast ?? 0
+          });
+    if (error) return setFehler(error.message);
+    setKennzahlenNeu((n) => n + 1);
+  }
+
   async function schutzAufheben() {
     if (!verein || !(await schutzwortPruefen(verein.id, passwort))) {
       setFehler('Das Schutzwort stimmt nicht.');
@@ -1088,7 +1226,7 @@ export default function LigaAnsicht({
         return setFehler(error.message);
       }
     }
-    const { aufstellung: _a, verdeckt: _v, quelle: _q, gestartet: _g, ...ligaLeer } = liga;
+    const { aufstellung: _a, verdeckt: _v, quelle: _q, gestartet: _g, dritt: _d, bemerkung: _b, ...ligaLeer } = liga;
     const { error } = await supabase
       .from('turniere')
       .update({ status: 'geplant', einstellungen: { ...einstellungen, liga: ligaLeer } })
@@ -1144,13 +1282,18 @@ export default function LigaAnsicht({
   // Naechster Schritt gruen hinterlegt (faellig), immer nur einer: Hinrunde starten,
   // sobald die Aufstellung vollstaendig ist; Rueckrunde, sobald die Hinrunde
   // gespielt ist; Abschliessen, sobald alle Partien gespielt sind
+  // Zu dritt bleibt in der Partie mit * die Seite der Mannschaft leer
   const aufstellungKomplett = (runde: 'hin' | 'rueck') =>
     spiele
       .filter((sp) => sp.runde === runde)
-      .every(
-        (sp) =>
-          spielerIn(sp, 'heim') && spielerIn(sp, 'gast') && (!istDoppel || (spielerIn(sp, 'heim2') && spielerIn(sp, 'gast2')))
-      );
+      .every((sp) => {
+        const lage = drittBei(sp);
+        return (
+          (lage === 'heim' || lage === 'beide' || spielerIn(sp, 'heim')) &&
+          (lage === 'gast' || lage === 'beide' || spielerIn(sp, 'gast')) &&
+          (!istDoppel || (spielerIn(sp, 'heim2') && spielerIn(sp, 'gast2')))
+        );
+      });
   const hinGespielt = fertigGespielt(partien.filter((p) => p.runde === 1));
   const naechsterSchritt: 'hin' | 'rueck' | 'abschliessen' | null =
     turnier?.status === 'beendet' || spiele.length === 0 || ungespeichert
@@ -1446,7 +1589,29 @@ export default function LigaAnsicht({
       {reihen.map((r) => (
         <section key={r.runde} className="block">
           <div className="rundenkopf">
-            <h2>{r.titel}</h2>
+            <div className="kopflinks">
+              <h2>{r.titel}</h2>
+              {!istDoppel &&
+                (['heim', 'gast'] as const).map((seite) => {
+                  const an = Boolean(liga.dritt?.[r.runde]?.[seite]);
+                  const name = seite === 'heim' ? heimMannschaft : gastMannschaft;
+                  const nr = drittNr(r.runde);
+                  return bearbeitbar && !(r.runde === 'hin' && hinGeschuetzt) ? (
+                    <label
+                      key={seite}
+                      className="ankreuz"
+                      title={`${name} tritt in der ${r.titel} nur mit drei Spielern an: Partie ${nr}* bleibt auf ihrer Seite leer und zählt kampflos für den Gegner. Treten beide Mannschaften zu dritt an, entfällt die Partie.`}
+                    >
+                      <input type="checkbox" checked={an} disabled={arbeitet} onChange={(e) => void drittSetzen(r.runde, seite, e.target.checked)} />
+                      {name} zu dritt
+                    </label>
+                  ) : an ? (
+                    <span key={seite} className="hinweis">
+                      {name} zu dritt
+                    </span>
+                  ) : null;
+                })}
+            </div>
             {gestartet[r.runde] ? (
               <span className="knopfpaar">
                 {turnier.status === 'laeuft' && <span className="livelaeuft">● läuft</span>}
@@ -1513,6 +1678,11 @@ export default function LigaAnsicht({
                   <small> {wirSindHeim ? 'Gast' : 'wir, Gast'}</small>
                 </th>
                 <th className="rechts">Ergebnis</th>
+                {!istDoppel && (
+                  <th className="rechts" title="Partiepunkt je Partie, Heim zuerst: der Sieger bekommt 1">
+                    Punkte
+                  </th>
+                )}
                 <th></th>
               </tr>
             </thead>
@@ -1560,31 +1730,51 @@ export default function LigaAnsicht({
                       })()}
                       spieltagWertet={turnier.rating_werten}
                       mitRating={mitRating}
+                      stern={!istDoppel && entfaelltBeiDritt(s.nr)}
+                      dritt={drittBei(s)}
+                      kampflos={ergebnisse.find((e) => e.nr === s.nr && e.kampflos) ?? null}
+                      kennzahl={p ? (kennzahlen.get(p.id) ?? null) : null}
+                      kennzahlenSetzen={(aufn, hsHeim, hsGast) => void kennzahlenSetzen(s, aufn, hsHeim, hsGast)}
                     />
                   );
                 })}
             </tbody>
-            {bearbeitbar && (
+            {(bearbeitbar || !istDoppel) && (
               <tfoot>
-                <tr>
-                  <td colSpan={2}></td>
-                  {(['heim', 'gast'] as const).map((seite) => (
-                    <td key={seite} colSpan={seite === 'heim' ? 2 : 1}>
-                      <button
-                        type="button"
-                        title="Verborgene Aufstellungen sieht der Gegner nicht. Zum Zeigen wird das Schutzwort gebraucht."
-                        onClick={() =>
-                          istVerdeckt(r.runde, seite)
-                            ? setPasswortFrage({ runde: r.runde, seite })
-                            : void verdeckenSetzen(r.runde, seite, true)
-                        }
-                      >
-                        Aufstellung {istVerdeckt(r.runde, seite) ? 'zeigen' : 'verbergen'}
-                      </button>
+                {!istDoppel && (
+                  // Partiepunkte dieser Runde, Heim zuerst
+                  <tr className="rundenstand">
+                    <td colSpan={6}>Partiepunkte {r.titel}</td>
+                    <td className="rechts">
+                      {(() => {
+                        const w = wertung(ergebnisse.filter((e) => spiele.some((s) => s.nr === e.nr && s.runde === r.runde)));
+                        return `${w.partiepunkte[0]} : ${w.partiepunkte[1]}`;
+                      })()}
                     </td>
-                  ))}
-                  <td colSpan={2}></td>
-                </tr>
+                    <td></td>
+                  </tr>
+                )}
+                {bearbeitbar && (
+                  <tr>
+                    <td colSpan={2}></td>
+                    {(['heim', 'gast'] as const).map((seite) => (
+                      <td key={seite} colSpan={seite === 'heim' ? 2 : 1}>
+                        <button
+                          type="button"
+                          title="Verborgene Aufstellungen sieht der Gegner nicht. Zum Zeigen wird das Schutzwort gebraucht."
+                          onClick={() =>
+                            istVerdeckt(r.runde, seite)
+                              ? setPasswortFrage({ runde: r.runde, seite })
+                              : void verdeckenSetzen(r.runde, seite, true)
+                          }
+                        >
+                          Aufstellung {istVerdeckt(r.runde, seite) ? 'zeigen' : 'verbergen'}
+                        </button>
+                      </td>
+                    ))}
+                    <td colSpan={istDoppel ? 2 : 3}></td>
+                  </tr>
+                )}
               </tfoot>
             )}
           </table>
@@ -1602,6 +1792,24 @@ export default function LigaAnsicht({
           )}
         </section>
       ))}
+
+      {!istDoppel && (
+        // Abschluss wie im Formular P-01: Endstand, Bemerkungen, Hinweis zu *
+        <section className="block">
+          <div className="endstand" title="Partiepunkte der ganzen Begegnung, Heim zuerst">
+            <span>Endstand</span>
+            <strong>
+              {punkte.partiepunkte[0]} : {punkte.partiepunkte[1]}
+            </strong>
+            <small>
+              {heimMannschaft} gegen {gastMannschaft}
+              {punkte.entschieden ? '' : ` · noch ${punkte.offen} ${punkte.offen === 1 ? 'Partie' : 'Partien'} offen`}
+            </small>
+          </div>
+          <Bemerkung text={liga.bemerkung ?? ''} bearbeitbar={bearbeitbar} speichern={(t) => void bemerkungSpeichern(t)} />
+          <p className="hinweis">{STERN_HINWEIS}</p>
+        </section>
+      )}
 
       {bearbeitbar && (
         <section className="block">
@@ -1770,8 +1978,35 @@ export default function LigaAnsicht({
   );
 }
 
+// Bemerkungen zur Begegnung; gespeichert beim Verlassen des Felds
+function Bemerkung({ text, bearbeitbar, speichern }: { text: string; bearbeitbar: boolean; speichern: (text: string) => void }) {
+  const [wert, setWert] = useState(text);
+  const feld = useRef<HTMLTextAreaElement>(null);
+  // Aenderungen von aussen uebernehmen, solange hier niemand tippt
+  useEffect(() => {
+    if (document.activeElement !== feld.current) setWert(text);
+  }, [text]);
+  if (!bearbeitbar) return text ? <p className="bemerkung"><strong>Bemerkungen:</strong> {text}</p> : null;
+  return (
+    <label className="bemerkung">
+      Bemerkungen
+      <textarea
+        ref={feld}
+        rows={2}
+        maxLength={1000}
+        value={wert}
+        placeholder="z. B. Spielbeginn 20:15, Partie 4 mit Verspätung"
+        title="Bemerkungen zur Begegnung, wie im Spielbericht. Gespeichert beim Verlassen des Felds; sie stehen auch im Spielbericht (PDF)."
+        onChange={(e) => setWert(e.target.value)}
+        onBlur={() => wert.trim() !== text && speichern(wert.trim())}
+      />
+    </label>
+  );
+}
+
 // Eine Zeile des Spielberichts: zwei Spieler und das Ergebnis. Gespeichert
-// wird beim Verlassen der Zeile, wie im Turnier-Spielplan.
+// wird beim Verlassen der Zeile, wie im Turnier-Spielplan. Bei 14.1 folgt
+// eine zweite Zeile mit Aufnahmen, Hoechstserien und GD (Formular P-01).
 function Spielzeile(props: {
   spiel: LigaSpiel;
   partie: Partie | null;
@@ -1794,6 +2029,11 @@ function Spielzeile(props: {
   laufend: string | null; // laufender Stand am Tisch ("● Tisch 1 · 14 : 28 · Aufn. 1"), nur zum Ansehen
   spieltagWertet: boolean; // Schalter "Fürs Rating werten" des Spieltags
   mitRating: boolean; // ohne Vereins-Rating keine Rating-Haken
+  stern: boolean; // Partie entfaellt bei drei Spielern (Nr. 4 und 5)
+  dritt: 'keine' | 'heim' | 'gast' | 'beide'; // wer in dieser Partie zu dritt fehlt
+  kampflos: LigaErgebnis | null; // Wertung, wenn nur eine Seite zu dritt ist
+  kennzahl: Partie141 | null; // 14.1: Aufnahmen und Hoechstserien
+  kennzahlenSetzen: (aufnahmen: number | null, hsHeim: number | null, hsGast: number | null) => void;
 }) {
   const { spiel, partie } = props;
   const wert = (w: number | null | undefined) => (w === null || w === undefined ? '' : String(w));
@@ -1823,7 +2063,12 @@ function Spielzeile(props: {
   const festgezurrt = Boolean(partie && (partie.tisch_id || partie.status === 'beendet'));
 
   const auswahl = (seite: Slot, gewaehlt: string | null, liste: Person[], verborgen: boolean) =>
-    verborgen ? (
+    (seite === 'heim' && (props.dritt === 'heim' || props.dritt === 'beide')) ||
+    (seite === 'gast' && (props.dritt === 'gast' || props.dritt === 'beide')) ? (
+      <span className="hinweis" title="Die Mannschaft tritt in dieser Runde zu dritt an; das Feld bleibt leer.">
+        – zu dritt –
+      </span>
+    ) : verborgen ? (
       // Der Name steht bewusst nicht im Seitenquelltext
       <span className="verdeckt" title="Aufstellung verborgen">{gewaehlt ? 'verdeckt' : 'noch offen'}</span>
     ) : props.bearbeitbar && !festgezurrt ? (
@@ -1862,10 +2107,16 @@ function Spielzeile(props: {
     if (e.target === felder[0] && felder[1]) (felder[1] as HTMLInputElement).focus();
     else (e.target as HTMLInputElement).blur();
   };
+  const gestrichen = props.dritt === 'beide';
+  const kampflos = props.dritt !== 'keine' && !gestrichen ? props.kampflos : null;
   return (
-    <tr ref={zeile} className={fertig ? 'gespielt' : ''}>
-      <td>{spiel.nr}</td>
-      <td>
+    <>
+    <tr ref={zeile} className={gestrichen ? 'gestrichen' : fertig || kampflos ? 'gespielt' : ''}>
+      <td title={props.stern ? 'Entfällt bei Antritt mit drei Spielern (STO 2.5.5)' : undefined}>
+        {spiel.nr}
+        {props.stern ? '*' : ''}
+      </td>
+      <td className="disziplin">
         {DISZIPLIN_KURZ[spiel.disziplin]}
         <small>
           {' '}
@@ -1898,7 +2149,13 @@ function Spielzeile(props: {
         </>
       )}
       <td className="rechts">
-        {props.bearbeitbar && partie ? (
+        {gestrichen ? (
+          <span title="Beide Mannschaften treten zu dritt an: Die Partie entfällt ohne Wertung.">entfällt</span>
+        ) : kampflos ? (
+          <span title="Der Gegner tritt zu dritt an: Die Partie zählt kampflos mit dem Ausspielziel.">
+            {kampflos.heim} : {kampflos.gast} <small>kampflos</small>
+          </span>
+        ) : props.bearbeitbar && partie ? (
           <>
             <input
               className="zahlfeld"
@@ -1922,6 +2179,15 @@ function Spielzeile(props: {
           <span>{fertig ? `${eigenErgebnis} : ${gegenErgebnis}` : '–'}</span>
         )}
       </td>
+      {!props.doppel && (
+        <td className="rechts">
+          {kampflos
+            ? partiePunkt(kampflos.heim ?? 0, kampflos.gast ?? 0)
+            : fertig && !gestrichen
+              ? partiePunkt(eigenErgebnis as number, gegenErgebnis as number)
+              : '–'}
+        </td>
+      )}
       <td className="rechts">
         {props.laufend && (
           <>
@@ -1930,7 +2196,7 @@ function Spielzeile(props: {
             </span>{' '}
           </>
         )}
-        {!props.mitRating ? null : props.doppel ? (
+        {!props.mitRating || props.dritt !== 'keine' ? null : props.doppel ? (
           <span className="hinweis" title="Doppel gehen nie ins Rating ein">
             Doppel: kein Rating
           </span>
@@ -1973,6 +2239,88 @@ function Spielzeile(props: {
               Zurücksetzen
             </button>
           </>
+        )}
+      </td>
+    </tr>
+    {spiel.disziplin === '14-1' && partie && props.dritt === 'keine' && (
+      <Zeile141 partie={partie} spiel={spiel} kennzahl={props.kennzahl} bearbeitbar={props.bearbeitbar} setzen={props.kennzahlenSetzen} />
+    )}
+    </>
+  );
+}
+
+// 14.1-Zeile unter der Partie, eingerueckt ab dem ersten Namensfeld
+// (Formular P-01): Aufnahmen des Gewinners, Hoechstserie und GD je Spieler.
+// Vom Tablet gespielt: nur Anzeige. Sonst von Hand, gespeichert beim
+// Verlassen der Zeile; der GD rechnet sich aus Punkten und Aufnahmen.
+function Zeile141(props: {
+  partie: Partie;
+  spiel: LigaSpiel;
+  kennzahl: Partie141 | null;
+  bearbeitbar: boolean;
+  setzen: (aufnahmen: number | null, hsHeim: number | null, hsGast: number | null) => void;
+}) {
+  const { partie, kennzahl } = props;
+  const vomTablet = kennzahl !== null && kennzahl.dauer_sek !== null;
+  const z = kennzahl ? zeile141(partie.ergebnis_a, partie.ergebnis_b, kennzahl) : null;
+  const wert = (w: number | undefined) => (w === undefined ? '' : String(w));
+  const [aufn, setAufn] = useState(wert(z?.aufnahmen));
+  const [hsHeim, setHsHeim] = useState(wert(z?.hsHeim));
+  const [hsGast, setHsGast] = useState(wert(z?.hsGast));
+  const reihe = useRef<HTMLTableRowElement>(null);
+
+  // Aenderungen von aussen uebernehmen, solange hier niemand tippt
+  useEffect(() => {
+    if (reihe.current?.contains(document.activeElement)) return;
+    setAufn(wert(z?.aufnahmen));
+    setHsHeim(wert(z?.hsHeim));
+    setHsGast(wert(z?.hsGast));
+  }, [z?.aufnahmen, z?.hsHeim, z?.hsGast]);
+
+  // Am Tisch schreibt das Tablet die Werte selbst; von Hand erst mit Ergebnis
+  const amTisch = Boolean(partie.tisch_id) && partie.status !== 'beendet';
+  const mitErgebnis = partie.ergebnis_a !== null && partie.ergebnis_b !== null;
+  const vonHand = props.bearbeitbar && !vomTablet && !amTisch && mitErgebnis;
+  if (!vonHand && !z) return null;
+
+  const zahl = (t: string) => (t.trim() === '' ? null : Number(t));
+  const uebernehmen = (e: React.FocusEvent<HTMLInputElement>) => {
+    if (e.relatedTarget && reihe.current?.contains(e.relatedTarget as Node)) return;
+    if (zahl(aufn) === (z?.aufnahmen ?? null) && zahl(hsHeim) === (z?.hsHeim ?? null) && zahl(hsGast) === (z?.hsGast ?? null)) return;
+    props.setzen(zahl(aufn), zahl(hsHeim), zahl(hsGast));
+  };
+  const gd = (punkte: number | null) => {
+    const a = zahl(aufn);
+    return punkte === null || !a ? '–' : (punkte / a).toFixed(2).replace('.', ',');
+  };
+  const feld = (w: string, setzen: (t: string) => void, titel: string) => (
+    <input
+      className="zahlfeld"
+      inputMode="numeric"
+      value={w}
+      title={titel}
+      onChange={(e) => setzen(e.target.value.replace(/\D/g, '').slice(0, 3))}
+      onBlur={uebernehmen}
+      onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
+    />
+  );
+
+  return (
+    <tr ref={reihe} className="zeile141">
+      <td colSpan={2}></td>
+      <td colSpan={6}>
+        {vonHand ? (
+          <>
+            Aufn. {feld(aufn, setAufn, `Benötigte Aufnahmen des Gewinners (höchstens ${props.spiel.aufnahmen ?? '–'})`)} · HS{' '}
+            {feld(hsHeim, setHsHeim, 'Höchstserie Heim')} | {feld(hsGast, setHsGast, 'Höchstserie Gast')} · GD{' '}
+            {gd(partie.ergebnis_a)} | {gd(partie.ergebnis_b)}
+          </>
+        ) : (
+          z && (
+            <span title={vomTablet ? 'Vom Tablet übernommen' : 'Von Hand oder aus dem eingelesenen Spielbericht'}>
+              Aufn. {z.aufnahmen} · HS {z.hsHeim} | {z.hsGast} · GD {z.gdHeim} | {z.gdGast}
+            </span>
+          )
         )}
       </td>
     </tr>

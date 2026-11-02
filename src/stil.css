@@ -237,7 +237,9 @@ ul.schlicht { list-style: none; padding: 0; margin: 0; display: flex; flex-direc
 .bearbeiten { padding: 14px 16px; display: flex; flex-direction: column; gap: 14px; }
 .bearbeitenkopf { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 /* Ueberschrift mit Knopf direkt dahinter (Teilnehmer: "Spieler nachtragen") */
-.bearbeitenkopf .kopflinks, .koblock .kopflinks { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.bearbeitenkopf .kopflinks, .koblock .kopflinks, .rundenkopf .kopflinks { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.rundenkopf .kopflinks .ankreuz { align-items: center; font-size: 14px; }
+.rundenkopf .kopflinks .ankreuz input { margin-top: 0; }
 
 .felder { display: grid; grid-template-columns: repeat(auto-fill, 120px); gap: 10px; }
 .feld { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--text-leise); }
@@ -588,6 +590,16 @@ tr.klickbar:hover td { background: var(--flaeche-2); }
 button.klein { font-size: 13px; padding: 2px 7px; margin-left: 4px; }
 tr.gespielt td { color: var(--text-leise); }
 tr.gespielt .zahlfeld { color: var(--text); }
+/* Liga: Partie mit *, die zu dritt entfaellt; 14.1-Zeile darunter (Formular P-01) */
+tr.gestrichen td { color: var(--text-leise); }
+tr.gestrichen td.disziplin { text-decoration: line-through; }
+.tabelle tr.zeile141 td { padding-top: 0; font-size: 13px; color: var(--text-leise); }
+.tabelle tr.rundenstand td { font-weight: 600; }
+.endstand { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.endstand strong { font-size: 24px; }
+.endstand small { color: var(--text-leise); }
+.bemerkung { display: block; margin: 12px 0 6px; }
+.bemerkung textarea { display: block; width: 100%; margin-top: 4px; }
 .marke.stichkampf { color: #854f0b; border-color: #e8cfa3; }
 .gefahrknopf { color: var(--fehler); border-color: #e7bcbc; white-space: nowrap; }
 /* Orange: aus einer Liste nehmen, laesst sich wieder hinzufuegen */

@@ -87,12 +87,66 @@ export function entfaelltBeiDritt(nr: number): boolean {
   return nr === 4 || nr === 5;
 }
 
+// Die Partie mit * (Formular P-01) einer Runde
+export const drittNr = (runde: Runde): number => (runde === 'hin' ? 4 : 5);
+
+// Welche Mannschaft tritt in einer Runde nur zu dritt an (Haken am Spieltag,
+// einstellungen.liga.dritt, je Runde und Seite wie verdeckt)
+export type Dritt = { hin?: { heim?: boolean; gast?: boolean }; rueck?: { heim?: boolean; gast?: boolean } };
+
+export function drittLage(dritt: Dritt | undefined, runde: Runde): 'keine' | 'heim' | 'gast' | 'beide' {
+  const heim = Boolean(dritt?.[runde]?.heim);
+  const gast = Boolean(dritt?.[runde]?.gast);
+  return heim && gast ? 'beide' : heim ? 'heim' : gast ? 'gast' : 'keine';
+}
+
 export type LigaErgebnis = {
   nr: number;
   heim: number | null; // Saetze, bei 14.1 Punkte
   gast: number | null;
   gewertet?: boolean; // false: gestrichene Partie ohne Wertung
+  kampflos?: boolean; // Gegner trat zu dritt an
 };
+
+// Partie mit * bei drei Spielern (STO 2.5.5): Tritt nur eine Mannschaft zu
+// dritt an, gewinnt die andere kampflos mit Ausspielziel : 0 (14.1 Punkteziel,
+// sonst Gewinnsaetze). Treten beide zu dritt an, entfaellt die Partie ohne
+// Wertung. Eine gespeicherte Partie gibt es dafuer nicht; ihr Eintrag wird
+// ersetzt.
+export function drittWertung(ergebnisse: LigaErgebnis[], dritt: Dritt | undefined, ziele: Ausspielziele | undefined): LigaErgebnis[] {
+  let aus = ergebnisse;
+  (['hin', 'rueck'] as Runde[]).forEach((runde) => {
+    const lage = drittLage(dritt, runde);
+    if (lage === 'keine') return;
+    const nr = drittNr(runde);
+    const ziel = ziele ? (runde === 'hin' ? ziele['10-ball'] : ziele.punkte141) : 1;
+    aus = aus.filter((e) => e.nr !== nr);
+    aus.push(
+      lage === 'beide'
+        ? { nr, heim: null, gast: null, gewertet: false }
+        : { nr, heim: lage === 'gast' ? ziel : 0, gast: lage === 'heim' ? ziel : 0, kampflos: true }
+    );
+  });
+  return aus;
+}
+
+// 14.1-Zeile unter der Partie (Formular P-01): eine Aufnahmenzahl, die des
+// Gewinners, und daraus der Generaldurchschnitt (GD) beider Spieler.
+// Kennzahlen aus partien_141 (Tablet, eingelesener Spielbericht oder von Hand).
+export type Kennzahlen141 = { aufnahmen_a: number; aufnahmen_b: number; hoechstserie_a: number; hoechstserie_b: number };
+
+export function zeile141(
+  punkteHeim: number | null,
+  punkteGast: number | null,
+  k: Kennzahlen141
+): { aufnahmen: number; hsHeim: number; hsGast: number; gdHeim: string; gdGast: string } {
+  const heim = punkteHeim ?? 0;
+  const gast = punkteGast ?? 0;
+  const aufnahmen = heim > gast ? k.aufnahmen_a : gast > heim ? k.aufnahmen_b : Math.max(k.aufnahmen_a, k.aufnahmen_b);
+  const gd = (punkte: number | null) =>
+    punkte === null || aufnahmen <= 0 ? '–' : (punkte / aufnahmen).toFixed(2).replace('.', ',');
+  return { aufnahmen, hsHeim: k.hoechstserie_a, hsGast: k.hoechstserie_b, gdHeim: gd(punkteHeim), gdGast: gd(punkteGast) };
+}
 
 export type LigaWertung = {
   partiepunkte: [number, number];

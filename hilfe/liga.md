@@ -25,12 +25,24 @@ Ein Liga-Spieltag besteht immer aus zwei Begegnungen gegen dieselbe Mannschaft, 
 - Spieler der Gastmannschaft legst du unter **Gegnerische Spieler** mit **Als Gast anlegen** an.
 - **Aufstellung verbergen** versteckt die eigene Aufstellung vor dem Gegner. Zum Zeigen braucht es das Schutzwort des Vereins.
 
+### Zu dritt
+
+Tritt eine Mannschaft nur mit drei Spielern an, entfällt je Runde eine Partie: in der Hinrunde Nr. 4 (10-Ball), in der Rückrunde Nr. 5 (14.1). Beide tragen in der Tabelle ein * (STO 2.5.5).
+
+- Im Kopf jeder Runde steht für beide Mannschaften ein Haken **zu dritt**, zum Beispiel „PBC Muster 1 zu dritt“. Mit dem Haken bleibt die Seite dieser Mannschaft in der Partie mit * leer („– zu dritt –“), und die Partie kommt nicht an die Tablets.
+- Tritt nur eine Mannschaft zu dritt an, gewinnt die andere die Partie kampflos mit dem Ausspielziel, zum Beispiel 4 : 0 im 10-Ball oder 40 : 0 im 14.1. Ihren Spieler trägst du wie gewohnt ein.
+- Treten beide zu dritt an, entfällt die Partie ohne Wertung.
+- Ist die Partie schon aufgestellt, nimmt der Haken den Spieler dieser Mannschaft wieder heraus. Läuft sie schon oder hat sie ein Ergebnis, erst **Zurücksetzen**.
+
 ## 4. Spielen
 
 - **Hinrunde starten** (rechts über der Hinrunde) gibt deren vier Partien für die Tablets frei; die Begegnung läuft dann. **Rückrunde starten** erscheint danach über der Rückrunde und gibt deren Partien frei. Bis dahin lässt sich die Aufstellung der Rückrunde in Ruhe eintragen. Gestartet wird je Begegnung.
 - Versehentlich gestartet? **Start zurücknehmen** neben „● läuft“ nimmt die Partien der Runde wieder von den Tablets – solange keine davon am Tisch liegt oder ein Ergebnis hat. Bei der Hinrunde geht das nur vor dem Start der Rückrunde; die Begegnung steht danach wieder auf „in Vorbereitung“.
 - Mit dem Start der Rückrunde ist die **Hinrunde geschützt**: Ergebnisse, Aufstellung, Rating-Haken und **Zurücksetzen** sind dort gesperrt; Ergebnisse von den Tablets kommen weiter an. **Schutz aufheben** über der Hinrunde fragt nach dem Schutzwort des Vereins und gibt die Hinrunde nur in diesem Fenster frei, bis du die Seite verlässt oder **Schutz einschalten** klickst.
 - Die Ergebnisse kommen von den Tablets oder werden in der Tabelle eingetragen, von Hand auch für eine noch nicht gestartete Runde.
+- Die Spalte **Punkte** zeigt den Partiepunkt (1 : 0 für den Sieger), unter jeder Runde stehen ihre Partiepunkte.
+- **14.1-Zeile:** Unter jeder 14.1-Partie stehen die Aufnahmen (die benötigten Aufnahmen des Gewinners), die Höchstserie (HS) beider Spieler und daraus der Generaldurchschnitt (GD = Punkte geteilt durch Aufnahmen). Am Tablet gespielt, füllt CueDesk die Zeile selbst. Sonst trägst du Aufnahmen und HS von Hand ein, sobald das Ergebnis steht; gespeichert wird beim Verlassen der Zeile.
+- Unter der Rückrunde stehen wie im Spielbericht des Verbands der **Endstand**, das Feld **Bemerkungen** (gespeichert beim Verlassen des Felds) und der Hinweis zu *.
 - **Spielbericht einlesen** übernimmt die Ergebnisse aus dem Spielbericht des Verbands; vorher zeigt CueDesk, was sich ändert.
 - **Live an** / **Live aus** im Kopf gilt für beide Begegnungen: Bei Live an sehen Mitglieder und Fernseher die Spielstände, solange der Spieltag läuft. Darunter schaltet **Chat an** / **Chat aus** den Chat für beide Begegnungen (nur, wenn der Verein den Chat eingeschaltet hat). Bei **Live aus** gibt es keinen Chat; nach **Live an** ist er wieder so wie vorher. **Öffentlicher Link** darunter gibt den ganzen Spieltag als Link ohne Anmeldung frei (wie beim Turnier, siehe dort).
 - **Fürs Rating werten** entscheidet, ob die Partien dieses Spieltags ins Vereins-Rating eingehen. 14.1 zählt nie.
@@ -54,7 +66,7 @@ In der Spaß-Liga kann zwischen 1. und 2. Begegnung eine Begegnung im Doppel ges
 
 - **Matchpunkte je Begegnung:** Wer mehr Partien gewinnt, bekommt 3 : 0, bei Gleichstand (z. B. 4 : 4, im Doppel 2 : 2) gibt es 1 : 1.
 - **Spieltag gesamt** im Kopf (ab zwei Begegnungen) zählt Partie- und Matchpunkte aller Begegnungen zusammen, immer aus Sicht der Heimmannschaft der 1. Begegnung; die Rückbegegnung wird dafür umgedreht. Beispiel: 2 : 6 (0 : 3), Doppel 2 : 2 (1 : 1), Rückbegegnung 4 : 4 (1 : 1) ergibt **8 : 12** Partiepunkte und **2 : 5** Matchpunkte. Eine Begegnung zählt bei den Matchpunkten erst, wenn alle ihre Partien entschieden sind; bis dahin steht dort „Zwischenstand“.
-- **Spielbericht (PDF)** in derselben Kachel lädt den ganzen Spieltag als PDF herunter: Gesamtstand, Übersicht je Begegnung und alle Partien mit Aufstellung und Ergebnis – zum Drucken oder Weiterschicken.
+- **Spielbericht (PDF)** in derselben Kachel lädt den ganzen Spieltag als PDF herunter: Gesamtstand, Übersicht je Begegnung und alle Partien mit Aufstellung, Ergebnis und Punkten, bei 14.1 mit Aufnahmen, HS und GD, dazu Endstand, Bemerkungen und Hinweis zu * – zum Drucken oder Weiterschicken.
 - Auf der Seite **Zuschauen** und auf dem **öffentlichen Link** steht dasselbe oben im Reiter **Turnier** als „Ergebnis des Spieltags“.
 - **Fernseher:** Im Kopf schaltet **TV: Live-Tische** / **TV: Spieltag-Ergebnis** um, was die Fernseher zeigen; das gilt für alle Begegnungen. Das Spieltag-Ergebnis zeigt groß den Gesamtstand, die Matchpunkte, den Sieger (vorher „Zwischenstand“) und je Begegnung eine Zeile. Beim Abschließen der letzten Begegnung stellt CueDesk die Fernseher von selbst auf das Spieltag-Ergebnis um.
 

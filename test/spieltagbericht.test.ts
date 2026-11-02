@@ -75,12 +75,17 @@ describe('Spielbericht des Spieltags', () => {
     expect(b.uebersicht.map((u) => u.titel)).toEqual(['1. Begegnung', '2. Begegnung · Doppel', '3. Begegnung']);
     expect(b.begegnungen[0].runden.map((r) => [r.name, r.partien.length])).toEqual([['Hinrunde', 4], ['Rückrunde', 4]]);
     expect(b.begegnungen[0].runden[0].partien[0]).toEqual({
-      nr: 1,
+      nr: '1',
       disziplin: '14.1-endlos 60 Pkt. / 25 Aufn.',
       heim: 'Frank F.',
       gast: 'Kura (Bassum)',
-      ergebnis: '40 : 60'
+      ergebnis: '40 : 60',
+      punkte: '0 : 1'
     });
+    expect(b.begegnungen[0].runden[0].partien[3].nr).toBe('4*');
+    expect(b.begegnungen[0].mitStern).toBe(true);
+    expect(b.begegnungen[1].mitStern).toBe(false);
+    expect(b.begegnungen[1].runden[0].partien[1].nr).toBe('2'); // Doppel ohne *
     expect(b.begegnungen[0].runden[0].partien[2]).toMatchObject({ heim: '', gast: '', ergebnis: '' }); // noch nicht angelegt
     expect(b.begegnungen[1].runden).toHaveLength(1);
     expect(b.begegnungen[1].runden[0].partien.map((x) => [x.disziplin, x.heim, x.gast])).toEqual([
@@ -96,6 +101,29 @@ describe('Spielbericht des Spieltags', () => {
     const bytes = spieltagBerichtPdf(b);
     expect(new TextDecoder('latin1').decode(bytes.slice(0, 5))).toBe('%PDF-');
     expect(spieltagBerichtDateiname(b.titel, '2026-10-08')).toBe('Spielbericht_Spass-Liga_1_Spieltag_2026-10-08.pdf');
+  });
+
+  test('zu dritt, 14.1-Zeile und Bemerkungen', () => {
+    const z1 = turnier('z1', {
+      heim: true,
+      ziele,
+      dritt: { hin: { gast: true }, rueck: { heim: true, gast: true } },
+      aufstellung: { '4': { heim: 'olli', gast: null } },
+      bemerkung: 'Beginn\n20:15'
+    });
+    const z2 = turnier('z2', { heim: false, ziele });
+    const p141 = partie('z1', 1, 1, 'frank', 'kura', 14, 34, { disziplin: '14-1' });
+    const kennzahlen = new Map([
+      [p141.id, { partie_id: p141.id, verein_id: 'v', ziel_punkte: 60, ziel_aufnahmen: 25, aufnahmen_a: 20, aufnahmen_b: 20, hoechstserie_a: 4, hoechstserie_b: 9, dauer_sek: null }]
+    ]);
+    const b = spieltagBerichtDaten([z1, z2], [p141], 'Verein', name, '', kennzahlen)!;
+    const [hin, rueck] = b.begegnungen[0].runden;
+    expect(hin.partien[0].zeile141).toEqual({ aufnahmen: 'Aufn. 20', heim: 'HS 4 · GD 0,70', gast: 'HS 9 · GD 1,70' });
+    expect(hin.partien[3]).toMatchObject({ nr: '4*', heim: 'Olli G.', gast: '– zu dritt –', ergebnis: '4 : 0 kampflos', punkte: '1 : 0' });
+    expect(rueck.partien[0]).toMatchObject({ nr: '5*', heim: '– zu dritt –', gast: '– zu dritt –', ergebnis: 'entfällt', punkte: '–' });
+    expect(b.begegnungen[0].partiepunkte).toEqual([1, 1]);
+    expect(b.begegnungen[0].bemerkung).toBe('Beginn 20:15');
+    expect(new TextDecoder('latin1').decode(spieltagBerichtPdf(b).slice(0, 5))).toBe('%PDF-');
   });
 
   test('nur eine Begegnung: kein Spieltagsbericht', () => {

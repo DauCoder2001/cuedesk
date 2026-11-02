@@ -9,7 +9,7 @@ import TeamvergleichAnsicht from './TeamvergleichAnsicht';
 import TurnierDateiEinlesen from './TurnierDateiEinlesen';
 import Ausschreibungen from './Ausschreibungen';
 import { LIGEN, doppelBegegnungIds, doppelPlanAusEingabe, doppelVon, partnerVon, spieltagStand, zweiteBegegnungIds } from '../liga';
-import type { Ausspielziele, DoppelPartie, LigaKennung } from '../liga';
+import type { Ausspielziele, DoppelPartie, Dritt, LigaKennung } from '../liga';
 import type { Ausschreibung } from '../ausschreibung';
 import { saisonAus } from '../mannschaften';
 import { importMarke } from '../importquelle';
@@ -96,6 +96,10 @@ export type TurnierEinstellungen = {
     begegnung: 1 | 2;
     // Verdeckte Aufstellung: je Runde und Mannschaft, bis der Kapitaen sie freigibt
     verdeckt?: { hin?: { heim?: boolean; gast?: boolean }; rueck?: { heim?: boolean; gast?: boolean } };
+    // Mannschaft tritt in der Runde nur zu dritt an: die Partie mit * (Nr. 4
+    // bzw. 5) bleibt auf ihrer Seite leer und zaehlt kampflos (src/liga.ts)
+    dritt?: Dritt;
+    bemerkung?: string; // Bemerkungen zur Begegnung, wie im Spielbericht P-01
     // Hin- und Rueckrunde einzeln fuer die Tablets freigegeben; fehlt der
     // Eintrag bei einem laufenden Spieltag (alter Stand), gelten beide als gestartet
     gestartet?: { hin?: boolean; rueck?: boolean };
