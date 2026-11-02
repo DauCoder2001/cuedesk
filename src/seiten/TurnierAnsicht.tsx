@@ -2873,15 +2873,17 @@ export default function TurnierAnsicht({
               {zwei && (
               <section className="block">
                 <div className="bearbeitenkopf">
-                  <h2>Platzierungsduelle ({duelleRace})</h2>
+                  <div className="kopflinks">
+                    <h2>Platzierungsduelle ({duelleRace})</h2>
+                    {bearbeitbar && (
+                      <button type="button" title="Race to der Platzierungsduelle ändern. Vor dem Start gilt es für alle Duelle, danach je Duell; laufende und beendete Duelle bleiben, wie sie sind." onClick={raceOeffnen} disabled={arbeitet}>
+                        Race to ändern…
+                      </button>
+                    )}
+                  </div>
                   {bearbeitbar && !einstellungen.phase2 && (
                     <button type="button" title="Setzt die Platzierungsduelle an. Geht erst, wenn alle Gruppenspiele beendet sind." className={faellig('duelle')} onClick={() => void phase2Starten()} disabled={arbeitet || offeneGruppenspiele > 0}>
                       Duelle starten
-                    </button>
-                  )}
-                  {bearbeitbar && (
-                    <button type="button" title="Race to der Platzierungsduelle ändern. Vor dem Start gilt es für alle Duelle, danach je Duell; laufende und beendete Duelle bleiben, wie sie sind." onClick={raceOeffnen} disabled={arbeitet}>
-                      Race to ändern…
                     </button>
                   )}
                   {bearbeitbar && einstellungen.phase2 && (
@@ -2948,15 +2950,17 @@ export default function TurnierAnsicht({
                 <>
                   <section className="block">
                     <div className="bearbeitenkopf">
-                      <h2>KO-Runde ({feld} Spieler)</h2>
+                      <div className="kopflinks">
+                        <h2>KO-Runde ({feld} Spieler)</h2>
+                        {bearbeitbar && (
+                          <button type="button" title="Race to je Runde ändern (Achtelfinale bis Finale, Platzierungsspiele). Runden, in denen schon gespielt wird, bleiben, wie sie sind." onClick={raceOeffnen} disabled={arbeitet}>
+                            Race to ändern…
+                          </button>
+                        )}
+                      </div>
                       {bearbeitbar && !koFest && (
                         <button type="button" title="Setzt die KO-Runde aus den Gruppentabellen an. Geht erst, wenn alle Gruppenspiele beendet sind." className={faellig('ko')} onClick={() => void koStarten()} disabled={arbeitet || offeneGruppenspiele > 0 || weiter === null}>
                           KO-Runde starten
-                        </button>
-                      )}
-                      {bearbeitbar && (
-                        <button type="button" title="Race to je Runde ändern (Achtelfinale bis Finale, Platzierungsspiele). Runden, in denen schon gespielt wird, bleiben, wie sie sind." onClick={raceOeffnen} disabled={arbeitet}>
-                          Race to ändern…
                         </button>
                       )}
                       {bearbeitbar && koFest && (
