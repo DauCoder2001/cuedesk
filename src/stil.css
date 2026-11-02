@@ -205,6 +205,9 @@ ul.schlicht { list-style: none; padding: 0; margin: 0; display: flex; flex-direc
 .listenkopf { padding: 10px; display: flex; flex-direction: column; gap: 8px; border-bottom: 1px solid var(--rand); }
 .listenkopf input { width: 100%; }
 .filterzeile { display: flex; flex-wrap: wrap; gap: 6px; }
+/* Filter der Turnierliste: Suche und Auswahlfelder in einer Zeile, am Handy umbrechend */
+.listenfilter { align-items: center; gap: 8px; margin-bottom: 8px; }
+.listenfilter input[type="search"] { width: 200px; max-width: 100%; }
 .chip { font-size: 13px; padding: 3px 9px; color: var(--text-leise); }
 .chip.aktiv { background: var(--akzent-hell); color: var(--akzent); border-color: var(--akzent-hell); }
 

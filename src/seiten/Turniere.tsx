@@ -21,6 +21,8 @@ import { useRueckfrage } from '../rueckfrage';
 import { TEAM_VORGABE, ZIEL_GRENZEN } from '../teamvergleich';
 import type { Reihenfolge } from '../reihenfolge';
 import { fuerTabletsZuAlt } from '../laufend';
+import { KEIN_FILTER, auswahl, filterAktiv, passt } from '../turnierliste';
+import type { ListenFilter } from '../turnierliste';
 import type { TeamvergleichEinstellungen } from '../teamvergleich';
 import type { Disziplin, Mannschaft, Serie, Turnier, TurnierModus, TurnierStatus } from '../datenbank.types';
 
@@ -188,6 +190,8 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
   const [live, setLive] = useState(true);
   // Filter der Turnierliste nach Turnierart ('' = alle)
   const [artFilter, setArtFilter] = useState('');
+  // Filterzeile: Name, Jahr, Disziplin, Modus, Stand; bleibt beim Oeffnen eines Turniers
+  const [listenFilter, setListenFilter] = useState<ListenFilter>(KEIN_FILTER);
   // Ausgleich in Prozent aus den Rating-Einstellungen, falls der Verein keinen eigenen vorgibt
   const [ratingStaerke, setRatingStaerke] = useState(75);
   const vorgaben = vereinsEinstellungen(verein?.einstellungen);
@@ -495,8 +499,36 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
   // bleibt sie, damit der Umschalter der Liga-Ansicht sie findet.
   const zweite = zweiteBegegnungIds(turniere);
   const doppelIds = doppelBegegnungIds(turniere);
-  const zeilen = turniere.filter(
-    (t) => !zweite.has(t.id) && !doppelIds.has(t.id) && (!artFilter || artVon(t) === artFilter)
+  const modusText = (t: Turnier) =>
+    (t.einstellungen as TurnierEinstellungen | null)?.modusOffen ? 'Modus offen' : MODUS_TEXT[t.modus];
+  const alleZeilen = turniere
+    .filter((t) => !zweite.has(t.id) && !doppelIds.has(t.id) && (!artFilter || artVon(t) === artFilter))
+    .map((t) => {
+      // Liga-Spieltag: eine Zeile fuer beide Begegnungen
+      const partner = t.modus === 'liga' ? partnerVon(t, turniere) : null;
+      const doppel = t.modus === 'liga' ? doppelVon(t, turniere) : null;
+      const stand = spieltagStand(t.status, partner?.status ?? null, doppel?.status ?? null);
+      const text = { name: t.name, datum: t.datum, disziplin: turnierDisziplinText(t), modus: modusText(t), stand: STATUS_TEXT[stand.status] };
+      return { t, stand, text };
+    });
+  const zeilen = alleZeilen.filter((z) => passt(z.text, listenFilter));
+  const wahl = auswahl(alleZeilen.map((z) => z.text));
+  // Ein gewaehlter Wert bleibt in der Auswahl, auch wenn ihn der Art-Filter gerade ausblendet
+  const mitGewaehltem = (liste: string[], wert: string) => (wert && !liste.includes(wert) ? [...liste, wert] : liste);
+  const filterFeld = (feld: Exclude<keyof ListenFilter, 'suche'>, alle: string, liste: string[], titel: string) => (
+    <select
+      aria-label={alle}
+      title={titel}
+      value={listenFilter[feld]}
+      onChange={(e) => setListenFilter({ ...listenFilter, [feld]: e.target.value })}
+    >
+      <option value="">{alle}</option>
+      {mitGewaehltem(liste, listenFilter[feld]).map((w) => (
+        <option key={w} value={w}>
+          {w}
+        </option>
+      ))}
+    </select>
   );
 
   const offenesTurnier = turniere.find((t) => t.id === offen);
@@ -935,6 +967,32 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
         {fehler && !formular && <p className="fehler">{fehler}</p>}
         {rueckfrage}
 
+        {turniere.length > 0 && (
+          <div className="filterzeile listenfilter">
+            <input
+              type="search"
+              placeholder="Name suchen"
+              aria-label="Name suchen"
+              title="Turniere nach einem Teil des Namens suchen"
+              value={listenFilter.suche}
+              onChange={(e) => setListenFilter({ ...listenFilter, suche: e.target.value })}
+            />
+            {filterFeld('jahr', 'Alle Jahre', wahl.jahre, 'Nur Turniere aus diesem Jahr zeigen')}
+            {filterFeld('disziplin', 'Alle Disziplinen', wahl.disziplinen, 'Nur Turniere dieser Disziplin zeigen')}
+            {filterFeld('modus', 'Alle Modi', wahl.modi, 'Nur Turniere in diesem Modus zeigen')}
+            {filterFeld('stand', 'Jeder Stand', wahl.staende, 'Nur Turniere mit diesem Stand zeigen')}
+            {filterAktiv(listenFilter) && (
+              <>
+                <span className="hinweis">
+                  {zeilen.length} von {alleZeilen.length}
+                </span>
+                <button type="button" className="linkknopf" title="Alle Filter wieder auf „alle“ stellen" onClick={() => setListenFilter(KEIN_FILTER)}>
+                  Filter zurücksetzen
+                </button>
+              </>
+            )}
+          </div>
+        )}
         {artenInListe.length > 0 && (
           <div className="filterzeile">
             {['', ...artenInListe].map((a) => (
@@ -962,11 +1020,7 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
             </tr>
           </thead>
           <tbody>
-            {zeilen.map((t) => {
-              // Liga-Spieltag: eine Zeile fuer beide Begegnungen
-              const partner = t.modus === 'liga' ? partnerVon(t, turniere) : null;
-              const doppel = t.modus === 'liga' ? doppelVon(t, turniere) : null;
-              const stand = spieltagStand(t.status, partner?.status ?? null, doppel?.status ?? null);
+            {zeilen.map(({ t, stand }) => {
               return (
                 <tr
                   key={t.id}
@@ -984,7 +1038,7 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
                   </td>
                   {artenInListe.length > 0 && <td>{artVon(t) ?? '–'}</td>}
                   <td>{turnierDisziplinText(t)}</td>
-                  <td>{(t.einstellungen as TurnierEinstellungen | null)?.modusOffen ? 'Modus offen' : MODUS_TEXT[t.modus]}</td>
+                  <td>{modusText(t)}</td>
                   <td className={stand.status === 'laeuft' ? 'livelaeuft' : ''}>
                     {stand.teilBeendet ? `${stand.teilBeendet}. Begegnung beendet` : STATUS_TEXT[stand.status]}
                     {stand.status === 'laeuft' && fuerTabletsZuAlt(t.datum) && (
@@ -997,6 +1051,13 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
                 </tr>
               );
             })}
+            {alleZeilen.length > 0 && zeilen.length === 0 && (
+              <tr>
+                <td colSpan={artenInListe.length > 0 ? 6 : 5} className="hinweis">
+                  Kein Turnier passt zu den Filtern.
+                </td>
+              </tr>
+            )}
             {turniere.length === 0 && (
               <tr>
                 <td colSpan={artenInListe.length > 0 ? 6 : 5} className="hinweis">
