@@ -36,7 +36,8 @@ function Inline({ teile }: { teile: Teil[] }) {
   );
 }
 
-function Bloecke({ bloecke }: { bloecke: Block[] }) {
+// auch fuer das kleine "?" an einem Abschnitt (src/abschnitthilfe.tsx)
+export function Bloecke({ bloecke }: { bloecke: Block[] }) {
   return (
     <>
       {bloecke.map((b, i) => {

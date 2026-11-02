@@ -67,6 +67,7 @@ import type { Partie, Person, RatingQuelle, Turnier, TurnierAnmeldung, TurnierTe
 import { anmeldeLink, anmeldestand } from '../ausschreibung';
 import { Modal } from '../modal';
 import { Pflichthinweis, usePflicht } from '../pflicht';
+import { AbschnittHilfe } from '../abschnitthilfe';
 import { REIHENFOLGE_TEXT, spielFolge } from '../reihenfolge';
 import type { Reihenfolge } from '../reihenfolge';
 
@@ -1767,7 +1768,7 @@ export default function TurnierAnsicht({
     if (rest.length < 2) return setFehler('Für die Platzierungsspiele werden mindestens zwei Spieler benötigt, die die KO-Runde nicht erreicht haben.');
     const abPlatz = koFest.gruppenzahl * koFest.weiter + 1;
     const frage = `Platzierungsspiele starten? Sie spielen die Plätze ${abPlatz} bis ${abPlatz + rest.length - 1} aus (Race to ${race3}).`;
-    if (!(await fragen(frage, 'Spiele starten'))) return;
+    if (!(await fragen(frage, 'Platzierungsspiele starten'))) return;
     setArbeitet(true);
     const reihung = nachGruppenleistung(rest, leistung, ordnung);
     const werte = ratingWerte();
@@ -3011,15 +3012,23 @@ export default function TurnierAnsicht({
                   {koFest && (
                     <section className="block">
                       <div className="bearbeitenkopf">
-                        <h2>Platzierungsspiele (Race to {race3})</h2>
+                        <div className="kopflinks">
+                          <h2>Platzierungsspiele (Race to {race3})</h2>
+                          <AbschnittHilfe
+                            ueberschrift="Platzierungsspiele"
+                            tipp={
+                              'Optionale Zusatzrunde für alle, die die KO-Runde nicht erreicht haben. Sie werden nach der Gruppenleistung gereiht und spielen ihre Plätze paarweise aus: der Erste gegen den Zweiten, der Dritte gegen den Vierten und so fort. Jeder bestreitet genau ein Spiel; bei ungerader Anzahl bleibt der Letzte ohne Gegner und behält seinen Platz.\nOhne Start bleibt es bei der Berechnung aus der Gruppenwertung.'
+                            }
+                          />
+                        </div>
                         {bearbeitbar && !einstellungen.phase3 && nichtImKo.length >= 2 && (
                           <button type="button" title="Setzt die Platzierungsspiele für alle an, die nicht in der KO-Runde stehen." onClick={() => void phase3Starten()} disabled={arbeitet}>
-                            Spiele starten
+                            Platzierungsspiele starten
                           </button>
                         )}
                         {bearbeitbar && einstellungen.phase3 && (
                           <button type="button" title="Löscht die Platzierungsspiele, damit sie neu angesetzt werden können. Mit Ergebnissen braucht es das Schutzwort." className="gefahrknopf" onClick={() => void phase3Zuruecksetzen()}>
-                            Spiele zurücksetzen
+                            Platzierungsspiele zurücksetzen
                           </button>
                         )}
                       </div>

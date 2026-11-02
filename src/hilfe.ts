@@ -152,6 +152,20 @@ export function themaZurSeite(themen: Thema[], bereich: string, eigene: Thema[] 
   );
 }
 
+// Ein Abschnitt ("## " oder "### ") fuer das kleine "?" an einer Stelle der
+// Seite: die Bloecke unter der Ueberschrift bis zur naechsten gleich hohen
+// oder hoeheren Ueberschrift
+export function abschnitt(themen: Thema[], ueberschrift: string): { thema: Thema; bloecke: Block[] } | null {
+  const stufe = (b: Block) => (b.art === 'h2' ? 2 : b.art === 'h3' ? 3 : 9);
+  for (const thema of nachReihenfolge(themen)) {
+    const start = thema.bloecke.findIndex((b) => (b.art === 'h2' || b.art === 'h3') && reinText(b.teile) === ueberschrift);
+    if (start < 0) continue;
+    const ende = thema.bloecke.findIndex((b, i) => i > start && stufe(b) <= stufe(thema.bloecke[start]));
+    return { thema, bloecke: thema.bloecke.slice(start + 1, ende < 0 ? undefined : ende) };
+  }
+  return null;
+}
+
 export function suchen(themen: Thema[], begriff: string): Thema[] {
   const b = begriff.trim().toLowerCase();
   if (!b) return nachReihenfolge(themen);

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { bloecke, dateiName, handbuchPdf, handoutPdf, pdfTauglich, suchen, teile, themaLesen, themaZurSeite, themenFuer } from '../src/hilfe';
+import { abschnitt, bloecke, dateiName, handbuchPdf, handoutPdf, pdfTauglich, suchen, teile, themaLesen, themaZurSeite, themenFuer } from '../src/hilfe';
 
 const TURNIER = `---
 titel: Turnier anlegen und durchführen
@@ -111,6 +111,14 @@ describe('Die echten Hilfetexte', () => {
     expect(themenFuer(THEMEN, [], true).eigene.map((t) => t.id)).toContain('konsole');
     expect(themaZurSeite(THEMEN, 'turniere')?.id).toBe('turnier');
     expect(themaZurSeite(THEMEN, 'personen')?.id).toBe('spieler-datenschutz');
+  });
+  test('Abschnitt fuer das "?" an den Platzierungsspielen', async () => {
+    const { THEMEN } = await import('../src/hilfe-texte');
+    const a = abschnitt(THEMEN, 'Platzierungsspiele');
+    expect(a?.thema.id).toBe('turnier');
+    expect(a?.bloecke.length).toBeGreaterThan(1);
+    expect(a?.bloecke.some((b) => b.art === 'h2' || b.art === 'h3')).toBe(false);
+    expect(abschnitt(THEMEN, 'Gibt es nicht')).toBeNull();
   });
   test('jeder Anhang liegt in public/hilfe', async () => {
     const { THEMEN } = await import('../src/hilfe-texte');

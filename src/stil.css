@@ -191,6 +191,8 @@ ul.schlicht { list-style: none; padding: 0; margin: 0; display: flex; flex-direc
 /* Hilfe-Knopf "?" in der Kopfzeile und auf der Zuschauerseite */
 .hilfeknopf { width: 30px; height: 30px; padding: 0; border-radius: 50%; font-weight: 700; font-size: 15px; line-height: 1; }
 .hilfeknopf.aktiv { background: var(--akzent-hell); color: var(--akzent); border-color: var(--akzent); }
+/* kleines "?" neben einer Abschnittsueberschrift (src/abschnitthilfe.tsx) */
+.hilfeknopf.abschnitthilfe { width: 24px; height: 24px; font-size: 13px; flex: none; }
 .konto .rolle { background: var(--akzent-hell); color: var(--akzent); padding: 3px 8px; border-radius: var(--radius); }
 
 .zweispaltig {
