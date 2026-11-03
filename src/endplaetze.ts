@@ -2,6 +2,8 @@ import { endtabelleZweiGruppen, gruppenRangliste } from './gruppen';
 import { KO_GRUPPEN, endtabelleKo, koAufloesen, phase3Paare } from './ko';
 import type { KoRunde, Leistung } from './ko';
 import { spielBeendet } from './turnier';
+import { dkoAufloesen, dkoEndtabelle, dkoStartplaetze } from './doppelko';
+import type { DkoArt } from './doppelko';
 import type { HandReihenfolge, RanglistenPartie, Stand } from './turnier';
 import type { TurnierEinstellungen } from './seiten/Turniere';
 
@@ -41,7 +43,7 @@ export type EndplatzZeile = {
 };
 
 export type VorlaeufigeEndplaetze = {
-  art: 'duelle' | 'ko';
+  art: 'duelle' | 'ko' | 'dko';
   beendet: number; // Spiele dieser Phase(n)
   gesamt: number;
   zeilen: EndplatzZeile[];
@@ -180,7 +182,11 @@ export function vorlaeufigeEndplaetze(
         : null
     );
 
-    // Offene Zeilen mit derselben Angabe zu einem Platzbereich zusammenfassen
+    return { art: 'ko', ...zaehlen([...koPartien, ...p3Partien]), zeilen: zusammenfassen(tabelle) };
+  }
+
+  // Offene Zeilen mit derselben Angabe zu einem Platzbereich zusammenfassen
+  function zusammenfassen(tabelle: { platz: number; wer: string | null; wie: string; offen: boolean }[]): EndplatzZeile[] {
     const zeilen: EndplatzZeile[] = [];
     for (const z of tabelle) {
       const letzte = zeilen[zeilen.length - 1];
@@ -198,7 +204,42 @@ export function vorlaeufigeEndplaetze(
           : { von: z.platz, bis: z.platz, personen: z.wer !== null ? [z.wer] : [], info: z.wie, offen: false, partieId: null, tisch: null }
       );
     }
-    return { art: 'ko', ...zaehlen([...koPartien, ...p3Partien]), zeilen };
+    return zeilen;
+  }
+
+  // Doppel-KO: Baum aus der Setzliste, Endtabelle wie in der Turnieransicht
+  if (modus === 'doppel-ko') {
+    const dko = e.dko;
+    if (!dko) return null;
+    const rd = e.raceDko;
+    const raceFuer = (art: DkoArt) =>
+      (art === 'G' ? rd?.G : art === 'V' ? rd?.V : art === 'VF' ? rd?.VF : art === 'FIN' ? rd?.FIN : rd?.HF) ?? raceTo;
+    const dkoPartien = partien.filter((p) => p.phase === 'dko');
+    const baum = dkoAufloesen(
+      dko.setzliste.length,
+      dkoStartplaetze(dko.setzliste),
+      (id, a, b) => stand(dkoPartien.find((x) => x.gruppe === id && x.spieler_a === a && x.spieler_b === b)),
+      raceFuer
+    );
+    // Saetze ueber das ganze Turnier, nur beendete Spiele
+    const bilanz = new Map<string, { gewonnen: number; verloren: number }>();
+    dkoPartien
+      .filter((p) => spielBeendet(p.ergebnis_a, p.ergebnis_b, p.race_to ?? raceTo))
+      .forEach((p) => {
+        const plus = (wer: string | null, g: number, v: number) => {
+          if (!wer) return;
+          const b = bilanz.get(wer) ?? { gewonnen: 0, verloren: 0 };
+          bilanz.set(wer, { gewonnen: b.gewonnen + g, verloren: b.verloren + v });
+        };
+        plus(p.spieler_a, p.ergebnis_a ?? 0, p.ergebnis_b ?? 0);
+        plus(p.spieler_b, p.ergebnis_b ?? 0, p.ergebnis_a ?? 0);
+      });
+    const tabelle = dkoEndtabelle(
+      baum,
+      (id) => bilanz.get(id) ?? { gewonnen: 0, verloren: 0 },
+      (id) => dko.setzliste.indexOf(id)
+    );
+    return { art: 'dko', ...zaehlen(dkoPartien), zeilen: zusammenfassen(tabelle) };
   }
 
   return null;

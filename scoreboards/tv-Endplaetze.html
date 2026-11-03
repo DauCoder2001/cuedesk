@@ -113,7 +113,7 @@
       }
       emptyEl.style.display = 'none';
       titleEl.innerHTML = '🏆 <span class="highlight">' + esc(d.name) + '</span>';
-      subEl.textContent = (d.art === 'duelle' ? 'Platzierungsduelle' : 'KO-Runde') + ' · ' + d.beendet + ' von ' + d.gesamt + ' beendet';
+      subEl.textContent = (d.art === 'duelle' ? 'Platzierungsduelle' : d.art === 'dko' ? 'Doppel-KO' : 'KO-Runde') + ' · ' + d.beendet + ' von ' + d.gesamt + ' beendet';
       vorlEl.style.display = d.vorlaeufig ? 'block' : 'none';
       const zeilen = d.zeilen.map((z) => {
         const platz = z.von === z.bis ? (z.offen ? z.von + '.' : medal(z.von)) : z.von + '.–' + z.bis + '.';

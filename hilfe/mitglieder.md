@@ -18,7 +18,7 @@ Mit deinem Konto verfolgst du die Spiele deines Vereins, auch auf dem Handy, sie
 Die Seite **Zuschauen** ist fürs Handy gebaut. Oben wählst du:
 
 - **Tische**: alle Tische mit Spielstand, live bei jedem Stoß – solange ein Turnier oder Liga-Spieltag mit Live-Übertragung läuft. Sonst steht dort „Gerade keine Live-Übertragung“. Bei 14.1 öffnet **Protokoll live** die Aufnahmen der laufenden Partie, nur zum Ansehen.
-- **Turnier**: das laufende Turnier mit Gruppentabellen, KO-Runde, den nächsten Spielen und den heute beendeten Partien. Bei Zwei Gruppen und Gruppen mit KO-Runde steht oben die **Endtabelle (vorläufig)**, sobald Platzierungsduelle bzw. KO-Runde angesetzt sind: entschiedene Plätze fest, offene Spiele mit Platzbereich (z. B. „3.–4.“) und beiden Namen, laufende mit Tisch. Nach dem Abschließen heißt sie **Endtabelle**. Beim Liga-Spieltag stehen dort Partie- und Matchpunkte.
+- **Turnier**: das laufende Turnier mit Gruppentabellen, KO-Runde, den nächsten Spielen und den heute beendeten Partien. Bei Zwei Gruppen, Gruppen mit KO-Runde und Doppel-KO steht oben die **Endtabelle (vorläufig)**, sobald Platzierungsduelle, KO-Runde bzw. Doppel-KO angesetzt sind: entschiedene Plätze fest, offene Spiele mit Platzbereich (z. B. „3.–4.“) und beiden Namen, laufende mit Tisch. Nach dem Abschließen heißt sie **Endtabelle**. Beim Liga-Spieltag stehen dort Partie- und Matchpunkte.
 - **Chat**: nur, wenn dein Verein ihn eingeschaltet hat, die Turnierleitung ihn für das Turnier eingeschaltet hat, das Turnier live übertragen wird und läuft.
 
 Wer nur Lesezugang hat, landet nach der Anmeldung am Handy direkt hier, am PC oder Tablet auf **Live**. **Weitere Seiten** führt zu Ranglisten, Auswertung und Archiv und Statistik.

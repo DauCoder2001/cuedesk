@@ -42,3 +42,19 @@ describe('vorlaeufige Endplaetze', () => {
     ]);
   });
 });
+
+describe('vorlaeufige Endplaetze im Doppel-KO', () => {
+  it('ohne Auslosung keine, danach alle 8 Plaetze offen; Freilos-Turnier spielt sich durch', () => {
+    expect(vorlaeufigeEndplaetze('doppel-ko', { raceTo: 3 }, [], [], () => null)).toBeNull();
+    const setzliste = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+    const leer = vorlaeufigeEndplaetze('doppel-ko', { raceTo: 3, dko: { setzliste } }, [], [], () => null);
+    expect(leer?.art).toBe('dko');
+    expect(leer?.zeilen.every((z) => z.offen)).toBe(true);
+    // Gewinnerrunde 1 gespielt: a, d, b, c gewinnen (Setzreihenfolge 1-8, 4-5, 2-7, 3-6)
+    const p = (id: string, x: string, y: string, ex: number, ey: number) => ({ ...partie(id, 'dko', 1, x, y, ex, ey), gruppe: id });
+    const r1 = [p('g1-1', 'a', 'h', 3, 0), p('g1-2', 'd', 'e', 3, 1), p('g1-3', 'b', 'g', 3, 2), p('g1-4', 'c', 'f', 3, 0)];
+    const stand = vorlaeufigeEndplaetze('doppel-ko', { raceTo: 3, dko: { setzliste } }, [], r1, () => null);
+    expect(stand?.beendet).toBe(4);
+    expect(stand?.zeilen.every((z) => z.offen)).toBe(true);
+  });
+});

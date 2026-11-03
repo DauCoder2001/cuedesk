@@ -304,11 +304,11 @@ export function TurnierTeil({
                   </table>
                 </div>
               ))}
-          {partien.some((p) => p.phase === 'ko') && (
+          {partien.some((p) => p.phase === 'ko' || p.phase === 'dko') && (
             <div className="zuschauenblock">
-              <h3>KO-Runde</h3>
+              <h3>{partien.some((p) => p.phase === 'dko') ? 'Doppel-KO' : 'KO-Runde'}</h3>
               {partien
-                .filter((p) => p.phase === 'ko')
+                .filter((p) => p.phase === 'ko' || p.phase === 'dko')
                 .sort((a, b) => (a.runde ?? 0) - (b.runde ?? 0) || (a.paarung ?? 0) - (b.paarung ?? 0))
                 .map((p) => (
                   <div key={p.id} className="zuschauenspiel">

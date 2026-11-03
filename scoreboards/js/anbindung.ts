@@ -640,7 +640,7 @@ let tvAnsicht: string | null = null; // tournament/tvView
 let tvArchiv: Record<string, TvErgebnis> | null = null; // tournament_archive
 let tvSpieltag: TvSpieltag | null = null; // tournament/spieltag (Liga, TV "Spieltag-Ergebnis")
 let tvTeamstand: TeamstandAnzeige | null = null; // tournament/teamstand (Teamvergleich, TV "Teamstand")
-// tournament/endplaetze (Zwei Gruppen, Gruppen mit KO; TV "Endplaetze")
+// tournament/endplaetze (Zwei Gruppen, Gruppen mit KO, Doppel-KO; TV "Endplaetze")
 export type TvEndplaetze = {
   name: string;
   datum: string;
@@ -800,7 +800,14 @@ async function turnierLaden(): Promise<void> {
   tvAnsicht = einstellungen.tvAnsicht ?? 'live';
   tvArchiv = {
     [t.id]: tvErgebnis(
-      { name: t.name, disziplin, raceTo: einstellungen.raceTo ?? 0, datum: t.datum, beendet: t.status === 'beendet' },
+      {
+        name: t.name,
+        disziplin,
+        raceTo: einstellungen.raceTo ?? 0,
+        datum: t.datum,
+        beendet: t.status === 'beendet',
+        mitEndplaetzen: t.modus === 'doppel-ko'
+      },
       aufstellung,
       partien,
       einstellungen.handReihenfolge ?? {},

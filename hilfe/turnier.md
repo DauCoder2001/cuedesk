@@ -12,9 +12,9 @@ Ein Turnier läuft in vier Schritten: anlegen, Teilnehmer eintragen, auslosen, s
 
 1. Reiter **Turniere** öffnen und oben rechts **Neues Turnier** klicken.
 2. **Name** und **Datum** eintragen, **Disziplin** (8-, 9- oder 10-Ball) und **Modus** wählen:
-   Einzelgruppe (jeder gegen jeden), Zwei Gruppen mit Platzierungsduellen oder Gruppen mit KO-Runde. Liga-Spieltag und Teamvergleich haben eigene Themen.
+   Einzelgruppe (jeder gegen jeden), Zwei Gruppen mit Platzierungsduellen, Gruppen mit KO-Runde oder Doppel-KO (siehe unten). Liga-Spieltag und Teamvergleich haben eigene Themen.
    Hat der Verein Turnierarten angelegt (zum Beispiel „Pokal“), wählst du bei **Turnierart** eine aus. Sie steht dann in der Turnierliste, und die Chips über der Liste filtern danach.
-3. **Race to** festlegen. Bei Gruppen mit KO-Runde lässt sich das Race je Runde einstellen.
+3. **Race to** festlegen. Bei Gruppen mit KO-Runde lässt sich das Race je Runde einstellen, beim Doppel-KO je Abschnitt (Gewinnerrunde, Verliererrunde, Viertelfinale, Halbfinale und Platz 3, Finale).
 4. Bei Bedarf **Mit Vorgabe (Handicap)** anhaken: Der schwächere Spieler startet mit Sätzen Vorsprung, berechnet aus dem Vereins-Rating.
 5. **Zählt für das Vereins-Rating** bleibt normalerweise an. Partien mit Gästen zählen nie. Hat der Verein das Vereins-Rating ausgeschaltet, fehlen die Punkte 4 und 5.
 6. **Live übertragen** bleibt normalerweise an: Solange das Turnier läuft, sehen Mitglieder und Fernseher die Spielstände aller Tische, auch freie Spiele.
@@ -22,7 +22,7 @@ Ein Turnier läuft in vier Schritten: anlegen, Teilnehmer eintragen, auslosen, s
 
 Die Vorgaben für neue Turniere (Race, Disziplin, Modus, Vorgabe) stellt der Vereins-Administrator auf der Seite **System** ein.
 
-**Modus am Turniertag:** Steht die Teilnehmerzahl noch nicht fest, bei **Modus** „am Turniertag festlegen“ wählen. Das Formular zeigt dann die Race-Felder aller Modi. Vor der Auslosung steht in der Turnieransicht **Modus festlegen** mit der aktuellen Teilnehmerzahl: jeder Modus mit seiner Spielzahl, nicht passende ausgegraut, dazu ein **Vorschlag**. Die Grenzen dafür (Vorgabe: bis 7 Einzelgruppe, bis 15 Zwei Gruppen, darüber Gruppen mit KO) stellt der Vereins-Administrator auf der Seite **System** ein. Erst nach **Modus festlegen** lässt sich auslosen.
+**Modus am Turniertag:** Steht die Teilnehmerzahl noch nicht fest, bei **Modus** „am Turniertag festlegen“ wählen. Das Formular zeigt dann die Race-Felder aller Modi. Vor der Auslosung steht in der Turnieransicht **Modus festlegen** mit der aktuellen Teilnehmerzahl: jeder Modus mit seiner Spielzahl, nicht passende ausgegraut, dazu ein **Vorschlag**. Die Grenzen dafür (Vorgabe: bis 7 Einzelgruppe, bis 15 Zwei Gruppen, darüber Gruppen mit KO) stellt der Vereins-Administrator auf der Seite **System** ein. Doppel-KO steht ab 8 Teilnehmern zur Wahl, vorgeschlagen wird er nur, wenn sonst nichts passt. Erst nach **Modus festlegen** lässt sich auslosen.
 
 **Serie mit Disziplin am Spieltag:** Hat die gewählte **Serie** die Disziplin „am Spieltag festgelegt“, gibt es bei **Disziplin** zusätzlich „noch offen“. Die Ausschreibung schreibt dann „Disziplin wird am Spieltag festgelegt“. Am Spieltag in der Turnieransicht die Disziplin wählen und **Disziplin festlegen** klicken; erst danach lässt sich auslosen. Eine Serie mit fester Disziplin bringt ihre Disziplin beim Auswählen gleich mit.
 
@@ -48,7 +48,7 @@ Bis zur Auslosung lassen sich Name, Modus und Race über **Ändern** noch anpass
 ## 3. Auslosen und starten
 
 1. **Auslosen und starten** klicken. CueDesk lost die Startnummern bzw. Gruppen aus und legt den Spielplan an.
-2. Auf den Fernsehern erscheint automatisch die Auslosung. Über **TV zeigt:** schaltest du zwischen **Auslosung**, **Live-Tische**, **Nächste Spiele** und **Ergebnis** um. Hat der Verein 3 oder 5 aktive Tische, gibt es zusätzlich **Live + Nächste**: Die Live-Tische bleiben, und die im Raster freie Kachel zeigt die nächsten offenen Spiele (bei 3 Tischen sechs, bei 5 Tischen vier). Bei Zwei Gruppen und Gruppen mit KO-Runde kommen **Gruppenstand** (die Gruppentabellen, solange das Turnier läuft mit „vorläufig“) und, sobald Duelle bzw. KO-Runde angesetzt sind, **Endplätze (vorläufig)** dazu: entschiedene Plätze fest, offene Spiele mit beiden Namen und laufende mit Tisch und Stand. **Ergebnis** zeigt nach dem Abschließen die festen Endplätze.
+2. Auf den Fernsehern erscheint automatisch die Auslosung. Über **TV zeigt:** schaltest du zwischen **Auslosung**, **Live-Tische**, **Nächste Spiele** und **Ergebnis** um. Hat der Verein 3 oder 5 aktive Tische, gibt es zusätzlich **Live + Nächste**: Die Live-Tische bleiben, und die im Raster freie Kachel zeigt die nächsten offenen Spiele (bei 3 Tischen sechs, bei 5 Tischen vier). Bei Zwei Gruppen und Gruppen mit KO-Runde kommen **Gruppenstand** (die Gruppentabellen, solange das Turnier läuft mit „vorläufig“) und, sobald Duelle bzw. KO-Runde angesetzt sind, **Endplätze (vorläufig)** dazu, beim Doppel-KO ab der Auslosung: entschiedene Plätze fest, offene Spiele mit beiden Namen und laufende mit Tisch und Stand. **Ergebnis** zeigt nach dem Abschließen die festen Endplätze.
 
 ## 4. Spielen
 
@@ -81,6 +81,18 @@ Bei **Gruppen mit KO-Runde** gibt es eine freiwillige Zusatzrunde für alle, die
 - Ohne Start bleibt es bei der Gruppenwertung: Die unteren Plätze der Endtabelle ergeben sich aus der Gruppenleistung.
 - **Platzierungsspiele zurücksetzen** löscht die Spiele wieder; mit Ergebnissen braucht es das Schutzwort.
 
+### Doppel-KO
+
+Doppel-KO nach BLVN-STO Pool 3.3, für 8 bis 64 Spieler: Wer verliert, rutscht von der Gewinnerrunde in die Verliererrunde; erst die zweite Niederlage scheidet aus. Bleiben in beiden Runden zusammen 4 übrig (ab 24 Spielern 8), geht es im einfachen KO weiter. Platz 3 wird immer ausgespielt.
+
+- Vor der Auslosung lässt sich in der Teilnehmerliste je Spieler ein Setzrang „gesetzt 1“ bis „gesetzt 8“ wählen, zum Beispiel Platz 1 bis 4 der Vorjahresmeisterschaft. Gesetzte stehen im Baum weit auseinander und bekommen zuerst die Freilose; nimmt ein Gesetzter nicht teil, rücken die anderen auf. Alle übrigen werden zugelost.
+- **Auslosen und starten** baut den Baum: 8, 16, 32 oder 64 Startplätze, was fehlt, sind Freilose. Die Startnummer ist der Setzrang. Ein Hinweis davor nennt Baumgröße und Zahl der Freilose.
+- **Spielplan:** Die Rundenknöpfe stehen in drei Zeilen, Gewinnerrunde, Verliererrunde und Endrunde. Ein Spiel erscheint dort und an den Tablets, sobald beide Spieler feststehen; Freilose werden nicht gespielt. Dafür muss die Turnieransicht an einem Gerät der Turnierleitung geöffnet sein. Steht im Folgespiel schon ein Ergebnis, ist ein Ergebnis gesperrt.
+- Wer in der Gewinnerrunde verliert, steigt über Kreuz in die Verliererrunde ein, damit er nicht gleich wieder auf denselben Gegner trifft.
+- Der Abschnitt **Doppel-KO** unter dem Spielplan zeigt je Runde, wer woher kommt, wer ein Freilos hat und wer weiter ist. **Race to ändern…** stellt das Race je Abschnitt um, solange dort noch nicht gespielt wird.
+- **Endtabelle:** Plätze 1 bis 4 aus Finale und Spiel um Platz 3. Wer in derselben Runde ausscheidet, teilt sich den Platzbereich (5–6, 7–8, 9–12 …); innerhalb zählt der Quotient gewonnene durch verlorene Sätze, dann die Zahl gewonnener Sätze (BLVN-STO Pool 3.4). Sind beide gleich, teilen sich die Spieler den Platz.
+- Spieler nachtragen gibt es im Doppel-KO nicht. Abschließen geht nach Finale und Spiel um Platz 3.
+
 ## 5. Abschließen
 
 1. Sind alle Spiele gespielt, **Abschließen** klicken. Die Ergebnisse werden gesperrt; zählt das Turnier fürs Rating, wird es gleich neu berechnet.
@@ -98,7 +110,7 @@ Ein Turnier, das mit TurnierPilot oder in einem anderen CueDesk-Verein gespielt 
 4. **Partien fürs Rating werten** ist zunächst aus; dann stehen die Partien nur im Archiv. **Einlesen** schreibt die Turniere.
 5. Das Turnier steht danach in der Liste mit der Marke „aus TurnierPilot“. Im Turnier schaltet **Fürs Rating werten** das Rating nachträglich ein (ab dem nächtlichen Lauf); einer Serie zuordnen geht unter **Serien**.
 
-Übertragen werden Einzelgruppe, Zwei Gruppen und Gruppen mit KO, nicht Liga-Spieltage und Teamvergleiche.
+Übertragen werden Einzelgruppe, Zwei Gruppen und Gruppen mit KO, nicht Liga-Spieltage, Teamvergleiche und Doppel-KO.
 
 ## Gut zu wissen
 

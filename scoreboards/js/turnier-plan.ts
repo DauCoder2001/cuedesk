@@ -355,7 +355,8 @@ export type ErgebnisPartie =Pick<PlanPartie, 'spieler_a' | 'spieler_b' | 'vorgab
 // v64-Regeln). Einzelgruppe: eine Tabelle. Gruppenturniere: eine Tabelle je
 // Gruppe aus den Gruppenspielen, nach dem Abschluss die Endplaetze.
 export function tvErgebnis(
-  turnier: { name: string; disziplin: string; raceTo: number; datum: string; beendet?: boolean },
+  // mitEndplaetzen: auch ohne Gruppen die Endplaetze zeigen (Doppel-KO)
+  turnier: { name: string; disziplin: string; raceTo: number; datum: string; beendet?: boolean; mitEndplaetzen?: boolean },
   teilnehmer: TvTeilnehmer[], // in Startnummern-Reihenfolge
   partien: ErgebnisPartie[],
   hand: HandReihenfolge,
@@ -399,7 +400,7 @@ export function tvErgebnis(
     date: new Date(`${turnier.datum}T12:00:00`).toLocaleDateString('de-DE'),
     endedAt: Date.now(),
     groups,
-    ...(gruppenNamen.length > 0 && turnier.beendet && endplaetze.length > 0
+    ...((gruppenNamen.length > 0 || turnier.mitEndplaetzen) && turnier.beendet && endplaetze.length > 0
       ? {
           finalPlacement: [...endplaetze]
             .sort((a, b) => (a.endplatz ?? 0) - (b.endplatz ?? 0))

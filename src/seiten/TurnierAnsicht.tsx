@@ -2565,7 +2565,7 @@ export default function TurnierAnsicht({
                   ['naechste', 'Nächste Spiele'],
                   // Gruppenturniere: Gruppenstand ab dem Start, Endplaetze sobald Duelle bzw. KO-Runde angesetzt sind
                   ...(mehrgruppig ? ([['gruppenstand', 'Gruppenstand']] as const) : []),
-                  ...((zwei && einstellungen.phase2) || (mitKo && koFest)
+                  ...((zwei && einstellungen.phase2) || (mitKo && koFest) || (dko && dkoFest)
                     ? ([['endplaetze', turnier.status === 'beendet' ? 'Endplätze' : 'Endplätze (vorläufig)']] as const)
                     : []),
                   ['results', 'Ergebnis']
