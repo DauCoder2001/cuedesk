@@ -30,7 +30,12 @@ export default function DkoBaum(props: {
       {abschnitte.map((titel) => {
         const liste = spiele.filter((s) => dkoAbschnitt(s.id).titel === titel);
         const arten = [...new Set(liste.map((s) => s.art))];
-        const race = arten.map((a) => `Race to ${props.raceFuer(a)}`).join(' · ');
+        // Finale und Platz 3 haben je ein Race; gleich: einmal, sonst mit Namen
+        const werte = [...new Set(arten.map((a) => props.raceFuer(a)))];
+        const race =
+          werte.length === 1
+            ? `Race to ${werte[0]}`
+            : arten.map((a) => `${a === 'FIN' ? 'Finale' : 'Platz 3'}: Race to ${props.raceFuer(a)}`).join(' · ');
         return (
           <div key={titel} className="koblock">
             <div className="kopflinks">
