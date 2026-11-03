@@ -302,3 +302,41 @@ export function dkoEndtabelle<T>(
   });
   return zeilen;
 }
+
+// ---------- Spielplan ----------
+
+// Abschnitt im Spielplan und Reihenfolge (stufe, auch partien.runde): erst
+// Gewinnerrunde 1, dann Verliererrunde 1 und Gewinnerrunde 2 usw., zuletzt die
+// Endrunde. Gleiche Namen wie am Tablet (scoreboards/js/turnier-plan.ts).
+export function dkoAbschnitt(id: string): { titel: string; stufe: number } {
+  const g = /^g(\d+)-\d+$/.exec(id);
+  if (g) return { titel: `Gewinnerrunde ${g[1]}`, stufe: 2 * Number(g[1]) - 2 };
+  const v = /^v(\d+)-\d+$/.exec(id);
+  if (v) return { titel: `Verliererrunde ${v[1]}`, stufe: Number(v[1]) === 1 ? 1 : Number(v[1]) + 1 };
+  if (id.startsWith('vf')) return { titel: 'Viertelfinale', stufe: 90 };
+  if (id.startsWith('hf')) return { titel: 'Halbfinale', stufe: 91 };
+  return { titel: 'Finale und Platz 3', stufe: 92 };
+}
+
+// Name eines Spiels: "Gewinnerrunde 1 · Spiel 2", "Halbfinale 1", "Finale"
+export function dkoSpielName(id: string): string {
+  const x = /^([gv])(\d+)-(\d+)$/.exec(id);
+  if (x) return `${x[1] === 'g' ? 'Gewinnerrunde' : 'Verliererrunde'} ${x[2]} · Spiel ${x[3]}`;
+  if (id.startsWith('vf')) return `Viertelfinale ${id.slice(2)}`;
+  if (id.startsWith('hf')) return `Halbfinale ${id.slice(2)}`;
+  return id === 'fin' ? 'Finale' : 'Spiel um Platz 3';
+}
+
+// Wie viele Spiele wirklich gespielt werden (ohne Freilose). Die Zahl haengt
+// nur vom Aufbau ab, nicht von den Ergebnissen.
+export function dkoSpielzahl(anzahl: number): number {
+  const plaetze = dkoStartplaetze(Array.from({ length: anzahl }, (_, i) => i));
+  const stand = new Map<string, true>();
+  for (let i = 0; i < 1000; i += 1) {
+    const baum = dkoAufloesen(anzahl, plaetze, (id) => (stand.has(id) ? { s1: 1, s2: 0 } : { s1: null, s2: null }), () => 1);
+    const offen = Object.values(baum).filter((m) => m.bereit && !m.fertig);
+    if (offen.length === 0) return Object.values(baum).filter((m) => m.bereit).length;
+    offen.forEach((m) => stand.set(m.spiel.id, true));
+  }
+  return 0;
+}

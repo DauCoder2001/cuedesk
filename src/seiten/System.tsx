@@ -494,6 +494,7 @@ export default function System() {
               <option value="einzelgruppe">Einzelgruppe (jeder gegen jeden)</option>
               <option value="zwei-gruppen">Zwei Gruppen mit Platzierungsduellen</option>
               <option value="gruppen-ko">Gruppen mit KO-Runde</option>
+              <option value="doppel-ko">Doppel-KO (zwei Niederlagen, letzte 4 bzw. 8 im KO)</option>
               <option value="liga">Liga-Spieltag (Begegnung)</option>
             </select>
           </label>

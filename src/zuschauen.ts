@@ -81,7 +81,8 @@ const istGruppenspiel = (p: Partie) => !p.phase || p.phase === 'gruppe';
 // Gruppentabellen wie in der Turnieransicht: Einzelgruppe eine Tabelle,
 // sonst je Gruppe. Liga-Spieltage haben keine Tabelle.
 export function tabellen(turnier: Turnier, teilnehmer: TurnierTeilnehmer[], partien: Partie[]): Tabelle[] {
-  if (turnier.modus === 'liga') return [];
+  // Liga-Spieltage und Doppel-KO haben keine Gruppentabelle
+  if (turnier.modus === 'liga' || turnier.modus === 'doppel-ko') return [];
   const e = einstellungenVon(turnier);
   const aufstellung = teilnehmer
     .filter((t) => t.startnummer !== null)

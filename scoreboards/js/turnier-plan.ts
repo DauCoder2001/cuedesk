@@ -7,6 +7,7 @@ import { gruppenRangliste } from '../../src/gruppen';
 import { rangliste } from '../../src/turnier';
 import type { HandReihenfolge } from '../../src/turnier';
 import { istGruppenrunde } from '../../src/reihenfolge';
+import { dkoSpielName } from '../../src/doppelko';
 
 export type PlanPartie = {
   id: string;
@@ -118,6 +119,7 @@ export function abschnittName(p: Pick<PlanPartie, 'runde' | 'gruppe' | 'phase'>)
   if (p.phase === 'phase2') return 'Platzierungsduelle';
   if (p.phase === 'phase3') return 'Platzierungsspiele';
   if (p.phase === 'ko') return KO_NAME[(p.gruppe ?? '').replace(/\d+$/, '')]?.(p.gruppe ?? '') ?? 'KO-Runde';
+  if (p.phase === 'dko') return dkoSpielName(p.gruppe ?? '');
   const runde = p.runde ? `Runde ${p.runde}` : '';
   return p.gruppe ? `Gruppe ${p.gruppe}${runde ? ` · ${runde}` : ''}` : runde;
 }
@@ -264,6 +266,7 @@ export function listenRang(p: Pick<PlanPartie, 'runde' | 'gruppe' | 'phase'> & {
   if (p.phase === 'phase2') return '1Z';
   if (p.phase === 'phase3') return '1Z3';
   if (p.phase === 'ko') return `1Y${r}`;
+  if (p.phase === 'dko') return `1D${r}`;
   return `0${r}${p.gruppe ?? ''}`;
 }
 

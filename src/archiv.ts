@@ -4,6 +4,7 @@
 // src/seiten/Archiv.tsx.
 
 import { saisonAus } from './mannschaften';
+import { dkoAbschnitt } from './doppelko';
 import type { Disziplin, TurnierModus, TurnierStatus } from './datenbank.types';
 
 export type ArchivTurnier = {
@@ -227,6 +228,7 @@ const KO_NAMEN: [string, string][] = [
 export function rundeText(p: Pick<ArchivPartie, 'phase' | 'gruppe'>): string {
   const phase = p.phase ?? '';
   if (phase === 'ko') return KO_NAMEN.find(([k]) => (p.gruppe ?? '').toLowerCase().startsWith(k))?.[1] ?? 'KO-Runde';
+  if (phase === 'dko') return dkoAbschnitt(p.gruppe ?? '').titel;
   if (phase === 'gruppe') return p.gruppe ? `Gruppe ${p.gruppe}` : 'Gruppe';
   if (phase === 'hin') return 'Hinrunde';
   if (phase === 'rueck') return 'Rückrunde';

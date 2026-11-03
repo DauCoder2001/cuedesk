@@ -61,6 +61,22 @@ import {
 } from '../ko';
 import type { KoRunde, Leistung } from '../ko';
 import KoBaum from './KoBaum';
+import {
+  DKO_ART_NAME,
+  DKO_MAX,
+  DKO_MIN,
+  dkoAbschnitt,
+  dkoAufloesen,
+  dkoAuslosen,
+  dkoEndrunde,
+  dkoEndtabelle,
+  dkoGroesse,
+  dkoSpiele,
+  dkoStartplaetze,
+  quotient
+} from '../doppelko';
+import type { DkoArt } from '../doppelko';
+import DkoBaum from './DkoBaum';
 import { ratingAn, vereinsEinstellungen } from '../vereinseinstellungen';
 import { DISZIPLIN_TEXT, MODUS_TEXT, STATUS_TEXT } from './Turniere';
 import type { TurnierEinstellungen } from './Turniere';
@@ -86,6 +102,28 @@ const ZWEI_GRUPPEN_MIN = 4;
 const ZWEI_GRUPPEN_MAX = 16;
 // KO-Runde: Rundennummer im Spielplan
 const KO_RUNDE_NR: Record<KoRunde, number> = { R16: 1, QF: 2, SF: 3, FIN: 4, BRO: 4 };
+// Doppel-KO: Abschnitt im Spielplan als [Schluessel, Zeile der Rundenknoepfe,
+// Titel, Ordnung]; die Zeilen trennen Gewinner-, Verliererrunde und Endrunde
+const DKO_ZEILEN = ['Gewinnerrunde', 'Verliererrunde', 'Endrunde'];
+function dkoZeile(id: string): [string, string, string, string] {
+  const a = dkoAbschnitt(id);
+  const zeile = id.startsWith('g') ? 'Gewinnerrunde' : /^v\d/.test(id) ? 'Verliererrunde' : 'Endrunde';
+  const schluessel = `D${String(a.stufe).padStart(3, '0')}`;
+  return [schluessel, zeile, a.titel, `Y${schluessel}`];
+}
+// Race-Abschnitt einer Doppel-KO-Partie; das Spiel um Platz 3 laeuft mit dem Halbfinale
+// Quotient gewonnene / verlorene Saetze fuer die Anzeige, z. B. "1,47"
+function quotientText(b: { gewonnen: number; verloren: number }): string {
+  const q = quotient(b);
+  return Number.isFinite(q) ? q.toFixed(2).replace('.', ',') : '–';
+}
+function dkoArtVon(p: { gruppe: string | null }): DkoArt {
+  const id = p.gruppe ?? '';
+  if (id.startsWith('g')) return 'G';
+  if (id.startsWith('vf')) return 'VF';
+  if (id.startsWith('v')) return 'V';
+  return id === 'fin' ? 'FIN' : 'HF';
+}
 const KO_ABSCHNITT: Record<string, string> = { af: 'Achtelfinale', qf: 'Viertelfinale', sf: 'Halbfinale', fin: 'Finale und Platz 3', bro: 'Finale und Platz 3' };
 const istGruppenspiel = (p: TPartie) => !p.phase || p.phase === 'gruppe';const istGruppenzeile = (zeile: string) => /^[A-D]$/.test(zeile);
 
@@ -318,6 +356,7 @@ export default function TurnierAnsicht({
 
   const zwei = turnier?.modus === 'zwei-gruppen';
   const mitKo = turnier?.modus === 'gruppen-ko';
+  const dko = turnier?.modus === 'doppel-ko';
   const mehrgruppig = zwei || mitKo;
   const race2 = einstellungen.racePhase2 ?? raceTo;
   const race3 = einstellungen.racePhase3 ?? raceTo;
@@ -469,6 +508,52 @@ export default function TurnierAnsicht({
       return f !== undefined && (begonnen(f) || f.tisch_id !== null);
     });
 
+  // ---------- Doppel-KO (src/doppelko.ts) ----------
+
+  const dkoFest = dko ? einstellungen.dko ?? null : null;
+  const rd = einstellungen.raceDko;
+  const raceDkoFuer = useCallback(
+    (art: DkoArt) => (art === 'G' ? rd?.G : art === 'V' ? rd?.V : art === 'VF' ? rd?.VF : art === 'FIN' ? rd?.FIN : rd?.HF) ?? raceTo,
+    [rd?.G, rd?.V, rd?.VF, rd?.HF, rd?.FIN, raceTo]
+  );
+  const dkoPartien = useMemo(() => partien.filter((p) => p.phase === 'dko'), [partien]);
+  // Stand eines Spiels: nur wenn die Partie zu den Spielern im Baum passt
+  const dkoStaende = useCallback(
+    (liste: TPartie[]) => (id: string, a: string, b: string) => {
+      const x = liste.find((p) => p.phase === 'dko' && p.gruppe === id && p.spieler_a === a && p.spieler_b === b);
+      return x ? { s1: x.ergebnis_a ?? x.vorgabe_a, s2: x.ergebnis_b ?? x.vorgabe_b, race: x.race_to } : { s1: null, s2: null };
+    },
+    []
+  );
+  const dkoBaum = useMemo(
+    () =>
+      dkoFest
+        ? dkoAufloesen(dkoFest.setzliste.length, dkoStartplaetze(dkoFest.setzliste), dkoStaende(dkoPartien), raceDkoFuer)
+        : null,
+    [dkoFest, dkoStaende, dkoPartien, raceDkoFuer]
+  );
+  const dkoTabelle = useMemo(
+    () =>
+      dkoBaum && dkoFest
+        ? dkoEndtabelle(
+            dkoBaum,
+            (id) => bilanz.get(id) ?? LEERE_BILANZ,
+            (id) => dkoFest.setzliste.indexOf(id)
+          )
+        : [],
+    [dkoBaum, dkoFest, bilanz]
+  );
+  // Ein Ergebnis ist gesperrt, sobald im Folgespiel gespielt wird
+  const dkoGesperrt = (p: TPartie) =>
+    p.phase === 'dko' &&
+    dkoFest !== null &&
+    dkoSpiele(dkoFest.setzliste.length)
+      .filter((s) => s.quelle.some((q) => 'spiel' in q && q.spiel === p.gruppe))
+      .some((s) => {
+        const f = dkoPartien.find((x) => x.gruppe === s.id);
+        return f !== undefined && (begonnen(f) || f.tisch_id !== null);
+      });
+
   // Zwei Gruppen: Endtabelle aus den Duellen; ein unberuehrtes Duell steht
   // auf der Vorgabe (wie in v64 vorbelegt)
   const endtabelle = useMemo(() => {
@@ -498,6 +583,8 @@ export default function TurnierAnsicht({
             ? ['P3', 'P3', 'Platzierungsspiele', 'Z3']
             : p.phase === 'ko'
               ? [`K${r}`, 'KO', KO_ABSCHNITT[(p.gruppe ?? '').replace(/\d+$/, '')] ?? 'KO', `Y${r}`]
+              : p.phase === 'dko'
+                ? dkoZeile(p.gruppe ?? '')
               : p.gruppe
             ? [`${p.gruppe}-${r}`, p.gruppe, `Runde ${r}`, `${p.gruppe}${String(r).padStart(3, '0')}`]
             : [`r${r}`, '', `Runde ${r}`, String(r).padStart(3, '0')];
@@ -602,7 +689,7 @@ export default function TurnierAnsicht({
     if (person(id)?.status === 'gast') return { wert: 500, quelle: 'gast' as RatingQuelle };
     return ratings.get(id) ?? { wert: 500, quelle: 'vereinsschnitt' as RatingQuelle };
   };
-  const grenzen: [number, number] = zwei ? [ZWEI_GRUPPEN_MIN, ZWEI_GRUPPEN_MAX] : [KO_MIN, KO_MAX];
+  const grenzen: [number, number] = dko ? [DKO_MIN, DKO_MAX] : zwei ? [ZWEI_GRUPPEN_MIN, ZWEI_GRUPPEN_MAX] : [KO_MIN, KO_MAX];
   const offeneStichkaempfe = () =>
     gruppenNamen.flatMap((g) => gruppenTabellen[g].gleichstaende.filter((x) => !x.entschieden)).length;
   // Setzungen vor der Auslosung: Teilnehmer -> Gruppe
@@ -775,6 +862,15 @@ export default function TurnierAnsicht({
     if (modusOffen) return setFehler('Erst den Modus festlegen, dann auslosen.');
     const imWeg = await andererLaufender(supabase, turnier);
     if (imWeg) return setFehler(laeuftSchonText(imWeg));
+    if (dko) {
+      const [min, max] = grenzen;
+      if (teilnehmer.length < min || teilnehmer.length > max) return setFehler(`Doppel-KO: ${min} bis ${max} Teilnehmer.`);
+      const n = teilnehmer.length;
+      const frei = dkoGroesse(n) - n;
+      const frage = `${n} Teilnehmer für den Doppel-KO auslosen und das Turnier starten?\nBaum für ${dkoGroesse(n)}${frei > 0 ? `, ${frei} Freilose` : ''}; die letzten ${dkoEndrunde(n)} spielen im einfachen KO.`;
+      if (!(await fragen(frage, 'Auslosen'))) return;
+      return dkoStarten();
+    }
     if (mehrgruppig) {
       const [min, max] = grenzen;
       if (teilnehmer.length < min || teilnehmer.length > max) {
@@ -873,6 +969,59 @@ export default function TurnierAnsicht({
     await laden();
   }
 
+  // Doppel-KO: Gesetzte (Rang 1, 2 ...) vorn, die uebrigen ausgelost; die
+  // Startnummer ist der Setzrang. Angelegt werden die Spiele, deren Spieler
+  // schon feststehen, also die Gewinnerrunde 1 ohne Freilose.
+  async function dkoStarten() {
+    if (!turnier) return;
+    setArbeitet(true);
+    setFehler(null);
+    const ids = teilnehmer.map((t) => t.person_id);
+    const setzliste = dkoAuslosen(ids, (einstellungen.dkoGesetzt ?? []).filter((id) => ids.includes(id)));
+    for (const [i, id] of setzliste.entries()) {
+      const r = ratingVon(id);
+      const { error } = await supabase
+        .from('turnier_teilnehmer')
+        .update({ startnummer: i + 1, gruppe: null, rating_eingefroren: r.wert, rating_quelle: r.quelle })
+        .eq('turnier_id', turnier.id)
+        .eq('person_id', id);
+      if (error) {
+        setArbeitet(false);
+        return setFehler(error.message);
+      }
+    }
+    const fest = { setzliste };
+    const { error } = await supabase
+      .from('turniere')
+      .update({
+        status: 'laeuft',
+        eingefroren_am: new Date().toISOString(),
+        teilnehmerzahl: setzliste.length,
+        einstellungen: { ...einstellungen, dko: fest, tvAnsicht: 'auslosung', tvLiveGewechselt: undefined }
+      })
+      .eq('id', turnier.id);
+    if (error) {
+      setArbeitet(false);
+      return setFehler(error.message);
+    }
+    await dkoAbgleichen([], fest, new Map(setzliste.map((id) => [id, ratingVon(id).wert])));
+    setArbeitet(false);
+    sprungNeu();
+    await laden();
+  }
+
+  // Doppel-KO: vor der Auslosung einen Setzrang vergeben (1 = bester); ein
+  // anderer Spieler auf demselben Rang verliert ihn
+  async function dkoSetzen(personId: string, rang: number | null) {
+    const liste = (einstellungen.dkoGesetzt ?? []).map((x) => (x === personId ? '' : x));
+    if (rang !== null) {
+      while (liste.length < rang) liste.push('');
+      liste[rang - 1] = personId;
+    }
+    while (liste.length > 0 && liste[liste.length - 1] === '') liste.pop();
+    await einstellungenSetzen({ dkoGesetzt: liste });
+  }
+
   function vorgabePaar(ratingA: number, ratingB: number, race: number): [number, number] {
     if (!va.aktiv || ratingA === ratingB) return [0, 0];
     const grenze = va.obergrenze > 0 ? va.obergrenze : Infinity;
@@ -932,6 +1081,7 @@ export default function TurnierAnsicht({
     setPartien(liste);
     if (!leer) await turnierBegonnen();
     await koAbgleichen(liste);
+    await dkoAbgleichen(liste);
   }
 
   // Nach "Zuruecksetzen": KO-Folgespiele abgleichen (der Sieger faellt dort
@@ -942,6 +1092,7 @@ export default function TurnierAnsicht({
     const liste = partien.map((x) => (x.id === p.id ? { ...x, ...offen } : x));
     setPartien(liste);
     await koAbgleichen(liste);
+    await dkoAbgleichen(liste);
     await laden();
   }
 
@@ -1044,6 +1195,86 @@ export default function TurnierAnsicht({
 
     // Turnierart vorn in der Kopfzeile, z. B. "Liga-Spiel · 9-Ball · ..."
     const artVorsatz = einstellungen.art ? `${einstellungen.art} · ` : '';
+
+    // Doppel-KO: Endtabelle, alle Spiele in Spielreihenfolge, Setzliste
+    if (dko) {
+      const n = dkoFest?.setzliste.length ?? aufstellung.length;
+      const races = (['G', 'V', ...(dkoEndrunde(n) === 8 ? ['VF'] : []), 'HF', 'FIN'] as DkoArt[])
+        .map((a) => `${raceDkoFuer(a)} (${DKO_ART_NAME[a]})`)
+        .join(' / ');
+      const bloecke: BerichtBlock[] = [];
+      if (dkoFest && dkoBaum) {
+        bloecke.push({
+          art: 'tabelle',
+          titel: 'Endtabelle',
+          spalten: [
+            { text: 'Platz', align: 'mitte' },
+            { text: 'Name', align: 'links' },
+            { text: 'Ermittelt durch', align: 'links' },
+            { text: 'Spiele', align: 'mitte' },
+            { text: 'Siege', align: 'mitte' },
+            { text: 'Sätze', align: 'mitte' },
+            { text: 'Quotient', align: 'mitte' }
+          ],
+          zeilen: dkoTabelle.map((x) => {
+            const b = bilanzVon(x.wer);
+            return [
+              x.zeigePlatz ? String(x.platz) : '',
+              x.wer ? anzeige(x.wer) : '-',
+              x.wie,
+              x.wer ? String(b.spiele) : '',
+              x.wer ? String(b.siege) : '',
+              x.wer ? `${b.gewonnen} : ${b.verloren}` : '',
+              x.wer ? quotientText(b) : ''
+            ];
+          })
+        });
+        const reihe = Object.values(dkoBaum).sort(
+          (x, y) => dkoAbschnitt(x.spiel.id).stufe - dkoAbschnitt(y.spiel.id).stufe
+        );
+        bloecke.push({
+          art: 'tabelle',
+          titel: 'Spiele',
+          neueSeite: true,
+          spalten: [
+            { text: 'Spiel', align: 'links' },
+            { text: 'Spieler 1', align: 'rechts' },
+            { text: 'Ergebnis', align: 'mitte' },
+            { text: 'Spieler 2', align: 'links' },
+            { text: 'Sieger', align: 'links' }
+          ],
+          zeilen: reihe
+            .filter((m) => !m.entfaellt)
+            .map((m) => [
+              m.spiel.name,
+              m.a.wer ? `${anzeige(m.a.wer)} (${m.l1})` : m.l1,
+              m.freilos ? 'Freilos' : m.bereit && m.s1 !== null && m.s2 !== null ? `${m.s1} : ${m.s2}` : '- : -',
+              m.b.wer ? `(${m.l2}) ${anzeige(m.b.wer)}` : m.l2,
+              m.sieger.wer ? anzeige(m.sieger.wer) : 'offen'
+            ])
+        });
+        bloecke.push({
+          art: 'tabelle',
+          titel: 'Setzliste',
+          spalten: [
+            { text: 'Rang', align: 'mitte' },
+            { text: 'Name', align: 'links' },
+            { text: 'Gesetzt', align: 'mitte' }
+          ],
+          zeilen: dkoFest.setzliste.map((id, i) => [
+            String(i + 1),
+            anzeige(id),
+            (einstellungen.dkoGesetzt ?? []).includes(id) ? 'ja' : ''
+          ])
+        });
+      }
+      const kopf =
+        `Doppel-KO · ${DISZIPLIN_TEXT[turnier.disziplin]} · Race to ${races} · ` +
+        `${n} Teilnehmer, Baum für ${dkoGroesse(n)}, die letzten ${dkoEndrunde(n)} im KO · ${datumText}${zeit}${handicap}`;
+      const bytes = gruppenBerichtPdf({ titel: turnier.name, kopf: artVorsatz + kopf, vorlaeufig: turnier.status !== 'beendet', bloecke, hinweise: [] });
+      herunterladen(bytes, berichtDateiname(turnier.name, turnier.datum));
+      return;
+    }
 
     if (!mehrgruppig) {
       const bytes = berichtPdf({
@@ -1272,6 +1503,12 @@ export default function TurnierAnsicht({
     const koKommend = mitKo
       ? koSpiele(feldJetzt).filter((k) => !koPartien.some((x) => x.gruppe === k.id)).map((k) => raceFuer(k.runde))
       : [];
+    // Doppel-KO: Spiele ohne Partie, die noch gespielt werden (Freilose nicht)
+    if (dkoBaum) {
+      Object.values(dkoBaum)
+        .filter((m) => !m.freilos && !m.entfaellt && !dkoPartien.some((x) => x.gruppe === m.spiel.id))
+        .forEach((m) => koKommend.push(raceDkoFuer(m.spiel.art)));
+    }
     return prognose(
       [
         ...partien.map((x) => ({
@@ -1297,7 +1534,9 @@ export default function TurnierAnsicht({
     setStapel((s) => s.slice(0, -1));
     setPartien((liste) => liste.map((x) => (x.id === letzter.partieId ? { ...x, ...letzter.vorher } : x)));
     setMeldung('Letzte Eingabe zurückgenommen.');
-    await koAbgleichen(partien.map((x) => (x.id === letzter.partieId ? { ...x, ...letzter.vorher } : x)));
+    const stand = partien.map((x) => (x.id === letzter.partieId ? { ...x, ...letzter.vorher } : x));
+    await koAbgleichen(stand);
+    await dkoAbgleichen(stand);
   }
 
   async function verlaufZeigen(p: TPartie) {
@@ -1541,6 +1780,16 @@ export default function TurnierAnsicht({
   // Zwei Gruppen: vor dem Start ein Wert fuer alle Duelle, danach je Duell.
   // Gruppen mit KO: je Runde; eine Runde ist gesperrt, sobald dort gespielt wird.
   const raceZeilen = (): RaceZeile[] => {
+    if (dko) {
+      const arten: DkoArt[] = ['G', 'V', ...(dkoEndrunde(dkoFest?.setzliste.length ?? teilnehmer.length) === 8 ? (['VF'] as DkoArt[]) : []), 'HF', 'FIN'];
+      return arten.map((art) => ({
+        schluessel: art,
+        text: DKO_ART_NAME[art],
+        plaetze: '',
+        wert: raceDkoFuer(art),
+        gesperrt: dkoPartien.some((p) => dkoArtVon(p) === art && !ruhtNoch(p)) ? 'hat begonnen' : null
+      }));
+    }
     if (zwei) {
       if (!einstellungen.phase2) return [{ schluessel: 'alle', text: 'Alle Duelle', plaetze: '', wert: race2, gesperrt: null }];
       return duelle.map((d) => ({
@@ -1607,6 +1856,21 @@ export default function TurnierAnsicht({
       for (const d of duelle) {
         const r = neu.get(d.id);
         if (r !== undefined) fehler = (await partieSetzen(d, r)) ?? fehler;
+      }
+    } else if (dko) {
+      const bisher = einstellungen.raceDko ?? {};
+      await einstellungenSetzen({
+        raceDko: {
+          G: neu.get('G') ?? bisher.G,
+          V: neu.get('V') ?? bisher.V,
+          VF: neu.get('VF') ?? bisher.VF,
+          HF: neu.get('HF') ?? bisher.HF,
+          FIN: neu.get('FIN') ?? bisher.FIN
+        }
+      });
+      for (const p of dkoPartien) {
+        const r = neu.get(dkoArtVon(p));
+        if (r !== undefined) fehler = (await partieSetzen(p, r)) ?? fehler;
       }
     } else {
       const bisher = einstellungen.raceKo ?? {};
@@ -1718,7 +1982,65 @@ export default function TurnierAnsicht({
       if (data) setPartien(data.filter(mitSpielern));
     }
   }
-  abgleichRef.current = koAbgleichen;
+  // Doppel-KO wie koAbgleichen: ein Spiel bekommt seine Partie, sobald beide
+  // Spieler feststehen; Freilose werden nicht gespielt. Beim Auslosen kommen
+  // die gerade eingefrorenen Ratings mit (werte), der Stand ist dann noch alt.
+  async function dkoAbgleichen(liste: TPartie[], fest = dkoFest, werte?: Map<string, number>) {
+    if (!turnier || !fest || !darfLeiten) return;
+    if (!werte && turnier.status !== 'laeuft') return;
+    const b = dkoAufloesen(fest.setzliste.length, dkoStartplaetze(fest.setzliste), dkoStaende(liste), raceDkoFuer);
+    const ratings = werte ?? ratingWerte();
+    const ruhend = (x: TPartie) => !begonnen(x) && x.status !== 'laeuft' && x.tisch_id === null;
+    let geaendert = false;
+    for (const [i, spiel] of dkoSpiele(fest.setzliste.length).entries()) {
+      const m = b[spiel.id];
+      const a = m.a.wer;
+      const z = m.b.wer;
+      const vorhanden = liste.find((x) => x.phase === 'dko' && x.gruppe === spiel.id);
+      if (m.bereit && a && z) {
+        const [vA, vB] = vorgabePaar(ratings.get(a) ?? 500, ratings.get(z) ?? 500, m.race);
+        if (!vorhanden) {
+          const { error } = await supabase.from('partien').insert({
+            verein_id: turnier.verein_id,
+            turnier_id: turnier.id,
+            disziplin: turnier.disziplin,
+            datum: turnier.datum,
+            phase: 'dko',
+            gruppe: spiel.id,
+            runde: dkoAbschnitt(spiel.id).stufe,
+            paarung: i + 1,
+            spieler_a: a,
+            spieler_b: z,
+            race_to: m.race,
+            vorgabe_a: vA,
+            vorgabe_b: vB,
+            status: 'geplant'
+          });
+          // 23505: ein zweites Notebook war schneller
+          if (error && error.code !== '23505') return setFehler(error.message);
+          geaendert = true;
+        } else if ((vorhanden.spieler_a !== a || vorhanden.spieler_b !== z) && ruhend(vorhanden)) {
+          await supabase
+            .from('partien')
+            .update({ spieler_a: a, spieler_b: z, vorgabe_a: vA, vorgabe_b: vB, ergebnis_a: null, ergebnis_b: null, status: 'geplant', beendet: null })
+            .eq('id', vorhanden.id);
+          geaendert = true;
+        }
+      } else if (vorhanden && ruhend(vorhanden)) {
+        await supabase.from('partien').delete().eq('id', vorhanden.id);
+        geaendert = true;
+      }
+    }
+    if (geaendert && !werte) {
+      const { data } = await supabase.from('partien').select('*').eq('turnier_id', turnier.id).order('runde').order('paarung');
+      if (data) setPartien(data.filter(mitSpielern));
+    }
+  }
+
+  abgleichRef.current = async (liste: TPartie[]) => {
+    await koAbgleichen(liste);
+    await dkoAbgleichen(liste);
+  };
 
   // KO-Runde: Gruppenreihenfolge fixieren, Setzliste bilden, erste Runde
   // anlegen (v74 startKO)
@@ -1830,6 +2152,7 @@ export default function TurnierAnsicht({
     if (!turnier) return;
     if (zwei && !einstellungen.phase2) return setFehler('Zuerst die Platzierungsduelle starten und ausspielen.');
     if (mitKo && !(baum?.fin.fertig && baum.bro.fertig)) return setFehler('Zuerst die KO-Runde bis zum Finale ausspielen.');
+    if (dko && !(dkoBaum?.fin.fertig && dkoBaum.p3.fertig)) return setFehler('Zuerst den Doppel-KO bis zum Finale und dem Spiel um Platz 3 ausspielen.');
     if (offeneSpiele > 0) return setFehler(`Es sind noch ${offeneSpiele} Spiele offen.`);
     const offen = mehrgruppig ? [] : tabelle.gleichstaende.filter((g) => !g.entschieden);
     if (offen.length > 0 && !(await fragen('Ein Stichkampf ist noch nicht entschieden. Trotzdem abschließen?'))) return;
@@ -1840,6 +2163,8 @@ export default function TurnierAnsicht({
     setArbeitet(true);
     const plaetze: [string, number][] = zwei
       ? endtabelle.map((z) => [z.wer, z.platz])
+      : dko
+        ? dkoTabelle.flatMap((z) => (z.wer ? [[z.wer, z.platz] as [string, number]] : []))
       : mitKo
         ? endtabelleMitKo.flatMap((z) => (z.wer ? [[z.wer, z.platz] as [string, number]] : []))
         : tabelle.zeilen.map((z, i) => [aufstellung[z.pos].person_id, i + 1]);
@@ -1935,7 +2260,8 @@ export default function TurnierAnsicht({
           raceFuer('FIN'),
           race3
         ]
-      : [])
+      : []),
+    ...(dko ? (['G', 'V', 'VF', 'HF', 'FIN'] as DkoArt[]).map(raceDkoFuer) : [])
   ]);
   const nichtImKo = koFest ? nichtQualifiziert(gruppenListen, koFest.seeds) : [];
   const offenP3 = p3Partien.filter((x) => !beendetBei(x)).length;
@@ -1971,7 +2297,7 @@ export default function TurnierAnsicht({
       const solo = einstellungen.phase3 ? phase3Paare(einstellungen.phase3.reihung).solo : null;
       return solo ? anzeige(solo) : '';
     }
-    if (aktiv.zeile === 'KO') return '';
+    if (aktiv.zeile === 'KO' || DKO_ZEILEN.includes(aktiv.zeile)) return '';
     const kreis = aktiv.zeile ? (gruppen[aktiv.zeile] ?? []) : aufstellung.map((_, i) => i);
     if (kreis.length % 2 === 0) return '';
     const spielen = new Set(aktiv.partien.flatMap((p) => [p.spieler_a, p.spieler_b]));
@@ -1989,7 +2315,9 @@ export default function TurnierAnsicht({
   const gesetztVorher = gesetztKarte();
   const zuviel = mehrgruppig ? zuVieleGesetzt(teilnehmer.length, gesetztVorher, gruppenNamen) : [];
   const ziel = zielGroessen(teilnehmer.length, gruppenNamen);
-  const teilnehmerOk = mehrgruppig
+  const teilnehmerOk = dko
+    ? teilnehmer.length >= DKO_MIN && teilnehmer.length <= DKO_MAX
+    : mehrgruppig
     ? teilnehmer.length >= grenzen[0] &&
       teilnehmer.length <= grenzen[1] &&
       zuviel.length === 0 &&
@@ -2015,7 +2343,7 @@ export default function TurnierAnsicht({
             ? offeneGruppenspiele === 0 ? 'duelle' : null
             : mitKo && !koFest
               ? offeneGruppenspiele === 0 && weiter !== null ? 'ko' : null
-              : offeneSpiele === 0 && (!mitKo || Boolean(baum?.fin.fertig && baum.bro.fertig))
+              : offeneSpiele === 0 && (!mitKo || Boolean(baum?.fin.fertig && baum.bro.fertig)) && (!dko || Boolean(dkoBaum?.fin.fertig && dkoBaum.p3.fertig))
                 ? 'abschliessen'
                 : null;
   const faellig = (schritt: typeof naechsterSchritt) => (naechsterSchritt === schritt ? 'faellig' : undefined);
@@ -2032,6 +2360,7 @@ export default function TurnierAnsicht({
   const nachtragMoeglich =
     bearbeitbar &&
     turnier.status === 'laeuft' &&
+    !dko &&
     aufstellung.length < (zwei ? ZWEI_GRUPPEN_MAX : mitKo ? KO_MAX : 12) &&
     !(zwei && einstellungen.phase2) &&
     !(mitKo && koFest) &&
@@ -2373,6 +2702,29 @@ export default function TurnierAnsicht({
                           {r.wert}
                         </td>
                       )}
+                      {dko && (() => {
+                        const rang = (einstellungen.dkoGesetzt ?? []).indexOf(t.person_id) + 1;
+                        return (
+                          <td className="rechts">
+                            {bearbeitbar ? (
+                              <select
+                                title="Setzrang, z. B. Platz 1 bis 4 der Vorjahresmeisterschaft (BLVN-STO Pool 3.3). Gesetzte stehen im Baum weit auseinander und bekommen zuerst die Freilose; wer auf „–“ steht, wird zugelost."
+                                value={rang > 0 ? String(rang) : ''}
+                                onChange={(e) => void dkoSetzen(t.person_id, e.target.value ? Number(e.target.value) : null)}
+                              >
+                                <option value="">–</option>
+                                {Array.from({ length: 8 }, (_, i) => (
+                                  <option key={i} value={i + 1}>
+                                    gesetzt {i + 1}
+                                  </option>
+                                ))}
+                              </select>
+                            ) : (
+                              rang > 0 && `gesetzt ${rang}`
+                            )}
+                          </td>
+                        );
+                      })()}
                       {mehrgruppig && (
                         <td className="rechts">
                           {bearbeitbar ? (
@@ -2521,7 +2873,8 @@ export default function TurnierAnsicht({
                     <p className="hinweis">
                       Vorschlag nach den Grenzen auf der Seite System: bis {grenzenVerein.einzelBis} Einzelgruppe, bis{' '}
                       {grenzenVerein.zweiBis} Zwei Gruppen, darüber Gruppen mit KO-Runde. Die Zahl der Spiele rechnet mit
-                      jeder Anmeldung mit; bei der KO-Runde ohne freiwillige Platzierungsspiele.
+                      jeder Anmeldung mit; bei der KO-Runde ohne freiwillige Platzierungsspiele. Doppel-KO (BLVN-STO
+                      Pool 3.3) wird nur vorgeschlagen, wenn sonst nichts passt; wählen lässt er sich ab {DKO_MIN} Teilnehmern.
                     </p>
                     <button
                       type="button"
@@ -2563,7 +2916,17 @@ export default function TurnierAnsicht({
                   />
                 </div>
               )}
-              {mehrgruppig ? (
+              {dko ? (
+                <p className="hinweis">
+                  {DKO_MIN} bis {DKO_MAX} Teilnehmer. Beim Auslosen stehen die Gesetzten vorn, alle übrigen werden zugelost.
+                  {teilnehmer.length >= DKO_MIN && teilnehmer.length <= DKO_MAX
+                    ? ` Bei ${teilnehmer.length} Teilnehmern: Baum für ${dkoGroesse(teilnehmer.length)}${
+                        dkoGroesse(teilnehmer.length) > teilnehmer.length ? `, ${dkoGroesse(teilnehmer.length) - teilnehmer.length} Freilose` : ''
+                      }, die letzten ${dkoEndrunde(teilnehmer.length)} spielen im einfachen KO.`
+                    : ''}
+                  {mitRating ? ' Die Ratings werden eingefroren, Gäste starten mit 500.' : ''}
+                </p>
+              ) : mehrgruppig ? (
                 <>
                   {zuviel.length > 0 && (
                     <p className="fehler">
@@ -2762,6 +3125,7 @@ export default function TurnierAnsicht({
                 <div key={zeile} className="filterzeile">
                   {istGruppenzeile(zeile) && <span className={`gruppenmarke gruppe-${zeile}`}>Gruppe {zeile}</span>}
                   {zeile === 'KO' && <span className="hinweis">KO-Runde:</span>}
+                  {DKO_ZEILEN.includes(zeile) && <span className="hinweis">{zeile}:</span>}
                   {abschnitte
                     .filter((a) => a.zeile === zeile)
                     .map((a) => (
@@ -2772,7 +3136,7 @@ export default function TurnierAnsicht({
                         title={`${a.titel} im Spielplan anzeigen`}
                         onClick={() => springen(a.schluessel)}
                       >
-                        {istGruppenzeile(zeile) ? a.titel.replace('Runde ', '') : a.titel}
+                        {istGruppenzeile(zeile) ? a.titel.replace('Runde ', '') : zeile !== 'Endrunde' && DKO_ZEILEN.includes(zeile) ? a.titel.replace(`${zeile} `, '') : a.titel}
                         {a.partien.every(beendetBei) ? ' ✓' : ''}
                       </button>
                     ))}
@@ -2816,7 +3180,7 @@ export default function TurnierAnsicht({
                               nameB={anzeige(p.spieler_b)}
                               tisch={p.tisch_id ? tische.get(p.tisch_id) ?? null : null}
                               laufend={laufendText(p)}
-                              bearbeitbar={bearbeitbar && !(istGruppenspiel(p) && mehrgruppig && gruppenGesperrt) && !koGesperrt(p)}
+                              bearbeitbar={bearbeitbar && !(istGruppenspiel(p) && mehrgruppig && gruppenGesperrt) && !koGesperrt(p) && !dkoGesperrt(p)}
                               mitVerlauf={darfLeiten}
                               mitVorgabe={mitRating}
                               speichern={(x, y) => void ergebnisSetzen(p, x, y)}
@@ -2847,7 +3211,91 @@ export default function TurnierAnsicht({
             </section>
           </div>
 
-          {mehrgruppig ? (
+          {dko ? (
+            <>
+              <section className="block">
+                <div className="bearbeitenkopf">
+                  <div className="kopflinks">
+                    <h2>
+                      Doppel-KO ({aufstellung.length} Spieler
+                      {dkoFest ? `, Baum für ${dkoGroesse(dkoFest.setzliste.length)}, die letzten ${dkoEndrunde(dkoFest.setzliste.length)} im KO` : ''})
+                    </h2>
+                    {bearbeitbar && (
+                      <button
+                        type="button"
+                        title="Race to je Abschnitt ändern: Gewinnerrunde, Verliererrunde, Viertelfinale, Halbfinale und Platz 3, Finale. Abschnitte, in denen schon gespielt wird, bleiben, wie sie sind."
+                        onClick={() => raceOeffnen()}
+                        disabled={arbeitet}
+                      >
+                        Race to ändern…
+                      </button>
+                    )}
+                  </div>
+                </div>
+                {dkoBaum ? (
+                  <>
+                    <DkoBaum
+                      baum={dkoBaum}
+                      anzeige={anzeige}
+                      raceFuer={raceDkoFuer}
+                      gesperrt={(id) => {
+                        const x = dkoPartien.find((k) => k.gruppe === id);
+                        return x !== undefined && dkoGesperrt(x);
+                      }}
+                    />
+                    <p className="hinweis">
+                      Die Ergebnisse stehen im Spielplan unter Gewinnerrunde, Verliererrunde und Endrunde. Ein Spiel erscheint
+                      dort und an den Tablets, sobald beide Spieler feststehen; Freilose werden nicht gespielt. Dafür muss
+                      diese Seite an einem Gerät der Turnierleitung geöffnet sein.
+                    </p>
+                  </>
+                ) : (
+                  <p className="hinweis">Der Baum entsteht beim Auslosen.</p>
+                )}
+              </section>
+              {dkoBaum && (
+                <section className="block">
+                  <h2>Endtabelle</h2>
+                  <table className="tabelle kompakt">
+                    <thead>
+                      <tr>
+                        <th className="platzspalte">Pl.</th>
+                        <th className="namenspalte">Name</th>
+                        <th>Wie</th>
+                        <th className="rechts">Spiele</th>
+                        <th className="rechts">Siege</th>
+                        <th className="rechts">Sätze</th>
+                        <th className="rechts" title="Gewonnene durch verlorene Sätze über das ganze Turnier, auf zwei Stellen (BLVN-STO Pool 3.4)">
+                          Quotient
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {dkoTabelle.map((z, i) => (
+                        <tr key={z.wer ?? `offen-${i}`} className={z.offen ? '' : 'gespielt'}>
+                          <td className="platzspalte">
+                            {z.zeigePlatz && <Platz platz={z.platz} medaille={turnier.status === 'beendet'} />}
+                          </td>
+                          <td>{z.wer ? anzeige(z.wer) : '–'}</td>
+                          <td className="hinweis">{z.wie}</td>
+                          <td className="rechts">{z.wer ? bilanzVon(z.wer).spiele : ''}</td>
+                          <td className="rechts">{z.wer ? bilanzVon(z.wer).siege : ''}</td>
+                          <td className="rechts">{z.wer ? `${bilanzVon(z.wer).gewonnen} : ${bilanzVon(z.wer).verloren}` : ''}</td>
+                          <td className="rechts">{z.wer ? quotientText(bilanzVon(z.wer)) : ''}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  <p className="hinweis">
+                    Plätze 1 bis 4 aus Finale und Spiel um Platz 3. Wer in derselben Runde ausscheidet, teilt sich den
+                    Platzbereich; innerhalb zählt der Quotient gewonnene durch verlorene Sätze, dann die Zahl gewonnener Sätze
+                    (BLVN-STO Pool 3.4). Sind beide gleich, teilen sich die Spieler den Platz. Spiele, Siege und Sätze zählen
+                    über das ganze Turnier, Freilose nicht.
+                  </p>
+                </section>
+              )}
+            </>
+          ) : mehrgruppig ? (
             <>
               {gruppenGesperrt && (
                 <p className="hinweis">
@@ -2875,7 +3323,9 @@ export default function TurnierAnsicht({
                         ? `Noch ${offenInGruppe(g)} Spiele offen. Ein Stichkampf wird erst angeboten, wenn alle Spiele der Gruppe beendet sind.`
                         : fixiert
                           ? `Gruppenplätze für ${zwei ? 'die Platzierungsduelle' : 'die KO-Runde'} fixiert.`
-                          : 'Reihenfolge: Punkte, Satzdifferenz, direkter Vergleich, danach Stichkampf.'}
+                          : saetzeZaehlen
+                    ? 'Reihenfolge: Punkte, Satzdifferenz, gewonnene Sätze, direkter Vergleich, danach Stichkampf.'
+                    : 'Reihenfolge: Punkte, Satzdifferenz, direkter Vergleich, danach Stichkampf.'}
                     </p>
                   </section>
                 ))}
@@ -3132,7 +3582,9 @@ export default function TurnierAnsicht({
               <p className="hinweis">
                 {offeneSpiele > 0
                   ? `Noch ${offeneSpiele} Spiele offen. Ein Stichkampf wird erst angeboten, wenn alle Spiele beendet sind.`
-                  : 'Reihenfolge: Punkte, Satzdifferenz, direkter Vergleich, danach Stichkampf.'}
+                  : saetzeZaehlen
+                    ? 'Reihenfolge: Punkte, Satzdifferenz, gewonnene Sätze, direkter Vergleich, danach Stichkampf.'
+                    : 'Reihenfolge: Punkte, Satzdifferenz, direkter Vergleich, danach Stichkampf.'}
               </p>
             </section>
           )}
@@ -3176,10 +3628,10 @@ export default function TurnierAnsicht({
         const anzahl = ankreuzen.ids.size;
         const grenzeText = modusOffen
           ? 'Der Modus wird danach passend zur Zahl vorgeschlagen.'
-          : mehrgruppig
+          : mehrgruppig || dko
             ? `${MODUS_TEXT[turnier.modus]}: ${grenzen[0]} bis ${grenzen[1]} Teilnehmer.`
             : 'Mindestens 3 Teilnehmer.';
-        const passt = modusOffen || (mehrgruppig ? anzahl >= grenzen[0] && anzahl <= grenzen[1] : anzahl >= 3);
+        const passt = modusOffen || (mehrgruppig || dko ? anzahl >= grenzen[0] && anzahl <= grenzen[1] : anzahl >= 3);
         return (
           <Modal breit abbrechen={() => !arbeitet && setAnkreuzen(null)}>
             <h2>Anwesende ankreuzen</h2>

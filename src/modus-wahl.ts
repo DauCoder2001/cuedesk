@@ -4,8 +4,9 @@
 
 import { zielGroessen } from './gruppen';
 import { KO_GRUPPEN, KO_MAX, KO_MIN, koSpiele, standardGruppenzahl, weiterPassend } from './ko';
+import { DKO_MAX, DKO_MIN, dkoSpielzahl } from './doppelko';
 
-export type WaehlbarerModus = 'einzelgruppe' | 'zwei-gruppen' | 'gruppen-ko';
+export type WaehlbarerModus = 'einzelgruppe' | 'zwei-gruppen' | 'gruppen-ko' | 'doppel-ko';
 
 export type ModusOption = {
   modus: WaehlbarerModus;
@@ -59,7 +60,12 @@ export function modusOptionen(anzahl: number): ModusOption[] {
       };
     }
   }
-  return [einzel, zwei, ko];
+  // Doppel-KO (STO 3.3) wird nur vorgeschlagen, wenn sonst nichts passt
+  const dko: ModusOption =
+    anzahl >= DKO_MIN && anzahl <= DKO_MAX
+      ? { modus: 'doppel-ko', passt: true, spiele: dkoSpielzahl(anzahl), grund: null }
+      : { modus: 'doppel-ko', passt: false, spiele: null, grund: `${DKO_MIN} bis ${DKO_MAX} Teilnehmer` };
+  return [einzel, zwei, ko, dko];
 }
 
 // Vorschlag nach den Grenzen des Vereins; passt er nicht, der naechste passende

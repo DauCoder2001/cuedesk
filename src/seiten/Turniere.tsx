@@ -52,6 +52,7 @@ export const MODUS_TEXT: Record<TurnierModus, string> = {
   einzelgruppe: 'Einzelgruppe',
   'zwei-gruppen': 'Zwei Gruppen',
   'gruppen-ko': 'Gruppen mit KO',
+  'doppel-ko': 'Doppel-KO',
   einzelspiel: 'Einzelspiel',
   liga: 'Liga-Spieltag',
   sonstiges: 'Sonstiges',
@@ -80,6 +81,11 @@ export type TurnierEinstellungen = {
   ko?: { seeds: string[]; option: number; gruppenzahl: number; weiter: number; reihung: Record<string, string[]> };
   phase3?: { reihung: string[]; abPlatz: number };
   nachgetragen?: { person: string; gruppe: string | null; zeit: string }[]; // Nachzuegler fuer den Bericht
+  // Doppel-KO (src/doppelko.ts): Race je Abschnitt, Gesetzte vor der Auslosung
+  // (Rang 1, 2 ...) und die beim Auslosen festgelegte Setzliste
+  raceDko?: { G?: number; V?: number; VF?: number; HF?: number; FIN?: number };
+  dkoGesetzt?: string[];
+  dko?: { setzliste: string[] };
   // Liga-Spieltag (Begegnung)
   liga?: {
     liga: LigaKennung;
@@ -167,6 +173,8 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
   const [raceTo, setRaceTo] = useState('5');
   const [racePhase2, setRacePhase2] = useState('5');
   const [raceKo, setRaceKo] = useState({ R16: '5', QF: '5', SF: '5', FIN: '5', P3: '5' });
+  // Doppel-KO: die Gewinnerrunde spielt mit Race to (raceTo)
+  const [raceDko, setRaceDko] = useState({ V: '5', VF: '5', HF: '5', FIN: '5' });
   const [liga, setLiga] = useState<LigaKennung>('kreisliga');
   const [spieltag, setSpieltag] = useState('1');
   const [heim, setHeim] = useState(true);
@@ -203,7 +211,7 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
   // Stand des Formulars; beim Oeffnen festgehalten, damit ein Wechsel nach
   // Aenderungen nachfragt
   const formularStand = formular
-    ? { name, datum, disziplin, modus, raceTo, racePhase2, raceKo, liga, spieltag, heim, gegner, eigeneMannschaft,
+    ? { name, datum, disziplin, modus, raceTo, racePhase2, raceKo, raceDko, liga, spieltag, heim, gegner, eigeneMannschaft,
         mannschaftId, ziele, mitDoppel, doppelZeilen, serieId, vorgabeAn, staerke, obergrenze, ratingWerten, art, chat, live,
         tvZiel, tvRace, tvTeamA, tvTeamB }
     : null;
@@ -260,11 +268,13 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
   // Bei "am Turniertag festlegen" gelten die Race-Felder aller Modi
   const mitZwei = modus === 'zwei-gruppen' || modus === 'offen';
   const mitKoFeldern = modus === 'gruppen-ko' || modus === 'offen';
+  const mitDkoFeldern = modus === 'doppel-ko' || modus === 'offen';
   const istTeam = modus === 'teamvergleich';
   const hinweisKurzesRace = kurzesRaceHinweis([
     Number(raceTo),
     ...(mitZwei ? [Number(racePhase2)] : []),
-    ...(mitKoFeldern ? Object.values(raceKo).map(Number) : [])
+    ...(mitKoFeldern ? Object.values(raceKo).map(Number) : []),
+    ...(mitDkoFeldern ? Object.values(raceDko).map(Number) : [])
   ]);
 
   async function anlegen() {
@@ -280,6 +290,10 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
     const ko = Object.fromEntries(Object.entries(raceKo).map(([k, v]) => [k, Number(v)]));
     if (mitKoFeldern && Object.values(ko).some((x) => !Number.isInteger(x) || x < 1 || x > 25)) {
       return pflicht.melden('Race to je Runde zwischen 1 und 25.');
+    }
+    const dko = Object.fromEntries(Object.entries(raceDko).map(([k, v]) => [k, Number(v)]));
+    if (mitDkoFeldern && Object.values(dko).some((x) => !Number.isInteger(x) || x < 1 || x > 25)) {
+      return pflicht.melden('Race to je Abschnitt zwischen 1 und 25.');
     }
     const eigeneZiele: Ausspielziele = {
       punkte141: Number(ziele.punkte141),
@@ -336,6 +350,7 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
       ...(mitKoFeldern
         ? { raceKo: { R16: ko.R16, QF: ko.QF, SF: ko.SF, FIN: ko.FIN }, racePhase3: ko.P3 }
         : {}),
+      ...(mitDkoFeldern ? { raceDko: { G: race, V: dko.V, VF: dko.VF, HF: dko.HF, FIN: dko.FIN } } : {}),
       vorgabe: {
         // In der Liga wird ohne Vorgabe gespielt (Ausschreibung, Abschnitt Modus)
         aktiv: modus === 'liga' || istTeam || !mitRating ? false : vorgabeAn,
@@ -407,6 +422,12 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
       FIN: String(e.raceKo?.FIN ?? race),
       P3: String(e.racePhase3 ?? race)
     });
+    setRaceDko({
+      V: String(e.raceDko?.V ?? race),
+      VF: String(e.raceDko?.VF ?? race),
+      HF: String(e.raceDko?.HF ?? race),
+      FIN: String(e.raceDko?.FIN ?? race)
+    });
     setSerieId(t.serie_id ?? '');
     setVorgabeAn(e.vorgabe?.aktiv ?? false);
     setStaerke(String(e.vorgabe?.staerke ?? ratingStaerke));
@@ -460,9 +481,9 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
     // Was das Formular festlegt, kommt neu; alles andere (Ausschreibung,
     // TV-Ansicht ...) bleibt. Bei neuem Modus fallen dessen Vorbereitungen weg.
     const behalten = { ...((aktuell.einstellungen ?? {}) as TurnierEinstellungen) };
-    const vomFormular: (keyof TurnierEinstellungen)[] = ['raceTo', 'racePhase2', 'raceKo', 'racePhase3', 'vorgabe', 'art', 'chat', 'live', 'disziplinOffen', 'modusOffen', 'teamvergleich'];
+    const vomFormular: (keyof TurnierEinstellungen)[] = ['raceTo', 'racePhase2', 'raceKo', 'racePhase3', 'raceDko', 'vorgabe', 'art', 'chat', 'live', 'disziplinOffen', 'modusOffen', 'teamvergleich'];
     const modusAbhaengig: (keyof TurnierEinstellungen)[] = [
-      'gruppenzahl', 'weiter', 'paarung', 'ko', 'phase2', 'phase3', 'handReihenfolge', 'tausch', 'nachgetragen'
+      'gruppenzahl', 'weiter', 'paarung', 'ko', 'phase2', 'phase3', 'handReihenfolge', 'tausch', 'nachgetragen', 'dko', 'dkoGesetzt'
     ];
     for (const k of [...vomFormular, ...(modusNeu ? modusAbhaengig : [])]) delete behalten[k];
     const { error } = await supabase
@@ -624,6 +645,7 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
                   setRaceTo(race);
                   setRacePhase2(race);
                   setRaceKo({ R16: race, QF: race, SF: race, FIN: race, P3: race });
+                  setRaceDko({ V: race, VF: race, HF: race, FIN: race });
                   setVorgabeAn(t.vorgabe);
                   setStaerke(String(t.staerke ?? ratingStaerke));
                   setObergrenze(String(t.obergrenze));
@@ -723,6 +745,7 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
                   <option value="einzelgruppe">Einzelgruppe (jeder gegen jeden)</option>
                   <option value="zwei-gruppen">Zwei Gruppen mit Platzierungsduellen</option>
                   <option value="gruppen-ko">Gruppen mit KO-Runde</option>
+                  <option value="doppel-ko">Doppel-KO (zwei Niederlagen, letzte 4 bzw. 8 im KO)</option>
                   <option value="offen">{MODUS_OFFEN_TEXT} (nach Teilnehmerzahl)</option>
                   {!bearbeitet && <option value="liga">Liga-Spieltag (Begegnung)</option>}
                   {(!bearbeitet || bearbeitet.modus === 'teamvergleich') && (
@@ -811,7 +834,15 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
               )}
               {modus !== 'liga' && !istTeam && (
               <label className="feld s">
-                <span>{modus === 'einzelgruppe' ? 'Race to' : modus === 'offen' ? 'Race to (Einzelgruppe bzw. Gruppenphase)' : 'Race to Gruppenphase'}</span>
+                <span>
+                  {modus === 'einzelgruppe'
+                    ? 'Race to'
+                    : modus === 'doppel-ko'
+                      ? 'Race to Gewinnerrunde'
+                      : modus === 'offen'
+                        ? 'Race to (Einzelgruppe, Gruppenphase bzw. Gewinnerrunde)'
+                        : 'Race to Gruppenphase'}
+                </span>
                 <input inputMode="numeric" required value={raceTo} onChange={(e) => setRaceTo(e.target.value)} />
               </label>
               )}
@@ -862,6 +893,20 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
                   <label key={k} className="feld s">
                     <span>{text}</span>
                     <input inputMode="numeric" required value={raceKo[k]} onChange={(e) => setRaceKo({ ...raceKo, [k]: e.target.value })} />
+                  </label>
+                ))}
+              {mitDkoFeldern &&
+                (
+                  [
+                    ['V', 'Race to Verliererrunde', 'Doppel-KO: alle Spiele derer, die schon einmal verloren haben.'],
+                    ['VF', 'Race to Viertelfinale (Doppel-KO)', 'Nur ab 24 Spielern: Dann spielen die letzten 8 im einfachen KO, beginnend mit dem Viertelfinale.'],
+                    ['HF', 'Race to Halbfinale und Platz 3 (Doppel-KO)', 'Doppel-KO: Halbfinale und Spiel um Platz 3.'],
+                    ['FIN', 'Race to Finale (Doppel-KO)', 'Doppel-KO: das Finale.']
+                  ] as const
+                ).map(([k, text, tipp]) => (
+                  <label key={`dko-${k}`} className="feld s" title={tipp}>
+                    <span>{modus === 'offen' ? text : text.replace(' (Doppel-KO)', '')}</span>
+                    <input inputMode="numeric" required value={raceDko[k]} onChange={(e) => setRaceDko({ ...raceDko, [k]: e.target.value })} />
                   </label>
                 ))}
               {!istTeam && (

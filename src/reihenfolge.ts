@@ -24,7 +24,7 @@ export const rundenSchluessel = (gruppe: string | null | undefined, runde: numbe
 
 // Nur die Gruppenphase wird umsortiert; Duelle, KO und Phase 3 folgen danach
 export const istGruppenrunde = (p: Pick<GruppenPartie, 'phase'>) =>
-  p.phase !== 'phase2' && p.phase !== 'phase3' && p.phase !== 'ko';
+  p.phase !== 'phase2' && p.phase !== 'phase3' && p.phase !== 'ko' && p.phase !== 'dko';
 
 // Platz jeder Gruppenrunde (Schluessel rundenSchluessel) in der Liste, ab 0
 export function rundenFolge(partien: GruppenPartie[], art: Reihenfolge = 'abwechselnd'): Map<string, number> {

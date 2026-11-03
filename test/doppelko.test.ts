@@ -1,11 +1,14 @@
 import { describe, expect, test } from 'vitest';
 import {
+  dkoAbschnitt,
   dkoAufloesen,
   dkoAuslosen,
   dkoEndrunde,
   dkoEndtabelle,
   dkoGroesse,
   dkoSpiele,
+  dkoSpielName,
+  dkoSpielzahl,
   dkoStartplaetze,
   quotient,
   setzReihenfolge
@@ -136,5 +139,30 @@ describe('Endtabelle', () => {
     ]);
     expect(quotient({ gewonnen: 7, verloren: 3 })).toBe(2.33);
     expect(quotient({ gewonnen: 3, verloren: 0 })).toBe(Number.POSITIVE_INFINITY);
+  });
+});
+
+describe('Spielplan', () => {
+  test('Abschnitte, Reihenfolge und Namen', () => {
+    expect(dkoAbschnitt('g1-3')).toEqual({ titel: 'Gewinnerrunde 1', stufe: 0 });
+    expect(dkoAbschnitt('v1-2')).toEqual({ titel: 'Verliererrunde 1', stufe: 1 });
+    expect(dkoAbschnitt('g2-1')).toEqual({ titel: 'Gewinnerrunde 2', stufe: 2 });
+    expect(dkoAbschnitt('v2-1').stufe).toBe(3);
+    expect(dkoAbschnitt('fin').titel).toBe('Finale und Platz 3');
+    expect(['g1-2', 'v3-1', 'vf2', 'hf1', 'fin', 'p3'].map(dkoSpielName)).toEqual([
+      'Gewinnerrunde 1 · Spiel 2',
+      'Verliererrunde 3 · Spiel 1',
+      'Viertelfinale 2',
+      'Halbfinale 1',
+      'Finale',
+      'Spiel um Platz 3'
+    ]);
+  });
+
+  test('Spielzahl ohne Freilose', () => {
+    expect(dkoSpielzahl(8)).toBe(14);
+    expect(dkoSpielzahl(16)).toBe(30);
+    // 9 Spieler: weniger als im vollen Baum fuer 16
+    expect(dkoSpielzahl(9)).toBeLessThan(30);
   });
 });

@@ -57,7 +57,7 @@ export const STANDARD_EINSTELLUNGEN: VereinsEinstellungen = {
 };
 
 const DISZIPLINEN: Disziplin[] = ['8-ball', '9-ball', '10-ball'];
-const MODI: TurnierModus[] = ['einzelgruppe', 'zwei-gruppen', 'gruppen-ko', 'liga'];
+const MODI: TurnierModus[] = ['einzelgruppe', 'zwei-gruppen', 'gruppen-ko', 'doppel-ko', 'liga'];
 const LIGEN: LigaKennung[] = ['kreisklasse', 'kreisliga', 'bezirksliga', 'landesliga', 'spass'];
 
 const ganzeZahl = (wert: unknown, von: number, bis: number): number | null =>
