@@ -8,7 +8,8 @@
   <!-- "TV zeigt: Nächste Spiele": die naechsten sechs offenen Paarungen in der
        Reihenfolge der Spielplan-Liste, mit Hinweis, wer gerade noch an einem
        anderen Tisch spielt. Gerechnet in js/turnier-plan.ts (naechsteSpiele),
-       Daten aus tournament/active. Stil wie die anderen TV-Seiten. -->
+       Daten aus tournament/active. Offene Stichkaempfe (src/stichkampf.ts) stehen
+       als gelb umrandete Kachel ganz oben. Stil wie die anderen TV-Seiten. -->
   <style>
     * { box-sizing: border-box; }
     body { font-family: Arial, sans-serif; background: #111; color: #fff; margin: 0; height: 100vh; overflow: hidden; }
@@ -40,6 +41,11 @@
     .wartet { color: #e0b050; }
     .fuss { margin-top: 3vh; color: #888; font-size: 2.4vh; }
     .empty { text-align: center; color: #666; font-size: 4vh; margin-top: 18vh; }
+    /* Offener Stichkampf: ganz oben, gelb umrandet */
+    .stich { background: #3a2c08; border: 2px solid #f2a900; border-radius: 12px; padding: 2vh 2vw; }
+    .stich .skopf { color: #f2c200; font-size: 2.4vh; font-weight: bold; letter-spacing: 2px; }
+    .stich .snamen { font-size: 4.4vh; font-weight: bold; margin: 0.6vh 0; }
+    .stich .sfuss { color: #c9b27a; font-size: 2.2vh; }
   </style>
 </head>
 <body>
@@ -100,8 +106,14 @@
       const fertig = alle.filter((e) => e.status === 'completed').length;
       subEl.textContent = t ? [t.name, alle.length ? fertig + ' von ' + alle.length + ' beendet' : ''].filter(Boolean).join(' · ') : '';
 
-      const spiele = naechsteSpiele(plan, 6);
-      if (spiele.length === 0) {
+      // Offene Stichkaempfe zuerst; sie zaehlen zu den sechs Plaetzen
+      const stich = t && Array.isArray(t.stichkaempfe) ? t.stichkaempfe : [];
+      const stichHtml = stich.map((s) =>
+        '<div class="stich"><div class="skopf">STICHKAMPF · ' + esc(s.plaetze) + '</div>'
+        + '<div class="snamen">' + (s.names || []).map(esc).join(s.names && s.names.length === 2 ? ' – ' : ' · ') + '</div>'
+        + '<div class="sfuss">' + (s.group ? esc(s.group) + ' · ' : '') + 'Shoot-Out</div></div>').join('');
+      const spiele = naechsteSpiele(plan, Math.max(0, 6 - stich.length));
+      if (spiele.length === 0 && stich.length === 0) {
         listeEl.innerHTML = '';
         fussEl.textContent = '';
         emptyEl.textContent = !t ? 'Gerade läuft kein Turnier.' : alle.some((e) => e.status === 'running') ? 'Alle Spiele sind vergeben.' : 'Keine offenen Spiele.';
@@ -111,7 +123,7 @@
       }
       emptyEl.style.display = 'none';
 
-      listeEl.innerHTML = spiele.map(({ eintrag: e, belegt }) => {
+      listeEl.innerHTML = stichHtml + spiele.map(({ eintrag: e, belegt }) => {
         const marke = [e.begegnung, e.group].filter(Boolean).join(' · ');
         const zustand = belegt.length === 0
           ? '<span class="bereit">bereit</span>'

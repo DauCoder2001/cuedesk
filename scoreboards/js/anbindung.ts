@@ -800,6 +800,18 @@ async function turnierLaden(): Promise<void> {
           type: t.name,
           discipline: disziplin,
           eventDate: new Date(`${t.datum}T12:00:00`).toLocaleDateString('de-DE'),
+          // Offene Stichkaempfe fuer "Naechste Spiele" (wie der Hinweis in der Turnieransicht)
+          stichkaempfe: stichkaempfeImTurnier(
+            t.modus,
+            t.einstellungen as TurnierEinstellungen,
+            aufstellung,
+            partien as unknown as StichkampfPartie[],
+            mitGewonnenenSaetzen(t.datum)
+          ).map((s) => ({
+            group: s.gruppe ? `Gruppe ${s.gruppe}` : null,
+            plaetze: plaetzeText(s),
+            names: s.personen.map(name)
+          })),
           players: Object.fromEntries(
             (teamTV ? teamTV.spieler : aufstellung).map((x) => [x.id, { name: name(x.id), group: x.gruppe ? 'ABCD'.indexOf(x.gruppe) + 1 : 1 }])
           ),
@@ -1247,7 +1259,9 @@ import { neueKennung } from './kennung';
 import { teamstandAnzeige } from '../../src/teamvergleich';
 import type { TeamstandAnzeige, TeamvergleichEinstellungen } from '../../src/teamvergleich';
 import { vorlaeufigeEndplaetze } from '../../src/endplaetze';
-import { spielBeendet } from '../../src/turnier';
+import { mitGewonnenenSaetzen, spielBeendet } from '../../src/turnier';
+import { plaetzeText, stichkaempfeImTurnier } from '../../src/stichkampf';
+import type { StichkampfPartie } from '../../src/stichkampf';
 import type { EndplatzPartie, EndplatzZeile, VorlaeufigeEndplaetze } from '../../src/endplaetze';
 import type { TurnierEinstellungen } from '../../src/seiten/Turniere';
 import type { Gestartet, PlanEintrag, PlanPartie, TabletTeams, TabletTurnier, TvErgebnis, Verdeckt } from './turnier-plan';

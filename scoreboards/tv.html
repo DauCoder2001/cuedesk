@@ -123,6 +123,11 @@
     .naechste-karte .bereit { color: #22c55e; }
     .naechste-karte .wartet { color: #e0b050; }
     .naechste-karte .leer { color: #666; font-size: 3vh; margin: auto; text-align: center; }
+    /* Offener Stichkampf: ganz oben, gelb umrandet */
+    .naechste-karte .stich { background: #3a2c08; border: 2px solid #f2a900; border-radius: 8px; padding: 1vh 1vw; }
+    .naechste-karte .stich .skopf { color: #f2c200; font-size: 1.5vh; font-weight: bold; letter-spacing: 1px; }
+    .naechste-karte .stich .snamen { font-size: 2.6vh; font-weight: bold; }
+    .naechste-karte .stich .sfuss { color: #c9b27a; font-size: 1.4vh; }
     /* 5 Tische (3x2): kleinere Kachel, kleinere Schrift */
     .naechste-karte.klein .paar { font-size: 2.2vh; }
     .naechste-karte.klein .titel { font-size: 2.6vh; }
@@ -209,15 +214,21 @@
       const alle = plan ? Object.values(plan) : [];
       const fertig = alle.filter((e) => e.status === 'completed').length;
       const sub = [t.name, alle.length ? fertig + ' von ' + alle.length + ' beendet' : ''].filter(Boolean).join(' · ');
-      const spiele = naechsteSpiele(plan, nummern.length === 5 ? 4 : 6);
+      // Offene Stichkaempfe zuerst; sie zaehlen zu den freien Plaetzen
+      const stich = Array.isArray(t.stichkaempfe) ? t.stichkaempfe : [];
+      const stichHtml = stich.map((s) =>
+        '<div class="stich"><div class="skopf">STICHKAMPF · ' + esc(s.plaetze) + '</div>'
+        + '<div class="snamen">' + (s.names || []).map(esc).join(s.names && s.names.length === 2 ? ' – ' : ' · ') + '</div>'
+        + '<div class="sfuss">' + (s.group ? esc(s.group) + ' · ' : '') + 'Shoot-Out</div></div>').join('');
+      const spiele = naechsteSpiele(plan, Math.max(0, (nummern.length === 5 ? 4 : 6) - stich.length));
       const farbe = (group) => {
         const g = /^Gruppe ([A-D])\b/.exec(group || '');
         return g ? 'gruppe-' + g[1] : 'gruppe-neutral';
       };
       const tischText = (n) => (n ? 'an Tisch ' + esc(n) : 'an einem anderen Tisch');
-      const liste = spiele.length === 0
+      const liste = spiele.length === 0 && stich.length === 0
         ? '<div class="leer">' + (alle.some((e) => e.status === 'running') ? 'Alle Spiele zugeteilt' : 'Keine offenen Spiele') + '</div>'
-        : '<div class="liste">' + spiele.map(({ eintrag: e, belegt }) => {
+        : '<div class="liste">' + stichHtml + spiele.map(({ eintrag: e, belegt }) => {
             const marke = [e.begegnung, e.group].filter(Boolean).join(' · ');
             const zustand = belegt.length === 0
               ? '<span class="bereit">bereit</span>'

@@ -600,7 +600,12 @@ tr.gestrichen td.disziplin { text-decoration: line-through; }
 .endstand small { color: var(--text-leise); }
 .bemerkung { display: block; margin: 12px 0 6px; }
 .bemerkung textarea { display: block; width: 100%; max-width: 560px; margin-top: 4px; font: inherit; font-size: 15px; color: var(--text); border: 1px solid var(--rand); border-radius: var(--radius); padding: 7px 10px; resize: vertical; }
-.marke.stichkampf { color: #854f0b; border-color: #e8cfa3; }
+.marke.stichkampf { color: #fff; background: #d97706; border-color: #d97706; font-weight: bold; }
+/* Offener Stichkampf: Zeilen in der Tabelle und Hinweis oben im Spielplan */
+.tabelle tr.stichkampfzeile td { background: #fff4d6; }
+.stichkampfkasten { background: #fff4d6; border: 1px solid #f0c36a; border-radius: 8px; padding: 8px 12px; margin-bottom: 12px; }
+.stichkampfkasten p { margin: 2px 0; }
+.stichkampfkasten .zeile { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-top: 6px; }
 .gefahrknopf { color: var(--fehler); border-color: #e7bcbc; white-space: nowrap; }
 /* Orange: aus einer Liste nehmen, laesst sich wieder hinzufuegen */
 .entfernknopf { color: #8a4f0b; border-color: #efc68a; white-space: nowrap; }

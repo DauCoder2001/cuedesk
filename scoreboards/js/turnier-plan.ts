@@ -76,6 +76,8 @@ export type TabletTurnier = {
   discipline?: string;
   eventDate?: string;
   players?: Record<string, { name: string; group: number }>;
+  // Offene Stichkaempfe (TV "Naechste Spiele" und "Live + Naechste": Kachel ganz oben)
+  stichkaempfe?: { group: string | null; plaetze: string; names: string[] }[];
 };
 
 // Turnier-Ergebnis fuer den Fernseher (Pool-TS: tournament_archive)

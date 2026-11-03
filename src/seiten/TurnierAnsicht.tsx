@@ -10,6 +10,7 @@ import type { BerichtBlock } from '../turnierbericht';
 import { herunterladen } from '../pdf';
 import { DATEI_MODI, dateiBauen, dateiHerunterladen, disziplinText, kennungVon, phaseText } from '../turnier-datei';
 import { VERSION } from '../version';
+import { offeneStichkaempfe as stichkaempfeDerTabellen, plaetzeText } from '../stichkampf';
 import AusschreibungBlock from './AusschreibungBlock';
 import AuslosungTeilen from './AuslosungTeilen';
 import LiveSchalter from './LiveSchalter';
@@ -2442,7 +2443,19 @@ export default function TurnierAnsicht({
   const zeilenDerAbschnitte = [...new Set(abschnitte.map((a) => a.zeile))];
   // Gruppenplaetze fixiert (Phase 2 oder KO-Runde gestartet)
   const fixiert = Boolean(einstellungen.phase2 || koFest);
-  const feld = koFest ? koFest.gruppenzahl * koFest.weiter : (weiter ?? 0) * gruppenzahl;
+  // Offene Stichkaempfe je Gruppe, sobald deren Spiele beendet sind (Hinweis
+  // oben im Spielplan, gruen als naechster Schritt; dieselben am Fernseher)
+  const stichkaempfe =
+    turnier.status !== 'laeuft' || !(turnier.modus === 'einzelgruppe' || mehrgruppig)
+      ? []
+      : stichkaempfeDerTabellen(
+          mehrgruppig
+            ? gruppenNamen.map((g) => ({ gruppe: g, gleichstaende: gruppenTabellen[g].gleichstaende, fertig: offenInGruppe(g) === 0 && !fixiert }))
+            : [{ gruppe: null, gleichstaende: tabelle.gleichstaende, fertig: alleFertig }]
+        );
+  const zurTabelle = (gruppe: string | null) =>
+    document.getElementById(gruppe ? `tabelle-${gruppe}` : 'tabelle-gesamt')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  const feld =koFest ? koFest.gruppenzahl * koFest.weiter : (weiter ?? 0) * gruppenzahl;
   // Alle Races, die in diesem Turnier tatsaechlich gespielt werden
   const hinweisKurzesRace = kurzesRaceHinweis([
     raceTo,
@@ -2521,10 +2534,12 @@ export default function TurnierAnsicht({
 
   // Naechster Schritt gruen hinterlegt (faellig), immer nur einer. Die
   // Platzierungsspiele bei Gruppen mit KO sind freiwillig und bleiben ohne.
-  const naechsterSchritt: 'disziplin' | 'modus' | 'auslosen' | 'duelle' | 'ko' | 'abschliessen' | null =
+  const naechsterSchritt: 'disziplin' | 'modus' | 'auslosen' | 'stichkampf' | 'duelle' | 'ko' | 'abschliessen' | null =
     !bearbeitbar || ungespeichert
       ? null
-      : turnier.status === 'geplant'
+      : stichkaempfe.length > 0
+        ? 'stichkampf'
+        : turnier.status === 'geplant'
         ? disziplinOffen && festDisziplin
           ? 'disziplin'
           : modusOffen
@@ -3330,6 +3345,27 @@ export default function TurnierAnsicht({
             </section>
 
             <section className="block">
+              {stichkaempfe.length > 0 && (
+                <div className="stichkampfkasten">
+                  {stichkaempfe.map((s) => (
+                    <p key={`${s.gruppe ?? ''}-${s.von}`}>
+                      <strong>Stichkampf offen:</strong> {plaetzeText(s)}
+                      {s.gruppe ? ` (Gruppe ${s.gruppe})` : ''} · {s.positionen.map(tabellenname).join(s.positionen.length === 2 ? ' und ' : ', ')}
+                    </p>
+                  ))}
+                  <p className="zeile">
+                    <span>Nach dem Shoot-Out die Reihenfolge in der Tabelle mit ↑ ↓ festlegen.</span>
+                    <button
+                      type="button"
+                      className={faellig('stichkampf')}
+                      title="Springt zur Tabelle mit dem offenen Stichkampf. Dort mit ↑ ↓ die Reihenfolge nach dem Shoot-Out festlegen; danach geht es mit dem nächsten Schritt weiter."
+                      onClick={() => zurTabelle(stichkaempfe[0].gruppe)}
+                    >
+                      Zur Tabelle
+                    </button>
+                  </p>
+                </div>
+              )}
               <div className="bearbeitenkopf">
                 <h2>Spielplan</h2>
                 {mehrgruppig && (
@@ -3547,7 +3583,7 @@ export default function TurnierAnsicht({
               )}
               <div className="gruppenraster">
                 {gruppenNamen.map((g) => (
-                  <section key={g} className="block">
+                  <section key={g} id={`tabelle-${g}`} className="block">
                     <h2>
                       Gruppe {g}
                       {turnier.status === 'laeuft' && !fixiert ? ' (live)' : ''}
@@ -3810,7 +3846,7 @@ export default function TurnierAnsicht({
               )}
             </>
           ) : (
-            <section className="block">
+            <section id="tabelle-gesamt" className="block">
               <h2>{turnier.status === 'beendet' ? 'Endtabelle' : turnier.status === 'laeuft' ? 'Tabelle (live)' : 'Tabelle'}</h2>
               <Tabelle
                 saetze={saetzeZaehlen}
@@ -4240,7 +4276,7 @@ function Tabelle(props: {
             props.setzen(gruppe.schluessel, r);
           };
           return (
-            <tr key={z.pos}>
+            <tr key={z.pos} className={gruppe && !gruppe.entschieden ? 'stichkampfzeile' : undefined}>
               <td className="platzspalte">
                 <Platz platz={i + 1} medaille={props.medaillen === true} />
               </td>
