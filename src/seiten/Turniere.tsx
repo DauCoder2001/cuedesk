@@ -81,6 +81,9 @@ export type TurnierEinstellungen = {
   ko?: { seeds: string[]; option: number; gruppenzahl: number; weiter: number; reihung: Record<string, string[]> };
   phase3?: { reihung: string[]; abPlatz: number };
   nachgetragen?: { person: string; gruppe: string | null; zeit: string }[]; // Nachzuegler fuer den Bericht
+  // Aufgabe: Wer hier steht, verliert alle offenen und kuenftigen Spiele
+  // kampflos (Race to : 0, nicht fuers Rating); Reihenfolge = Zeitpunkt
+  aufgaben?: { person: string; zeit: string; grund?: string }[];
   // Doppel-KO (src/doppelko.ts): Race je Abschnitt, Gesetzte vor der Auslosung
   // (Rang 1, 2 ...) und die beim Auslosen festgelegte Setzliste
   raceDko?: { G?: number; V?: number; VF?: number; HF?: number; FIN?: number };

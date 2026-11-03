@@ -17,6 +17,7 @@ import { ratingAn, vereinsEinstellungen } from '../vereinseinstellungen';
 import type { TurnierEinstellungen } from './Turniere';
 import type { Partie, Person, Turnier, TurnierTeilnehmer } from '../datenbank.types';
 import { useEtwasUngespeichert } from '../ungespeichert';
+import { unberuehrt } from '../partie-zuruecksetzen';
 
 // Teamvergleich (Mosconi-Format). Vorbereitung: Teams zusammenstellen,
 // Kapitaene festlegen, Spielplan vorschlagen lassen, anpassen und uebernehmen.
@@ -368,6 +369,38 @@ export default function TeamvergleichAnsicht({
     await laden();
   }
 
+  // Start zuruecknehmen, solange kein Match begonnen hat (wie "Auslosung
+  // zuruecknehmen" im Turnier). Der Spielplan bleibt, er ist von Hand gebaut.
+  async function startZuruecknehmen() {
+    if (!turnier) return;
+    setFehler(null);
+    if (
+      !(await fragen(
+        `Start von „${turnier.name}“ zurücknehmen?\nDie Matches verschwinden wieder von den Tablets, der Teamvergleich steht wieder auf „in Vorbereitung“. Teams und Spielplan bleiben und lassen sich wieder ändern.`,
+        'Zurücknehmen'
+      ))
+    ) {
+      return;
+    }
+    setArbeitet(true);
+    // Frisch nachsehen: Hat inzwischen ein Tablet ein Match gestartet, bleibt alles
+    const { data: aktuell, error: lesefehler } = await supabase.from('partien').select('*').eq('turnier_id', turnier.id);
+    if (lesefehler || !aktuell || !aktuell.every(unberuehrt)) {
+      setArbeitet(false);
+      await laden();
+      return setFehler(lesefehler?.message ?? 'Inzwischen hat ein Match begonnen. Der Start lässt sich nicht mehr zurücknehmen.');
+    }
+    const neu: TurnierEinstellungen = { ...einstellungen, teamvergleich: { ...tv, freigegeben: 0 } };
+    delete neu.tvAnsicht;
+    delete neu.tvLiveGewechselt;
+    delete neu.beginn;
+    const { error } = await supabase.from('turniere').update({ status: 'geplant', einstellungen: neu }).eq('id', turnier.id);
+    setArbeitet(false);
+    if (error) return setFehler(error.message);
+    setMeldung('Start zurückgenommen. Der Teamvergleich steht wieder auf „in Vorbereitung“.');
+    await laden();
+  }
+
   async function blockFreigeben(nr: number) {
     if (!turnier) return;
     setFehler(null);
@@ -698,6 +731,17 @@ export default function TeamvergleichAnsicht({
               <button type="button" className={faellig('abschliessen')} disabled={arbeitet} title="Beendet den Teamvergleich und sperrt die Ergebnisse. Offene Matches entfallen." onClick={() => void abschliessen()}>
                 Teamvergleich abschließen
               </button>
+              {partien.every(unberuehrt) && (
+                <button
+                  type="button"
+                  className="gefahrknopf"
+                  disabled={arbeitet}
+                  title="Nimmt den Start zurück, solange noch kein Match begonnen hat: Die Matches verschwinden wieder von den Tablets, der Teamvergleich steht wieder auf „in Vorbereitung“. Teams und Spielplan bleiben und lassen sich wieder ändern."
+                  onClick={() => void startZuruecknehmen()}
+                >
+                  Start zurücknehmen
+                </button>
+              )}
             </div>
           )}
           {bearbeitbar && (

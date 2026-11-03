@@ -20,7 +20,7 @@ import { andererLaufender, laeuftSchonText } from '../laufend';
 import Platz from './Platz';
 import { diffText, LEERE_BILANZ, turnierBilanz } from '../turnier-bilanz';
 import ZuruecksetzenDialog from './ZuruecksetzenDialog';
-import { zuruecksetzbar } from '../partie-zuruecksetzen';
+import { unberuehrt, zuruecksetzbar } from '../partie-zuruecksetzen';
 import { gemeinsamePartie, istMarkiert, markierungUmschalten } from '../markierung';
 import { mitSpielern } from '../partie-spieler';
 import type { SpielerPartie } from '../partie-spieler';
@@ -126,9 +126,7 @@ function dkoArtVon(p: { gruppe: string | null }): DkoArt {
 }
 const KO_ABSCHNITT: Record<string, string> = { af: 'Achtelfinale', qf: 'Viertelfinale', sf: 'Halbfinale', fin: 'Finale und Platz 3', bro: 'Finale und Platz 3' };
 const istGruppenspiel = (p: TPartie) => !p.phase || p.phase === 'gruppe';
-// Noch nicht begonnen: kein Ergebnis, kein Tisch, kein Start am Tablet
-const unberuehrt = (p: { status: string; tisch_id: string | null; ergebnis_a: number | null; ergebnis_b: number | null; begonnen: string | null }) =>
-  p.status === 'geplant' && p.tisch_id === null && p.ergebnis_a === null && p.ergebnis_b === null && p.begonnen === null;const istGruppenzeile = (zeile: string) => /^[A-D]$/.test(zeile);
+const istGruppenzeile = (zeile: string) => /^[A-D]$/.test(zeile);
 
 type Aenderungszeile = { zeitpunkt: string; nachher: Partial<TPartie> | null; aktion: string };
 type Rueckgaengig = { partieId: string; vorher: Pick<TPartie, 'ergebnis_a' | 'ergebnis_b' | 'status' | 'beendet'> };
@@ -205,6 +203,7 @@ export default function TurnierAnsicht({
   const [verlauf, setVerlauf] = useState<{ partie: TPartie; zeilen: Aenderungszeile[] } | null>(null);
   const [stapel, setStapel] = useState<Rueckgaengig[]>([]);
   const [ruecksetzPartie, setRuecksetzPartie] = useState<TPartie | null>(null); // Partie zuruecksetzen (Dialog)
+  const [aufgabeDialog, setAufgabeDialog] = useState<{ person: string; grund: string } | null>(null); // Aufgabe eines Spielers
   const [rueckfrage, fragen] = useRueckfrage();
   // Rating-Spalte der Teilnehmer ausblenden (etwa am Laptop, den die Spieler
   // sehen); je Geraet gemerkt, fuer alle Turniere
@@ -229,6 +228,9 @@ export default function TurnierAnsicht({
   const [, setTakt] = useState(0);
   // KO-Abgleich fuer den Echtzeit-Kanal; wird bei jedem Zeichnen neu gesetzt
   const abgleichRef = useRef<(liste: TPartie[]) => Promise<void>>(async () => {});
+  // Aufgaben: offene Spiele Aufgegebener kampflos werten (wird beim Zeichnen gesetzt)
+  const aufgabeRef = useRef<(liste: TPartie[]) => Promise<void>>(async () => {});
+  const aufgabeArbeitet = useRef(false);
 
   // Zeitprognose haengt an der Uhr, nicht nur an Eingaben
   useEffect(() => {
@@ -556,6 +558,19 @@ export default function TurnierAnsicht({
         const f = dkoPartien.find((x) => x.gruppe === s.id);
         return f !== undefined && (begonnen(f) || f.tisch_id !== null);
       });
+
+  // Aufgaben: Liegt ein offenes Spiel eines Aufgegebenen vor (auch ein gerade
+  // angelegtes KO-Spiel), wertet es das Notebook der Turnierleitung kampflos
+  const aufgaben = useMemo(() => einstellungen.aufgaben ?? [], [einstellungen.aufgaben]);
+  useEffect(() => {
+    if (turnier?.status !== 'laeuft' || aufgaben.length === 0 || aufgabeArbeitet.current) return;
+    const weg = new Set(aufgaben.map((a) => a.person));
+    if (!partien.some((p) => unberuehrt(p) && (weg.has(p.spieler_a) || weg.has(p.spieler_b)))) return;
+    aufgabeArbeitet.current = true;
+    void aufgabeRef.current(partien).finally(() => {
+      aufgabeArbeitet.current = false;
+    });
+  }, [partien, aufgaben, turnier?.status]);
 
   // Zwei Gruppen: Endtabelle aus den Duellen; ein unberuehrtes Duell steht
   // auf der Vorgabe (wie in v64 vorbelegt)
@@ -1196,6 +1211,11 @@ export default function TurnierAnsicht({
           }.`
       );
 
+    // Aufgaben mit Uhrzeit und Grund
+    const aufgabeHinweise = aufgaben.map(
+      (a) => `${uhr(Date.parse(a.zeit))} Uhr: ${anzeige(a.person)} hat aufgegeben${a.grund ? ` (${a.grund})` : ''}; die offenen Spiele zählen kampflos.`
+    );
+
     // Turnierart vorn in der Kopfzeile, z. B. "Liga-Spiel · 9-Ball · ..."
     const artVorsatz = einstellungen.art ? `${einstellungen.art} · ` : '';
 
@@ -1274,7 +1294,7 @@ export default function TurnierAnsicht({
       const kopf =
         `Doppel-KO · ${DISZIPLIN_TEXT[turnier.disziplin]} · Race to ${races} · ` +
         `${n} Teilnehmer, Baum für ${dkoGroesse(n)}, die letzten ${dkoEndrunde(n)} im KO · ${datumText}${zeit}${handicap}`;
-      const bytes = gruppenBerichtPdf({ titel: turnier.name, kopf: artVorsatz + kopf, vorlaeufig: turnier.status !== 'beendet', bloecke, hinweise: [] });
+      const bytes = gruppenBerichtPdf({ titel: turnier.name, kopf: artVorsatz + kopf, vorlaeufig: turnier.status !== 'beendet', bloecke, hinweise: aufgabeHinweise });
       herunterladen(bytes, berichtDateiname(turnier.name, turnier.datum));
       return;
     }
@@ -1285,7 +1305,7 @@ export default function TurnierAnsicht({
         kopf: `${artVorsatz}${DISZIPLIN_TEXT[turnier.disziplin]} · Race to ${raceTo} · ${aufstellung.length} Spieler · ${datumText}${zeit}${handicap}`,
         vorlaeufig: turnier.status !== 'beendet',
         zeilen: tabelle.zeilen.map((zeile, i) => berichtZeile(zeile, i + 1)),
-        stichkampf: alleFertig ? stichkampfVermerke(tabelle.gleichstaende) : [],
+        stichkampf: [...(alleFertig ? stichkampfVermerke(tabelle.gleichstaende) : []), ...aufgabeHinweise],
         runden: abschnitte.map((x) => ({ name: x.titel, spiele: x.partien.map(spiel) }))
       });
       herunterladen(bytes, berichtDateiname(turnier.name, turnier.datum));
@@ -1485,6 +1505,7 @@ export default function TurnierAnsicht({
         )
       );
     }
+    hinweise.push(...aufgabeHinweise);
     (einstellungen.nachgetragen ?? []).forEach((x) =>
       hinweise.push(`${uhr(Date.parse(x.zeit))} Uhr: ${anzeige(x.person)} nachgetragen${x.gruppe ? ` in Gruppe ${x.gruppe}` : ''}.`)
     );
@@ -2222,6 +2243,102 @@ export default function TurnierAnsicht({
     await laden();
   }
 
+  // ---------- Aufgabe ----------
+
+  // Offene Spiele Aufgegebener kampflos fuer den Gegner werten: Race to : 0,
+  // nicht fuers Rating. Geben beide auf, verliert, wer zuerst aufgegeben hat.
+  // Danach KO- und Doppel-KO-Baum abgleichen; neue Spiele mit Aufgegebenen
+  // kommen ueber den Effekt wieder hierher.
+  async function aufgabenAnwenden(liste: TPartie[]) {
+    if (!turnier || !darfLeiten || turnier.status !== 'laeuft') return;
+    const rang = new Map(aufgaben.map((a, i) => [a.person, i]));
+    const offen = liste.filter((p) => unberuehrt(p) && (rang.has(p.spieler_a) || rang.has(p.spieler_b)));
+    if (offen.length === 0) return;
+    let neu = liste;
+    for (const p of offen) {
+      const aVerliert = rang.has(p.spieler_a) && (!rang.has(p.spieler_b) || (rang.get(p.spieler_a) ?? 0) < (rang.get(p.spieler_b) ?? 0));
+      const race = p.race_to ?? raceTo;
+      const werte = {
+        ergebnis_a: aVerliert ? 0 : race,
+        ergebnis_b: aVerliert ? race : 0,
+        status: 'beendet' as const,
+        beendet: new Date().toISOString(),
+        rating_werten: false,
+        rating_grund: 'Aufgabe'
+      };
+      // Nur, solange kein Tablet die Partie gestartet hat
+      const { data, error } = await supabase
+        .from('partien')
+        .update(werte)
+        .eq('id', p.id)
+        .eq('status', 'geplant')
+        .is('tisch_id', null)
+        .select('id');
+      if (error) return setFehler(error.message);
+      if (data && data.length > 0) neu = neu.map((x) => (x.id === p.id ? { ...x, ...werte } : x));
+    }
+    // Nichts geaendert (ein Tablet war schneller): frisch laden statt erneut versuchen
+    if (neu === liste) return laden();
+    setPartien(neu);
+    await koAbgleichen(neu);
+    await dkoAbgleichen(neu);
+  }
+  aufgabeRef.current = aufgabenAnwenden;
+
+  const aufgabeVon = (person: string) => aufgaben.find((a) => a.person === person) ?? null;
+
+  async function aufgabeEintragen() {
+    if (!turnier || !aufgabeDialog) return;
+    const { person, grund } = aufgabeDialog;
+    // Ein Spiel am Tisch oder mit Zwischenstand bleibt, wie es ist
+    const amTisch = partien.filter((p) => (p.spieler_a === person || p.spieler_b === person) && !unberuehrt(p) && !beendetBei(p));
+    setAufgabeDialog(null);
+    if (amTisch.length > 0) {
+      return setFehler(
+        `${anzeige(person)} spielt gerade oder hat ein Spiel mit Zwischenstand. Erst am Tablet beenden oder im Spielplan zurücksetzen, dann die Aufgabe eintragen.`
+      );
+    }
+    setFehler(null);
+    await einstellungenSetzen({
+      aufgaben: [
+        ...aufgaben.filter((a) => a.person !== person),
+        { person, zeit: new Date().toISOString(), ...(grund.trim() ? { grund: grund.trim() } : {}) }
+      ]
+    });
+    setMeldung(`Aufgabe von ${anzeige(person)} eingetragen. Die offenen Spiele zählen kampflos für die Gegner.`);
+  }
+
+  // Aufgabe zuruecknehmen: Die kampflosen Spiele werden wieder offen, solange
+  // ihre Folgespiele (KO, Doppel-KO) noch nicht begonnen haben
+  async function aufgabeZuruecknehmen(person: string) {
+    if (!turnier) return;
+    const kampflos = partien.filter((p) => p.rating_grund === 'Aufgabe' && (p.spieler_a === person || p.spieler_b === person));
+    if (kampflos.some((p) => koGesperrt(p) || dkoGesperrt(p))) {
+      return setFehler('Ein Folgespiel eines kampflosen Spiels hat schon begonnen. Die Aufgabe lässt sich nicht mehr zurücknehmen.');
+    }
+    const frage = `Aufgabe von ${anzeige(person)} zurücknehmen?${
+      kampflos.length > 0 ? `\n${kampflos.length === 1 ? '1 kampfloses Spiel wird' : `${kampflos.length} kampflose Spiele werden`} wieder offen.` : ''
+    }`;
+    if (!(await fragen(frage, 'Zurücknehmen'))) return;
+    setArbeitet(true);
+    await einstellungenSetzen({ aufgaben: aufgaben.filter((a) => a.person !== person) });
+    const offen = { ergebnis_a: null, ergebnis_b: null, status: 'geplant' as const, beendet: null, rating_werten: true, rating_grund: null };
+    for (const p of kampflos) {
+      const { error } = await supabase.from('partien').update(offen).eq('id', p.id).eq('rating_grund', 'Aufgabe');
+      if (error) {
+        setArbeitet(false);
+        return setFehler(error.message);
+      }
+    }
+    const liste = partien.map((x) => (kampflos.some((k) => k.id === x.id) ? { ...x, ...offen } : x));
+    setPartien(liste);
+    await koAbgleichen(liste);
+    await dkoAbgleichen(liste);
+    setArbeitet(false);
+    setMeldung(`Aufgabe von ${anzeige(person)} zurückgenommen.`);
+    await laden();
+  }
+
   // Auslosung zuruecknehmen, solange kein Spiel begonnen hat: Spielplan,
   // Startnummern, ausgeloste Gruppen und eingefrorene Ratings fallen weg, das
   // Turnier steht wieder auf "in Vorbereitung". Teilnehmer, feste Setzungen,
@@ -2256,7 +2373,7 @@ export default function TurnierAnsicht({
       () => supabase.from('turnier_teilnehmer').update({ gruppe: null }).eq('turnier_id', turnier.id).eq('gesetzt', false),
       () => {
         const neu = { ...einstellungen };
-        for (const k of ['dko', 'ko', 'phase2', 'phase3', 'handReihenfolge', 'tausch', 'nachgetragen', 'beginn', 'tvAnsicht', 'tvLiveGewechselt', 'pausiert'] as const) {
+        for (const k of ['dko', 'ko', 'phase2', 'phase3', 'handReihenfolge', 'tausch', 'nachgetragen', 'aufgaben', 'beginn', 'tvAnsicht', 'tvLiveGewechselt', 'pausiert'] as const) {
           delete neu[k];
         }
         return supabase.from('turniere').update({ status: 'geplant', eingefroren_am: null, teilnehmerzahl: null, einstellungen: neu }).eq('id', turnier.id);
@@ -3053,6 +3170,7 @@ export default function TurnierAnsicht({
                     </th>
                     {mehrgruppig && <th>Gruppe</th>}
                     {zeigeRating && <th className="rechts">Rating</th>}
+                    {bearbeitbar && turnier.status === 'laeuft' && <th></th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -3062,6 +3180,14 @@ export default function TurnierAnsicht({
                       <td>
                         {anzeige(t.person_id)}
                         {person(t.person_id)?.status === 'gast' && <span className="marke">Gast</span>}
+                        {aufgabeVon(t.person_id) && (
+                          <span
+                            className="marke warnmarke"
+                            title={`Hat aufgegeben${aufgabeVon(t.person_id)?.grund ? ` (${aufgabeVon(t.person_id)?.grund})` : ''}. Offene Spiele zählen kampflos für die Gegner.`}
+                          >
+                            aufgegeben {uhr(Date.parse(aufgabeVon(t.person_id)?.zeit ?? ''))}
+                          </span>
+                        )}
                       </td>
                       <td className="markierspalte">
                         <input
@@ -3110,6 +3236,31 @@ export default function TurnierAnsicht({
                             />
                           ) : (
                             t.rating_eingefroren
+                          )}
+                        </td>
+                      )}
+                      {bearbeitbar && turnier.status === 'laeuft' && (
+                        <td className="rechts">
+                          {aufgabeVon(t.person_id) ? (
+                            <button
+                              type="button"
+                              className="klein"
+                              disabled={arbeitet}
+                              title="Nimmt die Aufgabe zurück: Die kampflosen Spiele werden wieder offen, solange ihre Folgespiele noch nicht begonnen haben."
+                              onClick={() => void aufgabeZuruecknehmen(t.person_id)}
+                            >
+                              Aufgabe zurücknehmen
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              className="klein"
+                              disabled={arbeitet}
+                              title="Der Spieler scheidet aus: Gespielte Spiele bleiben, alle offenen und späteren Spiele zählen kampflos für den Gegner (Race to : 0, nicht fürs Rating)."
+                              onClick={() => setAufgabeDialog({ person: t.person_id, grund: '' })}
+                            >
+                              Aufgabe…
+                            </button>
                           )}
                         </td>
                       )}
@@ -3752,6 +3903,38 @@ export default function TurnierAnsicht({
           </Modal>
         );
       })()}
+      {aufgabeDialog && (() => {
+        const person = aufgabeDialog.person;
+        const offen = partien.filter((p) => (p.spieler_a === person || p.spieler_b === person) && unberuehrt(p)).length;
+        return (
+          <Modal abbrechen={() => setAufgabeDialog(null)}>
+            <h2>{anzeige(person)} gibt auf</h2>
+            <p className="hinweis">
+              Gespielte Spiele bleiben. Alle offenen Spiele von {anzeige(person)} zählen kampflos für den Gegner (Race to : 0)
+              {koFest || dkoFest || einstellungen.phase2 ? ', ebenso jedes Spiel, in das der Spieler später noch käme' : ''}. Kampflose
+              Spiele zählen nicht fürs Rating.
+            </p>
+            <p>{offen === 0 ? 'Gerade ist kein Spiel offen.' : offen === 1 ? 'Betroffen jetzt: 1 offenes Spiel.' : `Betroffen jetzt: ${offen} offene Spiele.`}</p>
+            <label className="feld">
+              <span>Grund (freiwillig, steht im Turnierbericht)</span>
+              <input
+                value={aufgabeDialog.grund}
+                maxLength={80}
+                placeholder="z. B. Verletzung"
+                onChange={(e) => setAufgabeDialog({ ...aufgabeDialog, grund: e.target.value })}
+              />
+            </label>
+            <div className="knopfpaar">
+              <button type="button" onClick={() => setAufgabeDialog(null)}>
+                Abbrechen
+              </button>
+              <button type="button" className="hauptaktion" disabled={arbeitet} onClick={() => void aufgabeEintragen()}>
+                Aufgabe eintragen
+              </button>
+            </div>
+          </Modal>
+        );
+      })()}
       {nachtrag && (
         <Modal abbrechen={() => setNachtrag(null)}>
           <h2>Spieler nachtragen</h2>
@@ -4123,7 +4306,9 @@ function Spielzeile(props: {
   const fertig = spielBeendet(p.ergebnis_a, p.ergebnis_b, props.raceTo);
   const vorgabeText = p.vorgabe_a || p.vorgabe_b ? `${p.vorgabe_a} : ${p.vorgabe_b}` : '–';
   const status = fertig
-    ? 'fertig'
+    ? p.rating_grund === 'Aufgabe'
+      ? 'kampflos (Aufgabe)'
+      : 'fertig'
     : props.laufend
       ? props.laufend
       : props.tisch !== null

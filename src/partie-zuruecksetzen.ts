@@ -13,6 +13,12 @@ export function zuruecksetzbar(p: Zustand | null | undefined): boolean {
   return p.tisch_id !== null || p.status !== 'geplant' || p.ergebnis_a !== null || p.ergebnis_b !== null;
 }
 
+// Noch nicht begonnen: kein Ergebnis, kein Tisch, kein Start am Tablet. So
+// laesst sich eine Auslosung bzw. ein Start zuruecknehmen.
+export function unberuehrt(p: Zustand & Pick<Partie, 'begonnen'>): boolean {
+  return !zuruecksetzbar(p) && p.begonnen === null;
+}
+
 // null = geklappt, sonst der Fehlertext
 export async function partieZuruecksetzen(p: Partie): Promise<string | null> {
   // Haelt ein Tablet die Partie, wird sein Stand verworfen; es zeigt dann

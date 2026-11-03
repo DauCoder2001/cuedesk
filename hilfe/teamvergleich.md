@@ -32,6 +32,7 @@ Geplant werden höchstens so viele Matches, wie bis zum Sieg nötig sind. Die Za
 ## 4. Spielen
 
 - **Teamvergleich starten** setzt den Teamvergleich auf „läuft“ und gibt Block 1 (Team-Match) für die Tablets frei.
+- **Start zurücknehmen** steht im Kopf, solange noch kein Match begonnen hat. Die Matches verschwinden wieder von den Tablets, der Teamvergleich steht wieder auf „in Vorbereitung“; Teams und Spielplan bleiben und lassen sich wieder ändern.
 - Danach gibt **Block 2 freigeben**, **Block 3 freigeben** usw. jeweils den nächsten Block frei. Die Tablets bieten nur freigegebene Matches an.
 - **TV zeigt:** schaltet zwischen **Teams**, **Live-Tische**, **Live + Nächste** (bei 3 oder 5 Tischen), **Nächste Spiele** und **Teamstand** um.
 - Hat ein Team das Ziel erreicht, entfallen die offenen Matches. Ein Match, das dann noch läuft, wird zu Ende gespielt und gespeichert, zählt aber nicht mehr zum Teamstand.
@@ -40,4 +41,4 @@ Geplant werden höchstens so viele Matches, wie bis zum Sieg nötig sind. Die Za
 
 **Teamvergleich abschließen** sperrt die Ergebnisse; offene Matches entfallen. Fürs Vereins-Rating zählen nur die Einzel und nur, wenn das beim Anlegen so gewählt war.
 
-**Teamvergleich ändern** (Name, Datum, Disziplin, Ziel, Race to, Teamnamen) und **Teamvergleich löschen** (mit dem Schutzwort des Vereins) gibt es nur vor dem Start.
+**Teamvergleich ändern** (Name, Datum, Disziplin, Ziel, Race to, Teamnamen) und **Teamvergleich löschen** (mit dem Schutzwort des Vereins) gibt es nur vor dem Start, nach **Start zurücknehmen** wieder.
