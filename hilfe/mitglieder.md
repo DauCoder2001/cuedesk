@@ -23,6 +23,10 @@ Die Seite **Zuschauen** ist fürs Handy gebaut. Oben wählst du:
 
 Wer nur Lesezugang hat, landet nach der Anmeldung am Handy direkt hier, am PC oder Tablet auf **Live**. **Weitere Seiten** führt zu Ranglisten, Auswertung und Archiv und Statistik.
 
+## Zu einem Turnier anmelden
+
+Hat die Turnierleitung eine Ausschreibung mit Anmeldung geöffnet, steht das Turnier oben auf der Seite **Turniere** unter **Ausschreibungen**: mit Tag, Uhrzeit, Meldeschluss, Startgeld und wer schon dabei ist. Dort meldest du dich bis zum Meldeschluss an oder wieder ab. Ist das Turnier voll, wirst du Nachrücker. Steht dort, dass dein Konto mit keinem Spieler verknüpft ist, trägt dich bis dahin die Turnierleitung ein.
+
 ## Chat
 
 - Schreiben kannst du, solange das Turnier läuft, bis zu 300 Zeichen je Beitrag.

@@ -12,7 +12,8 @@ Ein Turnier läuft in vier Schritten: anlegen, Teilnehmer eintragen, auslosen, s
 
 1. Reiter **Turniere** öffnen und oben rechts **Neues Turnier** klicken.
 2. **Name** und **Datum** eintragen, **Disziplin** (8-, 9- oder 10-Ball) und **Modus** wählen:
-   Einzelgruppe (jeder gegen jeden), Zwei Gruppen mit Platzierungsduellen oder Gruppen mit KO-Runde.
+   Einzelgruppe (jeder gegen jeden), Zwei Gruppen mit Platzierungsduellen oder Gruppen mit KO-Runde. Liga-Spieltag und Teamvergleich haben eigene Themen.
+   Hat der Verein Turnierarten angelegt (zum Beispiel „Pokal“), wählst du bei **Turnierart** eine aus. Sie steht dann in der Turnierliste, und die Chips über der Liste filtern danach.
 3. **Race to** festlegen. Bei Gruppen mit KO-Runde lässt sich das Race je Runde einstellen.
 4. Bei Bedarf **Mit Vorgabe (Handicap)** anhaken: Der schwächere Spieler startet mit Sätzen Vorsprung, berechnet aus dem Vereins-Rating.
 5. **Zählt für das Vereins-Rating** bleibt normalerweise an. Partien mit Gästen zählen nie. Hat der Verein das Vereins-Rating ausgeschaltet, fehlen die Punkte 4 und 5.
@@ -25,12 +26,21 @@ Die Vorgaben für neue Turniere (Race, Disziplin, Modus, Vorgabe) stellt der Ver
 
 **Serie mit Disziplin am Spieltag:** Hat die gewählte **Serie** die Disziplin „am Spieltag festgelegt“, gibt es bei **Disziplin** zusätzlich „noch offen“. Die Ausschreibung schreibt dann „Disziplin wird am Spieltag festgelegt“. Am Spieltag in der Turnieransicht die Disziplin wählen und **Disziplin festlegen** klicken; erst danach lässt sich auslosen. Eine Serie mit fester Disziplin bringt ihre Disziplin beim Auswählen gleich mit.
 
+### Ausschreibung und Anmeldung
+
+Solange das Turnier in Vorbereitung ist, steht in der Turnieransicht der Block **Ausschreibung**:
+
+- **Beginn**, **Meldeschluss** (Vorschlag: eine Stunde vor Beginn), **Startgeld**, **Höchstens Teilnehmer** und ein **Hinweis** eintragen und speichern.
+- **Anmeldung für Mitglieder offen** anhaken: Mitglieder mit Konto melden sich dann bis zum Meldeschluss auf der Seite **Turniere** selbst an und ab. Wer sich anmeldet, steht sofort in der Teilnehmerliste.
+- Darunter steht der Text zum Teilen, mit Link zur Anmeldung. Die Knöpfe daneben kopieren ihn oder öffnen WhatsApp. **Aushang (PDF)** erzeugt eine DIN-A4-Seite zum Aushängen im Vereinsheim, mit Zeilen zum Eintragen.
+- Unter **Anmeldungen** siehst du, wer sich wann an- oder abgemeldet hat. Ist die Höchstzahl erreicht, kommen weitere als **Nachrücker** dazu; **Übernehmen** nimmt einen Nachrücker trotzdem als Teilnehmer auf.
+
 ## 2. Teilnehmer eintragen
 
 - Am schnellsten geht es mit **Anwesende ankreuzen…**: Die Liste zeigt alle Mitglieder und Gäste, wer schon Teilnehmer ist, hat bereits einen Haken. Anhaken, wer da ist, und **Übernehmen** klicken. Wer den Haken verliert, wird dabei entfernt. Unten steht, wie viele ausgewählt sind und wie viele der Modus erlaubt. Ein neuer Gast lässt sich im Dialog gleich anlegen und ist dann angehakt.
 - Einzeln geht es im Feld **Mitglied suchen**: Namen tippen und den Spieler wählen.
 - Wer nicht im Verein ist, kommt über **Neuer Gast: Vor- und Nachname** und **Gast hinzufügen** dazu.
-- Haben sich Mitglieder über eine Ausschreibung angemeldet, stehen sie unter **Anmeldungen**; **Übernehmen** trägt sie als Teilnehmer ein.
+- Haben sich Mitglieder über die Ausschreibung angemeldet, stehen sie schon in der Teilnehmerliste (siehe **Ausschreibung und Anmeldung**).
 - Falsch eingetragen? **Entfernen** neben dem Namen.
 
 Bis zur Auslosung lassen sich Name, Modus und Race über **Ändern** noch anpassen.

@@ -13,7 +13,7 @@ Beim ersten Aufruf erscheint **Bevor es losgeht**. Lies die **Nutzungsbedingunge
 ## 2. Verein und Vorgaben (Seite System)
 
 1. Unter **Verein** Name, Kurzname und Logo prüfen. Das Logo wird auf 128 × 128 Pixel verkleinert.
-2. Unter **Vorgaben für „Neues Turnier“** Race to, Disziplin, Modus und Vorgabe so einstellen, wie ihr meistens spielt. Das spart später Klicks.
+2. Unter **Vorgaben für „Neues Turnier“** Race to, Disziplin, Modus und Vorgabe so einstellen, wie ihr meistens spielt. Das spart später Klicks. Unter **Turnierarten** legt ihr eigene Arten an (z. B. „Pokal“, „Vereinsmeisterschaft“) und könnt eine davon vorwählen.
 3. Unter **Vorgaben für Liga-Spieltage** Liga und eigene Mannschaft wählen.
 4. **Saisonbeginn** festlegen (meist Juli).
 5. **Speichern** oben rechts.

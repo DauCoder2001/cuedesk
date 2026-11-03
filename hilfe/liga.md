@@ -17,6 +17,7 @@ Ein Liga-Spieltag besteht immer aus zwei Begegnungen gegen dieselbe Mannschaft, 
 1. Reiter **Turniere**, **Neues Turnier**, Modus **Liga-Spieltag (Begegnung)**.
 2. **Name**, Liga, Spieltag, **Heimspiel** oder **Auswärtsspiel**, eigene Mannschaft und Gegner eintragen. Der Name steht in der Turnierliste, als Überschrift des Spieltags, auf dem Spielbericht und am Fernseher; Liga und Spieltag stehen darunter in der Infozeile.
 3. **Anlegen**. Beide Begegnungen entstehen sofort.
+4. Vertippt? **Spieltag ändern…** im Kopf korrigiert Name, Datum, Liga, Spieltag, Heimrecht, eigene Mannschaft und Gegner für alle Begegnungen des Spieltags, solange noch keine Begegnung gestartet ist.
 
 ## 3. Aufstellung
 
@@ -62,7 +63,7 @@ In der Spaß-Liga kann zwischen 1. und 2. Begegnung eine Begegnung im Doppel ges
 
 ## 5. Abschließen
 
-**Begegnung abschließen** sperrt die Ergebnisse dieser Begegnung. Sind alle Partien gespielt, ist der Knopf gelb markiert. Das Rating wird erst neu berechnet, wenn alle Begegnungen des Spieltags abgeschlossen sind.
+**Begegnung abschließen** sperrt die Ergebnisse dieser Begegnung. Sind alle Partien gespielt, ist der Knopf grün (nächster Schritt). Das Rating wird erst neu berechnet, wenn alle Begegnungen des Spieltags abgeschlossen sind.
 
 ## Ergebnis des Spieltags
 
