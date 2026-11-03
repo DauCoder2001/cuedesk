@@ -2,6 +2,9 @@ import { describe, expect, test } from 'vitest';
 import {
   einsaetze,
   einsatzHinweise,
+  ersatzspieler,
+  ersatzZeile,
+  mitErsatzZeile,
   festgespielt,
   istErsatz,
   kaderHinweise,
@@ -235,5 +238,26 @@ describe('Spielberechtigung nach Nachmeldung (BLVN-STO Pool 2.1.4)', () => {
       'N ist erst ab 20.11.2026 spielberechtigt (Nachmeldung, STO 2.1.4).'
     ]);
     expect(einsatzHinweise({ ...grund, mannschaft: mannschaften[1], datum: '2026-11-21', aufgestellt: ['n'] })).toEqual([]);
+  });
+});
+
+describe('Ersatzspieler in den Bemerkungen (BLVN-STO Pool 2.2.3)', () => {
+  test('aus unteren Mannschaften, mit Herkunft und festgespielt', () => {
+    const liste = ersatzspieler({
+      mannschaft: mannschaften[0],
+      aufgestellt: ['a', 'b', 'c', 'x', 'b'],
+      kader,
+      mannschaften,
+      fest: new Map([['c', 'm1']])
+    });
+    expect(liste).toEqual([
+      { person: 'b', aus: 'Zweite', festgespielt: false },
+      { person: 'c', aus: 'Dritte', festgespielt: true }
+    ]);
+    const zeile = ersatzZeile(liste, name);
+    expect(zeile).toBe('Ersatzspieler: B (Zweite), C (Dritte, festgespielt).');
+    expect(mitErsatzZeile('Gast 15 Min. verspätet', zeile)).toBe(`${zeile}\nGast 15 Min. verspätet`);
+    expect(mitErsatzZeile('Ersatzspieler: alt.\nProtest folgt', 'Ersatzspieler: neu.')).toBe('Ersatzspieler: neu.\nProtest folgt');
+    expect(mitErsatzZeile('', zeile)).toBe(zeile);
   });
 });

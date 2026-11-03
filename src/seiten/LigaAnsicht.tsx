@@ -28,7 +28,7 @@ import {
 import DoppelPlanFelder, { DOPPEL_ZEILEN_STANDARD } from './DoppelPlanFelder';
 import type { DoppelZeile } from './DoppelPlanFelder';
 import type { DoppelPartie } from '../liga';
-import { einsatzHinweise, kaderHinweise } from '../mannschaften';
+import { einsatzHinweise, ersatzspieler, ersatzZeile, festgespielt, kaderHinweise, mitErsatzZeile } from '../mannschaften';
 import type { EinsatzTag } from '../mannschaften';
 import { schutzwortPruefen } from '../schutzwort';
 import { STATUS_TEXT } from './Turniere';
@@ -635,6 +635,24 @@ export default function LigaAnsicht({
       ...kaderHinweise(grundlage),
       ...(turnier ? einsatzHinweise({ ...grundlage, datum: turnier.datum, andere: einsatzTage }) : [])
     ];
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mannschaften, kader, spiele, partien, wahl, anzeige, liga?.mannschaft_id, wirSindHeim, einsatzTage, turnier?.datum, nicht]);
+
+  // Ersatzspieler der eigenen Mannschaft fuer die Bemerkungen (STO 2.2.3);
+  // null, wenn keiner aufgestellt ist
+  const ersatzText = useMemo(() => {
+    const eigene = mannschaften.find((m) => m.id === liga?.mannschaft_id);
+    if (!eigene || !turnier || spiele.length === 0 || istDoppel || nicht) return null;
+    const derSaison = mannschaften.filter((m) => m.saison === eigene.saison).map((m) => ({ id: m.id, name: m.name, rang: m.rang }));
+    const kaderSaison = kader.filter((k) => derSaison.some((m) => m.id === k.mannschaft_id));
+    const aufgestellt = spiele.map((s) => unsererSpieler(s)).filter((id): id is string => Boolean(id));
+    const fest = festgespielt(
+      [...einsatzTage, ...aufgestellt.map((person) => ({ datum: turnier.datum, mannschaft_id: eigene.id, person_id: person }))],
+      kaderSaison,
+      derSaison
+    );
+    const liste = ersatzspieler({ mannschaft: { id: eigene.id, name: eigene.name, rang: eigene.rang }, aufgestellt, kader: kaderSaison, mannschaften: derSaison, fest });
+    return liste.length > 0 ? ersatzZeile(liste, (id) => anzeige(id)) : null;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mannschaften, kader, spiele, partien, wahl, anzeige, liga?.mannschaft_id, wirSindHeim, einsatzTage, turnier?.datum, nicht]);
 
@@ -1962,7 +1980,7 @@ export default function LigaAnsicht({
               {punkte.entschieden ? '' : ` · noch ${punkte.offen} ${punkte.offen === 1 ? 'Partie' : 'Partien'} offen`}
             </small>
           </div>
-          <Bemerkung text={liga.bemerkung ?? ''} bearbeitbar={bearbeitbar} speichern={(t) => void bemerkungSpeichern(t)} />
+          <Bemerkung text={liga.bemerkung ?? ''} bearbeitbar={bearbeitbar} ersatz={ersatzText} speichern={(t) => void bemerkungSpeichern(t)} />
           <p className="hinweis">{STERN_HINWEIS}</p>
         </section>
       )}
@@ -2135,7 +2153,17 @@ export default function LigaAnsicht({
 }
 
 // Bemerkungen zur Begegnung; gespeichert beim Verlassen des Felds
-function Bemerkung({ text, bearbeitbar, speichern }: { text: string; bearbeitbar: boolean; speichern: (text: string) => void }) {
+function Bemerkung({
+  text,
+  bearbeitbar,
+  ersatz,
+  speichern
+}: {
+  text: string;
+  bearbeitbar: boolean;
+  ersatz: string | null; // Zeile "Ersatzspieler: …" laut Kader, null ohne Ersatzspieler
+  speichern: (text: string) => void;
+}) {
   const [wert, setWert] = useState(text);
   const feld = useRef<HTMLTextAreaElement>(null);
   // Aenderungen von aussen uebernehmen, solange hier niemand tippt
@@ -2156,6 +2184,26 @@ function Bemerkung({ text, bearbeitbar, speichern }: { text: string; bearbeitbar
         onChange={(e) => setWert(e.target.value)}
         onBlur={() => wert.trim() !== text && speichern(wert.trim())}
       />
+      {ersatz && (
+        <span className="kopfreihe">
+          <span className="hinweis">Laut Kader: {ersatz.replace('Ersatzspieler: ', '').replace(/\.$/, '')}</span>
+          <button
+            type="button"
+            className="klein"
+            title="Schreibt die Ersatzspieler der eigenen Mannschaft in die erste Zeile der Bemerkungen (BLVN-STO Pool 2.2.3), mit der Mannschaft, aus der sie kommen. Eine schon vorhandene Zeile „Ersatzspieler: …“ wird ersetzt, alles andere bleibt. Ersatzspieler des Gegners trägst du von Hand ein."
+            // Fokus im Feld lassen: sonst speichert das Verlassen des Felds
+            // gleichzeitig den alten Text
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => {
+              const neu = mitErsatzZeile(wert, ersatz);
+              setWert(neu);
+              if (neu !== text) speichern(neu);
+            }}
+          >
+            Ersatzspieler eintragen
+          </button>
+        </span>
+      )}
     </label>
   );
 }

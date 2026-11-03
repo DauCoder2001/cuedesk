@@ -271,3 +271,38 @@ export function berechtigtAb(person: string, mannschaft: MannschaftKurz, kader: 
     eigene.find((k) => k.mannschaft_id === mannschaft.id) ?? eigene.find((k) => k.stammspieler) ?? eigene.find((k) => k.berechtigt_ab);
   return eintrag?.berechtigt_ab ?? null;
 }
+
+// Ersatzspieler einer Aufstellung mit ihrer unteren Mannschaft; laut STO 2.2.3
+// stehen sie namentlich unter "Bemerkungen", festgespielte ebenso. fest: aus
+// festgespielt (Person -> Mannschaft), diese Begegnung eingerechnet.
+export function ersatzspieler(args: {
+  mannschaft: MannschaftKurz;
+  aufgestellt: string[];
+  kader: KaderEintrag[];
+  mannschaften: MannschaftKurz[];
+  fest: Map<string, string>;
+}): { person: string; aus: string; festgespielt: boolean }[] {
+  const { mannschaft, kader, mannschaften, fest } = args;
+  return [...new Set(args.aufgestellt.filter(Boolean))]
+    .filter((person) => istErsatz(person, mannschaft, kader, mannschaften))
+    .map((person) => {
+      const unten = kader
+        .filter((k) => k.person_id === person)
+        .map((k) => ({ k, m: mannschaften.find((m) => m.id === k.mannschaft_id) }))
+        .filter((x) => x.m && x.m.rang > mannschaft.rang)
+        .sort((a, b) => Number(b.k.stammspieler) - Number(a.k.stammspieler) || (a.m?.rang ?? 0) - (b.m?.rang ?? 0));
+      return { person, aus: unten[0]?.m?.name ?? '?', festgespielt: fest.get(person) === mannschaft.id };
+    });
+}
+
+// Zeile fuer die Bemerkungen: "Ersatzspieler: Max M. (Zweite), Lisa L. (Dritte, festgespielt)."
+export function ersatzZeile(liste: { person: string; aus: string; festgespielt: boolean }[], name: (id: string) => string): string {
+  return `Ersatzspieler: ${liste.map((e) => `${name(e.person)} (${e.aus}${e.festgespielt ? ', festgespielt' : ''})`).join(', ')}.`;
+}
+
+// Die Ersatzspieler-Zeile vorn in die Bemerkungen setzen; eine vorhandene
+// wird ersetzt, alles andere bleibt
+export function mitErsatzZeile(text: string, zeile: string): string {
+  const rest = text.split('\n').filter((z) => !z.trim().startsWith('Ersatzspieler:'));
+  return [zeile, ...rest].join('\n').trim();
+}
