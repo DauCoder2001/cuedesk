@@ -125,7 +125,10 @@ function dkoArtVon(p: { gruppe: string | null }): DkoArt {
   return id === 'fin' ? 'FIN' : 'HF';
 }
 const KO_ABSCHNITT: Record<string, string> = { af: 'Achtelfinale', qf: 'Viertelfinale', sf: 'Halbfinale', fin: 'Finale und Platz 3', bro: 'Finale und Platz 3' };
-const istGruppenspiel = (p: TPartie) => !p.phase || p.phase === 'gruppe';const istGruppenzeile = (zeile: string) => /^[A-D]$/.test(zeile);
+const istGruppenspiel = (p: TPartie) => !p.phase || p.phase === 'gruppe';
+// Noch nicht begonnen: kein Ergebnis, kein Tisch, kein Start am Tablet
+const unberuehrt = (p: { status: string; tisch_id: string | null; ergebnis_a: number | null; ergebnis_b: number | null; begonnen: string | null }) =>
+  p.status === 'geplant' && p.tisch_id === null && p.ergebnis_a === null && p.ergebnis_b === null && p.begonnen === null;const istGruppenzeile = (zeile: string) => /^[A-D]$/.test(zeile);
 
 type Aenderungszeile = { zeitpunkt: string; nachher: Partial<TPartie> | null; aktion: string };
 type Rueckgaengig = { partieId: string; vorher: Pick<TPartie, 'ergebnis_a' | 'ergebnis_b' | 'status' | 'beendet'> };
@@ -2219,6 +2222,59 @@ export default function TurnierAnsicht({
     await laden();
   }
 
+  // Auslosung zuruecknehmen, solange kein Spiel begonnen hat: Spielplan,
+  // Startnummern, ausgeloste Gruppen und eingefrorene Ratings fallen weg, das
+  // Turnier steht wieder auf "in Vorbereitung". Teilnehmer, feste Setzungen,
+  // Race und Ausschreibung bleiben.
+  async function auslosungZuruecknehmen() {
+    if (!turnier) return;
+    const frage =
+      `Auslosung von „${turnier.name}“ zurücknehmen?\nDer Spielplan (${partien.length} Spiele, keins begonnen) und die Startnummern werden gelöscht. ` +
+      'Das Turnier steht danach wieder auf „in Vorbereitung“; Teilnehmer, Setzungen und Race bleiben.';
+    if (!(await fragen(frage, 'Zurücknehmen'))) return;
+    setArbeitet(true);
+    setFehler(null);
+    // Frisch nachsehen: Hat inzwischen ein Tablet ein Spiel gestartet, bleibt alles
+    const { data: aktuell, error: lesefehler } = await supabase.from('partien').select('*').eq('turnier_id', turnier.id);
+    if (lesefehler || !aktuell) {
+      setArbeitet(false);
+      return setFehler(lesefehler?.message ?? 'Spielplan nicht lesbar.');
+    }
+    if (!aktuell.every(unberuehrt)) {
+      setArbeitet(false);
+      await laden();
+      return setFehler('Inzwischen hat ein Spiel begonnen. Die Auslosung lässt sich nicht mehr zurücknehmen.');
+    }
+    const schritte = [
+      () => supabase.from('partien').delete().eq('turnier_id', turnier.id),
+      () =>
+        supabase
+          .from('turnier_teilnehmer')
+          .update({ startnummer: null, rating_eingefroren: null, rating_quelle: null })
+          .eq('turnier_id', turnier.id),
+      // Ausgeloste Gruppen fallen weg, feste Setzungen bleiben
+      () => supabase.from('turnier_teilnehmer').update({ gruppe: null }).eq('turnier_id', turnier.id).eq('gesetzt', false),
+      () => {
+        const neu = { ...einstellungen };
+        for (const k of ['dko', 'ko', 'phase2', 'phase3', 'handReihenfolge', 'tausch', 'nachgetragen', 'beginn', 'tvAnsicht', 'tvLiveGewechselt', 'pausiert'] as const) {
+          delete neu[k];
+        }
+        return supabase.from('turniere').update({ status: 'geplant', eingefroren_am: null, teilnehmerzahl: null, einstellungen: neu }).eq('id', turnier.id);
+      }
+    ];
+    for (const schritt of schritte) {
+      const { error } = await schritt();
+      if (error) {
+        setArbeitet(false);
+        await laden();
+        return setFehler(error.message);
+      }
+    }
+    setArbeitet(false);
+    setMeldung('Auslosung zurückgenommen. Das Turnier steht wieder auf „in Vorbereitung“.');
+    await laden();
+  }
+
   async function loeschen() {
     if (!turnier || !verein) return;
     const zusatz =
@@ -2434,6 +2490,17 @@ export default function TurnierAnsicht({
             {istAdmin && turnier.status === 'beendet' && turnier.quelle !== 'import' && (
               <button type="button" title="Öffnet das Turnier wieder, damit sich Ergebnisse ändern lassen." onClick={() => void wiederOeffnen()}>
                 Wieder öffnen
+              </button>
+            )}
+            {bearbeitbar && turnier.status === 'laeuft' && turnier.quelle !== 'import' && partien.every(unberuehrt) && (
+              <button
+                type="button"
+                className="gefahrknopf"
+                title="Nimmt die Auslosung zurück, solange noch kein Spiel begonnen hat: Spielplan und Startnummern werden gelöscht, das Turnier steht wieder auf „in Vorbereitung“. Danach lassen sich Spieler nachtragen oder entfernen und neu auslosen."
+                onClick={() => void auslosungZuruecknehmen()}
+                disabled={arbeitet}
+              >
+                Auslosung zurücknehmen
               </button>
             )}
             {/* In Vorbereitung darf die Turnierleitung loeschen, danach nur der Vereins-Admin */}

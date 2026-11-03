@@ -48,6 +48,7 @@ Bis zur Auslosung lassen sich Name, Modus und Race über **Ändern** noch anpass
 ## 3. Auslosen und starten
 
 1. **Auslosen und starten** klicken. CueDesk lost die Startnummern bzw. Gruppen aus und legt den Spielplan an.
+   Kommt danach noch jemand dazu oder fällt jemand aus, bevor das erste Spiel begonnen hat: **Auslosung zurücknehmen** im Kopf löscht Spielplan und Startnummern (nach einer Rückfrage), das Turnier steht wieder auf „in Vorbereitung“. Teilnehmer, feste Setzungen, Race und Ausschreibung bleiben; Spieler lassen sich dann ergänzen oder entfernen und neu auslosen. Sobald ein Spiel ein Ergebnis hat oder an einem Tisch läuft, verschwindet der Knopf.
 2. Auf den Fernsehern erscheint automatisch die Auslosung. Über **TV zeigt:** schaltest du zwischen **Auslosung**, **Live-Tische**, **Nächste Spiele** und **Ergebnis** um. Hat der Verein 3 oder 5 aktive Tische, gibt es zusätzlich **Live + Nächste**: Die Live-Tische bleiben, und die im Raster freie Kachel zeigt die nächsten offenen Spiele (bei 3 Tischen sechs, bei 5 Tischen vier). Bei Zwei Gruppen und Gruppen mit KO-Runde kommen **Gruppenstand** (die Gruppentabellen, solange das Turnier läuft mit „vorläufig“) und, sobald Duelle bzw. KO-Runde angesetzt sind, **Endplätze (vorläufig)** dazu, beim Doppel-KO ab der Auslosung: entschiedene Plätze fest, offene Spiele mit beiden Namen und laufende mit Tisch und Stand. **Ergebnis** zeigt nach dem Abschließen die festen Endplätze.
 
 ## 4. Spielen
@@ -91,7 +92,7 @@ Doppel-KO nach BLVN-STO Pool 3.3, für 8 bis 64 Spieler: Wer verliert, rutscht v
 - Wer in der Gewinnerrunde verliert, steigt über Kreuz in die Verliererrunde ein, damit er nicht gleich wieder auf denselben Gegner trifft.
 - Der Abschnitt **Doppel-KO** unter dem Spielplan zeigt je Runde, wer woher kommt, wer ein Freilos hat und wer weiter ist. **Race to ändern…** stellt das Race je Abschnitt um, solange dort noch nicht gespielt wird.
 - **Endtabelle:** Plätze 1 bis 4 aus Finale und Spiel um Platz 3. Wer in derselben Runde ausscheidet, teilt sich den Platzbereich (5–6, 7–8, 9–12 …); innerhalb zählt der Quotient gewonnene durch verlorene Sätze, dann die Zahl gewonnener Sätze (BLVN-STO Pool 3.4). Sind beide gleich, teilen sich die Spieler den Platz.
-- Spieler nachtragen gibt es im Doppel-KO nicht. Abschließen geht nach Finale und Spiel um Platz 3.
+- Spieler nachtragen gibt es im Doppel-KO nicht; solange noch kein Spiel begonnen hat, hilft **Auslosung zurücknehmen**. Abschließen geht nach Finale und Spiel um Platz 3.
 
 ## 5. Abschließen
 
