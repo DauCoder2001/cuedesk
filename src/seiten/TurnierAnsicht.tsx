@@ -2199,7 +2199,8 @@ export default function TurnierAnsicht({
     if (mitKo && !(baum?.fin.fertig && baum.bro.fertig)) return setFehler('Zuerst die KO-Runde bis zum Finale ausspielen.');
     if (dko && !(dkoBaum?.fin.fertig && dkoBaum.p3.fertig)) return setFehler('Zuerst den Doppel-KO bis zum Finale und dem Spiel um Platz 3 ausspielen.');
     if (offeneSpiele > 0) return setFehler(`Es sind noch ${offeneSpiele} Spiele offen.`);
-    const offen = mehrgruppig ? [] : tabelle.gleichstaende.filter((g) => !g.entschieden);
+    // Doppel-KO kennt keinen Stichkampf: Gleichstand teilt den Platz
+    const offen = mehrgruppig || dko ? [] : tabelle.gleichstaende.filter((g) => !g.entschieden);
     if (offen.length > 0 && !(await fragen('Ein Stichkampf ist noch nicht entschieden. Trotzdem abschließen?'))) return;
     const frage = mitRating
       ? 'Turnier abschließen?\nEndplätze werden gespeichert, das Rating wird neu berechnet.'
