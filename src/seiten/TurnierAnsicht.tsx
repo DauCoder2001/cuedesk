@@ -292,9 +292,8 @@ export default function TurnierAnsicht({
     const partienNeu = async () => {
       const { data } = await supabase.from('partien').select('*').eq('turnier_id', turnierId).order('runde').order('paarung');
       if (data) {
-        const mit = data.filter(mitSpielern);
-        setPartien(mit);
-        void abgleichRef.current(mit);
+        // Den KO-Abgleich erledigt der Effekt unten, sobald die Partien da sind
+        setPartien(data.filter(mitSpielern));
       }
     };
     const kanal = supabase
@@ -309,6 +308,28 @@ export default function TurnierAnsicht({
       void supabase.removeChannel(kanal);
     };
   }, [turnierId]);
+
+  // KO- und Doppel-KO-Baum mit den Partien abgleichen, sobald sie sich
+  // aendern - auch beim Oeffnen der Seite. So kommen Folgespiele nach, deren
+  // Ergebnisse eingingen, waehrend kein Geraet der Turnierleitung offen war.
+  // Kommen waehrenddessen neue Partien an, laeuft er danach noch einmal.
+  const abgleichLaeuft = useRef(false);
+  const abgleichNochmal = useRef(false);
+  useEffect(() => {
+    if (turnier?.status !== 'laeuft') return;
+    if (abgleichLaeuft.current) {
+      abgleichNochmal.current = true;
+      return;
+    }
+    abgleichLaeuft.current = true;
+    void abgleichRef.current(partien).finally(() => {
+      abgleichLaeuft.current = false;
+      if (abgleichNochmal.current) {
+        abgleichNochmal.current = false;
+        setPartien((liste) => [...liste]);
+      }
+    });
+  }, [partien, turnier?.status]);
 
   // Laufender Stand am Tisch neben dem (noch leeren) Ergebnis
   const laufendeStaende = useLaufendeStaende(verein?.id);
@@ -3466,7 +3487,8 @@ export default function TurnierAnsicht({
                     <p className="hinweis">
                       Die Ergebnisse stehen im Spielplan unter Gewinnerrunde, Verliererrunde und Endrunde. Ein Spiel erscheint
                       dort und an den Tablets, sobald beide Spieler feststehen; Freilose werden nicht gespielt. Dafür muss
-                      diese Seite an einem Gerät der Turnierleitung geöffnet sein.
+                      diese Seite an einem Gerät der Turnierleitung geöffnet sein; war sie zu, holt sie fehlende Spiele beim
+                      nächsten Öffnen nach.
                     </p>
                   </>
                 ) : (
@@ -3693,7 +3715,7 @@ export default function TurnierAnsicht({
                         <p className="hinweis">
                           Die Ergebnisse stehen im Spielplan unter „KO-Runde“. Ein Spiel erscheint dort und an den Tablets,
                           sobald beide Spieler feststehen. Dafür muss diese Seite an einem Gerät der Turnierleitung geöffnet
-                          sein.
+                          sein; war sie zu, holt sie fehlende Spiele beim nächsten Öffnen nach.
                         </p>
                       </>
                     )}
