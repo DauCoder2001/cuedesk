@@ -54,7 +54,8 @@ export function vorlaeufigeEndplaetze(
   e: TurnierEinstellungen,
   teilnehmer: EndplatzTeilnehmer[],
   partien: EndplatzPartie[],
-  tischNummer: (id: string) => string | null
+  tischNummer: (id: string) => string | null,
+  saetze = false // gewonnene Saetze in der Gruppentabelle (mitGewonnenenSaetzen)
 ): VorlaeufigeEndplaetze | null {
   const raceTo = e.raceTo ?? 0;
   const stand = (p: EndplatzPartie | undefined) =>
@@ -151,7 +152,7 @@ export function vorlaeufigeEndplaetze(
     const personVon = (pos: number) => aufstellung[pos]?.person_id ?? '';
     const leistung = new Map<string, Leistung>();
     gruppenNamen.forEach((g) => {
-      const zeilen = gruppenRangliste(gruppen[g] ?? [], eingabe, hand).zeilen;
+      const zeilen = gruppenRangliste(gruppen[g] ?? [], eingabe, hand, saetze).zeilen;
       const fest = ko.reihung[g] ?? zeilen.map((z) => personVon(z.pos));
       zeilen.forEach((z) => {
         const id = personVon(z.pos);

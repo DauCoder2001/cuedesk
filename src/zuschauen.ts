@@ -3,7 +3,7 @@
 // Datenbank, abgesichert durch test/zuschauen.test.ts. Tabellen rechnen mit
 // denselben Funktionen wie die Turnieransicht (src/turnier.ts, src/gruppen.ts).
 
-import { rangliste } from './turnier';
+import { mitGewonnenenSaetzen, rangliste } from './turnier';
 import { gruppenRangliste } from './gruppen';
 import { KO_GRUPPEN, standardGruppenzahl } from './ko';
 import { doppelVon, drittWertung, istDoppelBegegnung, partnerVon, wertung } from './liga';
@@ -99,6 +99,7 @@ export function tabellen(turnier: Turnier, teilnehmer: TurnierTeilnehmer[], part
       vorgabeB: p.vorgabe_b
     }));
   const hand = e.handReihenfolge ?? {};
+  const saetze = mitGewonnenenSaetzen(turnier.datum);
   const zeile = (z: { pos: number; spiele: number; punkte: number; diff: number }): Tabellenzeile => ({
     personId: aufstellung[z.pos]?.person_id ?? '',
     spiele: z.spiele,
@@ -106,7 +107,7 @@ export function tabellen(turnier: Turnier, teilnehmer: TurnierTeilnehmer[], part
     diff: z.diff
   });
   if (turnier.modus === 'einzelgruppe') {
-    return [{ gruppe: null, zeilen: rangliste(aufstellung.length, eingabe, hand).zeilen.map(zeile) }];
+    return [{ gruppe: null, zeilen: rangliste(aufstellung.length, eingabe, hand, saetze).zeilen.map(zeile) }];
   }
   const namen =
     turnier.modus === 'zwei-gruppen'
@@ -114,7 +115,7 @@ export function tabellen(turnier: Turnier, teilnehmer: TurnierTeilnehmer[], part
       : KO_GRUPPEN.slice(0, e.gruppenzahl ?? standardGruppenzahl(teilnehmer.length));
   return namen.map((g) => {
     const mitglieder = aufstellung.map((t, i) => (t.gruppe === g ? i : -1)).filter((i) => i >= 0);
-    return { gruppe: g, zeilen: gruppenRangliste(mitglieder, eingabe, hand).zeilen.map(zeile) };
+    return { gruppe: g, zeilen: gruppenRangliste(mitglieder, eingabe, hand, saetze).zeilen.map(zeile) };
   });
 }
 

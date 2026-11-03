@@ -118,10 +118,17 @@ export function gleichstandSchluessel(positionen: number[]): string {
   return [...positionen].sort((x, y) => x - y).join('-');
 }
 
-function nichtTrennbar(x: Zeile, y: Zeile): boolean {
+// Seit 03.11.2026 (Turnierdatum) zaehlen bei Gleichstand nach Punkten und
+// Satzdifferenz zuerst die gewonnenen Saetze, dann der direkte Vergleich
+// (BLVN-STO Pool 3.4). Aeltere Turniere behalten ihre Reihenfolge.
+export const SAETZE_AB = '2026-11-03';
+export const mitGewonnenenSaetzen = (datum: string | null | undefined) => Boolean(datum && datum >= SAETZE_AB);
+
+function nichtTrennbar(x: Zeile, y: Zeile, saetze: boolean): boolean {
   return (
     x.punkte === y.punkte &&
     x.diff === y.diff &&
+    (!saetze || x.gewonnen === y.gewonnen) &&
     x.dvPunkte !== undefined &&
     y.dvPunkte !== undefined &&
     x.dvPunkte === y.dvPunkte &&
@@ -131,13 +138,15 @@ function nichtTrennbar(x: Zeile, y: Zeile): boolean {
 
 // Tabelle wie in v57 calculateRanking() und sortStats():
 //   1. Punkte (1 je gewonnenem Spiel), 2. Satzdifferenz,
+//   (mit saetze: 2a. gewonnene Saetze, BLVN-STO Pool 3.4)
 //   3. direkter Vergleich innerhalb der punkt- und differenzgleichen Gruppe
 //      (Siege, dann Satzdifferenz), 4. von Hand festgelegte Reihenfolge.
 // Bei voelliger Gleichheit bleibt die Startnummern-Reihenfolge.
 export function rangliste(
   anzahl: number,
   partien: RanglistenPartie[],
-  hand: HandReihenfolge = {}
+  hand: HandReihenfolge = {},
+  saetze = false
 ): { zeilen: Zeile[]; gleichstaende: Gleichstand[] } {
   const zeilen: Zeile[] = Array.from({ length: anzahl }, (_, pos) => ({
     pos,
@@ -170,7 +179,7 @@ export function rangliste(
   }
 
   // Stufe 1 und 2 (stabil: sonst Startnummern-Reihenfolge)
-  zeilen.sort((x, y) => y.punkte - x.punkte || y.diff - x.diff);
+  zeilen.sort((x, y) => y.punkte - x.punkte || y.diff - x.diff || (saetze ? y.gewonnen - x.gewonnen : 0));
 
   // Stufe 3: direkter Vergleich je punkt- und differenzgleichem Block
   let start = 0;
@@ -179,7 +188,8 @@ export function rangliste(
     while (
       ende < zeilen.length &&
       zeilen[ende].punkte === zeilen[start].punkte &&
-      zeilen[ende].diff === zeilen[start].diff
+      zeilen[ende].diff === zeilen[start].diff &&
+      (!saetze || zeilen[ende].gewonnen === zeilen[start].gewonnen)
     )
       ende += 1;
     if (ende - start > 1) {
@@ -205,7 +215,7 @@ export function rangliste(
   let i = 0;
   while (i < zeilen.length) {
     let j = i + 1;
-    while (j < zeilen.length && nichtTrennbar(zeilen[i], zeilen[j])) j += 1;
+    while (j < zeilen.length && nichtTrennbar(zeilen[i], zeilen[j], saetze)) j += 1;
     if (j - i > 1) {
       const mitglieder = zeilen.slice(i, j).map((z) => z.pos);
       const schluessel = gleichstandSchluessel(mitglieder);

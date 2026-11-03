@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, test } from 'vitest';
-import { angefangen, auslosen, bergerRunden, hoechstwert, rangliste, spielBeendet, spielZaehler, spielZaehlerText } from '../src/turnier';
+import { angefangen, auslosen, bergerRunden, hoechstwert, mitGewonnenenSaetzen, rangliste, spielBeendet, spielZaehler, spielZaehlerText } from '../src/turnier';
 import type { RanglistenPartie } from '../src/turnier';
 
 // Original aus Turnier light. Fehlt die Datei, entfallen die Vergleichstests.
@@ -110,6 +110,37 @@ describe('Rangliste', () => {
     const { zeilen, gleichstaende } = rangliste(3, partien, { '0-1-2': [2, 0, 1] });
     expect(zeilen.map((z) => z.pos)).toEqual([2, 0, 1]);
     expect(gleichstaende[0].entschieden).toBe(true);
+  });
+
+  test('gewonnene Saetze vor dem direkten Vergleich (BLVN-STO Pool 3.4)', () => {
+    // Anna (0) 18:13 und Bernd (1) 16:11: beide 3 Siege, +5; Bernd schlaegt Anna 5:3
+    const partien = [
+      partie(1, 0, 5, 3),
+      partie(0, 2, 5, 3),
+      partie(0, 3, 5, 3),
+      partie(0, 4, 5, 2),
+      partie(2, 1, 5, 1),
+      partie(1, 3, 5, 2),
+      partie(1, 4, 5, 1),
+      partie(2, 3, 5, 4),
+      partie(3, 4, 5, 4),
+      partie(4, 2, 5, 4)
+    ];
+    expect(rangliste(5, partien).zeilen.slice(0, 2).map((z) => z.pos)).toEqual([1, 0]);
+    const neu = rangliste(5, partien, {}, true);
+    expect(neu.zeilen.slice(0, 2).map((z) => [z.pos, z.gewonnen, z.verloren])).toEqual([
+      [0, 18, 13],
+      [1, 16, 11]
+    ]);
+    expect(neu.gleichstaende).toEqual([]);
+    // Gleich viele Saetze: weiter der direkte Vergleich, Dreieck bleibt Stichkampf
+    expect(rangliste(3, [partie(0, 1, 5, 3), partie(1, 2, 5, 3), partie(2, 0, 5, 3)], {}, true).gleichstaende).toHaveLength(1);
+  });
+
+  test('Stichtag nach Turnierdatum', () => {
+    expect(mitGewonnenenSaetzen('2026-11-02')).toBe(false);
+    expect(mitGewonnenenSaetzen('2026-11-03')).toBe(true);
+    expect(mitGewonnenenSaetzen(null)).toBe(false);
   });
 });
 

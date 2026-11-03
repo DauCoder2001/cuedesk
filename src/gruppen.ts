@@ -64,7 +64,8 @@ export function verteilen<T extends string>(
 export function gruppenRangliste(
   mitglieder: number[],
   partien: RanglistenPartie[],
-  hand: HandReihenfolge = {}
+  hand: HandReihenfolge = {},
+  saetze = false
 ): { zeilen: Zeile[]; gleichstaende: Gleichstand[] } {
   const lokal = new Map(mitglieder.map((pos, i) => [pos, i]));
   const eigene = partien
@@ -84,7 +85,7 @@ export function gruppenRangliste(
     if (schluesselGlobal(liste) === schluessel) handLokal[[...liste].sort((x, y) => x - y).join('-')] = liste;
   });
 
-  const { zeilen, gleichstaende } = rangliste(mitglieder.length, eigene, handLokal);
+  const { zeilen, gleichstaende } = rangliste(mitglieder.length, eigene, handLokal, saetze);
   return {
     zeilen: zeilen.map((z) => ({ ...z, pos: mitglieder[z.pos] })),
     gleichstaende: gleichstaende.map((g) => ({

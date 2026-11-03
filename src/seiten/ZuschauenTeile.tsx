@@ -8,6 +8,7 @@ import { ART_NAME, teamstandAnzeige } from '../teamvergleich';
 import type { TeamstandAnzeige, TeamvergleichEinstellungen } from '../teamvergleich';
 import type { Partie, Tisch, Turnier, TurnierTeilnehmer } from '../datenbank.types';
 import { vorlaeufigeEndplaetze } from '../endplaetze';
+import { mitGewonnenenSaetzen } from '../turnier';
 import type { EndplatzPartie, VorlaeufigeEndplaetze } from '../endplaetze';
 import type { TurnierEinstellungen } from './Turniere';
 
@@ -239,7 +240,8 @@ export function TurnierTeil({
         (anzeige.turnier.einstellungen ?? {}) as TurnierEinstellungen,
         teilnehmer.filter((t) => t.turnier_id === anzeige.turnier.id),
         partien.filter((p) => p.turnier_id === anzeige.turnier.id) as unknown as EndplatzPartie[],
-        (id) => (tischNummer(id) !== undefined ? String(tischNummer(id)) : null)
+        (id) => (tischNummer(id) !== undefined ? String(tischNummer(id)) : null),
+        mitGewonnenenSaetzen(anzeige.turnier.datum)
       )
     : null;
 

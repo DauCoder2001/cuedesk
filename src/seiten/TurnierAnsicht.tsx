@@ -29,7 +29,7 @@ import { modusOptionen, modusVorschlag } from '../modus-wahl';
 import type { WaehlbarerModus } from '../modus-wahl';
 import { laufenderStand, laufenderStandText } from '../live';
 import { useEtwasUngespeichert, useWechsel } from '../ungespeichert';
-import { angefangen, auslosen, bergerRunden, hoechstwert, rangliste, spielBeendet, spielZaehler, spielZaehlerText } from '../turnier';
+import { angefangen, auslosen, bergerRunden, hoechstwert, mitGewonnenenSaetzen, rangliste, spielBeendet, spielZaehler, spielZaehlerText } from '../turnier';
 import type { Gleichstand, RanglistenPartie, Zeile } from '../turnier';
 import {
   endtabelleZweiGruppen,
@@ -377,16 +377,18 @@ export default function TurnierAnsicht({
   const bilanz = useMemo(() => turnierBilanz(partien), [partien]);
   const bilanzVon = (id: string | null) => (id && bilanz.get(id)) || LEERE_BILANZ;
 
+  // Gewonnene Saetze vor dem direkten Vergleich (BLVN-STO Pool 3.4), ab SAETZE_AB
+  const saetzeZaehlen = mitGewonnenenSaetzen(turnier?.datum);
   const tabelle = useMemo(
-    () => rangliste(aufstellung.length, eingabe, einstellungen.handReihenfolge ?? {}),
-    [eingabe, aufstellung.length, einstellungen.handReihenfolge]
+    () => rangliste(aufstellung.length, eingabe, einstellungen.handReihenfolge ?? {}, saetzeZaehlen),
+    [eingabe, aufstellung.length, einstellungen.handReihenfolge, saetzeZaehlen]
   );
   const gruppenTabellen = useMemo(
     () =>
       Object.fromEntries(
-        gruppenNamen.map((g) => [g, gruppenRangliste(gruppen[g] ?? [], eingabe, einstellungen.handReihenfolge ?? {})])
+        gruppenNamen.map((g) => [g, gruppenRangliste(gruppen[g] ?? [], eingabe, einstellungen.handReihenfolge ?? {}, saetzeZaehlen)])
       ),
-    [gruppenNamen, gruppen, eingabe, einstellungen.handReihenfolge]
+    [gruppenNamen, gruppen, eingabe, einstellungen.handReihenfolge, saetzeZaehlen]
   );
 
   const offeneSpiele = partien.filter((p) => !beendetBei(p)).length;
@@ -2860,6 +2862,7 @@ export default function TurnierAnsicht({
                       {turnier.status === 'laeuft' && !fixiert ? ' (live)' : ''}
                     </h2>
                     <Tabelle
+                      saetze={saetzeZaehlen}
                       zeilen={gruppenTabellen[g].zeilen}
                       gleichstaende={gruppenTabellen[g].gleichstaende}
                       stichkampf={offenInGruppe(g) === 0 && !fixiert}
@@ -3117,6 +3120,7 @@ export default function TurnierAnsicht({
             <section className="block">
               <h2>{turnier.status === 'beendet' ? 'Endtabelle' : turnier.status === 'laeuft' ? 'Tabelle (live)' : 'Tabelle'}</h2>
               <Tabelle
+                saetze={saetzeZaehlen}
                 zeilen={tabelle.zeilen}
                 gleichstaende={tabelle.gleichstaende}
                 stichkampf={alleFertig}
@@ -3469,6 +3473,7 @@ function Tabelle(props: {
   gleichstaende: Gleichstand[];
   stichkampf: boolean;
   medaillen?: boolean; // Endtabelle eines beendeten Turniers: Plaetze 1-3 als Medaille
+  saetze: boolean; // gewonnene Saetze vor dem direkten Vergleich (mitGewonnenenSaetzen)
   name: (pos: number) => string;
   bearbeitbar: boolean;
   setzen: (schluessel: string, reihenfolge: number[] | null) => void;
@@ -3477,7 +3482,16 @@ function Tabelle(props: {
     <table className="tabelle">
       <thead>
         <tr>
-          <th className="platzspalte">Pl.</th>
+          <th
+            className="platzspalte"
+            title={
+              props.saetze
+                ? 'Reihenfolge: Punkte, Satz-Differenz, gewonnene Sätze, direkter Vergleich der Gleichen untereinander, zuletzt Stichkampf (BLVN-STO Pool 3.4).'
+                : 'Reihenfolge: Punkte, Satz-Differenz, direkter Vergleich der Gleichen untereinander, zuletzt Stichkampf. Die gewonnenen Sätze zählen erst bei Turnieren ab 03.11.2026.'
+            }
+          >
+            Pl.
+          </th>
           <th>Name</th>
           <th className="rechts">Spiele</th>
           <th className="rechts">Punkte</th>
