@@ -426,6 +426,7 @@ export function onValue(verweis: Verweis, cb: Beobachter): () => void {
     verweis.pfad === 'tournament/spieltag' ||
     verweis.pfad === 'tournament/teamstand' ||
     verweis.pfad === 'tournament/endplaetze' ||
+    verweis.pfad === 'tournament/turnierbaum' ||
     verweis.pfad === 'tournament_archive'
   ) {
     if (verbindung) void turnierBeobachten(verweis.pfad);
@@ -651,6 +652,13 @@ export type TvEndplaetze = {
   zeilen: (Omit<EndplatzZeile, 'personen'> & { namen: string[] })[];
 };
 let tvEndplaetze: TvEndplaetze | null = null;
+// tournament/turnierbaum (Doppel-KO, Gruppen mit KO; TV "Turnierbaum"), Personen als Namen
+export type TvTurnierbaum = Omit<Turnierbaum, 'spiele'> & {
+  name: string;
+  vorlaeufig: boolean;
+  spiele: (Omit<BaumSpiel, 'a' | 'b'> & { a: BaumSeite & { name: string | null }; b: BaumSeite & { name: string | null } })[];
+};
+let tvTurnierbaum: TvTurnierbaum | null = null;
 let turnierLaeuftSchon = false;
 let turnierZeitgeber: number | null = null;
 
@@ -684,6 +692,7 @@ async function turnierLaden(): Promise<void> {
     tvSpieltag = null;
     tvTeamstand = null;
     tvEndplaetze = null;
+    tvTurnierbaum = null;
     return;
   }
 
@@ -848,6 +857,11 @@ async function turnierLaden(): Promise<void> {
         zeilen: vorl.zeilen.map(({ personen, ...z }) => ({ ...z, namen: personen.map(name) }))
       }
     : null;
+  const baum = turnierbaum(t.modus, t.einstellungen as TurnierEinstellungen, partien as unknown as EndplatzPartie[], (id) => nummern.get(id) ?? null);
+  const mitName = (s: BaumSeite) => ({ ...s, name: s.person ? name(s.person) : null });
+  tvTurnierbaum = baum
+    ? { ...baum, name: t.name, vorlaeufig: t.status !== 'beendet', spiele: baum.spiele.map((s) => ({ ...s, a: mitName(s.a), b: mitName(s.b) })) }
+    : null;
 }
 
 // Liga-Spieltag fuer die TV-Anzeige "Spieltag-Ergebnis": alle Begegnungen
@@ -888,6 +902,7 @@ async function turnierAuffrischen() {
   melden('tournament/spieltag', tvSpieltag);
   melden('tournament/teamstand', tvTeamstand);
   melden('tournament/endplaetze', tvEndplaetze);
+  melden('tournament/turnierbaum', tvTurnierbaum);
 }
 
 // Welcher Wert gehoert zu welchem Turnier-Pfad
@@ -898,6 +913,7 @@ function turnierWert(pfad: string): unknown {
   if (pfad === 'tournament/spieltag') return tvSpieltag;
   if (pfad === 'tournament/teamstand') return tvTeamstand;
   if (pfad === 'tournament/endplaetze') return tvEndplaetze;
+  if (pfad === 'tournament/turnierbaum') return tvTurnierbaum;
   return tvArchiv;
 }
 
@@ -1237,6 +1253,8 @@ import type { TurnierEinstellungen } from '../../src/seiten/Turniere';
 import type { Gestartet, PlanEintrag, PlanPartie, TabletTeams, TabletTurnier, TvErgebnis, Verdeckt } from './turnier-plan';
 import { aufnahmenAusProtokoll, protokollAusAufnahmen } from './protokoll-141';
 import { spielFolge } from '../../src/reihenfolge';
+import { turnierbaum } from '../../src/turnierbaum';
+import type { BaumSeite, BaumSpiel, Turnierbaum } from '../../src/turnierbaum';
 import type { Reihenfolge } from '../../src/reihenfolge';
 import type { AufnahmeZeile, Zustand141 } from './protokoll-141';
 

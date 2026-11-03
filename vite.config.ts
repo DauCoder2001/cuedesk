@@ -38,7 +38,8 @@ export default defineConfig(() => ({
         tvNaechste: resolve(__dirname, 'scoreboards/tv-Naechste.html'),
         tvTeamstand: resolve(__dirname, 'scoreboards/tv-Teamstand.html'),
         tvGruppenstand: resolve(__dirname, 'scoreboards/tv-Gruppenstand.html'),
-        tvEndplaetze: resolve(__dirname, 'scoreboards/tv-Endplaetze.html')
+        tvEndplaetze: resolve(__dirname, 'scoreboards/tv-Endplaetze.html'),
+        tvTurnierbaum: resolve(__dirname, 'scoreboards/tv-Turnierbaum.html')
       }
     }
   }

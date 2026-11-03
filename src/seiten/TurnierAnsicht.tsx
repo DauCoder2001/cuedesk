@@ -2752,6 +2752,8 @@ export default function TurnierAnsicht({
                   ...((zwei && einstellungen.phase2) || (mitKo && koFest) || (dko && dkoFest)
                     ? ([['endplaetze', turnier.status === 'beendet' ? 'Endplätze' : 'Endplätze (vorläufig)']] as const)
                     : []),
+                  // Doppel-KO ab der Auslosung, Gruppen mit KO ab dem KO-Start
+                  ...((mitKo && koFest) || (dko && dkoFest) ? ([['turnierbaum', 'Turnierbaum']] as const) : []),
                   ['results', 'Ergebnis']
                 ] as const
               ).map(([wert, name]) => (

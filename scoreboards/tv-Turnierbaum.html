@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CueDesk – Turnierbaum</title>
+  <link rel="icon" type="image/svg+xml" href="./img/favicon.svg">
+  <!-- "TV zeigt: Turnierbaum" (Doppel-KO, Gruppen mit KO): der Baum mit Herkunft,
+       Ergebnis und Sieger, laufende Spiele mit Tisch und Stand vom Tablet.
+       Doppel-KO: Gewinnerrunde oben, Verliererrunde darunter, Endrunde rechts;
+       ab 17 Spielern wechseln die drei Teile als Seiten. Gerechnet in
+       src/turnierbaum.ts, geliefert unter tournament/turnierbaum. -->
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; background: #111; color: #fff; margin: 0; height: 100vh; overflow: hidden; }
+    #tv-viewport { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }
+    #tv-stage { width: 100vw; padding: 2.5vh 2.5vw; transform-origin: center center; }
+    .tv-title { text-align: center; color: #888; font-size: 3.2vh; margin: 0 0 4px; font-weight: bold; text-transform: uppercase; letter-spacing: 2px; }
+    .tv-title .highlight { color: #38bdf8; }
+    .tv-sub { text-align: center; color: #aaa; font-size: 2.2vh; margin-bottom: 1.5vh; }
+    .vorl { display: inline-block; margin-left: 1vw; background: #f2c200; color: #111; font-weight: bold; font-size: 1.8vh; padding: 0.2vh 0.8vw; border-radius: 2vh; }
+    .baum { display: flex; gap: 2vw; align-items: stretch; }
+    .zonen { display: flex; flex-direction: column; gap: 1.5vh; flex: 2; min-width: 0; }
+    .zone { min-width: 0; }
+    .zone h2 { margin: 0 0 0.6vh; font-size: 1.9vh; letter-spacing: 2px; color: #7fb2e6; }
+    .zone.v h2 { color: #e0a85a; }
+    .zone.e h2 { color: #8fcf6a; }
+    .spalten { display: flex; gap: 1.2vw; }
+    .spalte { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: space-around; }
+    .spalte h3 { margin: 0 0 0.4vh; font-size: 1.6vh; color: #9fb0c0; font-weight: normal; }
+    .spiel { background: #1d2630; border: 1px solid #2c3a48; border-radius: 6px; padding: 0.4vh 0.6vw; margin: 0.4vh 0; font-size: 1.9vh; }
+    .spiel .kopf { font-size: 1.3vh; color: #7d8c9a; }
+    .zeile { display: flex; justify-content: space-between; gap: 0.6vw; white-space: nowrap; }
+    .zeile .n { overflow: hidden; text-overflow: ellipsis; }
+    .zeile .h { color: #6f7f8e; font-size: 1.4vh; }
+    .sieg { font-weight: bold; color: #fff; }
+    .raus { color: #7d8c9a; }
+    .wartet { color: #9fb0c0; }
+    .frei { opacity: 0.45; font-style: italic; }
+    .live { border-color: #e0a030; box-shadow: inset 4px 0 0 #e0a030; }
+    .live .kopf { color: #e0a030; }
+    .seite { text-align: center; color: #888; font-size: 1.8vh; margin-top: 1vh; }
+    .empty { text-align: center; color: #666; font-size: 4vh; margin-top: 18vh; }
+  </style>
+</head>
+<body>
+
+  <div id="tv-viewport"><div id="tv-stage">
+    <div class="tv-title" id="title">Turnierbaum</div>
+    <div class="tv-sub" id="sub"></div>
+    <div id="inhalt"></div>
+    <div class="seite" id="seite"></div>
+    <div class="empty" id="empty" style="display:none;">Noch kein Turnierbaum: Doppel-KO nicht ausgelost bzw. KO-Runde nicht angesetzt.</div>
+  </div></div>
+
+  <script type="module">
+    import { db, ref, onValue, starten } from "./js/anbindung.ts";
+    import { keepScreenAwake } from "./js/wake-lock.js";
+    import { startTvAutofit } from "./js/tv-autofit.js";
+
+    await starten();
+
+    // Namen kommen aus CueDesk - nie als HTML einsetzen
+    const esc = (t) => String(t == null ? '' : t).replace(/[&<>"]/g, (c) =>
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+    keepScreenAwake();
+
+    let overscanPct = 3;
+    const refit = startTvAutofit(document.getElementById('tv-stage'), () => overscanPct);
+    onValue(ref(db, 'system/tvSettings'), (snap) => {
+      const p = snap.val() && Number(snap.val().overscanPct);
+      overscanPct = Number.isFinite(p) ? p : 3;
+      refit();
+    });
+
+    // Umschaltung am Turnierbildschirm ("TV zeigt")
+    const PAGE_FOR = { auslosung: 'tv-Auslosung.html', live: 'tv.html', livenaechste: 'tv.html', naechste: 'tv-Naechste.html', results: 'tv-Turnier-Ergebnis.html', spieltag: 'tv-Spieltag.html', teamstand: 'tv-Teamstand.html', gruppenstand: 'tv-Gruppenstand.html', endplaetze: 'tv-Endplaetze.html', turnierbaum: 'tv-Turnierbaum.html' };
+    onValue(ref(db, 'tournament/tvView'), (snap) => {
+      const target = PAGE_FOR[snap.val()] || 'tv.html';
+      if (target !== 'tv-Turnierbaum.html') window.location.href = target;
+    });
+
+    const titleEl = document.getElementById('title');
+    const subEl = document.getElementById('sub');
+    const inhaltEl = document.getElementById('inhalt');
+    const seiteEl = document.getElementById('seite');
+    const emptyEl = document.getElementById('empty');
+
+    let daten = null;
+    let tische = null;
+    let seite = 0; // grosser Doppel-KO: 0 Gewinnerrunde, 1 Verliererrunde, 2 Endrunde
+
+    // Laufender Stand vom Tablet; nach einem Seitenwechsel stehen die Namen dort vertauscht
+    function liveStand(s) {
+      const t = tische && s.partieId ? Object.values(tische).find((x) => x && x.tournamentMatchId === s.partieId) : null;
+      if (!t) return null;
+      const s1 = Number(t.score1 ?? t.s1 ?? 0), s2 = Number(t.score2 ?? t.s2 ?? 0);
+      const getauscht = t.player1 === s.b.name && t.player2 === s.a.name;
+      return getauscht ? [s2, s1] : [s1, s2];
+    }
+
+    function seiteHtml(x, punkte, sieger, verlierer) {
+      const name = x.name ? esc(x.name) : x.frei ? 'Freilos' : '<span class="h">' + esc(x.herkunft) + '</span>';
+      const klasse = x.frei ? 'frei' : !x.name ? 'wartet' : sieger ? 'sieg' : verlierer ? 'raus' : '';
+      return '<div class="zeile ' + klasse + '"><span class="n">' + name + '</span><span>' + (punkte ?? '') + '</span></div>';
+    }
+
+    function spielHtml(s) {
+      if (s.entfaellt) return '';
+      const live = !s.fertig ? liveStand(s) : null;
+      const laeuft = !s.fertig && (live || s.tisch);
+      const punkte = s.fertig && !s.freilos ? [s.s1, s.s2] : live;
+      const kopf = laeuft
+        ? '● ' + (s.tisch ? 'Tisch ' + esc(s.tisch) : 'läuft')
+        : esc(s.name) + (s.freilos ? ' · Freilos' : '');
+      return '<div class="spiel' + (laeuft ? ' live' : '') + '"><div class="kopf">' + kopf + '</div>'
+        + seiteHtml(s.a, punkte ? punkte[0] : null, s.sieger === 'a', s.sieger === 'b')
+        + seiteHtml(s.b, punkte ? punkte[1] : null, s.sieger === 'b', s.sieger === 'a') + '</div>';
+    }
+
+    // Spalten in Spielreihenfolge
+    function spaltenHtml(spiele) {
+      const namen = [...new Set(spiele.map((s) => s.spalte))];
+      return '<div class="spalten">' + namen.map((n) =>
+        '<div class="spalte"><h3>' + esc(n) + '</h3>' + spiele.filter((s) => s.spalte === n).map(spielHtml).join('') + '</div>'
+      ).join('') + '</div>';
+    }
+
+    function zoneHtml(klasse, titel, spiele) {
+      return '<div class="zone ' + klasse + '"><h2>' + titel + '</h2>' + spaltenHtml(spiele) + '</div>';
+    }
+
+    function zeichnen() {
+      const d = daten;
+      if (!d) {
+        titleEl.textContent = 'Turnierbaum';
+        subEl.textContent = '';
+        inhaltEl.innerHTML = '';
+        seiteEl.textContent = '';
+        emptyEl.style.display = 'block';
+        refit();
+        return;
+      }
+      emptyEl.style.display = 'none';
+      titleEl.innerHTML = '<span class="highlight">' + esc(d.name) + '</span> · Turnierbaum';
+      subEl.innerHTML = (d.art === 'dko' ? 'Doppel-KO' : 'KO-Runde') + ' · ' + d.beendet + ' von ' + d.gesamt + ' Spielen beendet'
+        + (d.vorlaeufig ? '' : '<span class="vorl">Endstand</span>');
+      const g = d.spiele.filter((s) => s.zone === 'G');
+      const v = d.spiele.filter((s) => s.zone === 'V');
+      const e = d.spiele.filter((s) => s.zone === 'E');
+      if (d.art !== 'dko') {
+        inhaltEl.innerHTML = '<div class="baum">' + zoneHtml('e', 'KO-RUNDE', e) + '</div>';
+        seiteEl.textContent = '';
+      } else if (g.filter((s) => s.spalte === 'Gewinnerrunde 1').length <= 8) {
+        // bis 16 Spieler: alles auf einer Seite
+        inhaltEl.innerHTML = '<div class="baum"><div class="zonen">' + zoneHtml('g', 'GEWINNERRUNDE', g) + zoneHtml('v', 'VERLIERERRUNDE', v)
+          + '</div><div style="flex:1;min-width:0;display:flex;align-items:center">' + zoneHtml('e', 'ENDRUNDE', e) + '</div></div>';
+        seiteEl.textContent = '';
+      } else {
+        const teile = [['g', 'GEWINNERRUNDE', g], ['v', 'VERLIERERRUNDE', v], ['e', 'ENDRUNDE', e]];
+        const [k, t, liste] = teile[seite % 3];
+        inhaltEl.innerHTML = '<div class="baum">' + zoneHtml(k, t, liste) + '</div>';
+        seiteEl.textContent = 'Seite ' + (seite % 3 + 1) + ' von 3';
+      }
+      refit();
+    }
+
+    // Grosser Doppel-KO: Seiten alle 20 Sekunden wechseln
+    setInterval(() => { seite += 1; zeichnen(); }, 20000);
+
+    onValue(ref(db, 'tournament/turnierbaum'), (snap) => { daten = snap.val(); zeichnen(); });
+    onValue(ref(db, 'tables'), (snap) => { tische = snap.val(); zeichnen(); });
+  </script>
+</body>
+</html>
