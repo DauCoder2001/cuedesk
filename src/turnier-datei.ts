@@ -44,7 +44,7 @@ export type TurnierDatei = {
 };
 
 // Modi, die beide Programme kennen
-export const DATEI_MODI: TurnierModus[] = ['einzelgruppe', 'zwei-gruppen', 'gruppen-ko'];
+export const DATEI_MODI: TurnierModus[] = ['einzelgruppe', 'zwei-gruppen', 'gruppen-ko', 'doppel-ko'];
 
 const DISZIPLIN_ALS_TEXT: Record<Disziplin, string> = {
   '8-ball': '8-Ball',
@@ -91,9 +91,12 @@ export function eigeneId(kennung: string): string | null {
   return kennung.startsWith('cuedesk:') ? kennung.slice('cuedesk:'.length) : null;
 }
 
-// Phase als Klartext wie in TurnierPilot ("Gruppe A", "Halbfinale", "Platzierung")
+// Phase als Klartext wie in TurnierPilot ("Gruppe A", "Halbfinale", "Platzierung");
+// Doppel-KO: "Gewinnerrunde 2", "Verliererrunde 3", "Viertelfinale" ... "Finale"
 export function phaseText(phase: string | null, gruppe: string | null): string {
   if (phase === 'phase2' || phase === 'phase3') return 'Platzierung';
+  if (phase === 'dko' && gruppe === 'fin') return 'Finale';
+  if (phase === 'dko' && gruppe === 'p3') return 'Spiel um Platz 3';
   return rundeText({ phase, gruppe });
 }
 
@@ -105,11 +108,41 @@ const KO_KUERZEL: [string, string][] = [
   ['spiel um platz 3', 'bro']
 ];
 
+const DKO_KUERZEL: [string, string][] = [
+  ['viertelfinale', 'vf'],
+  ['halbfinale', 'hf']
+];
+
+// Doppel-KO: Spiele je Abschnitt durchzaehlen (g2-1, g2-2 ...); Finale und Platz 3 gibt es einmal
+function dkoAusText(klein: string, zaehler: Map<string, number>): { phase: string; gruppe: string } | null {
+  const weiter = (kuerzel: string) => {
+    const n = (zaehler.get(kuerzel) ?? 0) + 1;
+    zaehler.set(kuerzel, n);
+    return n;
+  };
+  const runde = /^(gewinnerrunde|verliererrunde)\s*(\d+)$/.exec(klein);
+  if (runde) {
+    const kuerzel = `${runde[1] === 'gewinnerrunde' ? 'g' : 'v'}${runde[2]}-`;
+    return { phase: 'dko', gruppe: `${kuerzel}${weiter(kuerzel)}` };
+  }
+  const ende = DKO_KUERZEL.find(([name]) => klein === name);
+  if (ende) return { phase: 'dko', gruppe: `${ende[1]}${weiter(ende[1])}` };
+  if (klein === 'finale') return { phase: 'dko', gruppe: 'fin' };
+  if (klein === 'spiel um platz 3') return { phase: 'dko', gruppe: 'p3' };
+  return null;
+}
+
 // Klartext zurueck in phase/gruppe von CueDesk. KO-Runden werden je Runde
-// durchgezaehlt (qf1, qf2, ...); dafuer zaehlt "zaehler" mit.
-export function phaseAusText(text: string | undefined, zaehler: Map<string, number>): { phase: string | null; gruppe: string | null } {
+// durchgezaehlt (qf1, qf2, ...); dafuer zaehlt "zaehler" mit. Beim Doppel-KO
+// werden daraus die Spiele des Baums (g2-1, v3-2, vf1, hf1, fin, p3).
+export function phaseAusText(
+  text: string | undefined,
+  zaehler: Map<string, number>,
+  modus = ''
+): { phase: string | null; gruppe: string | null } {
   const t = (text ?? '').trim();
   const klein = t.toLowerCase();
+  if (modus === 'doppel-ko') return dkoAusText(klein, zaehler) ?? { phase: t || null, gruppe: null };
   const gruppe = /^gruppe\s*([a-z])?$/i.exec(t);
   if (gruppe) return { phase: 'gruppe', gruppe: gruppe[1]?.toUpperCase() ?? null };
   if (klein === 'platzierung') return { phase: 'phase3', gruppe: null };

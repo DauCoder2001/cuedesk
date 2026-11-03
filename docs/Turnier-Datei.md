@@ -30,9 +30,9 @@ Austauschformat für einzelne beendete Turniere zwischen CueDesk und TurnierPilo
 
 - **kennung**: Herkunft, `cuedesk:<Turnier-Id>` oder `turnierpilot:<Archiv-Id>`. Wer ein eingelesenes Turnier weitergibt, behält die Kennung. So erkennt jedes Programm ein Turnier wieder, auch nach Hin und Zurück. Altbestand aus Turnier light steht in CueDesk ohne Vorsilbe in `alt_id` und gilt als `turnierpilot:`.
 - **disziplin**: Klartext `8-Ball`, `9-Ball`, `10-Ball`, `Multi-Ball`, `14.1`. TurnierPilot kennt 14.1 nicht.
-- **modus**: `einzelgruppe`, `zwei-gruppen`, `gruppen-ko`. Andere Modi (Liga, Teamvergleich) werden nicht übertragen.
-- **teilnehmer**, **ranking**, **a**, **b**: Namen als Text. Beim Einlesen ordnet man sie Spielern zu.
-- **phase**: Klartext wie in TurnierPilot: `Gruppe`, `Gruppe A`, `Achtelfinale`, `Viertelfinale`, `Halbfinale`, `Finale`, `Spiel um Platz 3`, `Platzierung`.
+- **modus**: `einzelgruppe`, `zwei-gruppen`, `gruppen-ko`, `doppel-ko`. Andere Modi (Liga, Teamvergleich) werden nicht übertragen. TurnierPilot spielt kein Doppel-KO, nimmt es aber ins Archiv.
+- **teilnehmer**, **ranking**, **a**, **b**: Namen als Text. Beim Einlesen ordnet man sie Spielern zu. Im Ranking dürfen sich Spieler einen Platz teilen (Doppel-KO: z. B. zweimal Platz 7).
+- **phase**: Klartext wie in TurnierPilot: `Gruppe`, `Gruppe A`, `Achtelfinale`, `Viertelfinale`, `Halbfinale`, `Finale`, `Spiel um Platz 3`, `Platzierung`. Doppel-KO: `Gewinnerrunde 1`, `Gewinnerrunde 2` …, `Verliererrunde 1` …, `Viertelfinale`, `Halbfinale`, `Finale`, `Spiel um Platz 3`. CueDesk zählt die Spiele je Abschnitt beim Einlesen durch (g2-1, g2-2 …, vf1, hf1, fin, p3).
 - **werten**, **grund**: ob die einzelne Partie fürs Rating zählt und warum nicht. Ob das ganze Turnier zählt, entscheidet man beim Einlesen.
 
 ## Einlesen

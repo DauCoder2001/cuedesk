@@ -150,7 +150,7 @@ export default function TurnierDateiEinlesen({
         const partien = t.partien.flatMap((p) => {
           const a = personNachName.get(p.a)!;
           const b = personNachName.get(p.b)!;
-          const { phase, gruppe } = phaseAusText(p.phase, zaehler);
+          const { phase, gruppe } = phaseAusText(p.phase, zaehler, t.modus);
           // Zwei Namen auf denselben Spieler zugeordnet: die Partie faellt weg
           if (a === b) {
             ausgelassen += 1;

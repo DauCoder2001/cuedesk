@@ -113,7 +113,7 @@ Ein Turnier, das mit TurnierPilot oder in einem anderen CueDesk-Verein gespielt 
 4. **Partien fürs Rating werten** ist zunächst aus; dann stehen die Partien nur im Archiv. **Einlesen** schreibt die Turniere.
 5. Das Turnier steht danach in der Liste mit der Marke „aus TurnierPilot“. Im Turnier schaltet **Fürs Rating werten** das Rating nachträglich ein (ab dem nächtlichen Lauf); einer Serie zuordnen geht unter **Serien**.
 
-Übertragen werden Einzelgruppe, Zwei Gruppen und Gruppen mit KO, nicht Liga-Spieltage, Teamvergleiche und Doppel-KO.
+Übertragen werden Einzelgruppe, Zwei Gruppen, Gruppen mit KO und Doppel-KO, nicht Liga-Spieltage und Teamvergleiche. Beim Doppel-KO stehen die Partien im Archiv wieder unter Gewinnerrunde, Verliererrunde und Endrunde, geteilte Plätze (z. B. zweimal Platz 7) bleiben geteilt.
 
 ## Gut zu wissen
 

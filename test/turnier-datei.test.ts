@@ -77,6 +77,19 @@ describe('Turnier-Datei', () => {
     expect(phaseAusText('Platzierung', z)).toEqual({ phase: 'phase3', gruppe: null });
   });
 
+  it('Doppel-KO-Phasen hin und zurueck', () => {
+    const ids = ['g1-1', 'g1-2', 'g2-1', 'v1-1', 'v3-1', 'v3-2', 'vf1', 'vf2', 'hf1', 'hf2', 'fin', 'p3'];
+    const texte = ids.map((id) => phaseText('dko', id));
+    expect(texte).toEqual([
+      'Gewinnerrunde 1', 'Gewinnerrunde 1', 'Gewinnerrunde 2', 'Verliererrunde 1', 'Verliererrunde 3', 'Verliererrunde 3',
+      'Viertelfinale', 'Viertelfinale', 'Halbfinale', 'Halbfinale', 'Finale', 'Spiel um Platz 3'
+    ]);
+    const z = new Map<string, number>();
+    expect(texte.map((t) => phaseAusText(t, z, 'doppel-ko'))).toEqual(ids.map((gruppe) => ({ phase: 'dko', gruppe })));
+    // Ohne Doppel-KO bleiben Halbfinale und Finale KO-Runde
+    expect(phaseAusText('Finale', new Map(), 'gruppen-ko')).toEqual({ phase: 'ko', gruppe: 'fin' });
+  });
+
   it('Disziplin, Dateiname und Namen', () => {
     expect(disziplinText('14-1')).toBe('14.1');
     expect(disziplinAusText('Multi-Ball')).toBe('multi-ball');
