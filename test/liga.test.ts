@@ -3,6 +3,7 @@ import {
   LIGEN,
   aufnahmen141Fehler,
   aufstellungPruefen,
+  clubCloudFrist,
   drittLage,
   drittWertung,
   entfaelltBeiDritt,
@@ -236,10 +237,10 @@ describe('Stammspieler je Runde (BLVN-STO Pool 2.5.4 a)', () => {
   test('weniger als 2 Stammspieler in einer vollen Runde', () => {
     const stamm = new Set(['a', 'b']);
     expect(stammspielerPruefen(spiele, voll(['a', 'x', 'y', 'z', 'a', 'b', 'x', 'y']), stamm, 'Erste')).toEqual([
-      'In der Hinrunde steht nur 1 Stammspieler von Erste (mindestens 2, STO 2.5.4).'
+      'In der Hinrunde steht nur 1 Stammspieler von Erste (mindestens 2, STO 2.5.4, sonst Verlust der Begegnung 0 : 8).'
     ]);
     expect(stammspielerPruefen(spiele, voll(['x', 'y', 'z', 'w']), stamm, 'Erste')).toEqual([
-      'In der Hinrunde steht kein Stammspieler von Erste (mindestens 2, STO 2.5.4).'
+      'In der Hinrunde steht kein Stammspieler von Erste (mindestens 2, STO 2.5.4, sonst Verlust der Begegnung 0 : 8).'
     ]);
   });
 
@@ -247,5 +248,26 @@ describe('Stammspieler je Runde (BLVN-STO Pool 2.5.4 a)', () => {
     const stamm = new Set(['a']);
     expect(stammspielerPruefen(spiele, voll(['a', 'x', 'y']), stamm, 'Erste')).toEqual([]);
     expect(stammspielerPruefen(spiele, voll(['a', 'x', 'y']), stamm, 'Erste', (s) => s.nr === 4)).toHaveLength(1);
+  });
+});
+
+describe('Nichtantritt (BLVN-STO Pool 2.3.7)', () => {
+  test('alle 8 Partien kampflos fuer den Gegner, 0 : 8 und 0 : 3', () => {
+    const e = drittWertung([{ nr: 1, heim: 4, gast: 2 }], { hin: { heim: true }, nicht: 'heim' }, LIGEN.kreisliga.ziele);
+    expect(e).toHaveLength(8);
+    expect(e.every((x) => x.kampflos && x.nurPunkt && x.heim === 0 && x.gast === 1)).toBe(true);
+    const w = wertung(e);
+    expect(w.partiepunkte).toEqual([0, 8]);
+    expect(w.matchpunkte).toEqual([0, 3]);
+    expect(w.entschieden).toBe(true);
+    expect(wertung(drittWertung([], { nicht: 'gast' }, undefined)).partiepunkte).toEqual([8, 0]);
+  });
+});
+
+describe('Club-Cloud-Frist (BLVN-STO Pool 2.4.4)', () => {
+  test('Folgetag', () => {
+    expect(clubCloudFrist('2026-11-07')).toBe('2026-11-08'); // Sa. > So.
+    expect(clubCloudFrist('2026-11-08')).toBe('2026-11-09'); // So. > Mo.
+    expect(clubCloudFrist('2026-12-31')).toBe('2027-01-01');
   });
 });

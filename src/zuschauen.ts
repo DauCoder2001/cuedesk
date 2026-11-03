@@ -128,8 +128,8 @@ export type LigaStand = {
 };
 
 // Stand einer Begegnung; gezaehlt werden nur beendete Partien (Heim = Seite A).
-// Tritt eine Mannschaft zu dritt an, zaehlt die Partie mit * kampflos
-// (drittWertung in src/liga.ts).
+// Tritt eine Mannschaft zu dritt an, zaehlt die Partie mit * kampflos, tritt
+// sie gar nicht an, die ganze Begegnung (drittWertung in src/liga.ts).
 export function ligaStand(begegnung: Turnier, partien: Partie[], vereinName: string): LigaStand {
   const liga = einstellungenVon(begegnung).liga ?? {};
   const eigene = liga.eigene || vereinName;
@@ -152,7 +152,10 @@ export function ligaStand(begegnung: Turnier, partien: Partie[], vereinName: str
     heim: wirHeim ? eigene : gegner,
     gast: wirHeim ? gegner : eigene,
     partiepunkte: w.partiepunkte,
-    matchpunkte: w.entschieden && partien.some((p) => p.turnier_id === begegnung.id) ? w.matchpunkte : null
+    matchpunkte:
+      w.entschieden && (partien.some((p) => p.turnier_id === begegnung.id) || (liga.art !== 'doppel' && liga.dritt?.nicht))
+        ? w.matchpunkte
+        : null
   };
 }
 

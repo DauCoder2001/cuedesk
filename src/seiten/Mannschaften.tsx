@@ -599,7 +599,7 @@ export default function Mannschaften() {
                   <th className="namenspalte">Name</th>
                   <th>Stammspieler</th>
                   <th>Kapitän</th>
-                  <th>Berechtigt</th>
+                  <th title="Ab wann der Spieler eingesetzt werden darf, wie im Mannschaftspass. Wer nach dem Meldeschluss (15.08.) nachgemeldet wird, hat eine Sperrzeit, meist 14 Tage (BLVN-STO Pool 2.1.4). Steht er am Spieltag vorher in der Aufstellung, kommt ein Hinweis.">Berechtigt</th>
                   <th>Einsätze</th>
                   <th>Partien</th>
                   {darfVerwalten && <th></th>}

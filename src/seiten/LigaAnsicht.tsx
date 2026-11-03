@@ -7,6 +7,7 @@ import {
   LIGEN,
   aufnahmen141Fehler,
   aufstellungPruefen,
+  clubCloudFrist,
   doppelPlanAendern,
   doppelPlanAusEingabe,
   doppelSeitePruefen,
@@ -531,8 +532,10 @@ export default function LigaAnsicht({
   );
   // Zu dritt in dieser Runde? (nur Einzel-Begegnungen)
   const drittIn = (runde: Runde) => (istDoppel ? 'keine' : drittLage(liga?.dritt, runde));
-  // Lage fuer ein Spiel: nur die Partie mit * ist betroffen
-  const drittBei = (s: LigaSpiel) => (s.nr === drittNr(s.runde) ? drittIn(s.runde) : 'keine');
+  // Nicht angetreten: die ganze Begegnung zaehlt kampflos (nur Einzel)
+  const nicht = istDoppel ? undefined : liga?.dritt?.nicht;
+  // Lage fuer ein Spiel: nur die Partie mit * ist betroffen, beim Nichtantritt alle
+  const drittBei = (s: LigaSpiel) => nicht ?? (s.nr === drittNr(s.runde) ? drittIn(s.runde) : 'keine');
   const punkte = useMemo(() => wertung(ergebnisse), [ergebnisse]);
 
   // Spieltag gesamt (ab zwei Begegnungen), aus Sicht der Heimmannschaft der 1. Begegnung
@@ -573,7 +576,7 @@ export default function LigaAnsicht({
   );
 
   const fehlerAufstellung = useMemo(() => {
-    if (spiele.length === 0) return [];
+    if (spiele.length === 0 || nicht) return [];
     if (istDoppel) {
       return spiele.flatMap((s) =>
         (['heim', 'gast'] as const)
@@ -619,7 +622,7 @@ export default function LigaAnsicht({
   const hinweiseKader = useMemo(() => {
     const eigene = mannschaften.find((m) => m.id === liga?.mannschaft_id);
     // Kaderregeln gelten fuer die Einzel-Begegnungen; das Doppel ist Spass
-    if (!eigene || spiele.length === 0 || istDoppel) return [];
+    if (!eigene || spiele.length === 0 || istDoppel || nicht) return [];
     const derSaison = mannschaften.filter((m) => m.saison === eigene.saison);
     const grundlage = {
       mannschaft: { id: eigene.id, name: eigene.name, rang: eigene.rang },
@@ -633,7 +636,7 @@ export default function LigaAnsicht({
       ...(turnier ? einsatzHinweise({ ...grundlage, datum: turnier.datum, andere: einsatzTage }) : [])
     ];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mannschaften, kader, spiele, partien, wahl, anzeige, liga?.mannschaft_id, wirSindHeim, einsatzTage, turnier?.datum]);
+  }, [mannschaften, kader, spiele, partien, wahl, anzeige, liga?.mannschaft_id, wirSindHeim, einsatzTage, turnier?.datum, nicht]);
 
   // Kader der gewaehlten Mannschaft: steht in den eigenen Auswahllisten oben,
   // alle anderen Mitglieder darunter (Aushilfe bleibt moeglich)
@@ -1034,6 +1037,40 @@ export default function LigaAnsicht({
     await laden();
   }
 
+  // Mannschaft gar nicht angetreten (STO 2.3.7, SBK: Verlust der Begegnung
+  // 0 : 8): Alle Partien zaehlen kampflos fuer den Gegner (drittWertung in
+  // src/liga.ts). Angelegte Partien und die Aufstellung werden dafuer
+  // geloescht; laeuft schon eine Partie oder hat sie ein Ergebnis, geht es nicht.
+  async function nichtSetzen(seite: 'heim' | 'gast', an: boolean) {
+    if (!turnier || !liga) return;
+    if (an) {
+      if (partien.some((p) => p.tisch_id || p.status !== 'geplant' || p.ergebnis_a !== null || p.ergebnis_b !== null)) {
+        return setFehler('Eine Partie läuft schon oder hat ein Ergebnis. Erst zurücksetzen, dann „nicht angetreten“ anhaken.');
+      }
+      const name = seite === 'heim' ? heimMannschaft : gastMannschaft;
+      const frage = `${name} ist nicht angetreten? Alle 8 Partien zählen kampflos für den Gegner, die Begegnung endet 0 : 8. Die eingetragene Aufstellung wird gelöscht.`;
+      if (!(await fragen(frage, 'Übernehmen'))) return;
+      if (partien.length > 0) {
+        const { error } = await supabase.from('partien').delete().eq('turnier_id', turnier.id);
+        if (error) return setFehler(error.message);
+      }
+    }
+    setFehler(null);
+    const { data } = await supabase.from('turniere').select('einstellungen').eq('id', turnier.id).maybeSingle();
+    const aktuell = (data?.einstellungen ?? {}) as TurnierEinstellungen;
+    if (!aktuell.liga) return;
+    const dritt = { ...(aktuell.liga.dritt ?? {}) };
+    if (an) dritt.nicht = seite;
+    else delete dritt.nicht;
+    const { error } = await supabase
+      .from('turniere')
+      .update({ einstellungen: { ...aktuell, liga: { ...aktuell.liga, dritt, ...(an ? { aufstellung: {} } : {}) } } })
+      .eq('id', turnier.id);
+    if (error) return setFehler(error.message);
+    if (an) setWahl({});
+    await laden();
+  }
+
   // Bemerkungen zur Begegnung (Formular P-01), gespeichert beim Verlassen des Felds
   async function bemerkungSpeichern(text: string) {
     if (!turnier) return;
@@ -1337,6 +1374,19 @@ export default function LigaAnsicht({
   // Spaltenfolge wie im Spielbericht: erst Heim, dann Gast
   const heimMannschaft = wirSindHeim ? eigenerName : liga.gegner;
   const gastMannschaft = wirSindHeim ? liga.gegner : eigenerName;
+  // Club-Cloud-Frist (STO 2.4.4): Gastgeber ist die Heimmannschaft der 1.
+  // Begegnung. Hinweis nach dem Abschluss des ganzen Spieltags, bis die Frist um ist.
+  const clubCloudBis = (() => {
+    const gastgeber = liga.begegnung === 2 ? !wirSindHeim : wirSindHeim;
+    const komplett = turnier.status === 'beendet' && teile.filter((x) => x.id !== turnier.id).every((x) => x.status === 'beendet');
+    if (istDoppel || liga.liga === 'spass' || !gastgeber || !komplett || !darfLeiten) return null;
+    const frist = clubCloudFrist(turnier.datum);
+    const jetzt = new Date();
+    const heute = `${jetzt.getFullYear()}-${String(jetzt.getMonth() + 1).padStart(2, '0')}-${String(jetzt.getDate()).padStart(2, '0')}`;
+    if (heute > frist) return null;
+    const tag = ['So.', 'Mo.', 'Di.', 'Mi.', 'Do.', 'Fr.', 'Sa.'][new Date(`${frist}T12:00:00Z`).getUTCDay()];
+    return `${tag} ${frist.slice(8, 10)}.${frist.slice(5, 7)}.${frist.slice(0, 4)}`;
+  })();
   const reihen: { runde: 'hin' | 'rueck'; titel: string }[] = istDoppel
     ? [{ runde: 'hin', titel: 'Doppel' }]
     : [
@@ -1362,6 +1412,8 @@ export default function LigaAnsicht({
   const naechsterSchritt: 'hin' | 'rueck' | 'abschliessen' | null =
     turnier?.status === 'beendet' || spiele.length === 0 || ungespeichert
       ? null
+      : nicht
+        ? 'abschliessen'
       : !gestartet.hin
         ? aufstellungKomplett('hin') && fehlerAufstellung.length === 0 ? 'hin' : null
         : !istDoppel && !gestartet.rueck
@@ -1635,6 +1687,44 @@ export default function LigaAnsicht({
             </div>
           )}
         </div>
+        {/* Nichtantritt einer Mannschaft: die ganze Begegnung kampflos (STO 2.3.7) */}
+        {!istDoppel && bearbeitbar && (
+          <div className="rundenkopf">
+            <div className="kopflinks">
+              {(['heim', 'gast'] as const).map((seite) => {
+                const name = seite === 'heim' ? heimMannschaft : gastMannschaft;
+                return (
+                  <label
+                    key={seite}
+                    className="ankreuz"
+                    title={`${name} ist gar nicht angetreten (auch: verspätet nach der Karenzzeit): Alle 8 Partien zählen kampflos für den Gegner, nur mit dem Spielpunkt; die Begegnung endet 0 : 8 (BLVN-STO Pool 2.3.7). Geht nur, solange keine Partie läuft oder ein Ergebnis hat.`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={nicht === seite}
+                      disabled={arbeitet || (nicht !== undefined && nicht !== seite)}
+                      onChange={(e) => void nichtSetzen(seite, e.target.checked)}
+                    />
+                    {name} nicht angetreten
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+        )}
+        {nicht && (
+          <div className="pausehinweis">
+            <strong>Nicht angetreten:</strong> {nicht === 'heim' ? heimMannschaft : gastMannschaft} ist nicht angetreten. Alle 8
+            Partien zählen kampflos für {nicht === 'heim' ? gastMannschaft : heimMannschaft}, Endstand{' '}
+            {nicht === 'heim' ? '0 : 8' : '8 : 0'} (BLVN-STO Pool 2.3.7). Aufstellung und Runden entfallen.
+          </div>
+        )}
+        {clubCloudBis && (
+          <div className="pausehinweis">
+            <strong>Club Cloud:</strong> Als gastgebender Verein die Ergebnisse bis {clubCloudBis}, 23:59 Uhr in der Club Cloud
+            eintragen (BLVN-STO Pool 2.4.4). Der Spielbericht (PDF) hilft dabei.
+          </div>
+        )}
         {/* Hinweise zur Aufstellung nur, solange die Begegnung offen ist */}
         {turnier.status !== 'beendet' && fehlerAufstellung.length > 0 && (
           <div className="pausehinweis">
@@ -1656,6 +1746,7 @@ export default function LigaAnsicht({
             <div className="kopflinks">
               <h2>{r.titel}</h2>
               {!istDoppel &&
+                !nicht &&
                 (['heim', 'gast'] as const).map((seite) => {
                   const an = Boolean(liga.dritt?.[r.runde]?.[seite]);
                   const name = seite === 'heim' ? heimMannschaft : gastMannschaft;
@@ -1676,7 +1767,7 @@ export default function LigaAnsicht({
                   ) : null;
                 })}
             </div>
-            {gestartet[r.runde] ? (
+            {nicht ? null : gestartet[r.runde] ? (
               <span className="knopfpaar">
                 {turnier.status === 'laeuft' && <span className="livelaeuft">● läuft</span>}
                 {bearbeitbar && r.runde === 'hin' && gestartet.rueck && (
@@ -1779,7 +1870,7 @@ export default function LigaAnsicht({
                       heimVerdeckt={istVerdeckt(r.runde, 'heim')}
                       gastVerdeckt={istVerdeckt(r.runde, 'gast')}
                       anzeige={anzeige}
-                      bearbeitbar={bearbeitbar && !(r.runde === 'hin' && hinGeschuetzt)}
+                      bearbeitbar={bearbeitbar && !nicht && !(r.runde === 'hin' && hinGeschuetzt)}
                       spielerSetzen={(seite, id) => void spielerSetzen(s, seite, id)}
                       ergebnisSetzen={(a, b) => void ergebnisSetzen(s, a, b)}
                       wertungSetzen={(werten) => void partieWertung(s, werten)}
@@ -1796,6 +1887,7 @@ export default function LigaAnsicht({
                       mitRating={mitRating}
                       stern={!istDoppel && entfaelltBeiDritt(s.nr)}
                       dritt={drittBei(s)}
+                      nicht={Boolean(nicht)}
                       kampflos={ergebnisse.find((e) => e.nr === s.nr && e.kampflos) ?? null}
                       kennzahl={p ? (kennzahlen.get(p.id) ?? null) : null}
                       kennzahlenSetzen={(aufn, hsHeim, hsGast) => void kennzahlenSetzen(s, aufn, hsHeim, hsGast)}
@@ -1818,7 +1910,7 @@ export default function LigaAnsicht({
                     <td></td>
                   </tr>
                 )}
-                {bearbeitbar && (
+                {bearbeitbar && !nicht && (
                   <tr>
                     <td colSpan={2}></td>
                     {(['heim', 'gast'] as const).map((seite) => (
@@ -2095,6 +2187,7 @@ function Spielzeile(props: {
   mitRating: boolean; // ohne Vereins-Rating keine Rating-Haken
   stern: boolean; // Partie entfaellt bei drei Spielern (Nr. 4 und 5)
   dritt: 'keine' | 'heim' | 'gast' | 'beide'; // wer in dieser Partie zu dritt fehlt
+  nicht: boolean; // die fehlende Seite ist gar nicht angetreten (ganze Begegnung kampflos)
   kampflos: LigaErgebnis | null; // Wertung, wenn nur eine Seite zu dritt ist
   kennzahl: Partie141 | null; // 14.1: Aufnahmen und Hoechstserien
   kennzahlenSetzen: (aufnahmen: number | null, hsHeim: number | null, hsGast: number | null) => void;
@@ -2129,9 +2222,15 @@ function Spielzeile(props: {
   const auswahl = (seite: Slot, gewaehlt: string | null, liste: Person[], verborgen: boolean) =>
     (seite === 'heim' && (props.dritt === 'heim' || props.dritt === 'beide')) ||
     (seite === 'gast' && (props.dritt === 'gast' || props.dritt === 'beide')) ? (
-      <span className="hinweis" title="Die Mannschaft tritt in dieser Runde zu dritt an; das Feld bleibt leer.">
-        – zu dritt –
-      </span>
+      props.nicht ? (
+        <span className="hinweis" title="Die Mannschaft ist nicht angetreten; die ganze Begegnung zählt kampflos.">
+          – nicht angetreten –
+        </span>
+      ) : (
+        <span className="hinweis" title="Die Mannschaft tritt in dieser Runde zu dritt an; das Feld bleibt leer.">
+          – zu dritt –
+        </span>
+      )
     ) : verborgen ? (
       // Der Name steht bewusst nicht im Seitenquelltext
       <span className="verdeckt" title="Aufstellung verborgen">{gewaehlt ? 'verdeckt' : 'noch offen'}</span>
@@ -2216,7 +2315,13 @@ function Spielzeile(props: {
         {gestrichen ? (
           <span title="Beide Mannschaften treten zu dritt an: Die Partie entfällt ohne Wertung.">entfällt</span>
         ) : kampflos?.nurPunkt ? (
-          <span title="Der Gegner tritt zu dritt an: Die Partie zählt kampflos nur mit dem Spielpunkt, ohne Punkte, Höchstserie und Aufnahmen (BLVN-STO Pool 2.5.5).">
+          <span
+            title={
+              props.nicht
+                ? 'Der Gegner ist nicht angetreten: Die Partie zählt kampflos nur mit dem Spielpunkt (BLVN-STO Pool 2.3.7).'
+                : 'Der Gegner tritt zu dritt an: Die Partie zählt kampflos nur mit dem Spielpunkt, ohne Punkte, Höchstserie und Aufnahmen (BLVN-STO Pool 2.5.5).'
+            }
+          >
             kampflos
           </span>
         ) : kampflos ? (

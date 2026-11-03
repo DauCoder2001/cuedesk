@@ -83,6 +83,19 @@ export function spieltagBerichtDaten(
     const eigene = partien.filter(mitSpielern).filter((p) => p.turnier_id === b.id);
     const zeile = (s: LigaSpiel): BerichtPartie => {
       const nr = !doppel && entfaelltBeiDritt(s.nr) ? `${s.nr}*` : String(s.nr);
+      // Nicht angetreten: alle Partien kampflos fuer den Gegner (STO 2.3.7)
+      const nicht = doppel ? undefined : liga.dritt?.nicht;
+      if (nicht) {
+        const leer = '– nicht angetreten –';
+        return {
+          nr,
+          disziplin: disziplinText(s),
+          heim: nicht === 'heim' ? leer : '',
+          gast: nicht === 'gast' ? leer : '',
+          ergebnis: 'kampflos',
+          punkte: nicht === 'heim' ? '0 : 1' : '1 : 0'
+        };
+      }
       // Zu dritt: keine Partie, kampflos (10-Ball Ausspielziel : 0, 14.1 nur
       // Spielpunkt) oder ganz entfallen (BLVN-STO Pool 2.5.5)
       const lage = !doppel && s.nr === drittNr(s.runde) ? drittLage(liga.dritt, s.runde) : 'keine';
@@ -136,7 +149,14 @@ export function spieltagBerichtDaten(
       matchpunkte: s.matchpunkte,
       runden,
       mitStern: !doppel,
-      bemerkung: doppel ? '' : (liga.bemerkung ?? '').replace(/\s+/g, ' ').trim()
+      bemerkung: doppel
+        ? ''
+        : [
+            liga.dritt?.nicht ? `${liga.dritt.nicht === 'heim' ? s.heim : s.gast} nicht angetreten (Verlust der Begegnung 0 : 8).` : '',
+            (liga.bemerkung ?? '').replace(/\s+/g, ' ').trim()
+          ]
+            .filter(Boolean)
+            .join(' ')
     };
   });
   return {

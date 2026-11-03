@@ -18,6 +18,7 @@ export type KaderEintrag = {
   mannschaft_id: string;
   person_id: string;
   stammspieler: boolean;
+  berechtigt_ab?: string | null; // Spalte "Berechtigt" im Mannschaftspass
 };
 
 // Die Saison beginnt im Juli: Spiele ab dem 1. Juli 2026 gehoeren zu 2026/27.
@@ -254,6 +255,19 @@ export function einsatzHinweise(args: {
           : `steht am ${tagText(anderswo.datum)} auch für ${mannschaftName(anderswo.mannschaft_id)} im Plan`;
       hinweise.push(`${name(person)} ${text} (am selben Wochenende nur eine Mannschaft, STO 2.2.5).`);
     }
+    const ab = berechtigtAb(person, mannschaft, kader);
+    if (ab && ab > datum) {
+      hinweise.push(`${name(person)} ist erst ab ${ab.slice(8, 10)}.${ab.slice(5, 7)}.${ab.slice(0, 4)} spielberechtigt (Nachmeldung, STO 2.1.4).`);
+    }
   });
   return hinweise;
+}
+
+// Ab wann jemand fuer diese Mannschaft spielen darf: das Datum aus ihrem Kader,
+// sonst (Aushilfe) aus dem Kader, in dem er Stammspieler ist, sonst irgendeins.
+export function berechtigtAb(person: string, mannschaft: MannschaftKurz, kader: KaderEintrag[]): string | null {
+  const eigene = kader.filter((k) => k.person_id === person);
+  const eintrag =
+    eigene.find((k) => k.mannschaft_id === mannschaft.id) ?? eigene.find((k) => k.stammspieler) ?? eigene.find((k) => k.berechtigt_ab);
+  return eintrag?.berechtigt_ab ?? null;
 }

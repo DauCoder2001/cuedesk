@@ -8,6 +8,7 @@ import {
   saisonAus,
   saisonBilanz,
   saisonListe,
+  berechtigtAb,
   stammspielerHinweis,
   wochenende
 } from '../src/mannschaften';
@@ -213,5 +214,26 @@ describe('Einsatzregeln (BLVN-STO Pool 2.2)', () => {
     expect(
       einsatzHinweise({ ...grund, mannschaft: mannschaften[2], datum: '2026-11-07', aufgestellt: ['c'], andere: [tag('2026-11-08', 'm1', 'c')] })
     ).toEqual(['C steht am So., 08.11. auch für Erste im Plan (am selben Wochenende nur eine Mannschaft, STO 2.2.5).']);
+  });
+});
+
+describe('Spielberechtigung nach Nachmeldung (BLVN-STO Pool 2.1.4)', () => {
+  const mitDatum: KaderEintrag[] = [
+    ...kader,
+    { mannschaft_id: 'm2', person_id: 'n', stammspieler: true, berechtigt_ab: '2026-11-20' }
+  ];
+  const grund = { kader: mitDatum, mannschaften, name, andere: [] };
+
+  test('Datum aus dem Kader, auch fuer Aushilfen', () => {
+    expect(berechtigtAb('n', mannschaften[1], mitDatum)).toBe('2026-11-20');
+    expect(berechtigtAb('n', mannschaften[0], mitDatum)).toBe('2026-11-20');
+    expect(berechtigtAb('a', mannschaften[0], mitDatum)).toBeNull();
+  });
+
+  test('Hinweis nur vor dem Datum', () => {
+    expect(einsatzHinweise({ ...grund, mannschaft: mannschaften[1], datum: '2026-11-14', aufgestellt: ['n'] })).toEqual([
+      'N ist erst ab 20.11.2026 spielberechtigt (Nachmeldung, STO 2.1.4).'
+    ]);
+    expect(einsatzHinweise({ ...grund, mannschaft: mannschaften[1], datum: '2026-11-21', aufgestellt: ['n'] })).toEqual([]);
   });
 });

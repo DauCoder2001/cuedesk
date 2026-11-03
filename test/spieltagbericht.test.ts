@@ -134,3 +134,19 @@ describe('Spielbericht des Spieltags', () => {
     expect(spieltagBerichtDaten([b1], p, 'Verein', name, '')).toBeNull();
   });
 });
+
+describe('Spielbericht bei Nichtantritt (BLVN-STO Pool 2.3.7)', () => {
+  test('alle Partien kampflos, 8 : 0 und Bemerkung', () => {
+    const b1 = turnier('b1', { heim: true, ziele, dritt: { nicht: 'gast' }, bemerkung: 'Anruf um 19 Uhr' });
+    const b2 = turnier('b2', { heim: false, ziele, dritt: { nicht: 'heim' } });
+    const b = spieltagBerichtDaten([b1, b2], [], 'Verein', name, 'Do., 08.10.2026')!;
+    const zeilen = b.begegnungen[0].runden.flatMap((r) => r.partien);
+    expect(zeilen).toHaveLength(8);
+    expect(zeilen.every((z) => z.gast === '– nicht angetreten –' && z.ergebnis === 'kampflos' && z.punkte === '1 : 0')).toBe(true);
+    expect(b.begegnungen[0].partiepunkte).toEqual([8, 0]);
+    expect(b.begegnungen[0].matchpunkte).toEqual([3, 0]);
+    expect(b.begegnungen[0].bemerkung).toBe('Schießbude Bassum nicht angetreten (Verlust der Begegnung 0 : 8). Anruf um 19 Uhr');
+    expect(b.partiepunkte).toEqual([16, 0]);
+    expect(b.fertig).toBe(true);
+  });
+});

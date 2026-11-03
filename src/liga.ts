@@ -91,8 +91,13 @@ export function entfaelltBeiDritt(nr: number): boolean {
 export const drittNr = (runde: Runde): number => (runde === 'hin' ? 4 : 5);
 
 // Welche Mannschaft tritt in einer Runde nur zu dritt an (Haken am Spieltag,
-// einstellungen.liga.dritt, je Runde und Seite wie verdeckt)
-export type Dritt = { hin?: { heim?: boolean; gast?: boolean }; rueck?: { heim?: boolean; gast?: boolean } };
+// einstellungen.liga.dritt, je Runde und Seite wie verdeckt). nicht: diese
+// Mannschaft ist gar nicht angetreten, die ganze Begegnung zaehlt kampflos.
+export type Dritt = {
+  hin?: { heim?: boolean; gast?: boolean };
+  rueck?: { heim?: boolean; gast?: boolean };
+  nicht?: 'heim' | 'gast';
+};
 
 export function drittLage(dritt: Dritt | undefined, runde: Runde): 'keine' | 'heim' | 'gast' | 'beide' {
   const heim = Boolean(dritt?.[runde]?.heim);
@@ -105,7 +110,7 @@ export type LigaErgebnis = {
   heim: number | null; // Saetze, bei 14.1 Punkte
   gast: number | null;
   gewertet?: boolean; // false: gestrichene Partie ohne Wertung
-  kampflos?: boolean; // Gegner trat zu dritt an
+  kampflos?: boolean; // Gegner trat zu dritt oder gar nicht an
   nurPunkt?: boolean; // kampflos nur mit Spielpunkt 1 : 0, ohne Ergebnis (14.1, Rueckrunde)
 };
 
@@ -116,6 +121,7 @@ export type LigaErgebnis = {
 // an, entfaellt die Partie ohne Wertung. Eine gespeicherte Partie gibt es dafuer nicht; ihr Eintrag wird
 // ersetzt.
 export function drittWertung(ergebnisse: LigaErgebnis[], dritt: Dritt | undefined, ziele: Ausspielziele | undefined): LigaErgebnis[] {
+  if (dritt?.nicht) return nichtAngetretenWertung(dritt.nicht);
   let aus = ergebnisse;
   (['hin', 'rueck'] as Runde[]).forEach((runde) => {
     const lage = drittLage(dritt, runde);
@@ -136,6 +142,19 @@ export function drittWertung(ergebnisse: LigaErgebnis[], dritt: Dritt | undefine
     );
   });
   return aus;
+}
+
+// Nichtantritt einer Mannschaft (BLVN-STO Pool 2.3.7, SBK: Verlust der
+// Begegnung 0 : 8): Alle acht Partien zaehlen kampflos fuer den Gegner, nur mit
+// dem Spielpunkt, ohne Ergebnis. Partien gibt es dafuer keine.
+export function nichtAngetretenWertung(nicht: 'heim' | 'gast'): LigaErgebnis[] {
+  return Array.from({ length: 8 }, (_, i) => ({
+    nr: i + 1,
+    heim: nicht === 'gast' ? 1 : 0,
+    gast: nicht === 'heim' ? 1 : 0,
+    kampflos: true,
+    nurPunkt: true
+  }));
 }
 
 // 14.1 kennt kein Unentschieden (BLVN-STO Pool 1.3.14): Bei Gleichstand am
@@ -266,7 +285,7 @@ export function stammspielerPruefen(
     const anzahl = new Set(inRunde.map((s) => spielerJeSpiel[s.nr] as string).filter((id) => stamm.has(id))).size;
     if (anzahl < 2) {
       fehler.push(
-        `In der ${runde === 'hin' ? 'Hinrunde' : 'Rückrunde'} ${anzahl === 1 ? 'steht nur 1 Stammspieler' : 'steht kein Stammspieler'} von ${mannschaft} (mindestens 2, STO 2.5.4).`
+        `In der ${runde === 'hin' ? 'Hinrunde' : 'Rückrunde'} ${anzahl === 1 ? 'steht nur 1 Stammspieler' : 'steht kein Stammspieler'} von ${mannschaft} (mindestens 2, STO 2.5.4, sonst Verlust der Begegnung 0 : 8).`
       );
     }
   });
@@ -503,4 +522,13 @@ export function spieltagStand(
   if (fertig(erste)) return { status: 'geplant', teilBeendet: 1 };
   if (fertig(zweite)) return { status: 'geplant', teilBeendet: 2 };
   return { status: 'geplant', teilBeendet: null };
+}
+
+// Frist fuer die Ergebnis-Eingabe in der Club Cloud (BLVN-STO Pool 2.4.4):
+// der gastgebende Verein bis 23:59 Uhr des Folgetags (Sa. > So., So. > Mo.).
+// Zurueck kommt der Folgetag als ISO-Datum.
+export function clubCloudFrist(datum: string): string {
+  const d = new Date(`${datum}T12:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + 1);
+  return d.toISOString().slice(0, 10);
 }
