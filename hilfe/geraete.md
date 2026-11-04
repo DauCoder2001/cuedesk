@@ -35,7 +35,7 @@ Genauso wie ein Tablet, nur statt eines Tisches **Fernseher (TV-Ansicht)** wähl
 
 Auf allen TV-Seiten verschwindet der Mauszeiger, wenn sich die Maus 3 Sekunden lang nicht bewegt. So steht auf einem Fernseher ohne Maus kein Zeiger mitten im Bild. Sobald die Maus bewegt wird, ist er wieder da.
 
-Was der Fernseher während eines Turniers zeigt (**Auslosung**, **Live-Tische**, bei 3 oder 5 Tischen **Live + Nächste**, **Nächste Spiele**, bei Gruppenturnieren **Gruppenstand** und **Endplätze**, **Ergebnis**), stellst du in der Turnieransicht unter **TV zeigt:** um.
+Was der Fernseher während eines Turniers zeigt (**Auslosung**, **Live-Tische**, bei 3 bis 6 Tischen **Live + Nächste**, **Nächste Spiele**, bei Gruppenturnieren **Gruppenstand** und **Endplätze**, **Ergebnis**), stellst du in der Turnieransicht unter **TV zeigt:** um.
 
 ## 4. Im Betrieb
 

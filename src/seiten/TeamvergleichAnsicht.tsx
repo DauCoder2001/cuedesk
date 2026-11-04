@@ -792,8 +792,8 @@ export default function TeamvergleichAnsicht({
                 [
                   ['auslosung', 'Teams'],
                   ['live', 'Live-Tische'],
-                  // Bei 3 oder 5 Tischen bleibt im TV-Raster eine Kachel frei
-                  ...(aktiveTische === 3 || aktiveTische === 5 ? ([['livenaechste', 'Live + Nächste']] as const) : []),
+                  // 3 und 5 Tische: freie Kachel im TV-Raster, 4 und 6: Spalte rechts
+                  ...(aktiveTische >= 3 && aktiveTische <= 6 ? ([['livenaechste', 'Live + Nächste']] as const) : []),
                   ['naechste', 'Nächste Spiele'],
                   ['teamstand', 'Teamstand']
                 ] as const

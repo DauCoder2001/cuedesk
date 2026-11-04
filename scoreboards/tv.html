@@ -97,7 +97,8 @@
     }
     .inactive { color: #555; font-size: 4vh; margin: auto; }
     /* "TV zeigt: Live + Nächste" bei 3 oder 5 Tischen: die freie Kachel zeigt die
-       naechsten offenen Paarungen (wie tv-Naechste.html, aber kompakt) */
+       naechsten offenen Paarungen (wie tv-Naechste.html, aber kompakt); bei 4 oder
+       6 Tischen eine eigene Spalte rechts ueber die volle Hoehe */
     .naechste-karte { justify-content: flex-start; text-align: left; padding: 1.6vh 1.4vw; overflow: hidden; }
     .naechste-karte .kopf { display: flex; justify-content: space-between; align-items: baseline; gap: 1vw; margin-bottom: 1.4vh; }
     .naechste-karte .titel { color: #ddd; font-size: 3.2vh; font-weight: bold; white-space: nowrap; }
@@ -180,9 +181,15 @@
     // CueDesk: Umschaltung am Turnierbildschirm ("TV zeigt"). Die Seiten liegen
     // bei CueDesk alle im Ordner scoreboards.
     const PAGE_FOR = { auslosung: 'tv-Auslosung.html', live: 'tv.html', livenaechste: 'tv.html', naechste: 'tv-Naechste.html', results: 'tv-Turnier-Ergebnis.html', spieltag: 'tv-Spieltag.html', teamstand: 'tv-Teamstand.html', gruppenstand: 'tv-Gruppenstand.html', endplaetze: 'tv-Endplaetze.html', turnierbaum: 'tv-Turnierbaum.html' };
-    // "Live + Nächste": nur bei 3 oder 5 Tischen (dort bleibt im Raster eine
-    // Kachel frei) und nur, solange ein Turnier laeuft. Sonst wie "Live-Tische".
-    const freieKachel = nummern.length === 3 || nummern.length === 5;
+    // "Live + Nächste": bei 3 bis 6 Tischen (3 und 5: freie Kachel im Raster,
+    // 4 und 6: Spalte rechts) und nur, solange ein Turnier laeuft. Sonst wie "Live-Tische".
+    // Bei 4 oder 6 Tischen ist das Raster voll: dann eine Spalte rechts dazu.
+    const freieKachel = nummern.length >= 3 && nummern.length <= 6;
+    const seitenspalte = nummern.length === 4 || nummern.length === 6;
+    const anzahlNaechste = seitenspalte ? 8 : nummern.length === 5 ? 4 : 6;
+    const rasterSpalten = (mitSpalte) => {
+      stage.style.gridTemplateColumns = 'repeat(' + spalten + ', 1fr)' + (mitSpalte ? ' minmax(0, 1.1fr)' : '');
+    };
     let aktivesTurnier = null;
     let tvView = null;
     onValue(ref(db, 'tournament/tvView'), (snap) => {
@@ -200,13 +207,21 @@
     function renderNaechste() {
       let feld = document.getElementById('naechste-feld');
       if (!(freieKachel && tvView === 'livenaechste' && aktivesTurnier)) {
-        if (feld) feld.remove();
+        if (feld) {
+          feld.remove();
+          if (seitenspalte) rasterSpalten(false);
+        }
         return;
       }
       if (!feld) {
         feld = document.createElement('div');
         feld.id = 'naechste-feld';
         feld.className = 'table-card naechste-karte' + (nummern.length === 5 ? ' klein' : '');
+        if (seitenspalte) {
+          feld.style.gridColumn = String(spalten + 1);
+          feld.style.gridRow = '1 / -1';
+          rasterSpalten(true);
+        }
         stage.append(feld);
       }
       const t = aktivesTurnier;
@@ -220,7 +235,7 @@
         '<div class="stich"><div class="skopf">STICHKAMPF · ' + esc(s.plaetze) + '</div>'
         + '<div class="snamen">' + (s.names || []).map(esc).join(s.names && s.names.length === 2 ? ' – ' : ' · ') + '</div>'
         + '<div class="sfuss">' + (s.group ? esc(s.group) + ' · ' : '') + 'Shoot-Out</div></div>').join('');
-      const spiele = naechsteSpiele(plan, Math.max(0, (nummern.length === 5 ? 4 : 6) - stich.length));
+      const spiele = naechsteSpiele(plan, Math.max(0, anzahlNaechste - stich.length));
       const farbe = (group) => {
         const g = /^Gruppe ([A-D])\b/.exec(group || '');
         return g ? 'gruppe-' + g[1] : 'gruppe-neutral';
