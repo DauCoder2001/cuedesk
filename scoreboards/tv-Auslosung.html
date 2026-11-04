@@ -26,6 +26,8 @@
 
     .tv-grid { display: grid; gap: 20px; box-sizing: border-box; }
     .layout-single-group { grid-template-columns: 1fr; max-width: 700px; margin: 0 auto; }
+    /* Grosses Spielerfeld (ab 13) und Doppel-KO: ueber die ganze Breite */
+    .layout-single-group.breit { max-width: none; }
     .layout-two-groups  { grid-template-columns: 1fr 1fr; }
     .layout-four-groups { grid-template-columns: 1fr 1fr; }
 
@@ -47,6 +49,19 @@
       border-left: 8px solid #4488ff;
     }
     .tv-player-list li:nth-child(even) { border-left-color: #ff4444; }
+    /* Startnummer vor dem Namen; ab 13 Spielern zwei, ab 25 drei Spalten */
+    .tv-player-list .nr { color: #777; min-width: 2.2em; font-size: 0.8em; }
+    .tv-player-list.spalten-2, .tv-player-list.spalten-3 { display: grid; grid-auto-flow: column; column-gap: 1.5vw; }
+    .tv-player-list.spalten-2 li, .tv-player-list.spalten-3 li { border-left-color: #4488ff; }
+    /* Doppel-KO: Paarungen der Gewinnerrunde 1 in zwei Spalten */
+    .runde-titel { color: #9fb0c0; font-size: 2.4vh; margin: 0 0 1vh; }
+    .paarungen { display: grid; grid-auto-flow: column; grid-template-columns: 1fr 1fr; column-gap: 2vw; row-gap: 8px; }
+    .paarung { display: flex; align-items: center; gap: 1vw; background: #1a1a1a; border-radius: 10px; padding: 10px 18px; font-size: 3.4vh; font-weight: bold; white-space: nowrap; }
+    .paarung .nr { color: #777; min-width: 2em; font-size: 0.8em; }
+    .paarung .p1 { color: #ff6b6b; }
+    .paarung .p2 { color: #6ba4ff; }
+    .paarung .gegen { color: #666; }
+    .paarung .frei { color: #777; font-style: italic; font-weight: normal; font-size: 0.8em; }
 
     .empty { text-align: center; color: #666; font-size: 4vh; margin-top: 18vh; }
     /* Teamvergleich: Teamnamen in Rot und Blau */
@@ -66,7 +81,9 @@
 
   <script type="module">
     // CueDesk: liest das laufende Turnier ueber die Anbindung und zeigt die
-    // Teilnehmer in Startnummern-Reihenfolge.
+    // Teilnehmer in Startnummern-Reihenfolge. Einzelgruppe und Doppel-KO heissen
+    // "Spielerfeld"; der Doppel-KO zeigt statt der Liste die Paarungen der
+    // Gewinnerrunde 1 (aus tournament/turnierbaum, wie die Seite Turnierbaum).
     import { db, ref, onValue, starten } from "./js/anbindung.ts";
     import { keepScreenAwake } from "./js/wake-lock.js";
     import { startTvAutofit } from "./js/tv-autofit.js";
@@ -104,11 +121,30 @@
     // CueDesk: Die Tische waehlen die Spieler am Tablet selbst, Gruppen heissen A bis D
     // Teamvergleich: Teamname statt Gruppe, Kapitaen statt Tisch-Hinweis
     function tableBadge(mode, g, t) { return t && t.groupNames ? (t.captains && t.captains[g] ? 'Kapitän: ' + t.captains[g] : 'Team') : 'alle Tische'; }
-    function groupLabel(mode, g, t) { return t && t.groupNames && t.groupNames[g] ? t.groupNames[g] : (mode === 'single' ? 'Hauptgruppe' : ('Gruppe ' + 'ABCD'.charAt(g - 1))); }
+    function groupLabel(mode, g, t) { return t && t.groupNames && t.groupNames[g] ? t.groupNames[g] : (mode === 'single' ? 'Spielerfeld · ' + Object.keys(t.players).length + ' Spieler' : ('Gruppe ' + 'ABCD'.charAt(g - 1))); }
     function layoutClass(n) { return n === 4 ? 'layout-four-groups' : (n === 2 ? 'layout-two-groups' : 'layout-single-group'); }
 
-    onValue(ref(db, 'tournament/active'), (snap) => {
-      const t = snap.val();
+    let aktiv = null;
+    let baum = null;
+    onValue(ref(db, 'tournament/active'), (snap) => { aktiv = snap.val(); zeichnen(); });
+    onValue(ref(db, 'tournament/turnierbaum'), (snap) => { baum = snap.val(); zeichnen(); });
+
+    // Doppel-KO: Paarungen der Gewinnerrunde 1, Freilos allein
+    function paarungenHtml(spiele) {
+      const name = (s) => s && s.name ? esc(s.name) : '';
+      return '<div class="runde-titel">Gewinnerrunde 1</div><div class="paarungen" style="grid-template-rows: repeat(' + Math.ceil(spiele.length / 2) + ', auto)">'
+        + spiele.map((s, i) => {
+          const nr = '<span class="nr">' + (i + 1) + '</span>';
+          if (s.a.frei || s.b.frei) {
+            const wer = s.a.frei ? s.b : s.a;
+            return '<div class="paarung">' + nr + '<span>' + name(wer) + '</span><span class="frei">Freilos</span></div>';
+          }
+          return '<div class="paarung">' + nr + '<span class="p1">' + name(s.a) + '</span><span class="gegen">–</span><span class="p2">' + name(s.b) + '</span></div>';
+        }).join('') + '</div>';
+    }
+
+    function zeichnen() {
+      const t = aktiv;
       if (!t || !t.players) {
         titleEl.innerHTML = '📺 Gruppen-Auslosung';
         subEl.textContent = '';
@@ -120,6 +156,12 @@
       emptyEl.style.display = 'none';
 
       const numGroups = t.mode === 'four' ? 4 : (t.mode === 'two' ? 2 : 1);
+      const g1 = baum && baum.art === 'dko' && Array.isArray(baum.spiele)
+        ? baum.spiele.filter((s) => s.spalte === 'Gewinnerrunde 1' && !s.entfaellt)
+        : [];
+      const dko = g1.length > 0;
+      const anzahl = Object.keys(t.players).length;
+      const spalten = numGroups === 1 && !t.groupNames ? (anzahl >= 25 ? 3 : anzahl >= 13 ? 2 : 1) : 1;
 
       // Spieler nach Gruppe sammeln (Reihenfolge der Auslosung bleibt erhalten)
       const groups = {};
@@ -129,7 +171,7 @@
       // Kopfzeile
       titleEl.innerHTML = t.groupNames
         ? `📺 Teams — <span class="highlight">${esc(t.discipline || '')}</span>`
-        : `📺 Auslosung — <span class="highlight">${esc(t.discipline || '')}</span> (Race to ${t.raceTo || ''})`;
+        : `📺 Auslosung — <span class="highlight">${esc(t.discipline || '')}</span> (Race to ${t.raceTo || ''})${dko ? ' · Doppel-KO' : ''}`;
       // Symbol aus dem am Turnier eingefrorenen Schalter, nicht aus dem Namen -
       // sonst bekaeme eine selbst angelegte Art immer die Medaille.
       let sub = `🏆 ${esc(t.type || '')}`;
@@ -138,21 +180,27 @@
       subEl.innerHTML = sub;
 
       // Gruppen-Raster
-      gridEl.className = 'tv-grid ' + layoutClass(numGroups);
+      gridEl.className = 'tv-grid ' + layoutClass(numGroups) + (dko || spalten > 1 ? ' breit' : '');
       let html = '';
       for (let g = 1; g <= numGroups; g++) {
-        const lis = groups[g].map(n => `<li>${esc(n)}</li>`).join('');
+        // Einzelgruppe: Startnummer davor, lange Listen in Spalten
+        const mitNr = numGroups === 1 && !t.groupNames;
+        const lis = groups[g].map((n, i) => `<li>${mitNr ? `<span class="nr">${i + 1}</span>` : ''}${esc(n)}</li>`).join('');
+        const zeilen = Math.ceil(groups[g].length / spalten);
+        const liste = dko
+          ? paarungenHtml(g1)
+          : `<ul class="tv-player-list${spalten > 1 ? ' spalten-' + spalten : ''}"${spalten > 1 ? ` style="grid-template-rows: repeat(${zeilen}, auto)"` : ''}>${lis}</ul>`;
         html += `<div class="table-card">
             <div class="table-title">
               <span class="${t.groupNames ? 'team-name team-' + g : ''}">👥 ${esc(groupLabel(t.mode, g, t))}</span>
               <span class="game-badge">${esc(tableBadge(t.mode, g, t))}</span>
             </div>
-            <ul class="tv-player-list">${lis}</ul>
+            ${liste}
           </div>`;
       }
       gridEl.innerHTML = html;
       refit();
-    });
+    }
   </script>
 
 </body>
