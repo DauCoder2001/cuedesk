@@ -596,7 +596,12 @@ tr.gespielt .zahlfeld { color: var(--text); }
 /* Liga: Partie mit *, die zu dritt entfaellt; 14.1-Zeile darunter (Formular P-01) */
 tr.gestrichen td { color: var(--text-leise); }
 tr.gestrichen td.disziplin { text-decoration: line-through; }
-.tabelle tr.zeile141 td { padding-top: 0; font-size: 13px; color: var(--text-leise); }
+.tabelle tr.zeile141 td { padding-top: 0; font-size: 14px; color: var(--text-leise); }
+/* 14.1-Werte: Kuerzel klein, Zahl normal; Heim rechtsbuendig, | unter dem Doppelpunkt */
+.tabelle tr.zeile141 td.doppelpunkt { padding-top: 0; }
+.zeile141 .wert141 { white-space: nowrap; }
+.zeile141 .wert141.abstand { margin-left: 22px; }
+.zeile141 .kuerzel141 { font-size: 12px; margin-right: 4px; }
 .tabelle tr.rundenstand td { font-weight: 600; }
 .endstand { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
 .endstand strong { font-size: 24px; }

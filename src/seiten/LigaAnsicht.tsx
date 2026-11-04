@@ -2526,24 +2526,52 @@ function Zeile141(props: {
     />
   );
 
+  // Heim rechtsbuendig vor dem Strich, Gast links danach; der Strich steht
+  // unter dem Doppelpunkt zwischen den Namen
+  const angabe = (kuerzel: string, inhalt: React.ReactNode, abstand = true) => (
+    <span className={abstand ? 'wert141 abstand' : 'wert141'}>
+      <span className="kuerzel141">{kuerzel}</span>
+      {inhalt}
+    </span>
+  );
+  const titel = vonHand ? undefined : vomTablet ? 'Vom Tablet übernommen' : 'Von Hand oder aus dem eingelesenen Spielbericht';
   return (
-    <tr ref={reihe} className="zeile141">
+    <tr ref={reihe} className="zeile141" title={titel}>
       <td colSpan={2}></td>
-      <td colSpan={6}>
+      <td className="rechts">
         {vonHand ? (
           <>
-            Aufn. {feld(aufn, setAufn, `Benötigte Aufnahmen des Gewinners (Limit ${props.spiel.aufnahmen ?? '–'}; bei Gleichstand am Limit je 5 Aufnahmen Verlängerung)`)} · HS{' '}
-            {feld(hsHeim, setHsHeim, 'Höchstserie Heim')} | {feld(hsGast, setHsGast, 'Höchstserie Gast')} · GD{' '}
-            {gd(partie.ergebnis_a)} | {gd(partie.ergebnis_b)}
+            {angabe('Aufn.', feld(aufn, setAufn, `Benötigte Aufnahmen des Gewinners (Limit ${props.spiel.aufnahmen ?? '–'}; bei Gleichstand am Limit je 5 Aufnahmen Verlängerung)`), false)}
+            {angabe('HS', feld(hsHeim, setHsHeim, 'Höchstserie Heim'))}
+            {angabe('GD', gd(partie.ergebnis_a))}
           </>
         ) : (
           z && (
-            <span title={vomTablet ? 'Vom Tablet übernommen' : 'Von Hand oder aus dem eingelesenen Spielbericht'}>
-              Aufn. {z.aufnahmen} · HS {z.hsHeim} | {z.hsGast} · GD {z.gdHeim} | {z.gdGast}
-            </span>
+            <>
+              {angabe('Aufn.', z.aufnahmen, false)}
+              {angabe('HS', z.hsHeim)}
+              {angabe('GD', z.gdHeim)}
+            </>
           )
         )}
       </td>
+      <td className="doppelpunkt">|</td>
+      <td>
+        {vonHand ? (
+          <>
+            {angabe('HS', feld(hsGast, setHsGast, 'Höchstserie Gast'), false)}
+            {angabe('GD', gd(partie.ergebnis_b))}
+          </>
+        ) : (
+          z && (
+            <>
+              {angabe('HS', z.hsGast, false)}
+              {angabe('GD', z.gdGast)}
+            </>
+          )
+        )}
+      </td>
+      <td colSpan={3}></td>
     </tr>
   );
 }
