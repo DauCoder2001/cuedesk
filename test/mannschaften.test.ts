@@ -8,7 +8,9 @@ import {
   mitErsatzZeile,
   festgespielt,
   istErsatz,
+  kaderGesperrt,
   kaderHinweise,
+  stammWechsel,
   saisonAus,
   saisonBilanz,
   saisonListe,
@@ -59,6 +61,30 @@ describe('Andere Kader', () => {
 
   test('Stammspieler oben im Kader unten: Warnung', () => {
     expect(zusatz('a', mannschaften[2])).toEqual({ text: 'Stammspieler in Erste, darf hier nicht antreten', warnung: true });
+  });
+
+  test('Auswahl: Stammspieler hoeherer Mannschaften gesperrt', () => {
+    expect(kaderGesperrt('a', mannschaften[2], mehr, mannschaften)?.name).toBe('Erste');
+    expect(kaderGesperrt('c', mannschaften[1], mehr, mannschaften)).toBeUndefined();
+    expect(kaderGesperrt('d', mannschaften[0], mehr, mannschaften)).toBeUndefined();
+  });
+
+  test('Stammspieler nach oben: unterer Kader faellt weg', () => {
+    const w = stammWechsel({ person: 'c', mannschaft: mannschaften[1], kader: mehr, mannschaften });
+    expect(w.bisher?.name).toBe('Dritte');
+    expect(w.entfernen.map((x) => x.mannschaft.name)).toEqual(['Dritte']);
+  });
+
+  test('Stammspieler nach unten: oben bleibt er im Kader', () => {
+    const w = stammWechsel({ person: 'a', mannschaft: mannschaften[2], kader: mehr, mannschaften });
+    expect(w.bisher?.name).toBe('Erste');
+    expect(w.entfernen).toEqual([]);
+  });
+
+  test('ohne Stammmannschaft: nur untere Kader fallen weg', () => {
+    const w = stammWechsel({ person: 'd', mannschaft: mannschaften[0], kader: mehr, mannschaften });
+    expect(w.bisher).toBeUndefined();
+    expect(w.entfernen.map((x) => x.mannschaft.name)).toEqual(['Zweite', 'Dritte']);
   });
 
   test('Kader anderer Saisons zaehlen nicht', () => {

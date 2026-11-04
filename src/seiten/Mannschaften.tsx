@@ -4,7 +4,7 @@ import { useSitzung } from '../sitzung';
 import { personName } from '../namen';
 import { useRueckfrage } from '../rueckfrage';
 import { LIGEN, drittWertung, istDoppelBegegnung, wertung } from '../liga';
-import { andereKader, einsaetze, festgespielt, saisonAus, saisonBilanz, saisonListe, stammspielerHinweis } from '../mannschaften';
+import { andereKader, kaderGesperrt, stammWechsel, einsaetze, festgespielt, saisonAus, saisonBilanz, saisonListe, stammspielerHinweis } from '../mannschaften';
 import { vereinsEinstellungen } from '../vereinseinstellungen';
 import { Pflichthinweis, usePflicht } from '../pflicht';
 import { useUngespeichert, weichtAb } from '../ungespeichert';
@@ -280,12 +280,51 @@ export default function Mannschaften() {
   async function hakenSetzen(eintrag: MannschaftSpieler, feld: 'stammspieler' | 'kapitaen', wert: boolean) {
     setFehler(null);
     setMeldung(null);
+    // Stammspieler werden: vorher fragen, wenn er anderswo Stammspieler ist
+    // oder in niedrigeren Kadern steht (dort darf er dann nicht mehr antreten).
+    let entfernen: MannschaftSpieler[] = [];
+    let untenNamen = '';
+    if (feld === 'stammspieler' && wert) {
+      const hier = derSaison.find((m) => m.id === eintrag.mannschaft_id);
+      if (hier) {
+        const wechsel = stammWechsel({ person: eintrag.person_id, mannschaft: hier, kader, mannschaften: derSaison });
+        entfernen = wechsel.entfernen.map((x) => x.eintrag);
+        untenNamen = wechsel.entfernen.map((x) => x.mannschaft.name).join(', ');
+        if (wechsel.bisher || entfernen.length > 0) {
+          const name = anzeige(eintrag.person_id);
+          const unten = untenNamen;
+          const zeilen = [
+            wechsel.bisher
+              ? `${name} ist Stammspieler in ${wechsel.bisher.name}. Stammspieler ist man nur in einer Mannschaft.`
+              : `${name} steht auch im Kader von ${unten}.`
+          ];
+          if (wechsel.bisher && wechsel.bisher.rang < hier.rang) {
+            zeilen.push(`In ${wechsel.bisher.name} wird der Haken entfernt; dort bleibt er im Kader und darf weiter aushelfen.`);
+          }
+          if (entfernen.length > 0) {
+            zeilen.push(`Als Stammspieler in ${hier.name} darf er in ${unten} nicht mehr antreten und wird dort aus dem Kader genommen.`);
+          }
+          if (!(await fragen(zeilen.join('\n\n'), `Stammspieler in ${hier.name}`, { blau: true }))) return;
+        }
+      }
+    }
+    if (entfernen.length > 0) {
+      const { error } = await supabase
+        .from('mannschaft_spieler')
+        .delete()
+        .in(
+          'id',
+          entfernen.map((k) => k.id)
+        );
+      if (error) return setFehler(error.message);
+    }
     const andere = wert
       ? kader.filter((k) =>
           feld === 'stammspieler'
             ? k.person_id === eintrag.person_id &&
               k.id !== eintrag.id &&
               k.stammspieler &&
+              !entfernen.some((e) => e.id === k.id) &&
               derSaison.some((m) => m.id === k.mannschaft_id)
             : k.mannschaft_id === eintrag.mannschaft_id && k.id !== eintrag.id && k.kapitaen
         )
@@ -304,8 +343,10 @@ export default function Mannschaften() {
       .update(feld === 'stammspieler' ? { stammspieler: wert } : { kapitaen: wert })
       .eq('id', eintrag.id);
     if (error) return setFehler(error.message);
-    if (andere.length > 0 && feld === 'stammspieler') {
-      setMeldung(`${anzeige(eintrag.person_id)} ist jetzt hier Stammspieler und nicht mehr in der anderen Mannschaft.`);
+    if ((andere.length > 0 || entfernen.length > 0) && feld === 'stammspieler') {
+      setMeldung(
+        `${anzeige(eintrag.person_id)} ist jetzt hier Stammspieler${andere.length > 0 ? ', nicht mehr in der anderen Mannschaft' : ''}${entfernen.length > 0 ? ` und steht nicht mehr im Kader von ${untenNamen}` : ''}.`
+      );
     }
     await laden();
   }
@@ -703,13 +744,26 @@ export default function Mannschaften() {
               <div className="zeile">
                 <select value={zugang[m.id] ?? ''} onChange={(e) => setZugang({ ...zugang, [m.id]: e.target.value })}>
                   <option value="">Spieler wählen</option>
-                  {frei.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {personName(p)}
-                    </option>
-                  ))}
+                  {frei
+                    .filter((p) => !kaderGesperrt(p.id, m, kader, derSaison))
+                    .map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {personName(p)}
+                      </option>
+                    ))}
+                  {/* Stammspieler hoeherer Mannschaften duerfen hier nicht antreten: grau am Ende */}
+                  {frei.flatMap((p) => {
+                    const heimat = kaderGesperrt(p.id, m, kader, derSaison);
+                    return heimat
+                      ? [
+                          <option key={p.id} value={p.id} disabled>
+                            {personName(p)} – Stammspieler in {heimat.name}
+                          </option>
+                        ]
+                      : [];
+                  })}
                 </select>
-                <button type="button" title="Nimmt den gewählten Spieler in den Kader dieser Mannschaft auf." onClick={() => void spielerAufnehmen(m)}>
+                <button type="button" title="Nimmt den gewählten Spieler in den Kader dieser Mannschaft auf. Stammspieler einer höheren Mannschaft stehen grau am Ende der Liste: Sie dürfen hier nicht antreten." onClick={() => void spielerAufnehmen(m)}>
                   In den Kader
                 </button>
               </div>

@@ -99,6 +99,44 @@ export function andereKader(args: {
   };
 }
 
+// Mannschaft, in der jemand in dieser Saison Stammspieler ist.
+// mannschaften: nur die der Saison.
+export function stammmannschaft(person: string, kader: KaderEintrag[], mannschaften: MannschaftKurz[]): MannschaftKurz | undefined {
+  const k = kader.find((e) => e.person_id === person && e.stammspieler && mannschaften.some((m) => m.id === e.mannschaft_id));
+  return k ? mannschaften.find((m) => m.id === k.mannschaft_id) : undefined;
+}
+
+// Darf die Person in den Kader dieser Mannschaft? Nein, wenn sie Stammspieler
+// einer hoeheren Mannschaft ist; zurueck kommt dann diese Mannschaft.
+export function kaderGesperrt(
+  person: string,
+  mannschaft: MannschaftKurz,
+  kader: KaderEintrag[],
+  mannschaften: MannschaftKurz[]
+): MannschaftKurz | undefined {
+  const heimat = stammmannschaft(person, kader, mannschaften);
+  return heimat && heimat.rang < mannschaft.rang ? heimat : undefined;
+}
+
+// Haken "Stammspieler" in einer Mannschaft setzen: Wo war er bisher
+// Stammspieler, und aus welchen Kadern niedrigerer Mannschaften muss er
+// heraus, weil er dort nicht mehr antreten darf?
+export function stammWechsel<K extends KaderEintrag>(args: {
+  person: string;
+  mannschaft: MannschaftKurz;
+  kader: K[];
+  mannschaften: MannschaftKurz[];
+}): { bisher?: MannschaftKurz; entfernen: { eintrag: K; mannschaft: MannschaftKurz }[] } {
+  const { person, mannschaft, mannschaften } = args;
+  const eigene = args.kader.filter((k) => k.person_id === person && k.mannschaft_id !== mannschaft.id);
+  const bisher = stammmannschaft(person, eigene, mannschaften);
+  const entfernen = eigene
+    .map((eintrag) => ({ eintrag, mannschaft: mannschaften.find((m) => m.id === eintrag.mannschaft_id) }))
+    .filter((x): x is { eintrag: K; mannschaft: MannschaftKurz } => Boolean(x.mannschaft) && x.mannschaft!.rang > mannschaft.rang)
+    .sort((a, b) => a.mannschaft.rang - b.mannschaft.rang);
+  return { bisher, entfernen };
+}
+
 export type Einsatzzeile = {
   person_id: string;
   mannschaft_id: string | null; // ohne Zuordnung, wenn der Spieltag keine kennt
