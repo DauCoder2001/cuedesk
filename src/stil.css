@@ -114,6 +114,9 @@ tr.fehlerzeile td:first-child { box-shadow: inset 3px 0 0 var(--fehler); }
 .rechtslinks { font-size: 14px; color: var(--text-leise); text-align: center; margin-top: 10px; }
 
 .hinweis { color: var(--text-leise); font-size: 14px; }
+/* Mannschaften: Zusatz unter dem Namen, wenn jemand auch in anderen Kadern steht */
+.kaderzusatz { display: block; color: var(--text-leise); font-size: 13px; }
+.kaderzusatz.warnung { color: #b45309; }
 .fehler { color: var(--fehler); font-size: 14px; }
 .meldung { color: var(--gut); font-size: 14px; }
 

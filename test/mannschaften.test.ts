@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import {
+  andereKader,
   einsaetze,
   einsatzHinweise,
   ersatzspieler,
@@ -32,6 +33,38 @@ const kader: KaderEintrag[] = [
 ];
 
 const name = (id: string) => id.toUpperCase();
+
+describe('Andere Kader', () => {
+  const mehr: KaderEintrag[] = [
+    ...kader,
+    { mannschaft_id: 'm2', person_id: 'c', stammspieler: false },
+    { mannschaft_id: 'm2', person_id: 'd', stammspieler: false },
+    { mannschaft_id: 'm1', person_id: 'd', stammspieler: false },
+    { mannschaft_id: 'm3', person_id: 'a', stammspieler: false }
+  ];
+  const zusatz = (person: string, m: MannschaftKurz) => andereKader({ person, mannschaft: m, kader: mehr, mannschaften });
+
+  test('nur in einem Kader: kein Zusatz', () => {
+    expect(zusatz('b', mannschaften[1])).toBeNull();
+  });
+
+  test('aushelfen nach oben: Hinweis mit Stammmannschaft', () => {
+    expect(zusatz('c', mannschaften[1])).toEqual({ text: 'auch in Dritte (dort Stammspieler)', warnung: false });
+    expect(zusatz('c', mannschaften[2])).toEqual({ text: 'auch in Zweite', warnung: false });
+  });
+
+  test('mehrere andere Kader, nach Rang sortiert', () => {
+    expect(zusatz('d', mannschaften[2])).toEqual({ text: 'auch in Erste, Zweite', warnung: false });
+  });
+
+  test('Stammspieler oben im Kader unten: Warnung', () => {
+    expect(zusatz('a', mannschaften[2])).toEqual({ text: 'Stammspieler in Erste, darf hier nicht antreten', warnung: true });
+  });
+
+  test('Kader anderer Saisons zaehlen nicht', () => {
+    expect(andereKader({ person: 'd', mannschaft: mannschaften[2], kader: mehr, mannschaften: [mannschaften[2]] })).toBeNull();
+  });
+});
 
 describe('Saison', () => {
   test('beginnt im Juli', () => {

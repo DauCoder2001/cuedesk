@@ -4,7 +4,7 @@ import { useSitzung } from '../sitzung';
 import { personName } from '../namen';
 import { useRueckfrage } from '../rueckfrage';
 import { LIGEN, drittWertung, istDoppelBegegnung, wertung } from '../liga';
-import { einsaetze, festgespielt, saisonAus, saisonBilanz, saisonListe, stammspielerHinweis } from '../mannschaften';
+import { andereKader, einsaetze, festgespielt, saisonAus, saisonBilanz, saisonListe, stammspielerHinweis } from '../mannschaften';
 import { vereinsEinstellungen } from '../vereinseinstellungen';
 import { Pflichthinweis, usePflicht } from '../pflicht';
 import { useUngespeichert, weichtAb } from '../ungespeichert';
@@ -608,6 +608,7 @@ export default function Mannschaften() {
               <tbody>
                 {imKader.map((k) => {
                   const einsatz = einsatzVon(k.person_id, m.id);
+                  const zusatz = andereKader({ person: k.person_id, mannschaft: m, kader, mannschaften: derSaison });
                   return (
                     <tr key={k.id}>
                       <td>
@@ -619,6 +620,18 @@ export default function Mannschaften() {
                               {festText(k.person_id)}
                             </span>
                           </>
+                        )}
+                        {zusatz && (
+                          <span
+                            className={zusatz.warnung ? 'kaderzusatz warnung' : 'kaderzusatz'}
+                            title={
+                              zusatz.warnung
+                                ? 'Stammspieler sind an ihre Mannschaft gebunden und dürfen nicht in einer niedrigeren Mannschaft antreten. Den Haken Stammspieler dort entfernen oder den Spieler hier aus dem Kader nehmen.'
+                                : 'Ein Spieler darf in mehreren Kadern stehen und in einer höheren Mannschaft aushelfen. Stammspieler ist er nur in einer Mannschaft.'
+                            }
+                          >
+                            {zusatz.text}
+                          </span>
                         )}
                       </td>
                       <td>

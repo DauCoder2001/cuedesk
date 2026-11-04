@@ -9,7 +9,7 @@ Ein Liga-Spieltag besteht immer aus zwei Begegnungen gegen dieselbe Mannschaft, 
 ## 1. Mannschaft und Kader (einmal je Saison)
 
 1. Reiter **Mannschaften** öffnen, Saison wählen und die Mannschaft anlegen: Name, Liga, Staffel und **Nummer im Pass**.
-2. Unter **Kader** über **Spieler wählen** die Spieler aufnehmen; **Stammspieler** und **Kapitän** markieren. In **Berechtigt** steht wie im Mannschaftspass, ab wann jemand spielen darf: Wer nach dem Meldeschluss (15.08.) nachgemeldet wird, hat eine Sperrzeit, meist 14 Tage (BLVN-STO Pool 2.1.4).
+2. Unter **Kader** über **Spieler wählen** die Spieler aufnehmen; **Stammspieler** und **Kapitän** markieren. In **Berechtigt** steht wie im Mannschaftspass, ab wann jemand spielen darf: Wer nach dem Meldeschluss (15.08.) nachgemeldet wird, hat eine Sperrzeit, meist 14 Tage (BLVN-STO Pool 2.1.4). Ein Spieler darf in mehreren Kadern stehen, um in einer höheren Mannschaft auszuhelfen; Stammspieler ist er nur in einer. Unter dem Namen steht dann grau, wo er noch gemeldet ist (z. B. „auch in DBV 3 (dort Stammspieler)“). Orange erscheint „Stammspieler in …, darf hier nicht antreten“, wenn ein Stammspieler einer höheren Mannschaft im Kader einer niedrigeren steht.
 3. Die Saisonübersicht zeigt später Partiepunkte, Matchpunkte und Einsätze. Wer aus einer unteren Mannschaft dreimal (an drei Spieltagen) ausgeholfen hat, ist dort festgespielt (BLVN-STO Pool 2.2.4); das steht dann im Kader neben dem Namen.
 
 ## 2. Spieltag anlegen

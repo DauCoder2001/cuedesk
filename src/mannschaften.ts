@@ -70,6 +70,35 @@ export function kaderHinweise(args: {
   return hinweise;
 }
 
+// Zusatz unter dem Namen in der Kader-Tabelle: In welchen anderen Mannschaften
+// der Saison steht der Spieler noch? Ist er Stammspieler einer hoeheren
+// Mannschaft, darf er hier nicht antreten (warnung). mannschaften: nur die der
+// angezeigten Saison.
+export function andereKader(args: {
+  person: string;
+  mannschaft: MannschaftKurz;
+  kader: KaderEintrag[];
+  mannschaften: MannschaftKurz[];
+}): { text: string; warnung: boolean } | null {
+  const { person, mannschaft } = args;
+  const andere = args.kader
+    .filter((k) => k.person_id === person && k.mannschaft_id !== mannschaft.id)
+    .map((k) => ({ k, m: args.mannschaften.find((m) => m.id === k.mannschaft_id) }))
+    .filter((x): x is { k: KaderEintrag; m: MannschaftKurz } => Boolean(x.m))
+    .sort((a, b) => a.m.rang - b.m.rang || a.m.name.localeCompare(b.m.name, 'de'));
+  if (andere.length === 0) return null;
+  const heimat = andere.find((x) => x.k.stammspieler)?.m;
+  if (heimat && heimat.rang < mannschaft.rang) {
+    return { text: `Stammspieler in ${heimat.name}, darf hier nicht antreten`, warnung: true };
+  }
+  const liste = `auch in ${andere.map((x) => x.m.name).join(', ')}`;
+  if (!heimat) return { text: liste, warnung: false };
+  return {
+    text: andere.length === 1 ? `${liste} (dort Stammspieler)` : `${liste} (Stammspieler in ${heimat.name})`,
+    warnung: false
+  };
+}
+
 export type Einsatzzeile = {
   person_id: string;
   mannschaft_id: string | null; // ohne Zuordnung, wenn der Spieltag keine kennt
