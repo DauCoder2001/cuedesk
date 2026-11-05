@@ -9,7 +9,8 @@
 //                 Live-Stand in Supabase, Spieler aus der Mitgliederliste,
 //                 Ergebnisse mit komplettem Protokoll in CueDesk.
 //   offline     - ueberall sonst: Stand nur im Browser, Namen als Freitext,
-//                 nichts wird gespeichert. Entspricht der alten Offline-Fassung.
+//                 nichts geht an CueDesk. Nur das Pool-Protokoll (letzte
+//                 beendete Spiele) liegt im Browser dieses Geraets.
 //   zuschauer   - angemeldetes Mitglied ohne Leitungsrolle: sieht die Live-
 //                 Staende (Protokoll live), schreibt aber nichts.
 //   archiv      - Protokollansicht einer gespeicherten 14.1-Partie
@@ -20,6 +21,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { leisteZeigen } from './hinweisleiste';
+import { PROTOKOLL_ANZAHL, protokollErgaenzen, protokollLesen, protokollSchluessel } from './protokoll-offline';
 import { VERALTET_NACH_MS } from '../../src/live';
 import { spieltagGesamt } from '../../src/zuschauen';
 import type { SpieltagGesamt } from '../../src/zuschauen';
@@ -1064,8 +1066,29 @@ export async function update(_verweis: Verweis, werte: Record<string, unknown>):
   void turnierAuffrischen().catch(() => {});
 }
 
+// Offline: beendetes Pool-Spiel ins Protokoll dieses Geraets (protokoll-offline.ts).
+export function offlineProtokollMerken(spiel: { player1: string; player2: string; score1: number; score2: number }): void {
+  if (betriebsart !== 'offline') return;
+  try {
+    const schluessel = protokollSchluessel(tischNummer);
+    const liste = protokollErgaenzen(protokollLesen(localStorage.getItem(schluessel)), { tisch: tischNummer, ...spiel });
+    localStorage.setItem(schluessel, JSON.stringify(liste));
+  } catch {
+    // Speicher voll oder gesperrt - dann eben ohne Protokoll
+  }
+}
+
 // Lesen auf Abruf. Genutzt wird es fuer die Ergebnisliste am Tisch ("results").
 export async function get(verweis: Verweis): Promise<{ val: () => unknown }> {
+  if (verweis.pfad === 'results' && betriebsart === 'offline') {
+    let liste: ReturnType<typeof protokollLesen> = [];
+    try {
+      liste = protokollLesen(localStorage.getItem(protokollSchluessel(tischNummer)));
+    } catch {
+      // Speicher gesperrt
+    }
+    return { val: () => Object.fromEntries(liste.map((e, i) => [String(i), e])) };
+  }
   if (verweis.pfad !== 'results' || !verbindung?.tischId) return { val: () => null };
   const v = verbindung;
 
@@ -1075,7 +1098,7 @@ export async function get(verweis: Verweis): Promise<{ val: () => unknown }> {
     .eq('tisch_id', v.tischId)
     .in('status', ['beendet', 'abgebrochen'])
     .order('beendet', { ascending: false })
-    .limit(10);
+    .limit(PROTOKOLL_ANZAHL);
 
   const ids = [
     ...new Set((data ?? []).flatMap((p) => [p.spieler_a, p.spieler_b, p.partner_a, p.partner_b]).filter((x): x is string => Boolean(x)))

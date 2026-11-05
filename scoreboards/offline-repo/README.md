@@ -2,7 +2,8 @@
 
 Offline-Scoreboards für Pool (8/9/10-Ball) und 14.1 endlos — je Board eine
 einzige HTML-Datei, kein Server, keine Installation. Der Spielstand wird lokal
-im Browser (localStorage) gespeichert.
+im Browser (localStorage) gespeichert, beim 8/9/10-Ball-Scoreboard dazu das
+Protokoll der letzten 10 beendeten Spiele je Tisch.
 
 ## Nutzung
 `index.html` öffnen (bzw. die GitHub-Pages-Adresse aufrufen; scoreboards.cuedesk.de leitet

@@ -53,4 +53,4 @@ Was der Fernseher während eines Turniers zeigt (**Auslosung**, **Live-Tische**,
 
 ## Ohne Internet
 
-Fällt das Internet aus, zählen die Scoreboards trotzdem weiter. Ergebnisse aus dieser Zeit trägst du danach in CueDesk nach. Unabhängig von CueDesk gibt es die Scoreboards auch als Offline-Fassung unter daucoder2001.github.io/scoreboards; kürzer geht es über scoreboards.cuedesk.de, das dorthin weiterleitet.
+Fällt das Internet aus, zählen die Scoreboards trotzdem weiter. Ergebnisse aus dieser Zeit trägst du danach in CueDesk nach. Unabhängig von CueDesk gibt es die Scoreboards auch als Offline-Fassung unter daucoder2001.github.io/scoreboards; kürzer geht es über scoreboards.cuedesk.de, das dorthin weiterleitet. Dort merkt sich jedes Tablet im Pool-Scoreboard die letzten 10 beendeten Spiele seines Tisches (**📋 Protokoll**); die Liste gibt es nur auf diesem Gerät und in diesem Browser.
