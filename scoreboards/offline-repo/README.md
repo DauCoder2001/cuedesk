@@ -4,10 +4,6 @@ Offline-Scoreboards für Pool (8/9/10-Ball) und 14.1 endlos — je Board eine
 einzige HTML-Datei, kein Server, keine Installation. Der Spielstand wird lokal
 im Browser (localStorage) gespeichert.
 
-**Nicht hier ändern:** Die Dateien werden automatisch aus CueDesk erzeugt
-(`npm run offline`, Workflow „Scoreboards offline“). Änderungen an den
-Scoreboards gehören in den Ordner `scoreboards/` von CueDesk.
-
 ## Nutzung
 `index.html` öffnen (bzw. die GitHub-Pages-Adresse aufrufen; scoreboards.cuedesk.de leitet
 dorthin weiter) und ein Scoreboard wählen:
