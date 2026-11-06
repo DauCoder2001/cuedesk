@@ -3354,11 +3354,11 @@ export default function TurnierAnsicht({
                     </p>
                   ))}
                   <p className="zeile">
-                    <span>Nach dem Shoot-Out die Reihenfolge in der Tabelle mit ↑ ↓ festlegen.</span>
+                    <span>Nach dem Shoot-Out die Reihenfolge in der Tabelle mit ↑ ↓ umstellen oder bestätigen.</span>
                     <button
                       type="button"
                       className={faellig('stichkampf')}
-                      title="Springt zur Tabelle mit dem offenen Stichkampf. Dort mit ↑ ↓ die Reihenfolge nach dem Shoot-Out festlegen; danach geht es mit dem nächsten Schritt weiter."
+                      title="Springt zur Tabelle mit dem offenen Stichkampf. Dort mit ↑ ↓ die Reihenfolge nach dem Shoot-Out umstellen oder mit „Reihenfolge bestätigen“ übernehmen; danach geht es mit dem nächsten Schritt weiter."
                       onClick={() => zurTabelle(stichkaempfe[0].gruppe)}
                     >
                       Zur Tabelle
@@ -4307,6 +4307,16 @@ function Tabelle(props: {
                     >
                       ↓
                     </button>
+                    {!gruppe.entschieden && inGruppe === 0 && (
+                      <button
+                        type="button"
+                        className="klein faellig"
+                        title="Der Stichkampf hat die angezeigte Reihenfolge bestätigt. Sonst erst mit ↑ ↓ umstellen."
+                        onClick={() => props.setzen(gruppe.schluessel, [...gruppe.mitglieder])}
+                      >
+                        Reihenfolge bestätigen
+                      </button>
+                    )}
                     {gruppe.entschieden && inGruppe === 0 && (
                       <button type="button" title="Hebt die von Hand festgelegte Reihenfolge bei Gleichstand wieder auf." className="klein" onClick={() => props.setzen(gruppe.schluessel, null)}>
                         zurücksetzen
