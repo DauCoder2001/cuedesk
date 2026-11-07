@@ -1022,7 +1022,7 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
         {/* Eigene Ueberschrift: Filter und Liste gehoeren sichtbar nicht zum Formular darueber */}
         {turniere.length > 0 && (
           <h3 className="listenkopf">
-            Angelegte Turniere <small className="hinweis">· {alleZeilen.length}</small>
+            Angelegte Turniere <span className="anzahl">({alleZeilen.length})</span>
           </h3>
         )}
         {turniere.length > 0 && (
