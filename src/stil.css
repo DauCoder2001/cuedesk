@@ -213,8 +213,8 @@ ul.schlicht { list-style: none; padding: 0; margin: 0; display: flex; flex-direc
 /* Filter der Turnierliste: Suche und Auswahlfelder in einer Zeile, am Handy umbrechend */
 .listenfilter { align-items: center; gap: 8px; margin-bottom: 8px; }
 /* Ueberschrift einer Liste unter einem Formular (Turniere): deutlich abgesetzt */
-h3.listenkopf { font-size: 17px; font-weight: 500; margin: 28px 0 10px; }
-h3.listenkopf .anzahl { font-weight: 400; color: var(--text-leise); }
+h3.listentitel { font-size: 17px; font-weight: 500; margin: 28px 0 10px; }
+h3.listentitel .anzahl { font-weight: 400; color: var(--text-leise); }
 .listenfilter input[type="search"] { width: 200px; max-width: 100%; }
 .chip { font-size: 13px; padding: 3px 9px; color: var(--text-leise); }
 .chip.aktiv { background: var(--akzent-hell); color: var(--akzent); border-color: var(--akzent-hell); }
