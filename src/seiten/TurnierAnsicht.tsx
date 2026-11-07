@@ -194,6 +194,9 @@ export default function TurnierAnsicht({
   // Markierte Teilnehmer (hoechstens zwei): Ihre Partie wird im Spielplan
   // hervorgehoben. Nur Anzeige, nichts wird gespeichert.
   const [markiert, setMarkiert] = useState<string[]>([]);
+  // "offene markieren" im Turnierkopf: alle nicht beendeten Spiele hervorheben.
+  // Schliesst die Spieler-Markierung aus und umgekehrt.
+  const [offeneMarkiert, setOffeneMarkiert] = useState(false);
   const [tausch, setTausch] = useState<{ raus: string; von: string; nach: string } | null>(null);
   // "Race to aendern": Duelle (Zwei Gruppen) bzw. Runden (Gruppen mit KO), Feld je Schluessel
   const [raceDialog, setRaceDialog] = useState<Record<string, string> | null>(null);
@@ -2488,12 +2491,30 @@ export default function TurnierAnsicht({
   function markieren(id: string) {
     const neu = markierungUmschalten(markiert, id);
     setMarkiert(neu);
+    setOffeneMarkiert(false);
     const gefunden = neu.length === 2 ? gemeinsamePartie(partien, neu[0], neu[1]) : null;
     const ziel = gefunden ? abschnittVon(gefunden) : undefined;
     if (ziel) springen(ziel.schluessel);
   }
   const abschnittKurz = (a: { zeile: string; titel: string }) =>
     istGruppenzeile(a.zeile) ? `Gruppe ${a.zeile}, ${a.titel}` : a.titel;
+
+  // Offene Spiele markieren: alle noch nicht beendeten, je Abschnitt; KO-Spiele
+  // ohne beide Spieler warten noch und werden so benannt
+  const nichtBeendet = partien.filter((p) => !beendetBei(p));
+  const offenMarkiert = offeneMarkiert && nichtBeendet.length > 0;
+  const wartetAufSpieler = (p: TPartie) => !p.spieler_a || !p.spieler_b;
+  const offeneAbschnitte = abschnitte.flatMap((a) => {
+    const offen = a.partien.filter((p) => !beendetBei(p));
+    return offen.length > 0 ? [{ a, anzahl: offen.length, wartet: offen.every(wartetAufSpieler) }] : [];
+  });
+  function offeneUmschalten(an: boolean) {
+    setOffeneMarkiert(an);
+    if (!an) return;
+    setMarkiert([]);
+    const ziel = offeneAbschnitte.find((x) => !x.wartet) ?? offeneAbschnitte[0];
+    if (ziel) springen(ziel.a.schluessel);
+  }
 
   // Wer in einer Runde spielfrei ist
   const spielfreiVon = (aktiv: (typeof abschnitte)[number]) => {
@@ -2754,7 +2775,17 @@ export default function TurnierAnsicht({
               <p className="hinweis">{prognoseText(zeitDaten())}</p>
             )}
             {turnier.quelle !== 'import' && turnier.status === 'laeuft' && partien.length > 0 && (
-              <p className="hinweis">{spielZaehlerText(spielZaehler(partien, beendetBei))}</p>
+              <p className="hinweis">
+                {spielZaehlerText(spielZaehler(partien, beendetBei))}
+                {nichtBeendet.length > 0 && (
+                  <label
+                    className="offenemarkieren"
+                    title="Hebt alle noch nicht beendeten Spiele im Spielplan hervor (auch laufende) und springt zum ersten. Hebt eine Spieler-Markierung auf; ein Spieler-Häkchen hebt diese Markierung wieder auf."
+                  >
+                    <input type="checkbox" checked={offenMarkiert} onChange={(e) => offeneUmschalten(e.target.checked)} /> offene markieren
+                  </label>
+                )}
+              </p>
             )}
           </div>
           <div className="kopfrechts">
@@ -3307,6 +3338,27 @@ export default function TurnierAnsicht({
                   ))}
                 </tbody>
               </table>
+              {offenMarkiert && (
+                <div className="markierzeile">
+                  <span>Offene Spiele ({nichtBeendet.length}):</span>
+                  {offeneAbschnitte.map(({ a, anzahl, wartet }) => (
+                    <button
+                      key={a.schluessel}
+                      type="button"
+                      className={a.schluessel === sichtbar ? 'chip aktiv' : 'chip'}
+                      title={`${abschnittKurz(a)} im Spielplan anzeigen`}
+                      onClick={() => springen(a.schluessel)}
+                    >
+                      {abschnittKurz(a)}
+                      {anzahl > 1 ? ` (${anzahl})` : ''}
+                      {wartet ? ' · wartet auf Spieler' : ''}
+                    </button>
+                  ))}
+                  <button type="button" className="klein" title="Hebt die Markierung der offenen Spiele auf." onClick={() => setOffeneMarkiert(false)}>
+                    Markierung aufheben
+                  </button>
+                </div>
+              )}
               {markiert.length > 0 && (
                 <div className="markierzeile">
                   <span>
@@ -3452,7 +3504,7 @@ export default function TurnierAnsicht({
                             <Spielzeile
                               key={p.id}
                               partie={p}
-                              markiert={istMarkiert(p, markiert, paar)}
+                              markiert={istMarkiert(p, markiert, paar) || (offenMarkiert && !beendetBei(p))}
                               raceTo={p.race_to ?? raceTo}
                               nameA={anzeige(p.spieler_a)}
                               nameB={anzeige(p.spieler_b)}

@@ -385,6 +385,9 @@ ul.schlicht { list-style: none; padding: 0; margin: 0; display: flex; flex-direc
 .tabelle tr.markiert td { background: #fde3c4; }
 .markierzeile { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin-top: 10px; font-size: 14px; }
 .markierzeile .chip { margin: 0; }
+/* Turnierkopf: Ankreuzfeld "offene markieren" hinter der Spielzaehlung */
+.offenemarkieren { margin-left: 10px; white-space: nowrap; cursor: pointer; }
+.offenemarkieren input { vertical-align: -2px; }
 /* Marke ("Vereinsschnitt") und Zahl bleiben in einer Zeile */
 .tabelle.kompakt.voll > * > tr > :is(th, td):last-child { white-space: nowrap; }
 /* Zahlenspalten (alles ausser Platz und Name) mindestens 72 px, damit kurze
