@@ -6,7 +6,7 @@ reihenfolge: 20
 ---
 Ein Turnier läuft in vier Schritten: anlegen, Teilnehmer eintragen, auslosen, spielen. Die Tablets an den Tischen holen sich die Spiele selbst, die Ergebnisse landen sofort in CueDesk.
 
-**Turnierliste filtern:** Über der Liste suchst du mit **Name suchen** nach einem Teil des Namens und grenzt mit **Jahr**, **Disziplin**, **Modus** und **Stand** (in Vorbereitung, läuft, beendet) ein. Die Filter wirken zusammen, dazu die Chips der Turnierart. Daneben steht, wie viele Turniere passen; **Filter zurücksetzen** stellt alles wieder auf „alle“. Die Auswahl bleibt, wenn du ein Turnier öffnest und zurückgehst.
+**Turnierliste filtern:** Die Liste steht unter der Überschrift **Angelegte Turniere** mit der Anzahl, abgesetzt vom Formular **Neues Turnier**. Über der Liste suchst du mit **Name suchen** nach einem Teil des Namens und grenzt mit **Jahr**, **Disziplin**, **Modus** und **Stand** (in Vorbereitung, läuft, beendet) ein. Die Filter wirken zusammen, dazu die Chips der Turnierart. Daneben steht, wie viele Turniere passen; **Filter zurücksetzen** stellt alles wieder auf „alle“. Die Auswahl bleibt, wenn du ein Turnier öffnest und zurückgehst.
 
 ## 1. Anlegen
 

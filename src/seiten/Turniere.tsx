@@ -1019,6 +1019,12 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
         {fehler && !formular && <p className="fehler">{fehler}</p>}
         {rueckfrage}
 
+        {/* Eigene Ueberschrift: Filter und Liste gehoeren sichtbar nicht zum Formular darueber */}
+        {turniere.length > 0 && (
+          <h3 className="listenkopf">
+            Angelegte Turniere <small className="hinweis">· {alleZeilen.length}</small>
+          </h3>
+        )}
         {turniere.length > 0 && (
           <div className="filterzeile listenfilter">
             <input
