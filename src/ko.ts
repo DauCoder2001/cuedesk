@@ -10,7 +10,9 @@ import { spielBeendet } from './turnier';
 import type { Stand } from './turnier';
 
 export const KO_GRUPPEN = ['A', 'B', 'C', 'D'];
-export const KO_MIN = 8;
+// Ab 6: zwei Gruppen zu 3, je 2 weiter, KO-Feld 4. Bei ungerader Zahl hat eine
+// Gruppe einen Spielfrei, in den spaeter ein Nachzuegler passt (Spieler nachtragen).
+export const KO_MIN = 6;
 export const KO_MAX = 32;
 const FELDGROESSEN = [4, 8, 16];
 

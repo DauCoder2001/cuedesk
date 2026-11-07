@@ -12,7 +12,8 @@ import {
   standardGruppenzahl,
   startplatzNamen,
   weiterOptionen,
-  weiterPassend
+  weiterPassend,
+  KO_MIN
 } from '../src/ko';
 import type { KoFest, KoRunde, Leistung } from '../src/ko';
 
@@ -47,6 +48,14 @@ describe('KO-Einstellungen', () => {
     expect(weiterOptionen(32, 4)).toEqual([1, 2, 4]);
     expect(weiterPassend(12, 2, undefined)).toBe(4);
     expect(weiterPassend(8, 2, 4)).toBe(2);
+  });
+
+  test('ab 6 Spielern: zwei Gruppen, je 2 weiter, KO-Feld 4', () => {
+    expect(KO_MIN).toBe(6);
+    expect(weiterOptionen(6, 2)).toEqual([2]);
+    expect(weiterOptionen(7, 2)).toEqual([2]);
+    expect(weiterPassend(7, 2, undefined)).toBe(2);
+    expect(weiterOptionen(7, 4)).toEqual([]); // vier Gruppen gehen erst mit mehr Spielern
   });
 
   test('Baum mit 8: Viertelfinale, Halbfinale, Finale, Platz 3', () => {

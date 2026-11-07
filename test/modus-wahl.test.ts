@@ -14,7 +14,7 @@ describe('Modus am Turniertag', () => {
 
   test('nicht passende Modi mit Grund', () => {
     const bei5 = modusOptionen(5);
-    expect(bei5.find((o) => o.modus === 'gruppen-ko')).toMatchObject({ passt: false, grund: '8 bis 32 Teilnehmer' });
+    expect(bei5.find((o) => o.modus === 'gruppen-ko')).toMatchObject({ passt: false, grund: '6 bis 32 Teilnehmer' });
     expect(modusOptionen(13).find((o) => o.modus === 'einzelgruppe')?.passt).toBe(false);
     expect(modusOptionen(20).find((o) => o.modus === 'zwei-gruppen')?.passt).toBe(false);
   });

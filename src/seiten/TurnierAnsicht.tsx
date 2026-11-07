@@ -3193,6 +3193,19 @@ export default function TurnierAnsicht({
                     übrigen werden verteilt; geht die Zahl nicht auf, bekommen die vorderen Gruppen einen Spieler mehr. Der
                     Spielplan entsteht je Gruppe{mitRating ? ', die Ratings werden eingefroren. Gäste starten mit 500.' : '.'}
                   </p>
+                  {/* Ungerade Gruppe = je Runde ein Spielfrei; dort passt spaeter ein Nachzuegler hinein */}
+                  {mitKo && teilnehmerOk && (() => {
+                    const ungerade = gruppenNamen.filter((g) => (ziel[g] ?? 0) % 2 === 1);
+                    if (ungerade.length === 0) return null;
+                    return (
+                      <p className="hinweis">
+                        {ungerade.length === 1
+                          ? `Gruppe ${ungerade[0]} hat ${ziel[ungerade[0]]} Spieler, also je Runde einen Spielfrei.`
+                          : `Gruppe ${ungerade.join(', ')} haben je eine ungerade Spielerzahl, also je Runde einen Spielfrei.`}{' '}
+                        Ein Nachzügler lässt sich nach dem Start mit <strong>Spieler nachtragen…</strong> dort einsetzen.
+                      </p>
+                    );
+                  })()}
                 </>
               ) : (
                 <p className="hinweis">
