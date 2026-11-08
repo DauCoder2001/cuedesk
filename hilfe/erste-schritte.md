@@ -40,7 +40,7 @@ Unter **Tische und Geräte** die Tische anlegen und die Tablets koppeln. Mehr da
 
 ## 6. Daten einlesen (optional)
 
-Wer vorher mit Turnier light gearbeitet hat, liest dessen Datenbestand unter **System → Daten einlesen** ein und ordnet die Namen den Spielern zu. So stimmen Rating und Ranglisten von Anfang an. Dort lassen sich auch die Stammdaten (Spieler, Mannschaften, Tische) aus einem CueDesk-Export einlesen, zum Beispiel aus der Testfassung. Das darf nur der Vereins-Administrator.
+Wer vorher mit TurnierPilot gearbeitet hat, liest dessen Datenbestand unter **System → Daten einlesen** ein und ordnet die Namen den Spielern zu. So stimmen Rating und Ranglisten von Anfang an. Dort lassen sich auch die Stammdaten (Spieler, Mannschaften, Tische) aus einem CueDesk-Export einlesen, zum Beispiel aus der Testfassung. Das darf nur der Vereins-Administrator.
 
 ## Später wichtig
 

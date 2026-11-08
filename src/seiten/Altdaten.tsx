@@ -51,7 +51,7 @@ export default function Altdaten({ schliessen }: { schliessen: () => void }) {
         return;
       }
       if (typeof roh !== 'object' || roh === null || !Array.isArray((roh as { serien?: unknown }).serien)) {
-        throw new Error('Die Datei stammt weder aus Turnier light noch aus einem CueDesk-Export.');
+        throw new Error('Die Datei stammt weder aus TurnierPilot noch aus einem CueDesk-Export.');
       }
       const inhalt = roh as Parameters<typeof auswerten>[0];
       const ergebnis = auswerten(inhalt);
@@ -349,7 +349,7 @@ export default function Altdaten({ schliessen }: { schliessen: () => void }) {
       <section className="block">
         <h2>Daten einlesen</h2>
         <p className="hinweis">
-          Datenbestand der Serienwertung (Turnier light) oder ein CueDesk-Export (z. B. aus der Testfassung); aus dem
+          Datenbestand der Serienwertung (TurnierPilot) oder ein CueDesk-Export (z. B. aus der Testfassung); aus dem
           Export kommen nur Spieler, Mannschaften mit Kader und Tische. Die Datei wird zuerst nur gelesen. Geschrieben
           wird erst mit "Übernehmen".
         </p>

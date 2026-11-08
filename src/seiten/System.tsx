@@ -736,13 +736,13 @@ export default function System() {
           )}
         </div>
         <p className="hinweis">
-          Einlesen: Datenbestand aus Turnier light oder Stammdaten (Spieler, Mannschaften, Tische) aus einem
+          Einlesen: Datenbestand aus TurnierPilot oder Stammdaten (Spieler, Mannschaften, Tische) aus einem
           CueDesk-Export; dazu die Spieltag-Dateien alter Excel-Serien in eine angelegte Serie.
         </p>
         <div className="knopfpaar">
           <button
             type="button"
-            title="Eine Datei aus Turnier light oder einen CueDesk-Export einlesen; geschrieben wird erst nach der Vorschau"
+            title="Eine Datei aus TurnierPilot oder einen CueDesk-Export einlesen; geschrieben wird erst nach der Vorschau"
             onClick={() => setEinlesen('daten')}
             disabled={einlesen !== null}
           >
