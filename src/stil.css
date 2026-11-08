@@ -413,11 +413,17 @@ h1.seitentitel { margin: 0 0 -4px; }
 .geraetezeile { display: flex; align-items: center; gap: 10px; border-top: 1px solid var(--rand); padding: 8px 0; font-size: 15px; }
 .geraetename { flex: 1; min-width: 0; }
 .geraetename small { display: block; font-size: 12px; color: var(--text-leise); }
-.geraeteknoepfe { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 6px; max-width: 280px; }
+/* Auswahl oben in der Knopfzeile, damit sie in allen Zeilen gleich steht */
+.geraetezeile select { align-self: flex-start; }
+.geraeteknoepfe { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.geraeteknoepfe-zeile { display: flex; gap: 6px; }
+.geraeteknoepfe-tv { flex-wrap: wrap; justify-content: flex-end; align-self: stretch; }
+/* Die Meldung bricht um, statt den Knopfblock zu verbreitern */
+.geraeteknoepfe-tv .meldung, .geraeteknoepfe-tv .fehler { width: 0; min-width: 100%; text-align: right; }
 @media (max-width: 600px) {
   .geraetezeile { flex-wrap: wrap; }
   .geraetename { flex-basis: 100%; }
-  .geraeteknoepfe { max-width: none; margin-left: auto; }
+  .geraeteknoepfe { margin-left: auto; }
 }
 
 .geraet { min-height: 100vh; display: grid; place-items: center; padding: 20px; }

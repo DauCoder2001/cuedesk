@@ -291,17 +291,23 @@ export default function TischeGeraete() {
               ))}
             </select>
             <div className="geraeteknoepfe">
-              {darfVerwalten && !geraet.tisch_id && (
-                <button type="button" title="Erzeugt den Schlüssel für den Agenten, der dieses TV-Gerät auf Wunsch herunterfährt. Er wird nur einmal angezeigt." onClick={() => void agentSchluesselErzeugen(geraet)}>
-                  Agent-Schlüssel
-                </button>
-              )}
               {darfVerwalten && (
-                <button type="button" title="Trennt das Tablet von CueDesk. Es zeigt danach wieder einen Kopplungscode." onClick={() => void trennen(geraet)}>
-                  Trennen
-                </button>
+                <div className="geraeteknoepfe-zeile">
+                  {!geraet.tisch_id && (
+                    <button type="button" title="Erzeugt den Schlüssel für den Agenten, der dieses TV-Gerät auf Wunsch herunterfährt. Er wird nur einmal angezeigt." onClick={() => void agentSchluesselErzeugen(geraet)}>
+                      Agent-Schlüssel
+                    </button>
+                  )}
+                  <button type="button" title="Trennt das Tablet von CueDesk. Es zeigt danach wieder einen Kopplungscode." onClick={() => void trennen(geraet)}>
+                    Trennen
+                  </button>
+                </div>
               )}
-              {agentVon(geraet) && <TvHerunterfahren vereinId={verein.id} agenten={agenten.length} />}
+              {agentVon(geraet) && (
+                <div className="geraeteknoepfe-zeile geraeteknoepfe-tv">
+                  <TvHerunterfahren vereinId={verein.id} agenten={agenten.length} />
+                </div>
+              )}
             </div>
           </div>
         ))}
