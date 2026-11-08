@@ -4551,7 +4551,7 @@ function Altturnier({
             ))}
           </tbody>
         </table>
-        <p className="hinweis">Übernommen aus Turnier light, nur zum Nachsehen.</p>
+        <p className="hinweis">Übernommen aus TurnierPilot, nur zum Nachsehen.</p>
       </section>
     </div>
   );
