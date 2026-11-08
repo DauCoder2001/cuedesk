@@ -8,7 +8,7 @@ Ranglisten, Serien und Statistiken werten die gespielten Turniere und Partien au
 
 ## Ranglisten und Serien
 
-- **Ranglisten**: Siegquote, Bestenliste 14.1 (höchste Serie), Titel aus Turniersiegen und Podestplätzen, Vereinsserien. Unter **Titel** stehen zunächst nur Spieler mit mindestens einem Podestplatz; mit dem Haken **auch Spieler ohne Podestplatz zeigen** kommen alle Turnierteilnehmer des Zeitraums dazu.
+- **Ranglisten**: Siegquote, Bestenliste 14.1 (höchste Serie), Titel aus Turniersiegen und Podestplätzen, Vereinsserien. Unter **Titel** stehen zunächst nur Spieler mit mindestens einem Podestplatz; mit dem Haken **auch Spieler ohne Podestplatz zeigen** kommen alle Turnierteilnehmer des Zeitraums dazu. Die Ranglisten vergleichen nur Vereinsmitglieder: Partien gegen Gäste zählen hier nicht mit, in der eigenen **Pool-Statistik** dagegen schon. Deshalb kann dort eine höhere Partienzahl stehen. Der Zeitraum gilt für Siegquote, Bestenliste 14.1 und Titel, Disziplin und Mindestzahl nur für die Siegquote.
 - **Serien**: Punkte aus den Platzierungen mehrerer Turniere, mit Streichergebnissen. Als Disziplin der Serie geht auch „am Spieltag festgelegt“; jedes Turnier zählt dann in seiner gespielten Disziplin fürs Rating, und unter **Turniere der Serie** steht bei jedem seine Disziplin.
 
 ## Statistik und Archiv

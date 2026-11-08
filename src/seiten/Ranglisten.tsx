@@ -187,6 +187,11 @@ export default function Ranglisten() {
   return (
     <div className="einspaltig">
       <section className="block">
+        <h1 className="seitentitel">Vereinsranglisten</h1>
+        <p className="hinweis seitentext">
+          Nur Vereinsmitglieder: Gäste und Ausgetretene stehen in keiner Rangliste, Partien gegen Gäste zählen nicht mit.
+          Deine eigene Bilanz mit diesen Partien steht in der Pool-Statistik.
+        </p>
         <div className="statkopf">
           <select value={zeitraum} onChange={(e) => setZeitraum(e.target.value)} aria-label="Zeitraum">
             {ZEITRAEUME.map((z) => (
@@ -218,8 +223,8 @@ export default function Ranglisten() {
         </div>
         {fehler && <p className="fehler">{fehler}</p>}
         <p className="hinweis">
-          Zeitraum und Disziplin gelten für die Siegquote und die Titel. Gäste und ausgetretene Personen stehen in keiner
-          Rangliste.
+          Der Zeitraum gilt für Siegquote, Bestenliste 14.1 und Titel, die Disziplin und die Mindestzahl nur für die
+          Siegquote.
         </p>
       </section>
 

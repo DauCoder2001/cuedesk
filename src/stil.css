@@ -242,6 +242,10 @@ h3.listentitel .anzahl { font-weight: 400; color: var(--text-leise); }
 
 .bearbeiten { padding: 14px 16px; display: flex; flex-direction: column; gap: 14px; }
 .bearbeitenkopf { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+/* Seitentitel mit Erklaerung direkt darunter (Ranglisten) */
+h1.seitentitel { margin: 0 0 -4px; }
+.seitentext { margin: 0 0 6px; }
+
 /* Ueberschrift mit Knopf direkt dahinter (Teilnehmer: "Spieler nachtragen") */
 .bearbeitenkopf .kopflinks, .koblock .kopflinks, .rundenkopf .kopflinks { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .rundenkopf .kopflinks .ankreuz { align-items: center; font-size: 14px; }
