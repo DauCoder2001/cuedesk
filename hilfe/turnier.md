@@ -103,6 +103,7 @@ Doppel-KO nach BLVN-STO Pool 3.3, für 8 bis 64 Spieler: Wer verliert, rutscht v
 2. **Turnierbericht (PDF)** erzeugt Tabellen und Platzierungen zum Drucken oder Weitergeben.
 3. Muss noch etwas korrigiert werden, öffnet **Wieder öffnen** das Turnier erneut.
 4. **Turnier-Datei herunterladen** legt das beendete Turnier mit Endplätzen und allen Partien in eine Datei, zum Beispiel für TurnierPilot oder einen anderen Verein. Spieler stehen darin nur mit ihren Namen.
+5. Zum Feierabend steht nach dem Abschließen in der Zeile **TV zeigt:** der Knopf **TV-Gerät herunterfahren** (siehe Thema **Tablets und Fernseher**).
 
 ## Turnier-Datei einlesen
 

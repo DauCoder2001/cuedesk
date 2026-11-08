@@ -83,6 +83,7 @@ Seid ihr gastgebender Verein (Heimmannschaft der 1. Begegnung), erinnert nach de
 - **Spielbericht (PDF)** in derselben Kachel lädt den ganzen Spieltag als PDF herunter: Gesamtstand, Übersicht je Begegnung und alle Partien mit Aufstellung, Ergebnis und Punkten, bei 14.1 mit Aufnahmen, HS und GD, dazu Endstand, Bemerkungen und Hinweis zu * – zum Drucken oder Weiterschicken.
 - Auf der Seite **Zuschauen** und auf dem **öffentlichen Link** steht dasselbe oben im Reiter **Turnier** als „Ergebnis des Spieltags“.
 - **Fernseher:** Im Kopf schaltet **TV: Live-Tische** / **TV: Spieltag-Ergebnis** um, was die Fernseher zeigen; das gilt für alle Begegnungen. Das Spieltag-Ergebnis zeigt groß den Gesamtstand, die Matchpunkte, den Sieger (vorher „Zwischenstand“) und je Begegnung eine Zeile. Beim Abschließen der letzten Begegnung stellt CueDesk die Fernseher von selbst auf das Spieltag-Ergebnis um.
+- Sind alle Begegnungen abgeschlossen, steht im Kopf **TV-Gerät herunterfahren** (siehe Thema **Tablets und Fernseher**).
 
 ## Korrigieren und löschen
 

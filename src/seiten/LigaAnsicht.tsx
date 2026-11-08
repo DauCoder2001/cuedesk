@@ -37,6 +37,7 @@ import SpieltagAendern from './SpieltagAendern';
 import LiveSchalter from './LiveSchalter';
 import ChatSchalter from './ChatSchalter';
 import OeffentlicherLink from './OeffentlicherLink';
+import TvHerunterfahren from './TvHerunterfahren';
 import { andererLaufender, laeuftSchonText } from '../laufend';
 import { ratingAn, vereinsEinstellungen } from '../vereinseinstellungen';
 import ZuruecksetzenDialog from './ZuruecksetzenDialog';
@@ -1621,6 +1622,9 @@ export default function LigaAnsicht({
                 </button>
               ))}
             </span>
+          )}
+          {darfLeiten && turnier.status === 'beendet' && teile.filter((x) => x.id !== turnier.id).every((x) => x.status === 'beendet') && (
+            <TvHerunterfahren vereinId={turnier.verein_id} />
           )}
           {istAdmin && (
             // Was verloren geht, steht abgesetzt ganz unten im Kopf

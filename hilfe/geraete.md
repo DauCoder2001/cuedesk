@@ -37,6 +37,16 @@ Auf allen TV-Seiten verschwindet der Mauszeiger, wenn sich die Maus 3 Sekunden l
 
 Was der Fernseher während eines Turniers zeigt (**Auslosung**, **Live-Tische**, bei 3 bis 6 Tischen **Live + Nächste**, **Nächste Spiele**, bei Gruppenturnieren **Gruppenstand** und **Endplätze**, **Ergebnis**), stellst du in der Turnieransicht unter **TV zeigt:** um.
 
+### TV-Gerät herunterfahren
+
+Hat der Fernseher ein Gerät wie einen Raspberry Pi, lässt es sich aus CueDesk sauber herunterfahren. Dafür läuft dort ein kleiner Dienst, der **Agent**.
+
+1. Unter **Tische und Geräte** beim Fernseher **Agent-Schlüssel** klicken (nur Vereins-Administratoren). Der Schlüssel wird nur einmal angezeigt und auf dem Gerät beim Agenten eingetragen. Ein neuer Schlüssel ersetzt den alten, nach einem **Trennen** und neuem Koppeln ist ein neuer nötig.
+2. In der Geräteliste steht danach **Agent verbunden**. Meldet sich der Agent zwei Minuten lang nicht, steht dort **Agent nicht erreichbar**.
+3. **TV-Gerät herunterfahren** steht in der Geräteliste und nach dem Abschließen eines Turniers oder Teamvergleichs in der Zeile **TV zeigt:**, beim Liga-Spieltag im Kopf, sobald alle Begegnungen abgeschlossen sind. Den Knopf sehen Vereins-Administratoren und Turnierleiter.
+
+Nach der Rückfrage fährt das Gerät innerhalb von 30 Sekunden herunter. Der Befehl gilt für alle Fernseher des Vereins mit Agent. Wieder an geht das Gerät erst, wenn der Strom kurz getrennt wird. Ein Fernseher ohne Agent zeigt den Knopf nicht.
+
 ## 4. Im Betrieb
 
 - Die Seite **Live** zeigt alle Tische mit Spielstand und ob das Tablet an ist.

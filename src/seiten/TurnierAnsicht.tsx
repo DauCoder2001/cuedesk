@@ -17,6 +17,7 @@ import LiveSchalter from './LiveSchalter';
 import SpielerErsetzen from './SpielerErsetzen';
 import ChatSchalter from './ChatSchalter';
 import OeffentlicherLink from './OeffentlicherLink';
+import TvHerunterfahren from './TvHerunterfahren';
 import { andererLaufender, laeuftSchonText } from '../laufend';
 import Platz from './Platz';
 import { diffText, LEERE_BILANZ, turnierBilanz } from '../turnier-bilanz';
@@ -2836,6 +2837,7 @@ export default function TurnierAnsicht({
                 </button>
               ))}
             </span>
+            {turnier.status === 'beendet' && <TvHerunterfahren vereinId={turnier.verein_id} />}
           </div>
         )}
         {einstellungen.pausiert && turnier.status === 'laeuft' && (

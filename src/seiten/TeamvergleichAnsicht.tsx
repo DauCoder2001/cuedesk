@@ -12,6 +12,7 @@ import { DISZIPLIN_TEXT, STATUS_TEXT } from './Turniere';
 import LiveSchalter from './LiveSchalter';
 import ChatSchalter from './ChatSchalter';
 import OeffentlicherLink from './OeffentlicherLink';
+import TvHerunterfahren from './TvHerunterfahren';
 import { andererLaufender, laeuftSchonText } from '../laufend';
 import { ratingAn, vereinsEinstellungen } from '../vereinseinstellungen';
 import type { TurnierEinstellungen } from './Turniere';
@@ -809,6 +810,7 @@ export default function TeamvergleichAnsicht({
                 </button>
               ))}
             </span>
+            {turnier.status === 'beendet' && <TvHerunterfahren vereinId={turnier.verein_id} />}
           </div>
         )}
         {fehler && <p className="fehler">{fehler}</p>}

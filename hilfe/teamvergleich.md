@@ -35,6 +35,7 @@ Geplant werden höchstens so viele Matches, wie bis zum Sieg nötig sind. Die Za
 - **Start zurücknehmen** steht im Kopf, solange noch kein Match begonnen hat. Die Matches verschwinden wieder von den Tablets, der Teamvergleich steht wieder auf „in Vorbereitung“; Teams und Spielplan bleiben und lassen sich wieder ändern.
 - Danach gibt **Block 2 freigeben**, **Block 3 freigeben** usw. jeweils den nächsten Block frei. Die Tablets bieten nur freigegebene Matches an.
 - **TV zeigt:** schaltet zwischen **Teams**, **Live-Tische**, **Live + Nächste** (bei 3 bis 6 Tischen), **Nächste Spiele** und **Teamstand** um.
+- Nach dem Abschließen steht in dieser Zeile auch **TV-Gerät herunterfahren** (siehe Thema **Tablets und Fernseher**).
 - Hat ein Team das Ziel erreicht, entfallen die offenen Matches. Ein Match, das dann noch läuft, wird zu Ende gespielt und gespeichert, zählt aber nicht mehr zum Teamstand.
 
 ## 5. Abschließen

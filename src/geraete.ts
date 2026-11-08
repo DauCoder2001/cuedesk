@@ -11,6 +11,26 @@ export function andereAmTisch<T extends GeraetKurz>(geraete: T[], tischId: strin
   return geraete.filter((g) => g.tisch_id === tischId && g.id !== ausser);
 }
 
+// Der Agent auf dem TV-Geraet meldet sich alle 30 Sekunden. Die Frist gleicht
+// der in der Datenbankfunktion tv_herunterfahren.
+const AGENT_FRIST_MS = 2 * 60 * 1000;
+
+export function agentErreichbar(zuletztGemeldet: string | null, jetzt = Date.now()): boolean {
+  return zuletztGemeldet !== null && jetzt - Date.parse(zuletztGemeldet) < AGENT_FRIST_MS;
+}
+
+export function herunterfahrenFrage(anzahl: number): string {
+  return anzahl === 1
+    ? 'TV-Gerät herunterfahren?\nEs startet erst wieder, wenn der Strom kurz getrennt wird.'
+    : `Alle ${anzahl} TV-Geräte herunterfahren?\nSie starten erst wieder, wenn der Strom kurz getrennt wird.`;
+}
+
+export function herunterfahrenMeldung(anzahl: number): string {
+  return anzahl === 1
+    ? 'Das TV-Gerät fährt in den nächsten 30 Sekunden herunter.'
+    : `${anzahl} TV-Geräte fahren in den nächsten 30 Sekunden herunter.`;
+}
+
 // Text der Rueckfrage vor dem Koppeln oder Umstellen
 export function belegtText(tischName: string, andere: GeraetKurz[], zuletzt: (zeitpunkt: string | null) => string): string {
   const wer = andere.map((g) => `„${g.name}“ (${zuletzt(g.zuletzt_gesehen)})`).join(', ');

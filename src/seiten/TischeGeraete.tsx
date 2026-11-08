@@ -4,7 +4,9 @@ import { useSitzung } from '../sitzung';
 import { Pflichthinweis, usePflicht } from '../pflicht';
 import { OHNE_TISCH_TEXT } from '../live';
 import { useRueckfrage } from '../rueckfrage';
-import { andereAmTisch, belegtText } from '../geraete';
+import { agentErreichbar, andereAmTisch, belegtText } from '../geraete';
+import { Modal } from '../modal';
+import TvHerunterfahren from './TvHerunterfahren';
 import type { Geraet, Tisch } from '../datenbank.types';
 
 export default function TischeGeraete() {
@@ -16,6 +18,9 @@ export default function TischeGeraete() {
 
   const [tische, setTische] = useState<Tisch[]>([]);
   const [geraete, setGeraete] = useState<Geraet[]>([]);
+  const [agenten, setAgenten] = useState<{ geraet_id: string; zuletzt_gemeldet: string | null }[]>([]);
+  // Der Schluessel steht nur in diesem Moment im Klartext zur Verfuegung
+  const [schluessel, setSchluessel] = useState<{ name: string; wert: string; kopiert: boolean } | null>(null);
   const [neueNummer, setNeueNummer] = useState('');
   const [neueBezeichnung, setNeueBezeichnung] = useState('');
   const [code, setCode] = useState('');
@@ -27,6 +32,7 @@ export default function TischeGeraete() {
   const koppelPflicht = usePflicht();
   const [rueckfrage, fragen] = useRueckfrage();
 
+  const agentVon = (geraet: Geraet) => agenten.find((a) => a.geraet_id === geraet.id);
   const tischName = (id: string) => {
     const t = tische.find((x) => x.id === id);
     return t ? `Tisch ${t.nummer}` : 'diesem Tisch';
@@ -45,13 +51,15 @@ export default function TischeGeraete() {
 
   async function laden() {
     if (!verein) return;
-    const [tischAntwort, geraetAntwort] = await Promise.all([
+    const [tischAntwort, geraetAntwort, agentAntwort] = await Promise.all([
       supabase.from('tische').select('*').eq('verein_id', verein.id).order('nummer'),
-      supabase.from('geraete').select('*').eq('verein_id', verein.id).order('name')
+      supabase.from('geraete').select('*').eq('verein_id', verein.id).order('name'),
+      supabase.rpc('tv_agenten', { p_verein: verein.id })
     ]);
     if (tischAntwort.error) setFehler(tischAntwort.error.message);
     setTische(tischAntwort.data ?? []);
     setGeraete(geraetAntwort.data ?? []);
+    setAgenten(agentAntwort.data ?? []);
   }
 
   async function tischAnlegen() {
@@ -137,6 +145,26 @@ export default function TischeGeraete() {
     }
     setMeldung(`${geraet.name} ist getrennt. Das Gerät zeigt wieder einen Kopplungscode.`);
     await laden();
+  }
+
+  async function agentSchluesselErzeugen(geraet: Geraet) {
+    setFehler(null);
+    const vorhanden = agenten.some((a) => a.geraet_id === geraet.id);
+    if (vorhanden && !(await fragen(`Neuen Agent-Schlüssel für ${geraet.name} erzeugen?\nDer bisherige funktioniert danach nicht mehr.`, 'Neuer Schlüssel'))) return;
+    const { data, error } = await supabase.rpc('agent_schluessel_erzeugen', { p_geraet: geraet.id });
+    if (error) return setFehler(error.message);
+    setSchluessel({ name: geraet.name, wert: data, kopiert: false });
+    await laden();
+  }
+
+  async function schluesselKopieren() {
+    if (!schluessel) return;
+    try {
+      await navigator.clipboard.writeText(schluessel.wert);
+      setSchluessel({ ...schluessel, kopiert: true });
+    } catch {
+      setFehler('Kopieren ging nicht. Bitte den Schlüssel im Feld markieren und kopieren.');
+    }
   }
 
   if (!verein) return <p className="hinweis">Kein Verein zugeordnet.</p>;
@@ -245,7 +273,10 @@ export default function TischeGeraete() {
                   ⚠ teilt {tischName(geraet.tisch_id)}
                 </span>
               )}
-              <small>{zuletzt(geraet.zuletzt_gesehen)}</small>
+              <small>
+                {zuletzt(geraet.zuletzt_gesehen)}
+                {agentVon(geraet) && (agentErreichbar(agentVon(geraet)?.zuletzt_gemeldet ?? null) ? ' · Agent verbunden' : ' · Agent nicht erreichbar')}
+              </small>
             </div>
             <select
               value={geraet.tisch_id ?? ''}
@@ -259,11 +290,19 @@ export default function TischeGeraete() {
                 </option>
               ))}
             </select>
-            {darfVerwalten && (
-              <button type="button" title="Trennt das Tablet von CueDesk. Es zeigt danach wieder einen Kopplungscode." onClick={() => void trennen(geraet)}>
-                Trennen
-              </button>
-            )}
+            <div className="geraeteknoepfe">
+              {darfVerwalten && !geraet.tisch_id && (
+                <button type="button" title="Erzeugt den Schlüssel für den Agenten, der dieses TV-Gerät auf Wunsch herunterfährt. Er wird nur einmal angezeigt." onClick={() => void agentSchluesselErzeugen(geraet)}>
+                  Agent-Schlüssel
+                </button>
+              )}
+              {darfVerwalten && (
+                <button type="button" title="Trennt das Tablet von CueDesk. Es zeigt danach wieder einen Kopplungscode." onClick={() => void trennen(geraet)}>
+                  Trennen
+                </button>
+              )}
+              {agentVon(geraet) && <TvHerunterfahren vereinId={verein.id} agenten={agenten.length} />}
+            </div>
           </div>
         ))}
         {geraete.length === 0 && <p className="hinweis">Noch kein Gerät gekoppelt.</p>}
@@ -314,6 +353,24 @@ export default function TischeGeraete() {
         {fehler && <p className="fehler">{fehler}</p>}
         {meldung && <p className="meldung">{meldung}</p>}
       </section>
+      {schluessel && (
+        <Modal abbrechen={() => setSchluessel(null)}>
+          <h3 style={{ margin: 0 }}>Agent-Schlüssel für {schluessel.name}</h3>
+          <p className="hinweis">Der Schlüssel wird nur dieses eine Mal angezeigt. Trage ihn auf dem TV-Gerät beim Agenten ein.</p>
+          <div className="zeile raster">
+            <input readOnly value={schluessel.wert} aria-label="Agent-Schlüssel" onFocus={(e) => e.currentTarget.select()} />
+            <button type="button" onClick={() => void schluesselKopieren()}>
+              {schluessel.kopiert ? 'Kopiert' : 'Kopieren'}
+            </button>
+          </div>
+          {fehler && <p className="fehler">{fehler}</p>}
+          <div className="zeile">
+            <button type="button" onClick={() => setSchluessel(null)}>
+              Schließen
+            </button>
+          </div>
+        </Modal>
+      )}
       {rueckfrage}
     </div>
   );
