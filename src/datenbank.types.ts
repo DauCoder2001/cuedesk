@@ -234,6 +234,7 @@ export type Geraet = {
   aktiv: boolean;
   zuletzt_gesehen: string | null;
   neu_laden_am: string | null;   // von der Live-Uebersicht gesetzt
+  herunterfahren_am: string | null;   // Bitte an den Agenten auf dem TV-Geraet
   erstellt_am: string;
 };
 
@@ -497,6 +498,10 @@ export type Database = {
       geraet_meldet_sich: { Args: Record<string, never>; Returns: undefined };
       geraet_neu_geladen: { Args: Record<string, never>; Returns: undefined };
       geraet_tisch_setzen: { Args: { p_tisch: string | null }; Returns: undefined };
+      agent_abfragen: { Args: { p_schluessel: string }; Returns: boolean };
+      agent_schluessel_erzeugen: { Args: { p_geraet: string }; Returns: string };
+      tv_herunterfahren: { Args: { p_verein: string }; Returns: number };
+      tv_agenten: { Args: { p_verein: string }; Returns: { geraet_id: string; zuletzt_gemeldet: string | null }[] };
       schutzwort_stimmt: { Args: { p_verein: string; p_wort: string }; Returns: boolean };
       schutzwort_setzen: { Args: { p_verein: string; p_wort: string }; Returns: undefined };
       rating_neustart: {
