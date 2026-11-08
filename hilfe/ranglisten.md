@@ -14,4 +14,5 @@ Ranglisten, Serien und Statistiken werten die gespielten Turniere und Partien au
 ## Statistik und Archiv
 
 - **Pool-Statistik** und **14.1-Statistik**: Bilanz, Verlauf, Form und Gegner eines Spielers. Mitglieder sehen hier nur sich selbst.
+- **Quoten in der 14.1-Statistik**: Jede Zeile erklärt sich beim Überfahren mit der Maus. **Aufnahme endet mit Fehlstoß** zählt die Aufnahmen, die am Board mit „Verschossen“ beendet wurden, auch nach einer langen Serie; das ist keine Trefferquote. Wie oft ein Spieler gar keine Kugel versenkt hat, zeigen die **Nullaufnahmen**. Der Wert stimmt nur, wenn am Board auch „Sicherheit“ und „Foul“ gedrückt werden.
 - **Auswertung und Archiv**: oben der **Saison-Überblick** (Spiele, Spielzeit an den Tischen, Ø Spieldauer, Turniere, aktivster Spieler, beste drei nach Siegen, Spielzeit je Tisch) zur gewählten Saison; „alle Saisons“ zeigt die Gesamtbilanz. Spieldauer gibt es nur für Spiele am Tablet, beim aktivsten und den besten Spielern stehen nur Mitglieder. Darunter alle beendeten Turniere und Partien, mit Filtern und dem direkten Vergleich zweier Spieler.

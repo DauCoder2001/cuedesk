@@ -256,33 +256,33 @@ export default function Statistik141() {
               <h2>Quoten</h2>
               <table className="tabelle kompakt">
                 <tbody>
-                  <tr>
+                  <tr title="Anteil der Aufnahmen ohne versenkte Kugel, egal wie sie geendet haben.">
                     <td>Nullaufnahmen</td>
                     <td className="rechts">{prozent(werte.nullQuote)}</td>
                   </tr>
-                  <tr>
+                  <tr title="Anteil der Aufnahmen, die am Board mit „Sicherheit“ beendet wurden.">
                     <td>Sicherheiten</td>
                     <td className="rechts">{prozent(werte.sicherheitQuote)}</td>
                   </tr>
-                  <tr>
-                    <td>Verschossen</td>
+                  <tr title="Anteil der Aufnahmen, die am Board mit „Verschossen“ beendet wurden, auch nach einer langen Serie. Das ist keine Trefferquote: Aufnahmen ohne Kugel zeigt die Zeile Nullaufnahmen.">
+                    <td>Aufnahme endet mit Fehlstoß</td>
                     <td className="rechts">{prozent(werte.verschossenQuote)}</td>
                   </tr>
-                  <tr>
+                  <tr title="Alle Fouls einschließlich Drei-Foul und Eröffnungsfoul, umgerechnet auf 10 Aufnahmen.">
                     <td>Fouls je 10 Aufnahmen</td>
                     <td className="rechts">{zahl(werte.foulsJe10, 1)}</td>
                   </tr>
-                  <tr>
+                  <tr title="Anzahl der zweiten Fouls in Folge, der dritten Fouls in Folge (Drei-Foul) und der Fouls beim Eröffnungsstoß.">
                     <td>2. Fouls / Drei-Foul / Eröffnung</td>
                     <td className="rechts">
                       {werte.zweiteFouls} / {werte.dreiFouls} / {werte.eroeffnungsfouls}
                     </td>
                   </tr>
-                  <tr>
+                  <tr title="Anzahl der Aufnahmen, in denen die Serie über mindestens einen Rackwechsel hinausging.">
                     <td>Serien über ein Rack hinaus</td>
                     <td className="rechts">{werte.rackUebergaenge}</td>
                   </tr>
-                  <tr>
+                  <tr title="Durchschnittliche Dauer einer eigenen Aufnahme, gemessen vom vorherigen Eintrag der Partie bis zum Ende der Aufnahme.">
                     <td>Tempo</td>
                     <td className="rechts">{tempoText(werte.sekundenJeAufnahme)}</td>
                   </tr>
