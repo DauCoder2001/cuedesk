@@ -1,0 +1,16 @@
+[Unit]
+Description=CueDesk-Agent (TV-Geraet herunterfahren)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /opt/billard/cuedesk_agent.py
+Restart=always
+RestartSec=30
+User=billardagent
+# sudo muss die Rechte wechseln duerfen
+NoNewPrivileges=no
+
+[Install]
+WantedBy=multi-user.target
