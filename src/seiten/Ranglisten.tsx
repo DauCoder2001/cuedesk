@@ -303,11 +303,16 @@ export default function Ranglisten() {
 
       <section className="block">
         <div className="bearbeitenkopf">
-          <h2>Titel</h2>
-          <label className="ankreuz">
-            <input type="checkbox" checked={alleTitel} onChange={(e) => setAlleTitel(e.target.checked)} />
-            auch ohne Podestplatz
-          </label>
+          <div className="kopflinks">
+            <h2>Titel</h2>
+            <label
+              className="ankreuz"
+              title="Zeigt auch Spieler, die im Zeitraum an Turnieren teilgenommen, aber keinen der Plätze 1 bis 3 erreicht haben."
+            >
+              <input type="checkbox" checked={alleTitel} onChange={(e) => setAlleTitel(e.target.checked)} />
+              auch Spieler ohne Podestplatz zeigen
+            </label>
+          </div>
         </div>
         <table className="tabelle kompakt">
           <thead>
