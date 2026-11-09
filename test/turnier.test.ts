@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, test } from 'vitest';
-import { angefangen, auslosen, bergerRunden, hoechstwert, mitGewonnenenSaetzen, rangliste, spielBeendet, spielZaehler, spielZaehlerText } from '../src/turnier';
+import { angefangen, auslosen, bergerRunden, hoechstwert, mitGewonnenenSaetzen, rangliste, spielBeendet, spielZaehler, spielZaehlerText, standAnheben, standEingabe } from '../src/turnier';
 import type { RanglistenPartie } from '../src/turnier';
 
 // Original aus Turnier light. Fehlt die Datei, entfallen die Vergleichstests.
@@ -55,6 +55,27 @@ describe('Ergebnisse', () => {
     expect(spielBeendet(null, 3, 5)).toBe(false);
     expect(hoechstwert(5, 5)).toBe(4);
     expect(hoechstwert(3, 5)).toBe(5);
+  });
+
+  test('Eingabe wird schon beim Tippen begrenzt', () => {
+    expect(standEingabe('99', 0, 3)).toBe('3');
+    expect(standEingabe('3', 3, 3)).toBe('2');
+    expect(standEingabe('2', 3, 3)).toBe('2');
+    expect(standEingabe('3', 2, 3)).toBe('3');
+    expect(standEingabe('3', null, 3)).toBe('3');
+    expect(standEingabe('12', 0, 25)).toBe('12');
+    expect(standEingabe('03', 0, 5)).toBe('3');
+    expect(standEingabe('0', 0, 5)).toBe('0');
+    expect(standEingabe('', 3, 3)).toBe('');
+    expect(standEingabe('x', 0, 3)).toBe('');
+  });
+
+  test('beim Verlassen nicht unter der Vorgabe', () => {
+    expect(standAnheben('1', 2)).toBe('2');
+    expect(standAnheben('2', 2)).toBe('2');
+    expect(standAnheben('3', 2)).toBe('3');
+    expect(standAnheben('', 2)).toBe('');
+    expect(standAnheben('0', 0)).toBe('0');
   });
 
   test('Stand gleich Vorgabe zaehlt nicht als begonnen', () => {

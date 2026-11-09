@@ -32,7 +32,7 @@ import { modusOptionen, modusVorschlag } from '../modus-wahl';
 import type { WaehlbarerModus } from '../modus-wahl';
 import { laufenderStand, laufenderStandText } from '../live';
 import { useEtwasUngespeichert, useWechsel } from '../ungespeichert';
-import { angefangen, auslosen, bergerRunden, hoechstwert, mitGewonnenenSaetzen, mitKommenden, rangliste, spielBeendet, spielZaehler, spielZaehlerText } from '../turnier';
+import { angefangen, auslosen, bergerRunden, hoechstwert, mitGewonnenenSaetzen, mitKommenden, rangliste, spielBeendet, spielZaehler, spielZaehlerText, standAnheben, standEingabe, standHinweis } from '../turnier';
 import type { Gleichstand, RanglistenPartie, Zeile } from '../turnier';
 import {
   endtabelleZweiGruppen,
@@ -4499,9 +4499,13 @@ function Spielzeile(props: {
   // Gespeichert wird erst, wenn der Cursor die Zeile verlaesst, nicht beim
   // Wechsel zwischen den beiden Feldern desselben Spiels.
   const uebernehmen = (e: React.FocusEvent<HTMLInputElement>) => {
+    const textA = standAnheben(a, p.vorgabe_a);
+    const textB = standAnheben(b, p.vorgabe_b);
+    setA(textA);
+    setB(textB);
     if (e.relatedTarget && zeile.current?.contains(e.relatedTarget as Node)) return;
-    const na = zahl(a);
-    const nb = zahl(b);
+    const na = zahl(textA);
+    const nb = zahl(textB);
     if (na === p.ergebnis_a && nb === p.ergebnis_b) return;
     props.speichern(na, nb);
   };
@@ -4519,14 +4523,15 @@ function Spielzeile(props: {
         ? 'läuft'
         : 'offen';
 
-  const feld = (wert: string, setzen: (t: string) => void, platzhalter: number) =>
+  const feld = (wert: string, setzen: (t: string) => void, platzhalter: number, gegner: string) =>
     props.bearbeitbar ? (
       <input
         className="zahlfeld"
         inputMode="numeric"
         value={wert}
         placeholder={String(platzhalter)}
-        onChange={(e) => setzen(e.target.value.replace(/\D/g, '').slice(0, 2))}
+        title={`${standHinweis(props.raceTo)}${platzhalter > 0 ? ` Mindestens die Vorgabe (${platzhalter}).` : ''}`}
+        onChange={(e) => setzen(standEingabe(e.target.value, zahl(gegner), props.raceTo))}
         onBlur={uebernehmen}
         onKeyDown={(e) => {
           if (e.key !== 'Enter') return;
@@ -4547,7 +4552,7 @@ function Spielzeile(props: {
       </td>
       {props.mitVorgabe && <td className="rechts hinweis">{vorgabeText}</td>}
       <td className="rechts">
-        {feld(a, setA, p.vorgabe_a)} : {feld(b, setB, p.vorgabe_b)}
+        {feld(a, setA, p.vorgabe_a, b)} : {feld(b, setB, p.vorgabe_b, a)}
       </td>
       <td className={fertig ? 'livelaeuft' : 'hinweis'}>{status}</td>
       <td className="rechts">

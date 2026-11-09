@@ -54,6 +54,23 @@ export function hoechstwert(gegner: Stand, raceTo: number): number {
   return gegner !== null && gegner >= raceTo ? raceTo - 1 : raceTo;
 }
 
+// Eingabe im Standfeld, schon beim Tippen: nur Ziffern, keine fuehrenden
+// Nullen, nie ueber dem Hoechstwert.
+export function standEingabe(text: string, gegner: Stand, raceTo: number): string {
+  const ziffern = text.replace(/\D/g, '');
+  if (ziffern === '') return '';
+  return String(Math.min(Number(ziffern), hoechstwert(gegner, raceTo)));
+}
+
+// Beim Verlassen des Feldes: nicht unter der Vorgabe. Beim Tippen bleibt das
+// Feld in Ruhe, sonst liesse sich dort keine Zahl eingeben.
+export function standAnheben(text: string, vorgabe: number): string {
+  return text !== '' && Number(text) < vorgabe ? String(vorgabe) : text;
+}
+
+export const standHinweis = (raceTo: number) =>
+  `Höchstens Race to ${raceTo}. Hat die Gegenseite das erreicht, höchstens ${raceTo - 1}.`;
+
 // Ein Spiel zaehlt erst, wenn der Stand von der Vorgabe abweicht (v57 hcAngefangen)
 export function angefangen(a: Stand, b: Stand, vorgabeA: number, vorgabeB: number): boolean {
   if (a === null && b === null) return false;

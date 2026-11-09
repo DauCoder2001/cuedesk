@@ -1,5 +1,10 @@
 # Änderungen an CueDesk
 
+## 0.5.0 – 09.11.2026
+
+- Standfelder im Turnier-Spielplan und im Teamvergleich begrenzen schon beim Tippen: höchstens das Race to, und hat die Gegenseite es erreicht, höchstens eins weniger.
+- Im Turnier-Spielplan springt ein Stand unter der Vorgabe beim Verlassen des Feldes auf die Vorgabe.
+
 ## 0.4.0 – 09.11.2026
 
 - Zeitschätzung schon vor dem Start: Unter **Auslosen und starten** steht die geschätzte Dauer aus Partien, aktiven Tischen und dem Vereinswert.

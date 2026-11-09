@@ -6,7 +6,7 @@ import { useRueckfrage } from '../rueckfrage';
 import { ART_NAME, TEAM_VORGABE, einsaetze, hoechstensMatches, pruefen, siegerVon, stand, vorschlag } from '../teamvergleich';
 import { useLaufendeStaende } from '../laufende-staende';
 import { laufenderStand, laufenderStandText } from '../live';
-import { hoechstwert, spielBeendet } from '../turnier';
+import { hoechstwert, spielBeendet, standEingabe, standHinweis } from '../turnier';
 import type { MatchArt, TeamSeite, TeamvergleichEinstellungen, VorschlagMatch } from '../teamvergleich';
 import { DISZIPLIN_TEXT, STATUS_TEXT } from './Turniere';
 import LiveSchalter from './LiveSchalter';
@@ -1013,6 +1013,7 @@ function ErgebnisFelder({ partie, speichern }: { partie: Partie; speichern: (a: 
     setB(text(partie.ergebnis_b));
   }, [partie.ergebnis_a, partie.ergebnis_b]);
   const zahl = (t: string) => (t.trim() === '' ? null : Number(t));
+  const race = partie.race_to ?? 5; // wie beim Speichern
   const verlassen = (e: React.FocusEvent<HTMLInputElement>) => {
     if (e.relatedTarget && bereich.current?.contains(e.relatedTarget as Node)) return;
     const na = zahl(a);
@@ -1023,9 +1024,9 @@ function ErgebnisFelder({ partie, speichern }: { partie: Partie; speichern: (a: 
   };
   return (
     <span ref={bereich} className="ergebnisfelder">
-      <input className="zahlfeld" inputMode="numeric" aria-label="Stand links" value={a} onChange={(e) => setA(e.target.value)} onBlur={verlassen} />
+      <input className="zahlfeld" inputMode="numeric" aria-label="Stand links" title={standHinweis(race)} value={a} onChange={(e) => setA(standEingabe(e.target.value, zahl(b), race))} onBlur={verlassen} />
       :
-      <input className="zahlfeld" inputMode="numeric" aria-label="Stand rechts" value={b} onChange={(e) => setB(e.target.value)} onBlur={verlassen} />
+      <input className="zahlfeld" inputMode="numeric" aria-label="Stand rechts" title={standHinweis(race)} value={b} onChange={(e) => setB(standEingabe(e.target.value, zahl(a), race))} onBlur={verlassen} />
     </span>
   );
 }
