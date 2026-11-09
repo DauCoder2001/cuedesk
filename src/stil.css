@@ -392,6 +392,13 @@ h1.seitentitel { margin: 0 0 -4px; }
 .tabelle tr.markiert td { background: #fde3c4; }
 .markierzeile { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin-top: 10px; font-size: 14px; }
 .markierzeile .chip { margin: 0; }
+/* Turnierkopf: Fortschrittsbalken ueber der Spielzaehlung */
+.spielfortschritt { display: flex; height: 10px; max-width: 520px; margin: 2px 0; overflow: hidden; background: var(--grund); border: 1px solid var(--rand); border-radius: 5px; }
+.spielfortschritt .fertig { background: var(--gut); }
+.spielfortschritt .laeuft { background: var(--gut-hell); }
+/* Geschaetzte Dauer vor der Auslosung */
+.zeitschaetzung { margin: 4px 0; padding: 6px 10px; background: var(--gut-hell); border-left: 3px solid var(--gut); }
+.zeitschaetzung strong { display: block; }
 /* Turnierkopf: Ankreuzfeld "offene markieren" hinter der Spielzaehlung */
 .offenemarkieren { margin-left: 10px; white-space: nowrap; cursor: pointer; }
 .offenemarkieren input { vertical-align: -2px; }

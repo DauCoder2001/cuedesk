@@ -4,7 +4,8 @@ import { useSitzung } from '../sitzung';
 import { LIGEN } from '../liga';
 import type { LigaKennung } from '../liga';
 import { saisonAus } from '../mannschaften';
-import { turnierartFehler, vereinsEinstellungen, vereinsKuerzel } from '../vereinseinstellungen';
+import { MINUTEN_JE_PARTIE_MAX, MINUTEN_JE_PARTIE_MIN, turnierartFehler, vereinsEinstellungen, vereinsKuerzel } from '../vereinseinstellungen';
+import { gemesseneMinutenJePartie, PROGNOSE_RACE_BASIS } from '../zeitprognose';
 import type { VereinsEinstellungen } from '../vereinseinstellungen';
 import type { Disziplin, Mannschaft, SupportFreigabe, TurnierModus, Vertragszustimmung } from '../datenbank.types';
 import { VERTRAEGE, VERTRAG_FASSUNG, fassungText } from '../vertraege';
@@ -86,6 +87,7 @@ type Formular = {
   art: string; // vorgewaehlte Turnierart, leer: keine
   einzelBis: string; // Modus-Vorschlag am Turniertag
   zweiBis: string;
+  minutenJePartie: string; // Zeitschaetzung, bei Race to 3
   turnierarten: string[];
   liga: LigaKennung;
   mannschaftRang: string; // leer: erste der Saison
@@ -143,6 +145,7 @@ function ausEinstellungen(
     art: e.turnier.art ?? '',
     einzelBis: String(e.turnier.einzelBis),
     zweiBis: String(e.turnier.zweiBis),
+    minutenJePartie: String(e.turnier.minutenJePartie),
     turnierarten: e.turnierarten,
     liga: e.liga.liga,
     mannschaftRang: e.liga.mannschaftRang === null ? '' : String(e.liga.mannschaftRang),
@@ -172,6 +175,8 @@ export default function System() {
   const [zustimmungen, setZustimmungen] = useState<(Vertragszustimmung & { email: string | null })[]>([]);
   const [tage, setTage] = useState(3);
   const [neueArt, setNeueArt] = useState('');
+  // Am Tablet gemessene Minuten je Partie (null: zu wenige Partien)
+  const [gemessen, setGemessen] = useState<number | null>(null);
   const [artFehler, setArtFehler] = useState<string | null>(null);
   const vereinPflicht = usePflicht();
   const schutzPflicht = usePflicht<HTMLElement>();
@@ -207,7 +212,7 @@ export default function System() {
   useEffect(() => {
     if (!verein) return;
     void (async () => {
-      const [r, m, f] = await Promise.all([
+      const [r, m, f, g] = await Promise.all([
         supabase.from('rating_einstellungen').select('*').eq('verein_id', verein.id).maybeSingle(),
         supabase.from('mannschaften').select('*').eq('verein_id', verein.id).order('rang'),
         supabase
@@ -217,8 +222,21 @@ export default function System() {
           .is('beendet_am', null)
           .gt('bis', new Date().toISOString())
           .order('bis', { ascending: false })
-          .limit(1)
+          .limit(1),
+        // Nur Spiele auf Saetze, 14.1 zaehlt Baelle; Team-Matches haben keine Spieler
+        supabase
+          .from('partien')
+          .select('begonnen, beendet, ergebnis_a, ergebnis_b, vorgabe_a, vorgabe_b')
+          .eq('verein_id', verein.id)
+          .eq('status', 'beendet')
+          .in('disziplin', ['8-ball', '9-ball', '10-ball'])
+          .not('spieler_a', 'is', null)
+          .not('begonnen', 'is', null)
+          .not('beendet', 'is', null)
+          .order('beendet', { ascending: false })
+          .limit(300)
       ]);
+      setGemessen(gemesseneMinutenJePartie(g.data ?? []));
       setRating((r.data as RatingWerte | null) ?? null);
       setNeustart(r.data?.neustart ?? null);
       setMannschaften(m.data ?? []);
@@ -284,6 +302,11 @@ export default function System() {
       return vereinPflicht.melden(`Zwei Gruppen bis: mehr als ${einzelBis} und höchstens 16 Teilnehmer.`);
     }
 
+    const minutenJePartie = zahl(f.minutenJePartie);
+    if (minutenJePartie === null || !Number.isInteger(minutenJePartie) || minutenJePartie < MINUTEN_JE_PARTIE_MIN || minutenJePartie > MINUTEN_JE_PARTIE_MAX) {
+      return vereinPflicht.melden(`Minuten je Partie: ${MINUTEN_JE_PARTIE_MIN} bis ${MINUTEN_JE_PARTIE_MAX}.`);
+    }
+
     const einstellungen: VereinsEinstellungen = {
       turnier: {
         raceTo: race,
@@ -295,7 +318,8 @@ export default function System() {
         ratingWerten: f.ratingWerten,
         art: f.art || null,
         einzelBis,
-        zweiBis
+        zweiBis,
+        minutenJePartie
       },
       turnierarten: f.turnierarten,
       liga: { liga: f.liga, mannschaftRang: zahl(f.mannschaftRang) },
@@ -530,7 +554,32 @@ export default function System() {
               ))}
             </select>
           </label>
+          <label
+            className="feld"
+            title="Damit schätzt CueDesk die Turnierdauer, bis genug echte Ergebnisse vorliegen. Bei anderem Race wird der Wert umgerechnet, Race to 5 dauert also länger."
+          >
+            <span>Minuten je Partie bei Race to {PROGNOSE_RACE_BASIS}</span>
+            <input inputMode="numeric" required value={f.minutenJePartie} onChange={(e) => setze({ minutenJePartie: e.target.value })} />
+          </label>
         </div>
+        {gemessen !== null && (
+          <p
+            className="hinweis"
+            title="Am Tablet gemessene reine Spielzeit der letzten Partien, umgerechnet auf Race to 3. Wechsel zwischen den Partien sind nicht enthalten."
+          >
+            Gemessen in deinem Verein: {gemessen} Min.
+            {String(gemessen) !== f.minutenJePartie && (
+              <button
+                type="button"
+                className="klein"
+                title="Trägt den gemessenen Wert ins Feld ein. Gespeichert wird mit „Speichern“."
+                onClick={() => setze({ minutenJePartie: String(gemessen) })}
+              >
+                Übernehmen
+              </button>
+            )}
+          </p>
+        )}
         {f.rating && (
           <label className="ankreuz">
             <input type="checkbox" checked={f.vorgabe} onChange={(e) => setze({ vorgabe: e.target.checked })} />

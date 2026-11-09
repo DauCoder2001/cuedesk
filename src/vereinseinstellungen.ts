@@ -6,6 +6,10 @@
 
 import type { Disziplin, TurnierModus } from './datenbank.types';
 import type { LigaKennung } from './liga';
+import { STANDARD_MINUTEN_JE_PARTIE } from './zeitprognose';
+
+export const MINUTEN_JE_PARTIE_MIN = 5;
+export const MINUTEN_JE_PARTIE_MAX = 240;
 
 export type VereinsEinstellungen = {
   turnier: {
@@ -20,6 +24,7 @@ export type VereinsEinstellungen = {
     // Modus am Turniertag: Vorschlag nach Teilnehmerzahl (src/modus-wahl.ts)
     einzelBis: number; // bis hier Einzelgruppe
     zweiBis: number; // bis hier Zwei Gruppen, darueber Gruppen mit KO
+    minutenJePartie: number; // Zeitschaetzung, bei Race to 3 (src/zeitprognose.ts)
   };
   // Turnierarten des Vereins, z. B. "Liga-Spiel", "Vereinsmeisterschaft".
   // Nur eine Bezeichnung - Spiel, Rating und Scoreboard bleiben unberuehrt.
@@ -47,7 +52,8 @@ export const STANDARD_EINSTELLUNGEN: VereinsEinstellungen = {
     ratingWerten: true,
     art: null,
     einzelBis: 7,
-    zweiBis: 15
+    zweiBis: 15,
+    minutenJePartie: STANDARD_MINUTEN_JE_PARTIE
   },
   turnierarten: [],
   liga: { liga: 'kreisliga', mannschaftRang: null },
@@ -115,7 +121,8 @@ export function vereinsEinstellungen(roh: unknown): VereinsEinstellungen {
       ratingWerten: typeof t.ratingWerten === 'boolean' ? t.ratingWerten : s.turnier.ratingWerten,
       art: typeof t.art === 'string' && turnierarten.includes(t.art) ? t.art : null,
       einzelBis,
-      zweiBis
+      zweiBis,
+      minutenJePartie: ganzeZahl(t.minutenJePartie, MINUTEN_JE_PARTIE_MIN, MINUTEN_JE_PARTIE_MAX) ?? s.turnier.minutenJePartie
     },
     turnierarten,
     liga: {

@@ -4,7 +4,8 @@ import { useSitzung } from '../sitzung';
 import { personName } from '../namen';
 import { kurzesRaceHinweis, vorgabe } from '../vorgabe';
 import { useRueckfrage } from '../rueckfrage';
-import { prognose, prognoseText } from '../zeitprognose';
+import { kommendePartien, prognose, prognoseText, prognoseZusatz, wirksameTische } from '../zeitprognose';
+import type { Vereinstempo } from '../zeitprognose';
 import { berichtDateiname, berichtPdf, gruppenBerichtPdf } from '../turnierbericht';
 import type { BerichtBlock } from '../turnierbericht';
 import { herunterladen } from '../pdf';
@@ -31,7 +32,7 @@ import { modusOptionen, modusVorschlag } from '../modus-wahl';
 import type { WaehlbarerModus } from '../modus-wahl';
 import { laufenderStand, laufenderStandText } from '../live';
 import { useEtwasUngespeichert, useWechsel } from '../ungespeichert';
-import { angefangen, auslosen, bergerRunden, hoechstwert, mitGewonnenenSaetzen, rangliste, spielBeendet, spielZaehler, spielZaehlerText } from '../turnier';
+import { angefangen, auslosen, bergerRunden, hoechstwert, mitGewonnenenSaetzen, mitKommenden, rangliste, spielBeendet, spielZaehler, spielZaehlerText } from '../turnier';
 import type { Gleichstand, RanglistenPartie, Zeile } from '../turnier';
 import {
   endtabelleZweiGruppen,
@@ -73,6 +74,7 @@ import {
   dkoEndrunde,
   dkoEndtabelle,
   dkoGroesse,
+  dkoSpielArten,
   dkoSpiele,
   dkoStartplaetze,
   quotient
@@ -1546,6 +1548,44 @@ export default function TurnierAnsicht({
       liste.filter((x): x is string => Boolean(x)).map((x) => Date.parse(x));
     const anfang = zeiten([einstellungen.beginn, ...partien.map((x) => x.begonnen), ...partien.map((x) => x.beendet)]);
     const schluss = zeiten(partien.map((x) => x.beendet));
+    return prognose(
+      [
+        ...partien.map((x) => ({
+          standA: x.ergebnis_a,
+          standB: x.ergebnis_b,
+          vorgabeA: x.vorgabe_a,
+          vorgabeB: x.vorgabe_b,
+          raceTo: x.race_to ?? raceTo
+        })),
+        ...kommendePartien(kommendeRaces())
+      ],
+      anfang.length ? Math.min(...anfang) : null,
+      schluss.length ? Math.max(...schluss) : null,
+      partien.length > 0 ? vereinstempo() : null
+    );
+  }
+
+  // Zeitschaetzung aus dem Vereinswert; ohne aktive Tische gibt es keine
+  function vereinstempo(): Vereinstempo | null {
+    const tische = wirksameTische(aktiveTische, teilnehmer.length);
+    if (tische === 0) return null;
+    return { minutenJePartie: vereinsEinstellungen(verein?.einstellungen).turnier.minutenJePartie, tische };
+  }
+
+  // Race der Partien, die ein Turnier mit dieser Teilnehmerzahl haben wird
+  function geplanteRaces(): number[] {
+    const n = teilnehmer.length;
+    const je = (anzahl: number, race: number) => Array.from({ length: anzahl }, () => race);
+    if (dko) return dkoSpielArten(n).map(raceDkoFuer);
+    if (!mehrgruppig) return je((n * (n - 1)) / 2, raceTo);
+    const groessen = gruppenNamen.map((g) => ziel[g] ?? 0);
+    const gruppenspiele = groessen.flatMap((g) => je((g * (g - 1)) / 2, raceTo));
+    if (zwei) return [...gruppenspiele, ...je(Math.min(...groessen), race2)];
+    return [...gruppenspiele, ...koSpiele((weiter ?? 0) * gruppenzahl).map((k) => raceFuer(k.runde))];
+  }
+
+  // Noch nicht angesetzte Partien: Duelle, KO-Runde, Doppel-KO
+  function kommendeRaces(): number[] {
     // Zwei Gruppen vor Phase 2: die Duelle zaehlen schon mit (v64 phase2Duelle)
     // Gruppen mit KO: alle KO-Spiele, die noch keine Partie haben (Phase 3 ist freiwillig)
     const kommend = zwei && !einstellungen.phase2 ? Math.min(gruppen.A.length, gruppen.B.length) : 0;
@@ -1559,21 +1599,7 @@ export default function TurnierAnsicht({
         .filter((m) => !m.freilos && !m.entfaellt && !dkoPartien.some((x) => x.gruppe === m.spiel.id))
         .forEach((m) => koKommend.push(raceDkoFuer(m.spiel.art)));
     }
-    return prognose(
-      [
-        ...partien.map((x) => ({
-          standA: x.ergebnis_a,
-          standB: x.ergebnis_b,
-          vorgabeA: x.vorgabe_a,
-          vorgabeB: x.vorgabe_b,
-          raceTo: x.race_to ?? raceTo
-        })),
-        ...Array.from({ length: kommend }, () => ({ standA: null, standB: null, vorgabeA: 0, vorgabeB: 0, raceTo: race2 })),
-        ...koKommend.map((race) => ({ standA: null, standB: null, vorgabeA: 0, vorgabeB: 0, raceTo: race }))
-      ],
-      anfang.length ? Math.min(...anfang) : null,
-      schluss.length ? Math.max(...schluss) : null
-    );
+    return [...Array.from({ length: kommend }, () => race2), ...koKommend];
   }
 
   async function rueckgaengig() {
@@ -2553,6 +2579,13 @@ export default function TurnierAnsicht({
       zuviel.length === 0 &&
       (!mitKo || weiter !== null)
     : teilnehmer.length >= 3;
+  // Zeitschaetzung im Kopf, Schaetzung vor der Auslosung, Zaehler mit kommenden Partien
+  const zeitStand = turnier.quelle !== 'import' ? zeitDaten() : null;
+  const dauerVorStart =
+    teilnehmerOk && !modusOffen && turnier.status === 'geplant'
+      ? prognose(kommendePartien(geplanteRaces()), null, null, vereinstempo())
+      : null;
+  const zaehler = mitKommenden(spielZaehler(partien, beendetBei), turnier.quelle !== 'import' ? kommendeRaces().length : 0);
 
   // Naechster Schritt gruen hinterlegt (faellig), immer nur einer. Die
   // Platzierungsspiele bei Gruppen mit KO sind freiwillig und bleiben ohne.
@@ -2772,12 +2805,34 @@ export default function TurnierAnsicht({
             {va.aktiv && turnier.quelle !== 'import' && hinweisKurzesRace && (
               <p className="hinweis">{hinweisKurzesRace}</p>
             )}
-            {turnier.quelle !== 'import' && prognoseText(zeitDaten()) && (
-              <p className="hinweis">{prognoseText(zeitDaten())}</p>
+            {zeitStand && prognoseText(zeitStand) && (
+              <p className="hinweis">
+                {prognoseText(zeitStand)}
+                {prognoseZusatz(zeitStand) && (
+                  <>
+                    <br />
+                    {prognoseZusatz(zeitStand)}
+                  </>
+                )}
+              </p>
+            )}
+            {turnier.quelle !== 'import' && turnier.status === 'laeuft' && partien.length > 0 && (
+              <div
+                className="spielfortschritt"
+                role="progressbar"
+                aria-label="Turnierfortschritt"
+                aria-valuemin={0}
+                aria-valuemax={zaehler.gesamt}
+                aria-valuenow={zaehler.beendet}
+                title="Dunkel: beendete Partien, hell: laufende. Noch nicht angesetzte Duelle und KO-Spiele zählen mit."
+              >
+                <span className="fertig" style={{ width: `${(zaehler.beendet / zaehler.gesamt) * 100}%` }} />
+                <span className="laeuft" style={{ width: `${(zaehler.laufen / zaehler.gesamt) * 100}%` }} />
+              </div>
             )}
             {turnier.quelle !== 'import' && turnier.status === 'laeuft' && partien.length > 0 && (
               <p className="hinweis">
-                {spielZaehlerText(spielZaehler(partien, beendetBei))}
+                {spielZaehlerText(zaehler)}
                 {nichtBeendet.length > 0 && (
                   <label
                     className="offenemarkieren"
@@ -3214,6 +3269,15 @@ export default function TurnierAnsicht({
                   Beim Auslosen werden die Startnummern zufällig vergeben und der Spielplan entsteht
                   {mitRating ? '; die Ratings werden eingefroren. Gäste starten mit 500.' : '.'}
                 </p>
+              )}
+              {dauerVorStart?.art === 'vor-start' && (
+                <div
+                  className="zeitschaetzung"
+                  title="Partien mal Minuten je Partie geteilt durch die Tische. Der Vereinswert steht auf der Seite System; im Turnier lösen ihn die echten Zeiten nach und nach ab."
+                >
+                  <strong>{prognoseText(dauerVorStart)}</strong>
+                  <span className="hinweis">{prognoseZusatz(dauerVorStart)}</span>
+                </div>
               )}
             </>
           )}

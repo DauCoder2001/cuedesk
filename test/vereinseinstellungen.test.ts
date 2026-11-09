@@ -24,7 +24,8 @@ describe('Vereinseinstellungen', () => {
       ratingWerten: false,
       art: null,
       einzelBis: 7,
-      zweiBis: 15
+      zweiBis: 15,
+      minutenJePartie: 35
     });
     expect(e.liga).toEqual({ liga: 'bezirksliga', mannschaftRang: 2 });
     expect(e.saisonbeginn).toBe(8);

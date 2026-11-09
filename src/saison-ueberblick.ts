@@ -32,7 +32,7 @@ export type Ueberblick = {
 // Laenger als 6 Stunden ist kein Spiel, sondern ein vergessenes Tablet
 const HOECHSTENS_MINUTEN = 360;
 
-export function spieldauer(p: UeberblickPartie): number | null {
+export function spieldauer(p: Pick<UeberblickPartie, 'begonnen' | 'beendet'>): number | null {
   if (!p.begonnen || !p.beendet) return null;
   const minuten = (Date.parse(p.beendet) - Date.parse(p.begonnen)) / 60000;
   return Number.isFinite(minuten) && minuten > 0 && minuten <= HOECHSTENS_MINUTEN ? minuten : null;

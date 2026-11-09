@@ -81,9 +81,9 @@ describe('Spielstand im Turnierkopf', () => {
   });
 
   test('Text ohne leere Teile', () => {
-    expect(spielZaehlerText({ gesamt: 24, beendet: 6, laufen: 2, offen: 16 })).toBe('Spiele: 6 von 24 beendet · 2 laufen · 16 offen');
-    expect(spielZaehlerText({ gesamt: 24, beendet: 0, laufen: 0, offen: 24 })).toBe('Spiele: 0 von 24 beendet · 24 offen');
-    expect(spielZaehlerText({ gesamt: 3, beendet: 2, laufen: 1, offen: 0 })).toBe('Spiele: 2 von 3 beendet · 1 läuft');
+    expect(spielZaehlerText({ gesamt: 24, beendet: 6, laufen: 2, offen: 16 })).toBe('6 von 24 Partien (25 %) · 2 laufen · 16 offen');
+    expect(spielZaehlerText({ gesamt: 24, beendet: 0, laufen: 0, offen: 24 })).toBe('0 von 24 Partien (0 %) · 24 offen');
+    expect(spielZaehlerText({ gesamt: 3, beendet: 2, laufen: 1, offen: 0 })).toBe('2 von 3 Partien (67 %) · 1 läuft');
   });
 });
 

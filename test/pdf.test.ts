@@ -107,9 +107,9 @@ describe('Zeitprognose', () => {
   });
 
   test('zu frueh, Schaetzung, beendet', () => {
-    expect(prognose([p(1, 0)], beginn, null, beginn + 5 * 60000).art).toBe('zu-frueh');
+    expect(prognose([p(1, 0)], beginn, null, null, beginn + 5 * 60000).art).toBe('zu-frueh');
     // 16 Saetze in 40 Minuten = 0,4 je Minute, offen 8 Saetze -> 20 Minuten
-    const s = prognose([p(5, 3), p(5, 3), p(null, null)], beginn, null, beginn + 40 * 60000);
+    const s = prognose([p(5, 3), p(5, 3), p(null, null)], beginn, null, null, beginn + 40 * 60000);
     expect(s).toEqual({ art: 'schaetzung', beginn, ende: beginn + 60 * 60000 });
     expect(prognoseText(s, beginn + 40 * 60000)).toBe('ca. Turnierende: 19:00 Uhr · Beginn 18:00 Uhr');
     const e = prognose([p(5, 3)], beginn, beginn + 95 * 60000);

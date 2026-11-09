@@ -75,8 +75,14 @@ export function spielZaehler<T extends ZaehlPartie>(partien: T[], beendet: (p: T
   return z;
 }
 
+// Noch nicht angesetzte Partien (Duelle, KO-Runde) zaehlen als offen
+export function mitKommenden(z: SpielZaehler, kommend: number): SpielZaehler {
+  return { ...z, gesamt: z.gesamt + kommend, offen: z.offen + kommend };
+}
+
 export function spielZaehlerText(z: SpielZaehler): string {
-  const teile = [`Spiele: ${z.beendet} von ${z.gesamt} beendet`];
+  const prozent = z.gesamt > 0 ? Math.round((z.beendet / z.gesamt) * 100) : 0;
+  const teile = [`${z.beendet} von ${z.gesamt} Partien (${prozent} %)`];
   if (z.laufen > 0) teile.push(z.laufen === 1 ? '1 läuft' : `${z.laufen} laufen`);
   if (z.offen > 0) teile.push(`${z.offen} offen`);
   return teile.join(' · ');

@@ -330,13 +330,18 @@ export function dkoSpielName(id: string): string {
 // Wie viele Spiele wirklich gespielt werden (ohne Freilose). Die Zahl haengt
 // nur vom Aufbau ab, nicht von den Ergebnissen.
 export function dkoSpielzahl(anzahl: number): number {
+  return dkoSpielArten(anzahl).length;
+}
+
+// Dieselben Spiele mit ihrer Art, fuer das Race je Abschnitt
+export function dkoSpielArten(anzahl: number): DkoArt[] {
   const plaetze = dkoStartplaetze(Array.from({ length: anzahl }, (_, i) => i));
   const stand = new Map<string, true>();
   for (let i = 0; i < 1000; i += 1) {
     const baum = dkoAufloesen(anzahl, plaetze, (id) => (stand.has(id) ? { s1: 1, s2: 0 } : { s1: null, s2: null }), () => 1);
     const offen = Object.values(baum).filter((m) => m.bereit && !m.fertig);
-    if (offen.length === 0) return Object.values(baum).filter((m) => m.bereit).length;
+    if (offen.length === 0) return Object.values(baum).filter((m) => m.bereit).map((m) => m.spiel.art);
     offen.forEach((m) => stand.set(m.spiel.id, true));
   }
-  return 0;
+  return [];
 }
