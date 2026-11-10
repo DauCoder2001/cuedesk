@@ -16,3 +16,5 @@ public/Serien*/
 *.xlsx
 # Vereins-Export aus System (cuedesk-<verein>-JJJJ-MM-TT.json)
 cuedesk-*-[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9].json
+# Claude Code: freigegebene Befehle (koennen Zugangsdaten enthalten) nie ins Repository
+.claude/settings.local.json
