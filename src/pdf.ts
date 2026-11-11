@@ -181,23 +181,41 @@ export function fliesstext(
   });
 }
 
-// Absatz in kleiner grauer Schrift
-export function absatz(dok: PdfDokument, inhalt: string): void {
-  platz(dok, 14);
-  text(dok, inhalt, PDF_RAND, PDF_BREITE - 2 * PDF_RAND, 8, false, 'links', 0.35);
-  dok.y -= 14;
+// Absatz in kleiner grauer Schrift. Zu lange Zeilen werden umbrochen, nicht
+// abgeschnitten; ein Zeilenwechsel im Text beginnt eine neue Zeile.
+export function absatz(dok: PdfDokument, inhalt: string, { groesse = 8, grauwert = 0.35 } = {}): void {
+  const breite = PDF_BREITE - 2 * PDF_RAND;
+  const zeilen = inhalt.split('\n').flatMap((teil) => umbrechen(teil, breite, groesse, false));
+  zeilen.forEach((zeile, i) => {
+    platz(dok, 14);
+    text(dok, zeile, PDF_RAND, breite, groesse, false, 'links', grauwert);
+    dok.y -= i === zeilen.length - 1 ? 14 : groesse * 1.3;
+  });
 }
 
+// Tabellenzelle: Text, auf Wunsch fett (z. B. der Sieger einer Partie)
+export type Zelle = string | { text: string; fett: boolean };
+const zellText = (z: Zelle | undefined) => (z === undefined ? '' : typeof z === 'string' ? z : z.text);
+const zellFett = (z: Zelle | undefined) => typeof z === 'object' && z.fett;
+
 // Tabelle; die Spaltenbreiten ergeben sich aus dem breitesten Inhalt
-export function tabelle(dok: PdfDokument, spalten: Spalte[], zeilen: string[][]): void {
+export function tabelle(dok: PdfDokument, spalten: Spalte[], zeilen: Zelle[][]): void {
   const nutzbar = PDF_BREITE - 2 * PDF_RAND;
-  const GROESSE = 8.5;
   const ZEILE = 13;
-  const roh = spalten.map((sp, k) => {
-    let max = textbreite(sp.text, GROESSE, true);
-    zeilen.forEach((z) => (max = Math.max(max, textbreite(String(z[k] ?? ''), GROESSE, false))));
-    return max + 10;
-  });
+  const breitenBei = (groesse: number) =>
+    spalten.map((sp, k) => {
+      let max = textbreite(sp.text, groesse, true);
+      zeilen.forEach((z) => (max = Math.max(max, textbreite(zellText(z[k]), groesse, zellFett(z[k])))));
+      return max + (10 * groesse) / 8.5;
+    });
+  // Passt die Tabelle nicht auf die Seite (z. B. Serie mit vielen Turnieren),
+  // wird die Schrift bis 6 pt kleiner, bevor Inhalte abgeschnitten werden
+  let GROESSE = 8.5;
+  let roh = breitenBei(GROESSE);
+  while (roh.reduce((a, b) => a + b, 0) > nutzbar && GROESSE > 6) {
+    GROESSE -= 0.5;
+    roh = breitenBei(GROESSE);
+  }
   const summe = roh.reduce((a, b) => a + b, 0);
   const breiten = roh.map((b) => (b * nutzbar) / summe);
 
@@ -221,7 +239,7 @@ export function tabelle(dok: PdfDokument, spalten: Spalte[], zeilen: string[][])
     }
     let x = PDF_RAND;
     spalten.forEach((sp, k) => {
-      text(dok, String(z[k] ?? ''), x + 4, breiten[k] - 8, GROESSE, false, sp.align ?? 'links');
+      text(dok, zellText(z[k]), x + 4, breiten[k] - 8, GROESSE, zellFett(z[k]), sp.align ?? 'links');
       x += breiten[k];
     });
     dok.y -= ZEILE;

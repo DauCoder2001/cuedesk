@@ -319,17 +319,18 @@ export function endtabelleKo<T>(
       zeilen.push({ platz: p2, wer: null, wie: `${m.spiel.name} offen`, offen: true, zeigePlatz: true });
     }
   };
-  paar(baum.fin, 'Sieger Finale', 'Finale', 1, 2);
-  paar(baum.bro, 'Sieger Spiel um Platz 3', 'Spiel um Platz 3', 3, 4);
+  // Begriffe wie beim Doppel-KO: "... gewonnen" / "... verloren"
+  paar(baum.fin, 'Finale gewonnen', 'Finale verloren', 1, 2);
+  paar(baum.bro, 'Spiel um Platz 3 gewonnen', 'Spiel um Platz 3 verloren', 3, 4);
 
   const feld = ko.gruppenzahl * ko.weiter;
   const runden: { ids: string[]; start: number; wie: string; offen: string }[] = [];
-  if (feld >= 8) runden.push({ ids: ['qf1', 'qf2', 'qf3', 'qf4'], start: 5, wie: 'Viertelfinale (Gruppenwertung)', offen: 'Viertelfinale offen' });
+  if (feld >= 8) runden.push({ ids: ['qf1', 'qf2', 'qf3', 'qf4'], start: 5, wie: 'Viertelfinale verloren', offen: 'Viertelfinale offen' });
   if (feld === 16) {
     runden.push({
       ids: ['af1', 'af2', 'af3', 'af4', 'af5', 'af6', 'af7', 'af8'],
       start: 9,
-      wie: 'Achtelfinale (Gruppenwertung)',
+      wie: 'Achtelfinale verloren',
       offen: 'Achtelfinale offen'
     });
   }
@@ -349,8 +350,8 @@ export function endtabelleKo<T>(
       const platz = phase3.abPlatz + 2 * i;
       if (spielBeendet(s1, s2, race ?? phase3.race)) {
         const aGewinnt = (s1 as number) > (s2 as number);
-        zeilen.push({ platz, wer: aGewinnt ? a : b, wie: 'Sieger Platzierungsspiel', offen: false, zeigePlatz: true });
-        zeilen.push({ platz: platz + 1, wer: aGewinnt ? b : a, wie: 'Platzierungsspiel', offen: false, zeigePlatz: true });
+        zeilen.push({ platz, wer: aGewinnt ? a : b, wie: 'Platzierungsspiel gewonnen', offen: false, zeigePlatz: true });
+        zeilen.push({ platz: platz + 1, wer: aGewinnt ? b : a, wie: 'Platzierungsspiel verloren', offen: false, zeigePlatz: true });
       } else {
         zeilen.push({ platz, wer: a, wie: 'Platzierungsspiel läuft', offen: true, zeigePlatz: true });
         zeilen.push({ platz: platz + 1, wer: b, wie: 'Platzierungsspiel läuft', offen: true, zeigePlatz: true });

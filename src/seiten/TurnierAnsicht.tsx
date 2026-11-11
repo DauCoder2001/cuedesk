@@ -7,7 +7,8 @@ import { useRueckfrage } from '../rueckfrage';
 import { kommendePartien, prognose, prognoseText, prognoseZusatz, wirksameTische } from '../zeitprognose';
 import type { Vereinstempo } from '../zeitprognose';
 import { berichtDateiname, berichtPdf, gruppenBerichtPdf } from '../turnierbericht';
-import type { BerichtBlock } from '../turnierbericht';
+import type { BerichtBlock, BerichtKreuz, BerichtSpiel } from '../turnierbericht';
+import { spieldauer } from '../saison-ueberblick';
 import { herunterladen } from '../pdf';
 import { DATEI_MODI, dateiBauen, dateiHerunterladen, disziplinText, kennungVon, phaseText } from '../turnier-datei';
 import { VERSION } from '../version';
@@ -130,6 +131,8 @@ function dkoArtVon(p: { gruppe: string | null }): DkoArt {
 }
 const KO_ABSCHNITT: Record<string, string> = { af: 'Achtelfinale', qf: 'Viertelfinale', sf: 'Halbfinale', fin: 'Finale und Platz 3', bro: 'Finale und Platz 3' };
 const istGruppenspiel = (p: TPartie) => !p.phase || p.phase === 'gruppe';
+// Kreuztabelle im Bericht nur bis zu dieser Gruppengroesse, sonst zu eng
+const KREUZ_HOECHSTENS = 8;
 const istGruppenzeile = (zeile: string) => /^[A-D]$/.test(zeile);
 
 type Aenderungszeile = { zeitpunkt: string; nachher: Partial<TPartie> | null; aktion: string };
@@ -1212,7 +1215,7 @@ export default function TurnierAnsicht({
       year: 'numeric'
     });
     const handicap = va.aktiv ? ` · Handicap ${va.staerke} %${va.obergrenze > 0 ? `, Obergrenze ${va.obergrenze}` : ''}` : '';
-    const spiel = (s: TPartie) => ({
+    const spiel = (s: TPartie): BerichtSpiel => ({
       nameA: anzeige(s.spieler_a),
       nameB: anzeige(s.spieler_b),
       standA: s.ergebnis_a,
@@ -1220,17 +1223,71 @@ export default function TurnierAnsicht({
       vorgabeA: s.vorgabe_a,
       vorgabeB: s.vorgabe_b,
       ratingA: mitRating ? ratingVonPerson(s.spieler_a) : null,
-      ratingB: mitRating ? ratingVonPerson(s.spieler_b) : null
+      ratingB: mitRating ? ratingVonPerson(s.spieler_b) : null,
+      sieger: beendetBei(s) ? ((s.ergebnis_a ?? 0) > (s.ergebnis_b ?? 0) ? 'a' : 'b') : null,
+      // Der Tisch bleibt nach dem Spiel an der Partie stehen; von Hand
+      // nachgetragene Ergebnisse haben keinen Tisch und keine Spielzeit
+      tisch: s.tisch_id ? tische.get(s.tisch_id) ?? null : null,
+      dauer: spieldauer(s)
     });
+    // KO-Startplatz ("A1") je Person, fuer die Spalte KO der Gruppentabellen
+    const koStart = new Map<string, string>(
+      koFest ? koFest.seeds.map((id, i) => [id, startplatzNamen(koFest.gruppenzahl, koFest.weiter)[i]]) : []
+    );
     const berichtZeile = (zeile: Zeile, platz: number) => ({
       platz,
       name: tabellenname(zeile.pos),
+      spiele: zeile.spiele,
       punkte: zeile.punkte,
       gewonnen: zeile.gewonnen,
       verloren: zeile.verloren,
       diff: zeile.diff,
-      rating: mitRating ? aufstellung[zeile.pos]?.rating_eingefroren ?? null : null
+      rating: mitRating ? aufstellung[zeile.pos]?.rating_eingefroren ?? null : null,
+      ko: koStart.get(personVon(zeile.pos))
     });
+
+    // Kreuztabelle (Ergebnis aus Sicht der Zeile); bei mehr als acht Spielern
+    // wird sie zu eng und entfaellt
+    const kreuzVon = (positionen: number[]): BerichtKreuz | null => {
+      if (positionen.length < 3 || positionen.length > KREUZ_HOECHSTENS) return null;
+      const ids = positionen.map(personVon);
+      const felder = ids.map((zeile) =>
+        ids.map((spalte) =>
+          zeile === spalte
+            ? ''
+            : partien
+                .filter(
+                  (p) =>
+                    istGruppenspiel(p) &&
+                    beendetBei(p) &&
+                    ((p.spieler_a === zeile && p.spieler_b === spalte) || (p.spieler_a === spalte && p.spieler_b === zeile))
+                )
+                .map((p) => (p.spieler_a === zeile ? `${p.ergebnis_a} : ${p.ergebnis_b}` : `${p.ergebnis_b} : ${p.ergebnis_a}`))
+                .join(' / ')
+        )
+      );
+      return { namen: positionen.map(tabellenname), felder };
+    };
+
+    // Ueberblick unter dem Kopf: Sieger (nach dem Abschliessen), Partien, Saetze
+    const gespielt = partien.filter(beendetBei);
+    const kampflos = gespielt.filter((p) => p.rating_grund === 'Aufgabe').length;
+    const saetze = gespielt
+      .filter((p) => p.rating_grund !== 'Aufgabe')
+      .reduce((n, p) => n + Math.max(0, (p.ergebnis_a ?? 0) - p.vorgabe_a) + Math.max(0, (p.ergebnis_b ?? 0) - p.vorgabe_b), 0);
+    const freilose = dko && dkoBaum ? Object.values(dkoBaum).filter((m) => m.freilos && !m.entfaellt).length : 0;
+    const sieger = teilnehmer.filter((t) => t.endplatz === 1).map((t) => anzeige(t.person_id));
+    const ueberblick =
+      turnier.status === 'beendet' && sieger.length > 0
+        ? `Sieger: ${sieger.join(', ')} · ${gespielt.length} Partien${kampflos ? ` (${kampflos} kampflos)` : ''}, ${saetze} Sätze` +
+          (freilose ? ` · ${freilose} ${freilose === 1 ? 'Freilos' : 'Freilose'}` : '')
+        : `Zwischenstand: ${gespielt.length} von ${partien.length} Partien beendet, ${saetze} Sätze`;
+
+    // Race je Abschnitt; ist es ueberall gleich, reicht eine kurze Angabe
+    const raceText = (teile: [number, string][]) =>
+      teile.every(([r]) => r === teile[0][0])
+        ? `Race to ${teile[0][0]} in allen Runden`
+        : `Race to ${teile.map(([r, name]) => `${r} (${name})`).join(' / ')}`;
     const stichkampfVermerke = (gleichstaende: Gleichstand[]) =>
       gleichstaende.map(
         (g) =>
@@ -1250,14 +1307,19 @@ export default function TurnierAnsicht({
     // Doppel-KO: Endtabelle, alle Spiele in Spielreihenfolge, Setzliste
     if (dko) {
       const n = dkoFest?.setzliste.length ?? aufstellung.length;
-      const races = (['G', 'V', ...(dkoEndrunde(n) === 8 ? ['VF'] : []), 'HF', 'FIN'] as DkoArt[])
-        .map((a) => `${raceDkoFuer(a)} (${DKO_ART_NAME[a]})`)
-        .join(' / ');
+      const races = raceText(
+        (['G', 'V', ...(dkoEndrunde(n) === 8 ? ['VF'] : []), 'HF', 'FIN'] as DkoArt[]).map((a) => [raceDkoFuer(a), DKO_ART_NAME[a]])
+      );
+      const gesetzt = (einstellungen.dkoGesetzt ?? []).filter(Boolean);
       const bloecke: BerichtBlock[] = [];
       if (dkoFest && dkoBaum) {
         bloecke.push({
           art: 'tabelle',
           titel: 'Endtabelle',
+          fussnote:
+            'Plätze 1 bis 4 aus Finale und Spiel um Platz 3. Wer in derselben Runde ausscheidet, teilt sich den Platzbereich; ' +
+            'innerhalb zählt der Quotient gewonnene durch verlorene Sätze, dann die Zahl gewonnener Sätze (BLVN-STO Pool 3.4). ' +
+            'Spiele, Siege und Sätze zählen über das ganze Turnier, Freilose nicht.',
           spalten: [
             { text: 'Platz', align: 'mitte' },
             { text: 'Name', align: 'links' },
@@ -1286,7 +1348,6 @@ export default function TurnierAnsicht({
         bloecke.push({
           art: 'tabelle',
           titel: 'Spiele',
-          neueSeite: true,
           spalten: [
             { text: 'Spiel', align: 'links' },
             { text: 'Spieler 1', align: 'rechts' },
@@ -1298,31 +1359,48 @@ export default function TurnierAnsicht({
             .filter((m) => !m.entfaellt)
             .map((m) => [
               m.spiel.name,
-              m.a.wer ? `${anzeige(m.a.wer)} (${m.l1})` : m.l1,
+              // Beim Freilos steht "Freilos" nur im Ergebnis, die leere Seite bekommt einen Strich
+              m.a.wer ? `${anzeige(m.a.wer)} (${m.l1})` : m.freilos ? '–' : m.l1,
               m.freilos ? 'Freilos' : m.bereit && m.s1 !== null && m.s2 !== null ? `${m.s1} : ${m.s2}` : '- : -',
-              m.b.wer ? `(${m.l2}) ${anzeige(m.b.wer)}` : m.l2,
+              m.b.wer ? `(${m.l2}) ${anzeige(m.b.wer)}` : m.freilos ? '–' : m.l2,
               m.sieger.wer ? anzeige(m.sieger.wer) : 'offen'
             ])
         });
+        // Spalte "Gesetzt" nur, wenn jemand gesetzt ist
         bloecke.push({
           art: 'tabelle',
           titel: 'Setzliste',
           spalten: [
             { text: 'Rang', align: 'mitte' },
             { text: 'Name', align: 'links' },
-            { text: 'Gesetzt', align: 'mitte' }
+            ...(gesetzt.length > 0 ? [{ text: 'Gesetzt', align: 'mitte' as const }] : [])
           ],
-          zeilen: dkoFest.setzliste.map((id, i) => [
-            String(i + 1),
-            anzeige(id),
-            (einstellungen.dkoGesetzt ?? []).includes(id) ? 'ja' : ''
-          ])
+          zeilen: dkoFest.setzliste.map((id, i) => [String(i + 1), anzeige(id), ...(gesetzt.length > 0 ? [gesetzt.includes(id) ? 'ja' : ''] : [])])
         });
       }
       const kopf =
-        `Doppel-KO · ${DISZIPLIN_TEXT[turnier.disziplin]} · Race to ${races} · ` +
-        `${n} Teilnehmer, Baum für ${dkoGroesse(n)}, die letzten ${dkoEndrunde(n)} im KO · ${datumText}${zeit}${handicap}`;
-      const bytes = gruppenBerichtPdf({ titel: turnier.name, kopf: artVorsatz + kopf, vorlaeufig: turnier.status !== 'beendet', bloecke, hinweise: aufgabeHinweise });
+        `Doppel-KO · ${DISZIPLIN_TEXT[turnier.disziplin]} · ${n} Teilnehmer, Baum für ${dkoGroesse(n)}, die letzten ${dkoEndrunde(n)} im KO\n` +
+        `${races} · ${datumText}${zeit}${handicap}`;
+      const hinweiseDko = [
+        ...(gesetzt.length > 0
+          ? [
+              `${gesetzt.length === 1 ? 'Ein Spieler wurde' : `${gesetzt.length} Spieler wurden`} vor der Auslosung gesetzt: ` +
+                (einstellungen.dkoGesetzt ?? [])
+                  .map((id, i) => (id ? `${i + 1}. ${anzeige(id)}` : ''))
+                  .filter(Boolean)
+                  .join(', ')
+            ]
+          : []),
+        ...aufgabeHinweise
+      ];
+      const bytes = gruppenBerichtPdf({
+        titel: turnier.name,
+        kopf: artVorsatz + kopf,
+        ueberblick,
+        vorlaeufig: turnier.status !== 'beendet',
+        bloecke,
+        hinweise: hinweiseDko
+      });
       herunterladen(bytes, berichtDateiname(turnier.name, turnier.datum));
       return;
     }
@@ -1331,9 +1409,11 @@ export default function TurnierAnsicht({
       const bytes = berichtPdf({
         titel: turnier.name,
         kopf: `${artVorsatz}${DISZIPLIN_TEXT[turnier.disziplin]} · Race to ${raceTo} · ${aufstellung.length} Spieler · ${datumText}${zeit}${handicap}`,
+        ueberblick,
         vorlaeufig: turnier.status !== 'beendet',
         zeilen: tabelle.zeilen.map((zeile, i) => berichtZeile(zeile, i + 1)),
         stichkampf: [...(alleFertig ? stichkampfVermerke(tabelle.gleichstaende) : []), ...aufgabeHinweise],
+        kreuz: kreuzVon(tabelle.zeilen.map((z) => z.pos)),
         runden: abschnitte.map((x) => ({ name: x.titel, spiele: x.partien.map(spiel) }))
       });
       herunterladen(bytes, berichtDateiname(turnier.name, turnier.datum));
@@ -1346,7 +1426,9 @@ export default function TurnierAnsicht({
     const bloecke: BerichtBlock[] = [];
     let kopf: string;
     if (zwei) {
-      kopf = `Zwei-Gruppen-Modus · ${DISZIPLIN_TEXT[turnier.disziplin]} · Race to ${raceTo} (Gruppenphase) / ${race2} (Platzierungsduelle${raceAusnahmen(duelle, race2) ? `; ${raceAusnahmen(duelle, race2)}` : ''}) · ${aufstellung.length} Teilnehmer · ${datumText}${zeit}${handicap}`;
+      kopf =
+        `Zwei-Gruppen-Modus · ${DISZIPLIN_TEXT[turnier.disziplin]} · ${aufstellung.length} Teilnehmer\n` +
+        `Race to ${raceTo} (Gruppenphase) / ${race2} (Platzierungsduelle${raceAusnahmen(duelle, race2) ? `; ${raceAusnahmen(duelle, race2)}` : ''}) · ${datumText}${zeit}${handicap}`;
       if (einstellungen.phase2) {
         bloecke.push({
           art: 'tabelle',
@@ -1378,7 +1460,6 @@ export default function TurnierAnsicht({
         bloecke.push({
           art: 'tabelle',
           titel: `Platzierungsduelle (${duelleRace})`,
-          neueSeite: true,
           spalten: [
             { text: 'Spieler 1', align: 'rechts' },
             { text: 'Ergebnis', align: 'mitte' },
@@ -1395,15 +1476,25 @@ export default function TurnierAnsicht({
       }
     } else {
       const feldJetzt = koFest ? koFest.gruppenzahl * koFest.weiter : (weiter ?? 0) * gruppenzahl;
+      const races = raceText([
+        [raceTo, 'Gruppe'],
+        ...(feldJetzt === 16 ? [[raceFuer('R16'), 'AF'] as [number, string]] : []),
+        ...(feldJetzt >= 8 ? [[raceFuer('QF'), 'VF'] as [number, string]] : []),
+        [raceFuer('SF'), 'HF, Platz 3'],
+        [raceFuer('FIN'), 'Finale']
+      ]);
       kopf =
         `${gruppenNamen.length} Gruppen mit KO-Runde · je ${koFest?.weiter ?? weiter} weiter, KO-Feld ${feldJetzt} · ` +
-        `${DISZIPLIN_TEXT[turnier.disziplin]} · Race to ${raceTo} (Gruppe)${feldJetzt === 16 ? ` / ${raceFuer('R16')} (AF)` : ''}` +
-        `${feldJetzt >= 8 ? ` / ${raceFuer('QF')} (VF)` : ''} / ${raceFuer('SF')} (HF, Platz 3) / ${raceFuer('FIN')} (Finale)` +
-        ` · ${aufstellung.length} Teilnehmer · ${datumText}${zeit}${handicap}`;
+        `${DISZIPLIN_TEXT[turnier.disziplin]} · ${aufstellung.length} Teilnehmer\n` +
+        `${races} · ${datumText}${zeit}${handicap}`;
       if (koFest && baum) {
         bloecke.push({
           art: 'tabelle',
           titel: 'Endtabelle',
+          fussnote:
+            'Plätze 1 bis 4 aus Finale und Spiel um Platz 3, danach die Verlierer jeder Runde nach ihrem Gruppenplatz, ' +
+            'bei gleichem Gruppenplatz nach Punkten und Sätzen aus der Gruppe; Gleichgute teilen sich einen Platz. ' +
+            'Spiele, Siege und Sätze zählen über das ganze Turnier.',
           spalten: [
             { text: 'Platz', align: 'mitte' },
             { text: 'Name', align: 'links' },
@@ -1431,7 +1522,6 @@ export default function TurnierAnsicht({
         bloecke.push({
           art: 'tabelle',
           titel: 'KO-Runde',
-          neueSeite: true,
           spalten: [
             { text: 'Spiel', align: 'links' },
             { text: 'Spieler 1', align: 'rechts' },
@@ -1499,7 +1589,8 @@ export default function TurnierAnsicht({
         art: 'gruppe',
         titel: `Gruppe ${g}`,
         zeilen: gruppenTabellen[g].zeilen.map((zeile, i) => berichtZeile(zeile, i + 1)),
-        vermerke: offenInGruppe(g) === 0 ? stichkampfVermerke(gruppenTabellen[g].gleichstaende) : []
+        vermerke: offenInGruppe(g) === 0 ? stichkampfVermerke(gruppenTabellen[g].gleichstaende) : [],
+        kreuz: kreuzVon(gruppenTabellen[g].zeilen.map((z) => z.pos))
       });
     });
     gruppenNamen.forEach((g) => {
@@ -1538,7 +1629,7 @@ export default function TurnierAnsicht({
       hinweise.push(`${uhr(Date.parse(x.zeit))} Uhr: ${anzeige(x.person)} nachgetragen${x.gruppe ? ` in Gruppe ${x.gruppe}` : ''}.`)
     );
 
-    const bytes = gruppenBerichtPdf({ titel: turnier.name, kopf: artVorsatz + kopf, vorlaeufig: turnier.status !== 'beendet', bloecke, hinweise });
+    const bytes = gruppenBerichtPdf({ titel: turnier.name, kopf: artVorsatz + kopf, ueberblick, vorlaeufig: turnier.status !== 'beendet', bloecke, hinweise });
     herunterladen(bytes, berichtDateiname(turnier.name, turnier.datum));
   }
 

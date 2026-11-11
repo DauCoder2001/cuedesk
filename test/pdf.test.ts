@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, test } from 'vitest';
-import { bauen, fliesstext, neuesDokument, pdfEscape, tabelle, textbreite, ueberschrift, umbrechen } from '../src/pdf';
+import { absatz, bauen, fliesstext, neuesDokument, pdfEscape, tabelle, textbreite, ueberschrift, umbrechen } from '../src/pdf';
 import { berichtPdf } from '../src/turnierbericht';
 import { prognose, prognoseText, saetzeRest } from '../src/zeitprognose';
 
@@ -42,19 +42,62 @@ describe('PDF-Schreiber', () => {
 
   test('Bericht mit vielen Runden bricht auf mehrere Seiten um', () => {
     const spiele = Array.from({ length: 6 }, (_, i) => ({
-      nameA: `Spieler ${i}`, nameB: 'Kai', standA: 5, standB: 3, vorgabeA: 0, vorgabeB: 1, ratingA: 500, ratingB: 525
+      nameA: `Spieler ${i}`, nameB: 'Kai', standA: 5, standB: 3, vorgabeA: 0, vorgabeB: 1, ratingA: 500, ratingB: 525,
+      sieger: 'a' as const, tisch: null, dauer: null
     }));
     const pdf = berichtPdf({
       titel: 'Testturnier',
       kopf: '9-Ball · Race to 5',
+      ueberblick: 'Sieger: Kai · 66 Partien, 528 Sätze',
       vorlaeufig: false,
-      zeilen: [{ platz: 1, name: 'Kai', punkte: 3, gewonnen: 15, verloren: 7, diff: 8, rating: 525 }],
+      zeilen: [{ platz: 1, name: 'Kai', spiele: 4, punkte: 3, gewonnen: 15, verloren: 7, diff: 8, rating: 525 }],
       stichkampf: [],
+      kreuz: null,
       runden: Array.from({ length: 11 }, (_, r) => ({ name: `Runde ${r + 1}`, spiele }))
     });
     const inhalt = new TextDecoder('latin1').decode(pdf);
     expect(inhalt).toContain('(Kai \\(525, +1\\))');
-    expect(Number(/\/Count (\d+)/.exec(inhalt)?.[1])).toBeGreaterThanOrEqual(3);
+    // Ohne erzwungenen Seitenwechsel vor den Ergebnissen: zwei Seiten
+    expect(Number(/\/Count (\d+)/.exec(inhalt)?.[1])).toBeGreaterThanOrEqual(2);
+  });
+
+  test('Bericht: Sieger fett, Tisch und Spielzeit nur mit Daten, Kreuztabelle', () => {
+    const spiel = (tisch: number | null, dauer: number | null) => ({
+      nameA: 'Kura', nameB: 'Marcel', standA: 3, standB: 0, vorgabeA: 0, vorgabeB: 0, ratingA: null, ratingB: null,
+      sieger: 'a' as const, tisch, dauer
+    });
+    const bericht = (s: ReturnType<typeof spiel>) =>
+      new TextDecoder('latin1').decode(
+        berichtPdf({
+          titel: 'Test',
+          kopf: 'Zeile 1\nZeile 2',
+          ueberblick: 'Sieger: Kura · 3 Partien, 9 Sätze',
+          vorlaeufig: false,
+          zeilen: [{ platz: 1, name: 'Kura', spiele: 2, punkte: 2, gewonnen: 6, verloren: 0, diff: 6, rating: null }],
+          stichkampf: [],
+          kreuz: { namen: ['Kura', 'Marcel', 'Rolf'], felder: [['', '3 : 0', '3 : 1'], ['0 : 3', '', ''], ['1 : 3', '', '']] },
+          runden: [{ name: 'Runde 1', spiele: [s] }]
+        })
+      );
+    const mit = bericht(spiel(2, 17.4));
+    expect(mit).toMatch(/\/F2 8\.5 Tf [^)]*\(Kura\)/);
+    expect(mit).toContain('(Tisch)');
+    expect(mit).toContain('(17 Min.)');
+    expect(mit).toContain('(Kreuztabelle)');
+    expect(mit).toContain('(Zeile 2)');
+    expect(mit).toContain('(Sieger: Kura \\267 3 Partien, 9 S\\344tze)');
+    const ohne = bericht(spiel(null, null));
+    expect(ohne).not.toContain('(Tisch)');
+    expect(ohne).not.toContain('(Spielzeit)');
+  });
+
+  test('Absatz wird umbrochen statt abgeschnitten', () => {
+    const dok = neuesDokument();
+    absatz(dok, 'Doppel-KO · 9-Ball · 27 Teilnehmer, Baum für 32, die letzten 8 im KO · Race to 3 (Gewinnerrunde) / 3 (Verliererrunde) / 3 (Viertelfinale) / 3 (Halbfinale / Platz 3) / 3 (Finale) · 03.11.2026');
+    const inhalt = dok.strom.join('\n');
+    expect(inhalt).not.toContain('...');
+    expect(inhalt).toContain('03.11.2026');
+    expect(dok.strom.length).toBeGreaterThanOrEqual(2);
   });
 });
 

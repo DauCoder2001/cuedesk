@@ -103,7 +103,7 @@ Doppel-KO nach BLVN-STO Pool 3.3, für 8 bis 64 Spieler: Wer verliert, rutscht v
 ## 5. Abschließen
 
 1. Sind alle Spiele gespielt, **Abschließen** klicken. Die Ergebnisse werden gesperrt; zählt das Turnier fürs Rating, wird es gleich neu berechnet.
-2. **Turnierbericht (PDF)** erzeugt Tabellen und Platzierungen zum Drucken oder Weitergeben.
+2. **Turnierbericht (PDF)** erzeugt Tabellen und Platzierungen zum Drucken oder Weitergeben. Im Kopf stehen Modus, Race, Datum und Uhrzeit, darunter Sieger, Zahl der Partien und Sätze. Die Endtabelle nennt, wie jeder Platz zustande kam („Finale gewonnen“, „Viertelfinale verloren“ …). Jede Gruppe hat ihre Tabelle mit Spielen, Siegen (S) und Niederlagen (N), bei KO-Turnieren mit dem Startplatz in der KO-Runde, und bis 8 Spieler eine Kreuztabelle mit allen Ergebnissen. In den Ergebnislisten steht der Sieger fett, dazu Tisch und Spielzeit, wenn am Tablet gespielt wurde.
 3. Muss noch etwas korrigiert werden, öffnet **Wieder öffnen** das Turnier erneut.
 4. **Turnier-Datei herunterladen** legt das beendete Turnier mit Endplätzen und allen Partien in eine Datei, zum Beispiel für TurnierPilot oder einen anderen Verein. Spieler stehen darin nur mit ihren Namen.
 5. Zum Feierabend steht nach dem Abschließen in der Zeile **TV zeigt:** der Knopf **TV-Gerät herunterfahren** (siehe Thema **Tablets und Fernseher**).

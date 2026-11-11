@@ -262,14 +262,14 @@ export function dkoEndtabelle<T>(
     }
   };
   paar(baum.fin, 'Finale gewonnen', 'Finale verloren', 1);
-  paar(baum.p3, 'Platz 3 gewonnen', 'Platz 3 verloren', 3);
+  paar(baum.p3, 'Spiel um Platz 3 gewonnen', 'Spiel um Platz 3 verloren', 3);
 
   // Ausscheiderunden von hinten: Viertelfinale, dann Verliererrunden absteigend
   const spiele = Object.values(baum).map((m) => m.spiel);
   const vRunden = [...new Set(spiele.filter((s) => s.art === 'V').map((s) => s.runde))].sort((x, y) => y - x);
   const runden: { ids: string[]; wie: string }[] = [];
-  if (baum.vf1) runden.push({ ids: ['vf1', 'vf2', 'vf3', 'vf4'], wie: 'raus im Viertelfinale' });
-  vRunden.forEach((r) => runden.push({ ids: spiele.filter((s) => s.art === 'V' && s.runde === r).map((s) => s.id), wie: `raus in Verliererrunde ${r}` }));
+  if (baum.vf1) runden.push({ ids: ['vf1', 'vf2', 'vf3', 'vf4'], wie: 'Viertelfinale verloren' });
+  vRunden.forEach((r) => runden.push({ ids: spiele.filter((s) => s.art === 'V' && s.runde === r).map((s) => s.id), wie: `Verliererrunde ${r} verloren` }));
 
   let platz = 5;
   runden.forEach((rd) => {

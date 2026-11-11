@@ -1,5 +1,15 @@
 # Änderungen an CueDesk
 
+## 0.6.0 – 11.11.2026
+
+- Turnierbericht (PDF): Die Kopfzeile wird umbrochen statt abgeschnitten, Datum und Uhrzeit fehlen nicht mehr. Ist das Race in allen Runden gleich, steht es kurz da.
+- Neu unter dem Kopf: Sieger, Zahl der Partien und Sätze (beim Doppel-KO auch die Freilose).
+- Einheitliche Begriffe in Endtabelle und Turnieransicht: „Finale gewonnen/verloren“, „Spiel um Platz 3 gewonnen/verloren“, „Platzierungsspiel gewonnen/verloren“, „Viertelfinale verloren“, „Verliererrunde 4 verloren“. Die Erklärung der Reihenfolge steht als Fußnote unter der Endtabelle.
+- Gruppentabellen im Bericht mit Spielen, Siegen und Niederlagen, bei Gruppen mit KO mit dem KO-Startplatz; bis 8 Spieler je Gruppe zusätzlich eine Kreuztabelle.
+- Ergebnislisten: Sieger fett, dazu Tisch und Spielzeit, wenn am Tablet gespielt wurde.
+- Doppel-KO-Bericht: kein Seitenwechsel vor den Spielen, „Freilos“ nur noch einmal, Spalte „Gesetzt“ nur bei Gesetzten, Gesetzte unter den Hinweisen zur Auslosung. Auch die anderen Turnierberichte laufen ohne erzwungenen Seitenwechsel durch.
+- Alle PDFs (auch Spielbericht, Serienwertung, Auskunft): lange Absätze werden umbrochen. Zu breite Tabellen, etwa eine Serie mit vielen Turnieren, bekommen eine kleinere Schrift, statt Werte abzuschneiden.
+
 ## 0.5.0 – 09.11.2026
 
 - Standfelder im Turnier-Spielplan und im Teamvergleich begrenzen schon beim Tippen: höchstens das Race to, und hat die Gegenseite es erreicht, höchstens eins weniger.
