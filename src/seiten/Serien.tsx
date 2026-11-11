@@ -293,7 +293,7 @@ export default function Serien() {
           </div>
           <div className="knopfpaar">
             {serie && turniere.length > 0 && (
-              <button type="button" title="Die Serienwertung als PDF zum Drucken oder Aushängen" onClick={pdf}>
+              <button type="button" title="Die Serienwertung als PDF zum Drucken oder Aushängen. Bei vielen Turnieren im Querformat, bei sehr vielen auf mehrere Tabellen verteilt." onClick={pdf}>
                 Rangliste (PDF)
               </button>
             )}

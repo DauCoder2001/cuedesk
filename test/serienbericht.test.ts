@@ -34,4 +34,28 @@ describe('Serien-Rangliste als PDF', () => {
     expect(zeilen).toContain('10.1.');
     expect(serienDateiname('Freitagsserie', '26/27')).toBe('Serienwertung_Freitagsserie_26_27.pdf');
   });
+
+  // Format nach Zahl der Turniere: hochkant, quer, quer in Bloecken
+  const bericht = (anzahl: number) => {
+    const turniere = Array.from({ length: anzahl }, (_, i) => ({
+      id: `t${i}`, name: `T${i}`, datum: new Date(Date.UTC(2026, 0, 7 + 7 * i)).toISOString().slice(0, 10), teilnehmer: 2,
+      platzierungen: [{ spieler: 'A', platz: 1 }, { spieler: 'B', platz: 2 }]
+    }));
+    return {
+      name: 'Mittwochs', saison: '2026', disziplin: '9-Ball', streicher: 0, bonus: 0, stand: new Date(2026, 10, 11),
+      turniere, spieler: serienwertung(turniere, { streicher: 0, bonus: 0 }, (s) => s), anzeige: (s: string) => `Spieler ${s}`
+    };
+  };
+  const pdfText = (anzahl: number) => new TextDecoder('latin1').decode(serienPdf(bericht(anzahl)));
+
+  test('wenige Turniere hochkant, viele quer, sehr viele in Bloecken', () => {
+    expect(pdfText(8)).toContain('/MediaBox [0 0 595.28 841.89]');
+    const zwanzig = pdfText(20);
+    expect(zwanzig).toContain('/MediaBox [0 0 841.89 595.28]');
+    expect(zwanzig).not.toContain('(Turniere 1 bis');
+    const vierzig = pdfText(40);
+    expect(vierzig).toContain('(Turniere 1 bis 20)');
+    expect(vierzig).toContain('(Turniere 21 bis 40)');
+    expect(vierzig).not.toContain('...');
+  });
 });

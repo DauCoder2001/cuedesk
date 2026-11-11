@@ -40,7 +40,8 @@ const WIN_ANSI: Record<number, number> = {
 
 export type Ausrichtung = 'links' | 'rechts' | 'mitte';
 export type Spalte = { text: string; align?: Ausrichtung };
-export type PdfDokument = { seiten: string[][]; strom: string[]; y: number };
+// breite/hoehe: Seitenformat des Dokuments, A4 hoch oder quer
+export type PdfDokument = { seiten: string[][]; strom: string[]; y: number; breite: number; hoehe: number };
 
 function zeichenbreite(zeichen: string, fett: boolean): number {
   const code = zeichen.charCodeAt(0);
@@ -83,8 +84,8 @@ export function pdfEscape(text: string): string {
   return aus;
 }
 
-export function neuesDokument(): PdfDokument {
-  const dok: PdfDokument = { seiten: [], strom: [], y: 0 };
+export function neuesDokument(quer = false): PdfDokument {
+  const dok: PdfDokument = { seiten: [], strom: [], y: 0, breite: quer ? PDF_HOEHE : PDF_BREITE, hoehe: quer ? PDF_BREITE : PDF_HOEHE };
   neueSeite(dok);
   return dok;
 }
@@ -92,7 +93,7 @@ export function neuesDokument(): PdfDokument {
 export function neueSeite(dok: PdfDokument): void {
   dok.strom = [];
   dok.seiten.push(dok.strom);
-  dok.y = PDF_HOEHE - PDF_RAND;
+  dok.y = dok.hoehe - PDF_RAND;
 }
 
 // Sicherstellen, dass die angegebene Hoehe auf der Seite noch Platz hat
@@ -133,7 +134,7 @@ export function ueberschrift(dok: PdfDokument, inhalt: string, groesse: number, 
   if (mitNeuerSeite && dok.strom.length > 0) neueSeite(dok);
   else platz(dok, groesse + 52);
   dok.y -= dok.strom.length > 0 ? 10 : 0;
-  text(dok, inhalt, PDF_RAND, PDF_BREITE - 2 * PDF_RAND, groesse, true, 'links');
+  text(dok, inhalt, PDF_RAND, dok.breite - 2 * PDF_RAND, groesse, true, 'links');
   dok.y -= groesse * 0.4 + 6;
 }
 
@@ -172,7 +173,7 @@ export function fliesstext(
 ): void {
   const zeilenhoehe = groesse * 1.4;
   const x = PDF_RAND + einzug + (marke ? 14 : 0);
-  const breite = PDF_BREITE - PDF_RAND - x;
+  const breite = dok.breite - PDF_RAND - x;
   umbrechen(inhalt, breite, groesse, fett).forEach((zeile, i) => {
     platz(dok, zeilenhoehe);
     if (i === 0 && marke) text(dok, marke, PDF_RAND + einzug, 14, groesse, fett);
@@ -184,7 +185,7 @@ export function fliesstext(
 // Absatz in kleiner grauer Schrift. Zu lange Zeilen werden umbrochen, nicht
 // abgeschnitten; ein Zeilenwechsel im Text beginnt eine neue Zeile.
 export function absatz(dok: PdfDokument, inhalt: string, { groesse = 8, grauwert = 0.35 } = {}): void {
-  const breite = PDF_BREITE - 2 * PDF_RAND;
+  const breite = dok.breite - 2 * PDF_RAND;
   const zeilen = inhalt.split('\n').flatMap((teil) => umbrechen(teil, breite, groesse, false));
   zeilen.forEach((zeile, i) => {
     platz(dok, 14);
@@ -198,18 +199,27 @@ export type Zelle = string | { text: string; fett: boolean };
 const zellText = (z: Zelle | undefined) => (z === undefined ? '' : typeof z === 'string' ? z : z.text);
 const zellFett = (z: Zelle | undefined) => typeof z === 'object' && z.fett;
 
+// Spaltenbreiten einer Tabelle bei der angegebenen Schriftgroesse
+function spaltenBreiten(spalten: Spalte[], zeilen: Zelle[][], groesse: number): number[] {
+  return spalten.map((sp, k) => {
+    let max = textbreite(sp.text, groesse, true);
+    zeilen.forEach((z) => (max = Math.max(max, textbreite(zellText(z[k]), groesse, zellFett(z[k])))));
+    return max + (10 * groesse) / 8.5;
+  });
+}
+
+// Passt die Tabelle in normaler Schrift auf die Seitenbreite (Standard: hoch)?
+export function passtAuf(spalten: Spalte[], zeilen: Zelle[][], seitenbreite = PDF_BREITE): boolean {
+  return spaltenBreiten(spalten, zeilen, 8.5).reduce((a, b) => a + b, 0) <= seitenbreite - 2 * PDF_RAND;
+}
+
 // Tabelle; die Spaltenbreiten ergeben sich aus dem breitesten Inhalt
 export function tabelle(dok: PdfDokument, spalten: Spalte[], zeilen: Zelle[][]): void {
-  const nutzbar = PDF_BREITE - 2 * PDF_RAND;
+  const nutzbar = dok.breite - 2 * PDF_RAND;
   const ZEILE = 13;
-  const breitenBei = (groesse: number) =>
-    spalten.map((sp, k) => {
-      let max = textbreite(sp.text, groesse, true);
-      zeilen.forEach((z) => (max = Math.max(max, textbreite(zellText(z[k]), groesse, zellFett(z[k])))));
-      return max + (10 * groesse) / 8.5;
-    });
-  // Passt die Tabelle nicht auf die Seite (z. B. Serie mit vielen Turnieren),
-  // wird die Schrift bis 6 pt kleiner, bevor Inhalte abgeschnitten werden
+  const breitenBei = (groesse: number) => spaltenBreiten(spalten, zeilen, groesse);
+  // Passt die Tabelle nicht auf die Seite (z. B. Serie mit sehr vielen
+  // Turnieren), wird die Schrift bis 6 pt kleiner, bevor Inhalte abgeschnitten werden
   let GROESSE = 8.5;
   let roh = breitenBei(GROESSE);
   while (roh.reduce((a, b) => a + b, 0) > nutzbar && GROESSE > 6) {
@@ -228,7 +238,7 @@ export function tabelle(dok: PdfDokument, spalten: Spalte[], zeilen: Zelle[][]):
       x += breiten[k];
     });
     dok.y -= ZEILE;
-    linie(dok, PDF_RAND, dok.y + 9.5, PDF_BREITE - PDF_RAND, dok.y + 9.5, 0.6, 0.45);
+    linie(dok, PDF_RAND, dok.y + 9.5, dok.breite - PDF_RAND, dok.y + 9.5, 0.6, 0.45);
   };
 
   kopf();
@@ -243,7 +253,7 @@ export function tabelle(dok: PdfDokument, spalten: Spalte[], zeilen: Zelle[][]):
       x += breiten[k];
     });
     dok.y -= ZEILE;
-    linie(dok, PDF_RAND, dok.y + 9.5, PDF_BREITE - PDF_RAND, dok.y + 9.5, 0.3, 0.8);
+    linie(dok, PDF_RAND, dok.y + 9.5, dok.breite - PDF_RAND, dok.y + 9.5, 0.3, 0.8);
   });
   dok.y -= 6;
 }
@@ -258,7 +268,7 @@ export function bauen(dok: PdfDokument, titel: string): Uint8Array<ArrayBuffer> 
     const t = `Seite ${i + 1} von ${anzahl}`;
     const breite = textbreite(t, 7.5, false);
     strom.push(
-      `0.45 g BT /F1 7.5 Tf 1 0 0 1 ${(PDF_BREITE - PDF_RAND - breite).toFixed(2)} ${(PDF_RAND - 12).toFixed(2)} Tm (${pdfEscape(t)}) Tj ET 0 g`
+      `0.45 g BT /F1 7.5 Tf 1 0 0 1 ${(dok.breite - PDF_RAND - breite).toFixed(2)} ${(PDF_RAND - 12).toFixed(2)} Tm (${pdfEscape(t)}) Tj ET 0 g`
     );
   });
 
@@ -271,7 +281,7 @@ export function bauen(dok: PdfDokument, titel: string): Uint8Array<ArrayBuffer> 
     const seiteId = 5 + i * 2;
     const inhaltId = seiteId + 1;
     objekte[seiteId] =
-      `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${PDF_BREITE} ${PDF_HOEHE}] ` +
+      `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${dok.breite} ${dok.hoehe}]` +
       `/Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents ${inhaltId} 0 R >>`;
     const inhalt = strom.join('\n');
     objekte[inhaltId] = `<< /Length ${inhalt.length} >>\nstream\n${inhalt}\nendstream`;

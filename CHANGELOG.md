@@ -1,5 +1,9 @@
 # Änderungen an CueDesk
 
+## 0.7.0 – 11.11.2026
+
+- Serienwertung (PDF): Passen die Turniere nicht mehr hochkant auf die Seite, kommt die Rangliste im Querformat. Reicht auch das nicht (etwa eine wöchentliche Serie über ein Jahr), werden die Turniere auf mehrere gleich große Tabellen verteilt („Turniere 1 bis 20“, „Turniere 21 bis 40“), jeweils mit Platz, Spieler und Punkten vorn.
+
 ## 0.6.0 – 11.11.2026
 
 - Turnierbericht (PDF): Die Kopfzeile wird umbrochen statt abgeschnitten, Datum und Uhrzeit fehlen nicht mehr. Ist das Race in allen Runden gleich, steht es kurz da.
