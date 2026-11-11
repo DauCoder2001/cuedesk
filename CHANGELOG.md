@@ -1,5 +1,10 @@
 # Änderungen an CueDesk
 
+## 0.9.0 – 11.11.2026
+
+- Liga-Aufstellung: Die Auswahl der eigenen Seite trennt den Kader in **Stammspieler** und **Ersatz**, darunter wie bisher die weiteren Mitglieder.
+- Über jeder Runde steht, solange sie noch nicht voll aufgestellt ist, wie viele Stammspieler schon spielen („Hinrunde: 1 von mindestens 2 Stammspielern …“). Reichen die freien Plätze nicht mehr, heißt es „bitte umstellen“. Pflicht sind 2 je Runde (BLVN-STO Pool 2.5.4).
+
 ## 0.8.1 – 11.11.2026
 
 - Spieltag anlegen mit **Aus Pass…**: Der Knopf im Pass-Kasten heißt jetzt **Gegner eintragen** und ist grün, denn er ist der nächste Schritt. Solange der Kasten offen ist, ist **Anlegen** nicht grün. Der Hinweis sagt deutlicher, dass die Spieler erst mit **Anlegen** oben im Formular zu Gästen werden.

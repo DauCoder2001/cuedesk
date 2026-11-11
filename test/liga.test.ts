@@ -13,6 +13,7 @@ import {
   spielplan,
   spieltagStand,
   stammspielerPruefen,
+  stammspielerStand,
   wertung,
   zeile141,
   zweiteBegegnungIds
@@ -248,6 +249,14 @@ describe('Stammspieler je Runde (BLVN-STO Pool 2.5.4 a)', () => {
     const stamm = new Set(['a']);
     expect(stammspielerPruefen(spiele, voll(['a', 'x', 'y']), stamm, 'Erste')).toEqual([]);
     expect(stammspielerPruefen(spiele, voll(['a', 'x', 'y']), stamm, 'Erste', (s) => s.nr === 4)).toHaveLength(1);
+  });
+
+  test('Zwischenstand je Runde: Stammspieler und freie Plaetze', () => {
+    const stamm = new Set(['a', 'b']);
+    expect(stammspielerStand(spiele, voll(['a', 'x']), stamm, 'hin')).toEqual({ anzahl: 1, frei: 2 });
+    expect(stammspielerStand(spiele, voll(['x', 'y', 'z']), stamm, 'hin')).toEqual({ anzahl: 0, frei: 1 });
+    expect(stammspielerStand(spiele, voll(['a', 'x', 'y']), stamm, 'hin', (s) => s.nr === 4)).toEqual({ anzahl: 1, frei: 0 });
+    expect(stammspielerStand(spiele, voll([]), stamm, 'rueck')).toEqual({ anzahl: 0, frei: 4 });
   });
 });
 

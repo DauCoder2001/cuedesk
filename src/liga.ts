@@ -292,6 +292,21 @@ export function stammspielerPruefen(
   return fehler;
 }
 
+// Zwischenstand fuer die Zaehlzeile je Runde, solange die Runde noch nicht
+// voll besetzt ist: wie viele Stammspieler stehen schon, wie viele Plaetze
+// sind noch frei. Ist die Runde voll, meldet stammspielerPruefen.
+export function stammspielerStand(
+  spiele: LigaSpiel[],
+  spielerJeSpiel: Record<number, string | null>,
+  stamm: Set<string>,
+  runde: Runde,
+  entfaellt: (s: LigaSpiel) => boolean = () => false
+): { anzahl: number; frei: number } {
+  const inRunde = spiele.filter((s) => s.runde === runde && !entfaellt(s));
+  const besetzt = inRunde.map((s) => spielerJeSpiel[s.nr]).filter((id): id is string => Boolean(id));
+  return { anzahl: new Set(besetzt.filter((id) => stamm.has(id))).size, frei: inRunde.length - besetzt.length };
+}
+
 // Wer fuer ein Spiel nicht mehr in Frage kommt: schon in derselben Runde
 // eingesetzt oder dieselbe Disziplin schon in der anderen Runde. Gilt fuer
 // jede Seite fuer sich; die Auswahllisten bieten diese Spieler nicht an.

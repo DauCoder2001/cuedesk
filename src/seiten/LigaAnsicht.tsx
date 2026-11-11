@@ -22,6 +22,7 @@ import {
   mehrfachImDoppel,
   spielplan,
   stammspielerPruefen,
+  stammspielerStand,
   wertung,
   zeile141
 } from '../liga';
@@ -676,13 +677,33 @@ export default function LigaAnsicht({
   }, [mannschaften, kader, spiele, partien, wahl, anzeige, liga?.mannschaft_id, wirSindHeim, einsatzTage, turnier?.datum, nicht]);
 
   // Kader der gewaehlten Mannschaft: steht in den eigenen Auswahllisten oben,
-  // alle anderen Mitglieder darunter (Aushilfe bleibt moeglich)
+  // getrennt nach Stammspielern und Ersatz, alle anderen Mitglieder darunter
+  // (Aushilfe bleibt moeglich)
   const kaderGruppe = useMemo(() => {
     const eigene = mannschaften.find((m) => m.id === liga?.mannschaft_id);
     if (!eigene) return null;
-    const ids = new Set(kader.filter((k) => k.mannschaft_id === eigene.id).map((k) => k.person_id));
-    return ids.size > 0 ? { name: eigene.name, ids } : null;
+    const imKader = kader.filter((k) => k.mannschaft_id === eigene.id);
+    const ids = new Set(imKader.map((k) => k.person_id));
+    const stamm = new Set(imKader.filter((k) => k.stammspieler).map((k) => k.person_id));
+    return ids.size > 0 ? { name: eigene.name, ids, stamm } : null;
   }, [mannschaften, kader, liga?.mannschaft_id]);
+
+  // Zaehlzeile je Runde: Stammspieler der eigenen Seite, solange die Runde
+  // noch Luecken hat (voll besetzt meldet "Aufstellung pruefen")
+  const stammZeile = (runde: 'hin' | 'rueck'): string | null => {
+    if (istDoppel || nicht || !kaderGruppe || kaderGruppe.stamm.size === 0) return null;
+    const plan: Record<number, string | null> = {};
+    spiele.forEach((sp) => (plan[sp.nr] = unsererSpieler(sp)));
+    const unsere = wirSindHeim ? 'heim' : 'gast';
+    const { anzahl, frei } = stammspielerStand(spiele, plan, kaderGruppe.stamm, runde, (sp) => {
+      const lage = drittBei(sp);
+      return lage === 'beide' || lage === unsere;
+    });
+    if (frei === 0 || anzahl >= 2) return null;
+    const titel = runde === 'hin' ? 'Hinrunde' : 'Rückrunde';
+    const text = `${titel}: ${anzahl} von mindestens 2 Stammspielern von ${kaderGruppe.name} aufgestellt.`;
+    return frei < 2 - anzahl ? `${text} Es ist nur noch ${frei === 1 ? '1 Platz' : `${frei} Plätze`} frei, bitte umstellen.` : text;
+  };
 
   if (!verein) return null;
   if (!turnier || !liga) {
@@ -1895,6 +1916,11 @@ export default function LigaAnsicht({
               )
             )}
           </div>
+          {bearbeitbar && !gestartet[r.runde] && stammZeile(r.runde) && (
+            <p className="hinweis" title="Je Runde müssen mindestens 2 Stammspieler der eigenen Mannschaft spielen (BLVN-STO Pool 2.5.4), sonst geht die Begegnung 0 : 8 verloren. Wer Stammspieler ist, steht unter Mannschaften.">
+              {stammZeile(r.runde)}
+            </p>
+          )}
           <table className="tabelle">
             <thead>
               <tr>
@@ -2298,7 +2324,7 @@ function Spielzeile(props: {
   gastWahl: Person[];
   // Doppel: zweiter Spieler je Seite und seine Auswahl (sonst null)
   doppel: { heim2: string | null; gast2: string | null; heimWahl2: Person[]; gastWahl2: Person[] } | null;
-  kaderGruppe: { name: string; ids: Set<string> } | null; // Kader der eigenen Mannschaft, oben in der Liste
+  kaderGruppe: { name: string; ids: Set<string>; stamm: Set<string> } | null; // Kader der eigenen Mannschaft, oben in der Liste
   eigeneSeite: 'heim' | 'gast';
   heimVerdeckt: boolean;
   gastVerdeckt: boolean;
@@ -2376,9 +2402,18 @@ function Spielzeile(props: {
           const imKader = gruppe && eigene ? liste.filter((p) => gruppe.ids.has(p.id)) : [];
           if (!gruppe || imKader.length === 0) return liste.map(option);
           const rest = liste.filter((p) => !gruppe.ids.has(p.id));
+          const stamm = imKader.filter((p) => gruppe.stamm.has(p.id));
+          const ersatz = imKader.filter((p) => !gruppe.stamm.has(p.id));
           return (
             <>
-              <optgroup label={`Kader ${gruppe.name}`}>{imKader.map(option)}</optgroup>
+              {stamm.length === 0 ? (
+                <optgroup label={`Kader ${gruppe.name}`}>{imKader.map(option)}</optgroup>
+              ) : (
+                <>
+                  <optgroup label={`Stammspieler ${gruppe.name}`}>{stamm.map(option)}</optgroup>
+                  {ersatz.length > 0 && <optgroup label={`Ersatz ${gruppe.name}`}>{ersatz.map(option)}</optgroup>}
+                </>
+              )}
               {rest.length > 0 && <optgroup label="weitere Mitglieder">{rest.map(option)}</optgroup>}
             </>
           );
