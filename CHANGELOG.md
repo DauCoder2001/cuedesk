@@ -1,5 +1,9 @@
 # Änderungen an CueDesk
 
+## 0.8.1 – 11.11.2026
+
+- Spieltag anlegen mit **Aus Pass…**: Der Knopf im Pass-Kasten heißt jetzt **Gegner eintragen** und ist grün, denn er ist der nächste Schritt. Solange der Kasten offen ist, ist **Anlegen** nicht grün. Der Hinweis sagt deutlicher, dass die Spieler erst mit **Anlegen** oben im Formular zu Gästen werden.
+
 ## 0.8.0 – 11.11.2026
 
 - Liga-Spieltag anlegen: **Aus Pass…** neben dem Feld Gegner liest den PDF-Mannschaftspass des gegnerischen Vereins. Vorgeschlagen wird die Mannschaft aus derselben Liga und Staffel wie die eigene; Übernehmen trägt den Gegner ein (Verein und Nummer im Pass), beim Anlegen werden die angehakten Spieler Gäste. Vorhandene Gäste werden an DBU- bzw. Pass-Nummer oder Namen erkannt und nicht doppelt angelegt.

@@ -725,7 +725,7 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
                   </button>
                   <button
                     type="button"
-                    className={weichtAb(formularStand, ursprung) && pflicht.vollstaendig ? 'faellig' : undefined}
+                    className={weichtAb(formularStand, ursprung) && pflicht.vollstaendig && !gegnerPass ? 'faellig' : undefined}
                     title={bearbeitet ? 'Die Änderungen speichern und zurück zum Turnier' : 'Legt das Turnier mit diesen Angaben an.'}
                     onClick={() => void anlegen()}
                   >
@@ -872,7 +872,9 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
                       liga={liga}
                       staffel={gewaehlteMannschaft?.staffel ?? null}
                       eigene={gewaehlteMannschaft?.name ?? (eigeneMannschaft.trim() || verein.name)}
-                      hinweis="Gegner wird „{gegner}“. Die Spieler werden erst mit „Anlegen“ als Gäste angelegt."
+                      hinweis="Gegner wird „{gegner}“. Die Spieler werden Gäste, sobald du den Spieltag oben mit „Anlegen“ anlegst."
+                      knopf="Gegner eintragen"
+                      naechsterSchritt
                       uebernehmen={(a) => {
                         setGegner(a.gegner);
                         setGegnerAuswahl(a);
@@ -883,8 +885,8 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
                   )}
                   {gegnerAuswahl && !gegnerPass && (
                     <p className="hinweis gegnerpass">
-                      Aus dem Mannschaftspass: {gegnerAuswahl.spieler.length} Spieler von {gegnerAuswahl.gegner}; neue werden beim
-                      Anlegen als Gäste angelegt.{' '}
+                      Aus dem Mannschaftspass: {gegnerAuswahl.spieler.length} Spieler von {gegnerAuswahl.gegner}. Neue werden Gäste, sobald du
+                      den Spieltag oben mit „Anlegen“ anlegst.{' '}
                       <button type="button" className="klein entfernknopf" title="Die übernommenen Spieler wieder entfernen; der Gegner bleibt eingetragen" onClick={() => setGegnerAuswahl(null)}>
                         Entfernen
                       </button>

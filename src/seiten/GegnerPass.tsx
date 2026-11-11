@@ -81,6 +81,8 @@ export function GegnerPassAuswahl({
   staffel,
   eigene,
   hinweis,
+  knopf = 'Übernehmen',
+  naechsterSchritt = false,
   uebernehmen,
   verwerfen
 }: {
@@ -89,7 +91,9 @@ export function GegnerPassAuswahl({
   liga: LigaKennung | null;
   staffel: string | null;
   eigene: string; // Name der eigenen Mannschaft, fuer den Hinweis
-  hinweis: string; // was "Uebernehmen" bewirkt
+  hinweis: string; // was der Knopf bewirkt
+  knopf?: string; // Beschriftung des Knopfs
+  naechsterSchritt?: boolean; // gruen (faellig): Formular, in dem erst spaeter gespeichert wird
   uebernehmen: (auswahl: GegnerAuswahl) => void;
   verwerfen: () => void;
 }) {
@@ -228,12 +232,12 @@ export function GegnerPassAuswahl({
           </button>
           <button
             type="button"
-            className="hauptaktion"
-            title="Gegner und die angehakten Spieler übernehmen"
+            className={naechsterSchritt ? 'faellig' : 'hauptaktion'}
+            title={naechsterSchritt ? 'Trägt den Gegner ein und merkt die angehakten Spieler vor; gespeichert wird mit Anlegen' : 'Gegner und die angehakten Spieler übernehmen'}
             onClick={weiter}
             disabled={!mannschaft || gaeste === null || gewaehlt.length === 0}
           >
-            Übernehmen
+            {knopf}
           </button>
         </span>
       </div>
