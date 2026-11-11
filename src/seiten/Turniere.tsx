@@ -7,6 +7,9 @@ import type { DoppelZeile } from './DoppelPlanFelder';
 import TurnierAnsicht from './TurnierAnsicht';
 import TeamvergleichAnsicht from './TeamvergleichAnsicht';
 import TurnierDateiEinlesen from './TurnierDateiEinlesen';
+import { GegnerPassAuswahl, GegnerPassKnopf, gegnerGaesteAnlegen } from './GegnerPass';
+import type { GegnerAuswahl } from './GegnerPass';
+import type { Mannschaftspass } from '../mannschaftspass';
 import Ausschreibungen from './Ausschreibungen';
 import { LIGEN, doppelBegegnungIds, doppelPlanAusEingabe, doppelVon, partnerVon, spieltagStand, zweiteBegegnungIds } from '../liga';
 import type { Ausspielziele, DoppelPartie, Dritt, LigaKennung } from '../liga';
@@ -113,6 +116,9 @@ export type TurnierEinstellungen = {
     // Eintrag bei einem laufenden Spieltag (alter Stand), gelten beide als gestartet
     gestartet?: { hin?: boolean; rueck?: boolean };
     partner?: string; // die jeweils andere Begegnung des Spieltags
+    // Gaeste der gegnerischen Mannschaft (aus ihrem Mannschaftspass oder hier
+    // angelegt); die Aufstellung bietet auf der Gegnerseite nur sie an
+    gegnerKader?: string[];
     // Halbe Aufstellung: Spiele, in denen erst eine Seite feststeht (Schluessel
     // ist die Spielnummer). Mit beiden Spielern wird daraus eine Partie.
     // Im Doppel zusaetzlich der zweite Spieler je Seite (heim2, gast2)
@@ -185,6 +191,10 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
   const [eigeneMannschaft, setEigeneMannschaft] = useState('');
   const [mannschaften, setMannschaften] = useState<Mannschaft[]>([]);
   const [mannschaftId, setMannschaftId] = useState('');
+  // Gegner aus seinem Mannschaftspass: eingelesene Datei, bis "Uebernehmen",
+  // danach die Auswahl, die beim Anlegen zu Gaesten wird
+  const [gegnerPass, setGegnerPass] = useState<Mannschaftspass | null>(null);
+  const [gegnerAuswahl, setGegnerAuswahl] = useState<GegnerAuswahl | null>(null);
   // Spaß-Liga: eigene Ausspielziele
   const [ziele, setZiele] = useState({ punkte141: '50', aufnahmen141: '20', '8-ball': '4', '9-ball': '5', '10-ball': '4' });
   // Spaß-Liga: Doppel-Begegnung zwischen 1. und 2. Begegnung
@@ -214,7 +224,7 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
   // Stand des Formulars; beim Oeffnen festgehalten, damit ein Wechsel nach
   // Aenderungen nachfragt
   const formularStand = formular
-    ? { name, datum, disziplin, modus, raceTo, racePhase2, raceKo, raceDko, liga, spieltag, heim, gegner, eigeneMannschaft,
+    ? { name, datum, disziplin, modus, raceTo, racePhase2, raceKo, raceDko, liga, spieltag, heim, gegner, gegnerAuswahl, eigeneMannschaft,
         mannschaftId, ziele, mitDoppel, doppelZeilen, serieId, vorgabeAn, staerke, obergrenze, ratingWerten, art, chat, live,
         tvZiel, tvRace, tvTeamA, tvTeamB }
     : null;
@@ -332,6 +342,14 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
         einzelFuersRating: ratingWerten
       };
     }
+    // Spieler aus dem Mannschaftspass des Gegners als Gaeste anlegen; ihre IDs
+    // stehen im Spieltag, damit die Aufstellung nur sie anbietet
+    let gegnerKader: string[] | null = null;
+    if (modus === 'liga' && gegnerAuswahl && !bearbeitet) {
+      const r = await gegnerGaesteAnlegen(verein.id, gegnerAuswahl.spieler);
+      if (r.fehler !== null) return setFehler(r.fehler);
+      gegnerKader = r.ids;
+    }
     const einstellungen: TurnierEinstellungen = {
       raceTo: teamvergleich ? teamvergleich.race.einzel : race,
       ...(teamvergleich ? { teamvergleich } : {}),
@@ -345,7 +363,8 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
               eigene: gewaehlteMannschaft?.name ?? (eigeneMannschaft.trim() || verein.name),
               mannschaft_id: mannschaftId || null,
               ziele: liga === 'spass' ? eigeneZiele : LIGEN[liga].ziele,
-              begegnung: 1 as const
+              begegnung: 1 as const,
+              ...(gegnerKader ? { gegnerKader } : {})
             }
           }
         : {}),
@@ -662,6 +681,8 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
                   setTvTeamB(TEAM_VORGABE.teams.B.name);
                   setMitDoppel(false);
                   setDoppelZeilen(DOPPEL_ZEILEN_STANDARD.map((z) => ({ ...z })));
+                  setGegnerPass(null);
+                  setGegnerAuswahl(null);
                   setLiga(vorgaben.liga.liga);
                   // Standard-Mannschaft nach Nummer im Mannschaftspass, sonst die erste der Saison
                   const rang = vorgaben.liga.mannschaftRang;
@@ -831,8 +852,44 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
                   )}
                   <label className="feld l">
                     <span>Gegner</span>
-                    <input required value={gegner} onChange={(e) => setGegner(e.target.value)} placeholder="z. B. BC Achim 2" />
+                    <span className="zeile">
+                      <input required value={gegner} onChange={(e) => setGegner(e.target.value)} placeholder="z. B. BC Achim 2" />
+                      {!bearbeitet && verein && (
+                        <GegnerPassKnopf
+                          gelesen={(p) => {
+                            setFehler(null);
+                            setGegnerPass(p);
+                          }}
+                          fehler={setFehler}
+                        />
+                      )}
+                    </span>
                   </label>
+                  {gegnerPass && verein && (
+                    <GegnerPassAuswahl
+                      vereinId={verein.id}
+                      pass={gegnerPass}
+                      liga={liga}
+                      staffel={gewaehlteMannschaft?.staffel ?? null}
+                      eigene={gewaehlteMannschaft?.name ?? (eigeneMannschaft.trim() || verein.name)}
+                      hinweis="Gegner wird „{gegner}“. Die Spieler werden erst mit „Anlegen“ als Gäste angelegt."
+                      uebernehmen={(a) => {
+                        setGegner(a.gegner);
+                        setGegnerAuswahl(a);
+                        setGegnerPass(null);
+                      }}
+                      verwerfen={() => setGegnerPass(null)}
+                    />
+                  )}
+                  {gegnerAuswahl && !gegnerPass && (
+                    <p className="hinweis gegnerpass">
+                      Aus dem Mannschaftspass: {gegnerAuswahl.spieler.length} Spieler von {gegnerAuswahl.gegner}; neue werden beim
+                      Anlegen als Gäste angelegt.{' '}
+                      <button type="button" className="klein entfernknopf" title="Die übernommenen Spieler wieder entfernen; der Gegner bleibt eingetragen" onClick={() => setGegnerAuswahl(null)}>
+                        Entfernen
+                      </button>
+                    </p>
+                  )}
                 </>
               )}
               {modus !== 'liga' && !istTeam && (

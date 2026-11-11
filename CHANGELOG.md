@@ -1,5 +1,12 @@
 # Änderungen an CueDesk
 
+## 0.8.0 – 11.11.2026
+
+- Liga-Spieltag anlegen: **Aus Pass…** neben dem Feld Gegner liest den PDF-Mannschaftspass des gegnerischen Vereins. Vorgeschlagen wird die Mannschaft aus derselben Liga und Staffel wie die eigene; Übernehmen trägt den Gegner ein (Verein und Nummer im Pass), beim Anlegen werden die angehakten Spieler Gäste. Vorhandene Gäste werden an DBU- bzw. Pass-Nummer oder Namen erkannt und nicht doppelt angelegt.
+- Dasselbe im Spieltag unter **Gegnerische Spieler**, für schon angelegte Spieltage.
+- Die Gegnerseite der Aufstellung bietet nur noch die Gäste dieses Gegners an (und wer dort schon steht); **Alle Gäste des Vereins anbieten** zeigt wieder alle. Ältere Spieltage bleiben wie bisher.
+- Neue Gäste erscheinen auf TV, Live und an den Tablets als „Vorname N.“ statt „Name (Gegner)“.
+
 ## 0.7.0 – 11.11.2026
 
 - Serienwertung (PDF): Passen die Turniere nicht mehr hochkant auf die Seite, kommt die Rangliste im Querformat. Reicht auch das nicht (etwa eine wöchentliche Serie über ein Jahr), werden die Turniere auf mehrere gleich große Tabellen verteilt („Turniere 1 bis 20“, „Turniere 21 bis 40“), jeweils mit Platz, Spieler und Punkten vorn.

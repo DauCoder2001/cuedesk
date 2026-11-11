@@ -16,7 +16,8 @@ Ein Liga-Spieltag besteht immer aus zwei Begegnungen gegen dieselbe Mannschaft, 
 
 1. Reiter **Turniere**, **Neues Turnier**, Modus **Liga-Spieltag (Begegnung)**.
 2. **Name**, Liga, Spieltag, **Heimspiel** oder **Auswärtsspiel**, eigene Mannschaft und Gegner eintragen. Der Name steht in der Turnierliste, als Überschrift des Spieltags, auf dem Spielbericht und am Fernseher; Liga und Spieltag stehen darunter in der Infozeile.
-3. **Anlegen**. Beide Begegnungen entstehen sofort.
+   Statt den Gegner einzutippen, geht auch **Aus Pass…** neben dem Feld Gegner: den PDF-Mannschaftspass des gegnerischen Vereins (Club-Cloud, z. B. BLVN) wählen. CueDesk schlägt die Mannschaft vor, die in Liga und Staffel zu deiner eigenen passt (für „PBC Muster 3, Kreisklasse OH / B“ die Mannschaft aus „Kreisklasse OH / B“); passen mehrere oder keine, wählst du sie aus. **Übernehmen** trägt den Gegner ein, z. B. „BC Beispiel 5“ (Verein und Nummer im Pass), und merkt die angehakten Spieler vor. Die Datei wird nur im Browser gelesen, nicht hochgeladen.
+3. **Anlegen**. Beide Begegnungen entstehen sofort. Spieler aus dem Pass werden dabei als Gäste angelegt; wer schon Gast ist (gleiche DBU- oder Pass-Nummer, sonst gleicher Name), wird nicht doppelt angelegt.
 4. Vertippt? **Spieltag ändern…** im Kopf korrigiert Name, Datum, Liga, Spieltag, Heimrecht, eigene Mannschaft und Gegner für alle Begegnungen des Spieltags, solange noch keine Begegnung gestartet ist.
 
 ## 3. Aufstellung
@@ -24,7 +25,8 @@ Ein Liga-Spieltag besteht immer aus zwei Begegnungen gegen dieselbe Mannschaft, 
 - Hin- und Rückrunde spielen jeweils vier Partien in derselben Reihenfolge: 14.1-endlos, 8-Ball, 9-Ball, 10-Ball (Nr. 1 bis 4 und 5 bis 8). Spieltage, deren Rückrunde vor November 2026 schon gespielt wurde, zeigen dort weiter die alte Reihenfolge 14.1, 10-, 9-, 8-Ball.
 - Je Partie für beide Seiten den Spieler wählen. CueDesk prüft die Regeln (niemand zweimal in einer Runde, dieselbe Disziplin nicht doppelt) und bietet gesperrte Spieler nicht an.
 - Für die eigene Mannschaft weisen gelbe Hinweise auf die Einsatzregeln der BLVN-STO Pool hin, ohne etwas zu sperren: weniger als 2 Stammspieler in einer besetzten Runde (2.5.4, sonst Verlust der Begegnung 0 : 8), wer laut **Berechtigt** im Kader noch nicht spielberechtigt ist (2.1.4), der 3. Einsatz als Ersatzspieler und wer schon in einer anderen Mannschaft festgespielt ist (2.2.4), und wer am selben Wochenende schon für eine andere Mannschaft spielt (2.2.5). Das Doppel zählt dabei nicht mit.
-- Spieler der Gastmannschaft legst du unter **Gegnerische Spieler** mit **Als Gast anlegen** an.
+- Spieler der Gastmannschaft legst du unter **Gegnerische Spieler** mit **Als Gast anlegen** an, oder alle auf einmal mit **Aus Pass…** aus ihrem Mannschaftspass. Gäste erscheinen auf TV, Live und an den Tablets mit Vorname und erstem Buchstaben des Nachnamens, zum Beispiel „Max M.“.
+- Auf der Gegnerseite der Aufstellung stehen nur die Gäste dieses Gegners (aus dem Pass oder hier angelegt) und wer dort schon aufgestellt ist. Fehlt jemand, hilft **Alle Gäste des Vereins anbieten**. Ältere Spieltage ohne solche Liste bieten wie bisher alle Gäste an.
 - **Aufstellung verbergen** versteckt die eigene Aufstellung vor dem Gegner. Zum Zeigen braucht es das Schutzwort des Vereins.
 
 ### Zu dritt

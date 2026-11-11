@@ -52,6 +52,11 @@ import type { TurnierEinstellungen } from './Turniere';
 import type { Mannschaft, MannschaftSpieler, Partie, Partie141, Person, Turnier, TurnierTeilnehmer } from '../datenbank.types';
 import { Modal } from '../modal';
 import { useEtwasUngespeichert } from '../ungespeichert';
+import { GegnerPassAuswahl, GegnerPassKnopf, gegnerGaesteAnlegen } from './GegnerPass';
+import { gastAnzeigename } from '../gegner-pass';
+import { nameZerlegen } from '../namen';
+import type { Mannschaftspass } from '../mannschaftspass';
+import type { GegnerAuswahl } from './GegnerPass';
 
 // Ein Liga-Spieltag (Begegnung): Aufstellung, acht Einzelpartien, Partie- und
 // Matchpunkte, Abschluss. Die Regeln stehen in src/liga.ts, die Ergebnisse in
@@ -244,6 +249,10 @@ export default function LigaAnsicht({
   // Partienliste der angezeigten Doppel-Begegnung aendern
   const [planDialog, setPlanDialog] = useState<DoppelZeile[] | null>(null);
   const [gastName, setGastName] = useState('');
+  // Mannschaftspass des Gegners, bis "Uebernehmen" oder "Verwerfen"
+  const [gegnerPass, setGegnerPass] = useState<Mannschaftspass | null>(null);
+  // Auf der Gegnerseite alle Gaeste des Vereins anbieten statt nur die des Gegners
+  const [alleGaeste, setAlleGaeste] = useState(false);
   const [passwortFrage, setPasswortFrage] = useState<{ runde: 'hin' | 'rueck'; seite: 'heim' | 'gast' } | null>(null);
   const [passwort, setPasswort] = useState('');
   // Schutz der Hinrunde, sobald die Rueckrunde gestartet ist: aufheben nur mit
@@ -575,6 +584,15 @@ export default function LigaAnsicht({
     () => personen.filter((p) => p.status === 'gast').sort((a, b) => personName(a).localeCompare(personName(b), 'de')),
     [personen]
   );
+  // Gegnerseite der Aufstellung: nur die Gaeste des Gegners (gegnerKader),
+  // dazu wer dort schon steht. Spieltage ohne Liste bieten alle Gaeste an.
+  const gegnerKader = liga?.gegnerKader;
+  const gegnerListe = (() => {
+    if (!gegnerKader || gegnerKader.length === 0 || alleGaeste) return gaeste;
+    const seiten: Slot[] = wirSindHeim ? ['gast', 'gast2'] : ['heim', 'heim2'];
+    const erlaubt = new Set([...gegnerKader, ...spiele.flatMap((s) => seiten.map((x) => spielerIn(s, x)))]);
+    return gaeste.filter((p) => erlaubt.has(p.id));
+  })();
 
   const fehlerAufstellung = useMemo(() => {
     if (spiele.length === 0 || nicht) return [];
@@ -823,24 +841,61 @@ export default function LigaAnsicht({
     if (!turnier || !liga) return;
     const text = gastName.trim().replace(/\s+/g, ' ');
     if (text.length < 2) return setFehler('Bitte den Namen des gegnerischen Spielers eingeben.');
-    const teile = text.split(' ');
-    const nachname = teile.length > 1 ? (teile.pop() as string) : '';
-    const { error } = await supabase.from('personen').insert({
-      verein_id: turnier.verein_id,
-      vorname: teile.join(' '),
-      nachname,
-      anzeigename: `${text} (${liga.gegner})`,
-      status: 'gast'
-    });
-    if (error) {
+    const { vorname, nachname } = nameZerlegen(text);
+    // Angezeigt (TV, Live, Tablets) als Vorname und erster Buchstabe des Nachnamens
+    const { data, error } = await supabase
+      .from('personen')
+      .insert({
+        verein_id: turnier.verein_id,
+        vorname,
+        nachname,
+        anzeigename: gastAnzeigename(vorname, nachname),
+        status: 'gast'
+      })
+      .select('id')
+      .single();
+    if (error || !data) {
       return setFehler(
-        error.message.includes('row-level security')
+        error?.message.includes('row-level security')
           ? 'Gäste anlegen dürfen Vereins-Admin, Sportwart und Turnierleiter.'
-          : error.message
+          : error?.message ?? 'Gast nicht angelegt.'
       );
     }
     setGastName('');
+    await gegnerKaderErgaenzen([data.id]);
+  }
+
+  // Gaeste in die Liste des Gegners aller Begegnungen des Spieltags aufnehmen
+  // (bei aelteren Spieltagen ohne Liste entsteht sie hier)
+  async function gegnerKaderErgaenzen(ids: string[]) {
+    if (!turnier) return;
+    const ziele = teile.length > 0 ? teile.map((x) => x.id) : [turnier.id];
+    for (const id of ziele) {
+      const { data: t, error: lesefehler } = await supabase.from('turniere').select('einstellungen').eq('id', id).single();
+      if (lesefehler || !t) return setFehler(lesefehler?.message ?? 'Begegnung nicht gefunden.');
+      const aktuell = (t.einstellungen ?? {}) as TurnierEinstellungen;
+      if (!aktuell.liga) continue;
+      const kaderNeu = [...new Set([...(aktuell.liga.gegnerKader ?? []), ...ids])];
+      const { error } = await supabase
+        .from('turniere')
+        .update({ einstellungen: { ...aktuell, liga: { ...aktuell.liga, gegnerKader: kaderNeu } } })
+        .eq('id', id);
+      if (error) return setFehler(error.message);
+    }
     await laden();
+  }
+
+  // Gegner aus seinem Mannschaftspass: Gaeste anlegen bzw. vorhandene nehmen
+  async function gegnerAusPass(auswahl: GegnerAuswahl) {
+    if (!turnier) return;
+    setArbeitet(true);
+    setFehler(null);
+    const r = await gegnerGaesteAnlegen(turnier.verein_id, auswahl.spieler);
+    if (r.ids.length > 0) await gegnerKaderErgaenzen(r.ids);
+    setArbeitet(false);
+    if (r.fehler !== null) return setFehler(r.fehler);
+    setGegnerPass(null);
+    setMeldung(`${r.ids.length} Spieler von ${auswahl.gegner} stehen jetzt in der Auswahl der Gegnerseite.`);
   }
 
   // Zur anderen Begegnung des Spieltags wechseln. Sie entsteht schon beim
@@ -1875,15 +1930,15 @@ export default function LigaAnsicht({
                       partie={p}
                       heim={heimSpieler(s)}
                       gast={gastSpieler(s)}
-                      heimWahl={moeglich(wirSindHeim ? eigeneMitglieder : gaeste, s, 'heim', heimSpieler(s))}
-                      gastWahl={moeglich(wirSindHeim ? gaeste : eigeneMitglieder, s, 'gast', gastSpieler(s))}
+                      heimWahl={moeglich(wirSindHeim ? eigeneMitglieder : gegnerListe, s, 'heim', heimSpieler(s))}
+                      gastWahl={moeglich(wirSindHeim ? gegnerListe : eigeneMitglieder, s, 'gast', gastSpieler(s))}
                       doppel={
                         istDoppel
                           ? {
                               heim2: spielerIn(s, 'heim2'),
                               gast2: spielerIn(s, 'gast2'),
-                              heimWahl2: moeglich(wirSindHeim ? eigeneMitglieder : gaeste, s, 'heim2', spielerIn(s, 'heim2')),
-                              gastWahl2: moeglich(wirSindHeim ? gaeste : eigeneMitglieder, s, 'gast2', spielerIn(s, 'gast2'))
+                              heimWahl2: moeglich(wirSindHeim ? eigeneMitglieder : gegnerListe, s, 'heim2', spielerIn(s, 'heim2')),
+                              gastWahl2: moeglich(wirSindHeim ? gegnerListe : eigeneMitglieder, s, 'gast2', spielerIn(s, 'gast2'))
                             }
                           : null
                       }
@@ -2002,10 +2057,29 @@ export default function LigaAnsicht({
             <button type="button" title="Legt den Spieler als Gast an. Danach steht er in den Auswahllisten der Gegnerseite." onClick={() => void gastAnlegen()}>
               Als Gast anlegen
             </button>
+            {!gegnerPass && <GegnerPassKnopf gelesen={(p) => { setFehler(null); setGegnerPass(p); }} fehler={setFehler} />}
           </div>
+          {gegnerPass && verein && (
+            <GegnerPassAuswahl
+              vereinId={verein.id}
+              pass={gegnerPass}
+              liga={liga.liga}
+              staffel={mannschaften.find((m) => m.id === liga.mannschaft_id)?.staffel ?? null}
+              eigene={liga.eigene}
+              hinweis="Die angehakten Spieler stehen danach in der Auswahl der Gegnerseite; neue werden als Gäste angelegt."
+              uebernehmen={(a) => void gegnerAusPass(a)}
+              verwerfen={() => setGegnerPass(null)}
+            />
+          )}
+          {gegnerKader && gegnerKader.length > 0 && (
+            <label className="ankreuz" title="Sonst stehen auf der Gegnerseite nur die Gäste von diesem Gegner und wer dort schon aufgestellt ist">
+              <input type="checkbox" checked={alleGaeste} onChange={(e) => setAlleGaeste(e.target.checked)} />
+              Alle Gäste des Vereins anbieten (sonst nur die {gegnerKader.length} von {liga.gegner})
+            </label>
+          )}
           <p className="hinweis">
-            Der Name bekommt die Mannschaft angehängt, zum Beispiel „Meier ({liga.gegner})“. Gäste stehen in keiner
-            Rangliste{mitRating ? ', ihre Stärke zählt aber für das Rating deiner Spieler' : ''}.
+            Angezeigt werden Gäste mit Vorname und erstem Buchstaben des Nachnamens, zum Beispiel „Max M.“. Gäste stehen in
+            keiner Rangliste{mitRating ? ', ihre Stärke zählt aber für das Rating deiner Spieler' : ''}.
           </p>
         </section>
       )}

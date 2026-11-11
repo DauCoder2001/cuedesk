@@ -738,3 +738,8 @@ button.aktivmarke { color: var(--gut); border-color: var(--gut); }
 .ankreuzfuss { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; border-top: 1px solid var(--rand); padding-top: 10px; }
 .ankreuzfuss .gut { color: var(--gut); }
 .kopfreihe { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-right: auto; margin-left: 12px; }
+
+/* Gegner aus dem Mannschaftspass: Auswahl ueber die ganze Breite des Formulars */
+.gegnerpass { flex-basis: 100%; }
+.felder > .gegnerpass { grid-column: 1 / -1; }
+.feld > .zeile { flex-wrap: nowrap; }
