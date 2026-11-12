@@ -401,7 +401,7 @@ h1.seitentitel { margin: 0 0 -4px; }
 /* Unterer Teil des festen Turnierkopfs: links Infos und TV-Auswahl, rechts Live, Chat, Link */
 .kopfunten { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 6px 16px; }
 .kopfunten > div:first-child { flex: 1 1 320px; min-width: 0; }
-.kopfunten > div:first-child > .zeile { margin-top: 6px; }
+.kopfunten > div:first-child > .zeile { margin-top: 14px; }
 .kopfstatus { font-weight: 400; margin-left: 6px; }
 .spielfortschritt { display: flex; height: 10px; max-width: 520px; margin: 2px 0; overflow: hidden; background: var(--grund); border: 1px solid var(--rand); border-radius: 5px; }
 /* Im Turnierkopf: Balken genau so breit wie die Zaehlerzeile, beides dicht beieinander */

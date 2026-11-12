@@ -1,5 +1,9 @@
 # Änderungen an CueDesk
 
+## 0.11.3 – 12.11.2026
+
+- Turnierkopf: mehr Abstand zwischen der Zeile „1 von 36 Partien …“ und **TV zeigt**.
+
 ## 0.11.2 – 12.11.2026
 
 - Turnierkopf: **Live an/aus**, der Chat-Schalter und **Öffentlicher Link…** stehen jetzt rechts im festen Kopf. Der Block darunter entfällt, wenn er sonst nichts enthält, Teilnehmer und Spielplan rücken nach oben.
