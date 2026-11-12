@@ -2358,11 +2358,8 @@ export default function TurnierAnsicht({
     const rating = await supabase.functions.invoke('rating', { body: { verein_id: turnier.verein_id } });
     setArbeitet(false);
     setMeldung(
-      !mitRating
-        ? 'Turnier abgeschlossen.'
-        : rating.error
-          ? 'Turnier abgeschlossen. Das Rating wird heute Nacht neu berechnet.'
-          : 'Turnier abgeschlossen, Rating neu berechnet.'
+      // "Turnier abgeschlossen." steht schon neben dem Namen
+      !mitRating ? null : rating.error ? 'Das Rating wird heute Nacht neu berechnet.' : 'Rating neu berechnet.'
     );
     await laden();
   }
@@ -2733,6 +2730,18 @@ export default function TurnierAnsicht({
         .slice(0, 8)
     : [];
 
+  // Block unter dem festen Kopf: Turnierart, seltene Hinweise, Live/Chat/Link
+  const kopfRest = Boolean(
+    (darfLeiten && turnierarten.length > 0) ||
+      einstellungen.art ||
+      (disziplinOffen && turnier.status === 'geplant') ||
+      (mitRating && !turnier.rating_werten) ||
+      (va.aktiv && turnier.quelle !== 'import' && hinweisKurzesRace) ||
+      (zeitStand && prognoseZusatz(zeitStand)) ||
+      (bearbeitbar && turnier.quelle !== 'import' && turnier.status !== 'beendet') ||
+      (einstellungen.pausiert && turnier.status === 'laeuft')
+  );
+
   return (
     <div className="einspaltig">
       {/* Feste Leiste: Name, Stand und Knoepfe bleiben beim Scrollen oben; dazu
@@ -2745,7 +2754,11 @@ export default function TurnierAnsicht({
         <div className="bearbeitenkopf kopf-umbruch">
           <h2>
             {turnier.name}{' '}
-            <span className={`marke ${turnier.status === 'laeuft' ? 'livelaeuft' : ''}`}>{STATUS_TEXT[turnier.status]}</span>
+            {turnier.status === 'beendet' ? (
+              <span className="meldung kopfstatus">Turnier abgeschlossen.</span>
+            ) : (
+              <span className={`marke ${turnier.status === 'laeuft' ? 'livelaeuft' : ''}`}>{STATUS_TEXT[turnier.status]}</span>
+            )}
           </h2>
           <div className="knopfpaar">
             <span className="knopfpaar" ref={setAusschreibungZiel} />
@@ -2813,11 +2826,97 @@ export default function TurnierAnsicht({
             )}
           </div>
         </div>
+        {/* Fest im Kopf: Spielweise mit Zeitangabe, Fortschritt und die TV-Auswahl */}
+        <p className="hinweis kopfinfo">
+          <span>
+          {new Date(`${turnier.datum}T12:00:00`).toLocaleDateString('de-DE', {
+            weekday: 'short',
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric'
+          })}{' '}
+          · {disziplinOffen ? 'Disziplin offen' : DISZIPLIN_TEXT[turnier.disziplin]} ·{' '}
+          {modusOffen ? 'Modus nach Teilnehmerzahl' : MODUS_TEXT[turnier.modus]}
+          {turnier.quelle !== 'import' &&
+            (modusOffen
+              ? ` · Race to ${raceTo}`
+              : zwei
+              ? ` · Race to ${raceTo}, Duelle Race to ${race2}`
+              : mitKo
+                ? ` · Race to ${raceTo}, KO ${raceFuer('QF')}/${raceFuer('SF')}/${raceFuer('FIN')}`
+                : ` · Race to ${raceTo}`)}
+          {va.aktiv && ` · Vorgabe ${va.staerke} %${va.obergrenze > 0 ? `, höchstens ${va.obergrenze}` : ''}`}
+          </span>
+          {zeitStand && prognoseText(zeitStand) && <span>{prognoseText(zeitStand)}</span>}
+        </p>
+        {turnier.quelle !== 'import' && turnier.status === 'laeuft' && partien.length > 0 && (
+          <div
+            className="spielfortschritt"
+            role="progressbar"
+            aria-label="Turnierfortschritt"
+            aria-valuemin={0}
+            aria-valuemax={zaehler.gesamt}
+            aria-valuenow={zaehler.beendet}
+            title="Dunkel: beendete Partien, hell: laufende. Noch nicht angesetzte Duelle und KO-Spiele zählen mit."
+          >
+            <span className="fertig" style={{ width: `${(zaehler.beendet / zaehler.gesamt) * 100}%` }} />
+            <span className="laeuft" style={{ width: `${(zaehler.laufen / zaehler.gesamt) * 100}%` }} />
+          </div>
+        )}
+        {turnier.quelle !== 'import' && turnier.status === 'laeuft' && partien.length > 0 && (
+          <p className="hinweis">
+            {spielZaehlerText(zaehler)}
+            {nichtBeendet.length > 0 && (
+              <label
+                className="offenemarkieren"
+                title="Hebt alle noch nicht beendeten Spiele im Spielplan hervor (auch laufende) und springt zum ersten. Hebt eine Spieler-Markierung auf; ein Spieler-Häkchen hebt diese Markierung wieder auf."
+              >
+                <input type="checkbox" checked={offenMarkiert} onChange={(e) => offeneUmschalten(e.target.checked)} /> offene markieren
+              </label>
+            )}
+          </p>
+        )}
+        {darfLeiten && turnier.quelle !== 'import' && turnier.status !== 'geplant' && (
+          <div className="zeile">
+            <span className="hinweis">TV zeigt:</span>
+            <span className="umschalter">
+              {(
+                [
+                  ['auslosung', 'Auslosung'],
+                  ['live', 'Live-Tische'],
+                  // 3 und 5 Tische: freie Kachel im TV-Raster, 4 und 6: Spalte rechts
+                  ...(aktiveTische >= 3 && aktiveTische <= 6 ? ([['livenaechste', 'Live + Nächste']] as const) : []),
+                  ['naechste', 'Nächste Spiele'],
+                  // Gruppenturniere: Gruppenstand ab dem Start, Endplaetze sobald Duelle bzw. KO-Runde angesetzt sind
+                  ...(mehrgruppig ? ([['gruppenstand', 'Gruppenstand']] as const) : []),
+                  ...((zwei && einstellungen.phase2) || (mitKo && koFest) || (dko && dkoFest)
+                    ? ([['endplaetze', turnier.status === 'beendet' ? 'Endplätze' : 'Endplätze (vorläufig)']] as const)
+                    : []),
+                  // Doppel-KO ab der Auslosung, Gruppen mit KO ab dem KO-Start
+                  ...((mitKo && koFest) || (dko && dkoFest) ? ([['turnierbaum', 'Turnierbaum']] as const) : []),
+                  ['results', 'Ergebnis']
+                ] as const
+              ).map(([wert, name]) => (
+                <button
+                  key={wert}
+                  type="button"
+                  className={(einstellungen.tvAnsicht ?? 'live') === wert ? 'aktiv' : ''}
+                  title={`Legt fest, was die TV-Anzeige zeigt: ${name}`}
+                  onClick={() => void einstellungenSetzen({ tvAnsicht: wert })}
+                >
+                  {name}
+                </button>
+              ))}
+            </span>
+            {turnier.status === 'beendet' && <TvHerunterfahren vereinId={turnier.verein_id} />}
+          </div>
+        )}
         <div ref={setMeldungsZiel} />
         {fehler && <p className="fehler">{fehler}</p>}
         {meldung && <p className="meldung">{meldung}</p>}
       </section>
 
+      {kopfRest && (
       <section className="block">
         <div className="bearbeitenkopf">
           <div>
@@ -2839,25 +2938,6 @@ export default function TurnierAnsicht({
             ) : (
               einstellungen.art && <p className="hinweis">Turnierart: {einstellungen.art}</p>
             )}
-            <p className="hinweis">
-              {new Date(`${turnier.datum}T12:00:00`).toLocaleDateString('de-DE', {
-                weekday: 'short',
-                day: '2-digit',
-                month: '2-digit',
-                year: 'numeric'
-              })}{' '}
-              · {disziplinOffen ? 'Disziplin offen' : DISZIPLIN_TEXT[turnier.disziplin]} ·{' '}
-              {modusOffen ? 'Modus nach Teilnehmerzahl' : MODUS_TEXT[turnier.modus]}
-              {turnier.quelle !== 'import' &&
-                (modusOffen
-                  ? ` · Race to ${raceTo}`
-                  : zwei
-                  ? ` · Race to ${raceTo}, Duelle Race to ${race2}`
-                  : mitKo
-                    ? ` · Race to ${raceTo}, KO ${raceFuer('QF')}/${raceFuer('SF')}/${raceFuer('FIN')}`
-                    : ` · Race to ${raceTo}`)}
-              {va.aktiv && ` · Vorgabe ${va.staerke} %${va.obergrenze > 0 ? `, höchstens ${va.obergrenze}` : ''}`}
-            </p>
             {disziplinOffen && turnier.status === 'geplant' && (
               <div className="zeile">
                 <span className="hinweis">Disziplin noch offen – vor der Auslosung festlegen.</span>
@@ -2896,44 +2976,7 @@ export default function TurnierAnsicht({
             {va.aktiv && turnier.quelle !== 'import' && hinweisKurzesRace && (
               <p className="hinweis">{hinweisKurzesRace}</p>
             )}
-            {zeitStand && prognoseText(zeitStand) && (
-              <p className="hinweis">
-                {prognoseText(zeitStand)}
-                {prognoseZusatz(zeitStand) && (
-                  <>
-                    <br />
-                    {prognoseZusatz(zeitStand)}
-                  </>
-                )}
-              </p>
-            )}
-            {turnier.quelle !== 'import' && turnier.status === 'laeuft' && partien.length > 0 && (
-              <div
-                className="spielfortschritt"
-                role="progressbar"
-                aria-label="Turnierfortschritt"
-                aria-valuemin={0}
-                aria-valuemax={zaehler.gesamt}
-                aria-valuenow={zaehler.beendet}
-                title="Dunkel: beendete Partien, hell: laufende. Noch nicht angesetzte Duelle und KO-Spiele zählen mit."
-              >
-                <span className="fertig" style={{ width: `${(zaehler.beendet / zaehler.gesamt) * 100}%` }} />
-                <span className="laeuft" style={{ width: `${(zaehler.laufen / zaehler.gesamt) * 100}%` }} />
-              </div>
-            )}
-            {turnier.quelle !== 'import' && turnier.status === 'laeuft' && partien.length > 0 && (
-              <p className="hinweis">
-                {spielZaehlerText(zaehler)}
-                {nichtBeendet.length > 0 && (
-                  <label
-                    className="offenemarkieren"
-                    title="Hebt alle noch nicht beendeten Spiele im Spielplan hervor (auch laufende) und springt zum ersten. Hebt eine Spieler-Markierung auf; ein Spieler-Häkchen hebt diese Markierung wieder auf."
-                  >
-                    <input type="checkbox" checked={offenMarkiert} onChange={(e) => offeneUmschalten(e.target.checked)} /> offene markieren
-                  </label>
-                )}
-              </p>
-            )}
+            {zeitStand && prognoseZusatz(zeitStand) && <p className="hinweis">{prognoseZusatz(zeitStand)}</p>}
           </div>
           <div className="kopfrechts">
           {bearbeitbar && turnier.quelle !== 'import' && turnier.status !== 'beendet' && (
@@ -2951,41 +2994,6 @@ export default function TurnierAnsicht({
           )}
           </div>
         </div>
-        {darfLeiten && turnier.quelle !== 'import' && turnier.status !== 'geplant' && (
-          <div className="zeile">
-            <span className="hinweis">TV zeigt:</span>
-            <span className="umschalter">
-              {(
-                [
-                  ['auslosung', 'Auslosung'],
-                  ['live', 'Live-Tische'],
-                  // 3 und 5 Tische: freie Kachel im TV-Raster, 4 und 6: Spalte rechts
-                  ...(aktiveTische >= 3 && aktiveTische <= 6 ? ([['livenaechste', 'Live + Nächste']] as const) : []),
-                  ['naechste', 'Nächste Spiele'],
-                  // Gruppenturniere: Gruppenstand ab dem Start, Endplaetze sobald Duelle bzw. KO-Runde angesetzt sind
-                  ...(mehrgruppig ? ([['gruppenstand', 'Gruppenstand']] as const) : []),
-                  ...((zwei && einstellungen.phase2) || (mitKo && koFest) || (dko && dkoFest)
-                    ? ([['endplaetze', turnier.status === 'beendet' ? 'Endplätze' : 'Endplätze (vorläufig)']] as const)
-                    : []),
-                  // Doppel-KO ab der Auslosung, Gruppen mit KO ab dem KO-Start
-                  ...((mitKo && koFest) || (dko && dkoFest) ? ([['turnierbaum', 'Turnierbaum']] as const) : []),
-                  ['results', 'Ergebnis']
-                ] as const
-              ).map(([wert, name]) => (
-                <button
-                  key={wert}
-                  type="button"
-                  className={(einstellungen.tvAnsicht ?? 'live') === wert ? 'aktiv' : ''}
-                  title={`Legt fest, was die TV-Anzeige zeigt: ${name}`}
-                  onClick={() => void einstellungenSetzen({ tvAnsicht: wert })}
-                >
-                  {name}
-                </button>
-              ))}
-            </span>
-            {turnier.status === 'beendet' && <TvHerunterfahren vereinId={turnier.verein_id} />}
-          </div>
-        )}
         {einstellungen.pausiert && turnier.status === 'laeuft' && (
           <div className="pausehinweis">
             <strong>Turnier pausiert.</strong> An den Tablets kann kein neues Spiel gestartet werden; laufende Spiele gehen
@@ -2998,6 +3006,7 @@ export default function TurnierAnsicht({
           </div>
         )}
       </section>
+      )}
 
       {darfLeiten && turnier.status === 'geplant' && turnier.quelle !== 'import' && (
         <AusschreibungBlock
@@ -3039,7 +3048,8 @@ export default function TurnierAnsicht({
         />
       )}
 
-      {darfLeiten && turnier.status !== 'geplant' && turnier.quelle !== 'import' && aufstellung.length > 0 && (
+      {/* Nur zwischen Auslosung und dem ersten gestarteten Spiel */}
+      {darfLeiten && turnier.status === 'laeuft' && partien.every(unberuehrt) && turnier.quelle !== 'import' && aufstellung.length > 0 && (
         <AuslosungTeilen
           ratingErlaubt={mitRating}
           daten={{

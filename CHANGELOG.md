@@ -1,5 +1,11 @@
 # Änderungen an CueDesk
 
+## 0.10.0 – 12.11.2026
+
+- Turnierkopf: Die Zeile mit Datum, Spielweise und Zeitangabe, der Fortschritt und **TV zeigt** gehören jetzt zum festen Kopf und bleiben beim Scrollen oben. Spielweise und Zeitangabe stehen nebeneinander in einer Zeile.
+- Nach dem Abschließen steht neben dem Namen grün „Turnier abgeschlossen.“ statt der Marke „beendet“ und einer zweiten Meldung.
+- **Auslosung teilen** ist nur noch zu sehen, solange nach der Auslosung kein Spiel begonnen hat.
+
 ## 0.9.0 – 11.11.2026
 
 - Liga-Aufstellung: Die Auswahl der eigenen Seite trennt den Kader in **Stammspieler** und **Ersatz**, darunter wie bisher die weiteren Mitglieder.
