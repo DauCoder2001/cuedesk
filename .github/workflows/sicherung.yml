@@ -1,11 +1,15 @@
 name: Sicherung
 
-# Zieht woechentlich einen vollstaendigen Auszug beider Datenbanken und legt
-# ihn verschluesselt in je einem privaten Repository ab:
-#   test        -> cuedesk-sicherung             (SUPABASE_DB_URL)
-#   produktion  -> cuedesk-sicherung-produktion  (SUPABASE_DB_URL_PRODUKTION)
+# Zieht einen vollstaendigen Auszug der Datenbanken und legt ihn
+# verschluesselt in je einem privaten Repository ab:
+#   produktion  -> cuedesk-sicherung-produktion  (SUPABASE_DB_URL_PRODUKTION)  taeglich
+#   test        -> cuedesk-sicherung             (SUPABASE_DB_URL)             montags
 # Zwei getrennte Laeufe; scheitert einer, laeuft der andere trotzdem. Die
-# Gratisstufe von Supabase sichert nichts von sich aus.
+# Gratisstufe von Supabase sichert nichts von sich aus. Von Hand gestartet
+# sichert der Lauf immer beide.
+#
+# Aufbewahrung (seit 12.11.2026 gestaffelt): jeder Auszug 14 Tage, danach
+# bleiben nur die Montags-Auszuege, nichts ist aelter als zwoelf Wochen.
 #
 # Noetige Geheimnisse in diesem Repository
 # (Settings -> Secrets and variables -> Actions -> Secrets):
@@ -20,13 +24,13 @@ name: Sicherung
 #
 # Der Auszug enthaelt Mitgliederdaten. GitHub bekommt ihn nur verschluesselt
 # (gpg, AES256). Jeder Lauf legt die Historie des Sicherungs-Repositorys neu
-# an, damit es wirklich nur die letzten zwoelf Wochen gibt
+# an, damit es wirklich nur die Auszuege der letzten zwoelf Wochen gibt
 # (Datenschutzerklaerung). Wiederherstellen:
 #   gpg --decrypt sicherung-JJJJ-MM-TT.tar.gz.gpg | tar xz
 
 on:
   schedule:
-    - cron: '23 3 * * 1'
+    - cron: '23 3 * * *'
   workflow_dispatch:
 
 jobs:
@@ -44,7 +48,20 @@ jobs:
     env:
       DB_URL: ${{ matrix.datenbank == 'test' && secrets.SUPABASE_DB_URL || secrets.SUPABASE_DB_URL_PRODUKTION }}
     steps:
+      # Die Test-Datenbank wird nur montags gesichert (und bei jedem Start von
+      # Hand); an den anderen Tagen ueberspringt ihr Lauf alle Schritte.
+      - name: Heute sichern?
+        id: plan
+        run: |
+          if [ "${{ matrix.datenbank }}" = "produktion" ] || [ "${{ github.event_name }}" != "schedule" ] || [ "$(date -u +%u)" = "1" ]; then
+            echo "aktiv=ja" >> "$GITHUB_OUTPUT"
+          else
+            echo "aktiv=nein" >> "$GITHUB_OUTPUT"
+            echo "Test-Datenbank: Sicherung nur montags, heute nichts zu tun."
+          fi
+
       - name: Sicherungs-Repository holen
+        if: steps.plan.outputs.aktiv == 'ja'
         env:
           TOKEN: ${{ secrets.SICHERUNG_TOKEN }}
           ZIEL: ${{ matrix.ziel }}
@@ -58,10 +75,12 @@ jobs:
           git clone "https://x-access-token:${TOKEN}@github.com/${ZIEL}.git" sicherung
 
       - uses: supabase/setup-cli@v3
+        if: steps.plan.outputs.aktiv == 'ja'
         with:
           version: latest
 
       - name: Auszug erstellen und verschluesseln
+        if: steps.plan.outputs.aktiv == 'ja'
         env:
           SCHLUESSEL: ${{ secrets.SICHERUNG_SCHLUESSEL }}
         run: |
@@ -82,15 +101,30 @@ jobs:
           ls -lh "sicherung/sicherung-$datum.tar.gz.gpg"
 
       - name: Alte Auszuege entfernen
+        if: steps.plan.outputs.aktiv == 'ja'
         run: |
           cd sicherung
           # Unverschluesselte Ordner aus der Zeit vor der Verschluesselung
           ls -1d 20*/ 2>/dev/null | xargs -r rm -rf
-          # Die letzten zwoelf Wochen bleiben erhalten.
-          ls -1 sicherung-*.tar.gz.gpg 2>/dev/null | sort | head -n -12 | xargs -r rm -f
+          # Gestaffelt: jeder Auszug bleibt 14 Tage, danach nur die vom Montag,
+          # nichts bleibt laenger als zwoelf Wochen (84 Tage).
+          heute=$(date -u +%s)
+          for datei in sicherung-*.tar.gz.gpg; do
+            [ -e "$datei" ] || continue
+            tag=${datei#sicherung-}
+            tag=${tag%.tar.gz.gpg}
+            alter=$(( (heute - $(date -u -d "$tag" +%s)) / 86400 ))
+            if [ "$alter" -gt 84 ]; then
+              rm -f "$datei"
+            elif [ "$alter" -gt 14 ] && [ "$(date -u -d "$tag" +%u)" != "1" ]; then
+              rm -f "$datei"
+            fi
+          done
+          echo "Auszuege: $(ls -1 sicherung-*.tar.gz.gpg | wc -l)"
           ls -1 sicherung-*.tar.gz.gpg | tail -n 3
 
       - name: Ablegen mit neuer Historie
+        if: steps.plan.outputs.aktiv == 'ja'
         run: |
           cd sicherung
           git config user.name "CueDesk Sicherung"
@@ -106,7 +140,7 @@ jobs:
       # gescheitert ist. Scheitert die Rueckmeldung selbst, bleibt der Lauf gruen:
       # Die Konsole warnt dann, weil die letzte Meldung zu alt wird.
       - name: Rueckmeldung an CueDesk
-        if: always()
+        if: always() && steps.plan.outputs.aktiv == 'ja'
         continue-on-error: true
         env:
           ERFOLG: ${{ job.status == 'success' }}

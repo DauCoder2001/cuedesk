@@ -64,8 +64,12 @@ describe('Konsole: Warnungen', () => {
   test('Sicherung', () => {
     expect(sicherungsWarnung(null, jetzt)).toContain('noch keine Meldung');
     expect(sicherungsWarnung({ zeit: '2026-09-21T03:30:00Z', erfolg: false }, jetzt)).toContain('fehlgeschlagen');
-    expect(sicherungsWarnung({ zeit: '2026-09-21T03:30:00Z', erfolg: true }, jetzt)).toBeNull();
-    expect(sicherungsWarnung({ zeit: '2026-09-14T03:30:00Z', erfolg: true }, jetzt)).toBe('Die letzte Sicherung ist 11 Tage alt.');
+    // taeglich (Produktion): nach 2 Tagen ohne Meldung
+    expect(sicherungsWarnung({ zeit: '2026-09-24T03:30:00Z', erfolg: true }, jetzt)).toBeNull();
+    expect(sicherungsWarnung({ zeit: '2026-09-21T03:30:00Z', erfolg: true }, jetzt)).toBe('Die letzte Sicherung ist 4 Tage alt.');
+    // montags (Testfassung): nach 8 Tagen
+    expect(sicherungsWarnung({ zeit: '2026-09-21T03:30:00Z', erfolg: true }, jetzt, 8)).toBeNull();
+    expect(sicherungsWarnung({ zeit: '2026-09-14T03:30:00Z', erfolg: true }, jetzt, 8)).toBe('Die letzte Sicherung ist 11 Tage alt.');
   });
 
   test('Rating: der juengste Lauf zaehlt', () => {

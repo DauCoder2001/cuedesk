@@ -195,7 +195,14 @@ Die Scoreboards und TV-Seiten sind Teil der Anwendung und liegen danach unter
 13.10.2026 als zwei getrennte Läufe „anklopfen (test)“ und „anklopfen
 (produktion)“; schlägt einer fehl, läuft der andere trotzdem.
 
-## Schritt 8 · Wöchentliche Sicherung
+## Schritt 8 · Sicherung
+
+Seit 12.11.2026 (Version 0.15.0) läuft die Sicherung der Produktion täglich, die
+der Test-Datenbank weiter montags. Jeder Auszug bleibt 14 Tage, danach bleiben
+nur die Montags-Auszüge, nichts ist älter als 12 Wochen. Die Verträge
+(Nutzungsbedingungen, Auftragsverarbeitung, Datenschutzerklärung) sagen
+„wöchentlich“ zu und bleiben unverändert: täglich ist mehr als zugesagt.
+
 
 **Matthias:** privates Repo für die Sicherung anlegen (E2); Secret
 `SUPABASE_DB_URL_PRODUKTION` (Connect → Session pooler, mit Passwort);

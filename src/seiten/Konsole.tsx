@@ -13,7 +13,8 @@ import {
   istVerbindungsfehler,
   groesseText,
   ratingWarnung,
-  sicherungsWarnung
+  sicherungsWarnung,
+  SICHERUNG_HOECHSTENS_TAGE_TEST
 } from '../mandanten';
 import { AUFRAEUMEN_ARTEN, datumText, loeschStand } from '../datenpflege';
 import type { AufraeumenArt, AufraeumenZahlen } from '../datenpflege';
@@ -388,7 +389,9 @@ export default function Konsole() {
 
   const superAdmins = konten.filter((k) => k.systemadmin);
   const jetzt = new Date();
-  const warnungSicherung = sicherungsWarnung(sicherung, jetzt);
+  // Testfassung: die Test-Datenbank wird nur montags gesichert
+  const testfassung = import.meta.env.VITE_TESTFASSUNG === '1';
+  const warnungSicherung = sicherungsWarnung(sicherung, jetzt, testfassung ? SICHERUNG_HOECHSTENS_TAGE_TEST : undefined);
   const laeufe = datenbank?.rating_laeufe ?? [];
   const warnungRating = ratingWarnung(laeufe, jetzt);
   const anteil = datenbank ? datenbank.groesse_bytes / DATENBANK_GRENZE_BYTES : 0;
@@ -724,7 +727,9 @@ export default function Konsole() {
         <h2>Sicherung und Rating</h2>
         <div className="kennzahlen">
           <div className={warnungSicherung ? 'warnkachel' : ''}>
-            <span>Wöchentliche Sicherung</span>
+            <span title={testfassung ? 'Die Test-Datenbank wird montags gesichert.' : 'Die Datenbank wird jede Nacht gesichert.'}>
+              {testfassung ? 'Wöchentliche Sicherung' : 'Tägliche Sicherung'}
+            </span>
             <strong>{sicherung ? zeit(sicherung.zeit) : '–'}</strong>
             <small>
               {warnungSicherung ??

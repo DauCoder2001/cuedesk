@@ -48,7 +48,7 @@ Export und Import zwischen Programmteilen entfallen.
    - Edge Function Rating-Berechnung (Code aus der Serienwertung)
  GitHub Actions
    - alle 3 Tage   Online-Halten (echte Abfrage)
-   - wöchentlich   Datenbank-Sicherung in privates Repository
+   - täglich       Datenbank-Sicherung in privates Repository (Test-DB montags)
 ```
 
 Zwei Supabase-Projekte: **Produktion** und **Test**. Entwicklung und

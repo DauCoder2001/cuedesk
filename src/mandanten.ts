@@ -40,8 +40,10 @@ export function homepageLink(text: string): string {
 // ---------- Konsole: Zustand von Sicherung und Rating ----------
 
 export const TAG_MS = 24 * 60 * 60 * 1000;
-// Die Sicherung laeuft woechentlich; nach 8 Tagen ohne Meldung stimmt etwas nicht
-export const SICHERUNG_HOECHSTENS_TAGE = 8;
+// Die Sicherung laeuft taeglich (app.cuedesk.de); nach 2 Tagen ohne Meldung stimmt
+// etwas nicht. Die Test-Datenbank wird nur montags gesichert: dort 8 Tage.
+export const SICHERUNG_HOECHSTENS_TAGE = 2;
+export const SICHERUNG_HOECHSTENS_TAGE_TEST = 8;
 // Grenze des Gratis-Tarifs von Supabase fuer die Datenbank
 export const DATENBANK_GRENZE_BYTES = 500 * 1024 * 1024;
 
@@ -49,11 +51,15 @@ export type SicherungsMeldung = { zeit: string; erfolg: boolean };
 export type RatingLauf = { status: string; start: string };
 
 // Warnung zur Sicherung oder null, wenn alles in Ordnung ist
-export function sicherungsWarnung(letzte: SicherungsMeldung | null, jetzt: Date): string | null {
+export function sicherungsWarnung(
+  letzte: SicherungsMeldung | null,
+  jetzt: Date,
+  hoechstensTage = SICHERUNG_HOECHSTENS_TAGE
+): string | null {
   if (!letzte) return 'Von der Sicherung ist noch keine Meldung angekommen.';
   if (!letzte.erfolg) return 'Die letzte Sicherung ist fehlgeschlagen.';
   const tage = (jetzt.getTime() - new Date(letzte.zeit).getTime()) / TAG_MS;
-  if (tage > SICHERUNG_HOECHSTENS_TAGE) return `Die letzte Sicherung ist ${Math.floor(tage)} Tage alt.`;
+  if (tage > hoechstensTage) return `Die letzte Sicherung ist ${Math.floor(tage)} Tage alt.`;
   return null;
 }
 

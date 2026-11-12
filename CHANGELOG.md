@@ -1,5 +1,11 @@
 # Änderungen an CueDesk
 
+## 0.15.0 – 12.11.2026
+
+- Die Datenbank von app.cuedesk.de wird jetzt **jede Nacht** gesichert statt nur montags. Im Ernstfall geht damit höchstens ein Tag verloren statt einer Woche. Die Test-Datenbank wird weiter montags gesichert.
+- Aufbewahrung gestaffelt: Jeder Auszug bleibt 14 Tage, danach bleiben nur die Auszüge vom Montag. Älter als 12 Wochen wird weiterhin nichts.
+- Konsole: Die Kachel heißt **Tägliche Sicherung** und warnt schon nach 2 Tagen ohne Meldung (Testfassung: weiter „Wöchentliche Sicherung“, 8 Tage).
+
 ## 0.14.1 – 12.11.2026
 
 - Behoben: **Doppelten Eintrag übernehmen** (Spieler zusammenführen) stellt jetzt auch die Verweise in den Turnier-Einstellungen um: Setzliste beim Doppel-KO, Reihungen und Setzliste bei Gruppen mit KO-Runde, Reihung der Platzierungsduelle, Gegner-Kader beim Liga-Spieltag und Kapitäne beim Teamvergleich. Vorher zeigten sie danach auf den gelöschten Eintrag.

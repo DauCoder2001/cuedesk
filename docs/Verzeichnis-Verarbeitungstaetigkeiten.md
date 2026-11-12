@@ -93,7 +93,7 @@ Die Ausnahme für Betriebe unter 250 Beschäftigten (Art. 30 Abs. 5) greift nich
 | Nicht erfasst | Anschrift, Geburtsdatum, Bankdaten, besondere Kategorien (Art. 9) |
 | Unterauftragsverarbeiter | Supabase, Inc. (Datenbank, Frankfurt); IONOS SE (Domain, Postfach, Versand der Anmelde-Mails); GitHub, Inc. (nur Ablage der verschlüsselten Sicherung) |
 | Drittland | Supabase, Inc.: USA, Daten in Frankfurt; DPA und Standardvertragsklauseln [prüfen]. GitHub, Inc.: USA, nur verschlüsselte Sicherung; DPA und Data Privacy Framework [prüfen] |
-| Sicherung | wöchentlich, vor der Ablage AES-256 verschlüsselt, in einem privaten GitHub-Repository, 12 Wochen; der Schlüssel liegt nicht bei GitHub |
+| Sicherung | täglich (seit 12.11.2026, vorher wöchentlich), vor der Ablage AES-256 verschlüsselt, in einem privaten GitHub-Repository; jeder Auszug 14 Tage, Montags-Auszüge 12 Wochen, nichts länger; der Schlüssel liegt nicht bei GitHub |
 | Löschung | Änderungsprotokoll 2 Jahre; Personen auf Wunsch anonymisiert; ganzer Verein 30 Tage nach Ende, in Sicherungen spätestens 12 Wochen später |
 
 ## Technische und organisatorische Maßnahmen

@@ -38,7 +38,7 @@ Schon vorhanden:
 - Jede Tabelle hängt an `verein_id`, die Datenbank-Regeln trennen die Vereine.
 - `benutzer.systemadmin` und `ist_systemadmin()`; Vereine anlegen und löschen darf nur der Super-Admin.
 - `vereine.aktiv`, `vereine.slug`, `vereine.logo_url`, `vereine.einstellungen`.
-- Nächtliches Rating für alle aktiven Vereine, wöchentliche Sicherung der ganzen Datenbank.
+- Nächtliches Rating für alle aktiven Vereine, tägliche Sicherung der ganzen Datenbank.
 
 Lücken:
 1. Keine Oberfläche für den Super-Admin; Super-Admin wird man nur direkt in der Datenbank.

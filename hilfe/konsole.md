@@ -22,7 +22,7 @@ Die **Konsole** ist nur für Super-Admins, also den Betreiber von CueDesk. Sie g
 ## Überblick
 
 - **Nutzung**: je Verein Konten, letzte Anmeldung, Mitglieder und Gäste, Turniere und Partien der letzten 30 Tage, Tablets.
-- **Sicherung und Rating**: wann die **Wöchentliche Sicherung** und das **Nächtliche Rating** zuletzt liefen.
+- **Sicherung und Rating**: wann die **Tägliche Sicherung** und das **Nächtliche Rating** zuletzt liefen. Die Sicherung läuft jede Nacht; ist die letzte Meldung älter als 2 Tage oder fehlgeschlagen, ist die Kachel gelb. Jeder Auszug bleibt 14 Tage, danach bleiben nur die Auszüge vom Montag, nichts ist älter als 12 Wochen. (In der Testfassung heißt die Kachel **Wöchentliche Sicherung**: Die Test-Datenbank wird nur montags gesichert.)
 - **Datenbank**: Größe, Verbindungen, größte Tabellen.
 - **Aufräumen**: verwaiste Daten finden und entfernen.
 - **Protokoll**: alle Aktionen der Super-Admins.
