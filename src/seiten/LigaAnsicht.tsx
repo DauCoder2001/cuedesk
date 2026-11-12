@@ -1530,80 +1530,28 @@ export default function LigaAnsicht({
       ? 'zuerst gespielt'
       : 'danach gespielt, mit getauschtem Heimrecht';
 
+  // TV-Zeile im Kopf: Auswahl ab zwei Begegnungen, Herunterfahren nach dem Abschluss aller
+  const tvWahl = darfLeiten && teile.length >= 2 && turnier.status !== 'geplant';
+  const tvAus = darfLeiten && turnier.status === 'beendet' && teile.filter((x) => x.id !== turnier.id).every((x) => x.status === 'beendet');
+
   return (
     <div className="einspaltig">
-      <section className="block">
+      {/* Fester Kopf wie im Turnier: Name, Stand und Knoepfe, darunter links Begegnungen,
+          Infozeile und TV-Auswahl, rechts Live, Chat und der oeffentliche Link */}
+      <section className="block festerkopf">
+        <button type="button" title={`Zurück zur Seite „${zurueckText}“`} className="zurueck" onClick={zurueck}>
+          ← {zurueckText}
+        </button>
         <div className="bearbeitenkopf kopf-umbruch">
-          <div>
-            <button type="button" title={`Zurück zur Seite „${zurueckText}“`} className="zurueck" onClick={zurueck}>
-              ← {zurueckText}
-            </button>
-            <h2>{spieltagName(turnier.name)}</h2>
-            <div className="zeile">
-              <span className="hinweis">Begegnung:</span>
-              <span className="umschalter">
-                {umschalter.map((u) => {
-                  const aktiv = u.id === turnier.id || (u.id === null && u.nummer === eigeneNummer);
-                  const titel = `${u.nummer}. Begegnung${u.doppel ? ' · Doppel' : ''}`;
-                  return (
-                    <button
-                      key={u.id ?? u.nummer}
-                      type="button"
-                      className={aktiv ? 'aktiv' : ''}
-                      disabled={arbeitet}
-                      title={aktiv ? `Die ${titel} wird gerade angezeigt.` : `Die ${titel} anzeigen.`}
-                      onClick={() => {
-                        if (aktiv) return;
-                        if (u.id) return oeffnen(u.id);
-                        void begegnungOeffnen(u.nummer === 1 ? 1 : 2);
-                      }}
-                    >
-                      {titel}
-                      {(aktiv ? turnier.status : u.status) === 'beendet' ? ' ✓' : ''}
-                    </button>
-                  );
-                })}
-              </span>
-              <span className="hinweis">{zeitHinweis}</span>
-              {doppelMoeglich && (
-                <button
-                  type="button"
-                  className="klein"
-                  disabled={arbeitet}
-                  title="Eine Begegnung im Doppel zwischen der 1. und der nächsten Begegnung einschieben. Geht, solange die nächste Begegnung noch nicht gestartet ist."
-                  onClick={() => {
-                    setFehler(null);
-                    setDoppelDialog(DOPPEL_ZEILEN_STANDARD.map((z) => ({ ...z })));
-                  }}
-                >
-                  + Doppel-Begegnung…
-                </button>
-              )}
-            </div>
-            <p className="hinweis">
-              {LIGEN[liga.liga].name} · {liga.spieltag}. Spieltag · {datumLang(turnier.datum)} · {eigenerName} gegen {liga.gegner} · {liga.heim ? 'Heimspiel' : 'Auswärtsspiel'} ·{' '}
-              {istDoppel
-                ? `${spiele.length} Doppel: ${spiele
-                    .map((s) => `${DISZIPLIN_KURZ[s.disziplin]} Race to ${s.ziel}`)
-                    .join(' · ')}`
-                : `14.1 ${liga.ziele.punkte141} Punkte / ${liga.ziele.aufnahmen141} Aufnahmen · 8-Ball ${liga.ziele['8-ball']} · 9-Ball ${liga.ziele['9-ball']} · 10-Ball ${liga.ziele['10-ball']} Gewinnsätze`}
-            </p>
-            {istDoppel && (
-              <p className="hinweis">
-                Doppel zählen nicht {mitRating ? 'fürs Rating und nicht ' : ''}in die Bilanz der Mannschaft. Partie- und
-                Matchpunkte stehen nur hier.
-              </p>
+          <h2>
+            {spieltagName(turnier.name)}{' '}
+            {turnier.status === 'beendet' ? (
+              <span className="meldung kopfstatus">Begegnung abgeschlossen.</span>
+            ) : (
+              <span className={`marke ${turnier.status === 'laeuft' ? 'livelaeuft' : ''}`}>{STATUS_TEXT[turnier.status]}</span>
             )}
-            {mitRating && !turnier.rating_werten && !istDoppel && (
-              <p className="hinweis">
-                Keine Partie dieses Spieltags zählt fürs Rating. Mit „Fürs Rating werten“ zählen die Partien, die rechts
-                angehakt sind.
-              </p>
-            )}
-          </div>
-          <div className="kopfrechts">
+          </h2>
           <div className="knopfpaar kopfaktionen">
-            <span className={`marke ${turnier.status === 'laeuft' ? 'livelaeuft' : ''}`}>{STATUS_TEXT[turnier.status]}</span>
             {bearbeitbar && teile.every((x) => x.status === 'geplant') && turnier.status === 'geplant' && (
               <button
                 type="button"
@@ -1659,51 +1607,8 @@ export default function LigaAnsicht({
                 Wieder öffnen
               </button>
             )}
-          </div>
-          {bearbeitbar && turnier.status !== 'beendet' && (
-            <LiveSchalter an={einstellungen.live !== false} schalten={(an) => void spieltagSetzen({ live: an })} />
-          )}
-          {bearbeitbar && turnier.status !== 'beendet' && vereinsEinstellungen(verein?.einstellungen).chat && (
-            <ChatSchalter
-              an={einstellungen.chat === true}
-              gesperrt={einstellungen.live === false}
-              schalten={(an) => void spieltagSetzen({ chat: an })}
-            />
-          )}
-          {bearbeitbar && turnier.status !== 'beendet' && liga && (
-            // Der Link haengt an der 1. Begegnung und zeigt den ganzen Spieltag
-            <OeffentlicherLink
-              turnierId={(liga.art === 'doppel' ? liga.haupt : (liga.begegnung ?? 1) === 1 ? turnier.id : liga.partner) ?? turnier.id}
-              vereinId={turnier.verein_id}
-              turnierDatum={turnier.datum}
-            />
-          )}
-          {darfLeiten && teile.length >= 2 && turnier.status !== 'geplant' && (
-            // Was die Fernseher zeigen, fuer alle Begegnungen; nach dem Abschluss
-            // der letzten Begegnung stellt CueDesk selbst auf das Ergebnis um
-            <span className="umschalter" title="Legt fest, was die TV-Anzeige zeigt">
-              {(
-                [
-                  ['live', 'TV: Live-Tische'],
-                  ['spieltag', 'TV: Spieltag-Ergebnis']
-                ] as const
-              ).map(([wert, name]) => (
-                <button
-                  key={wert}
-                  type="button"
-                  className={(einstellungen.tvAnsicht === 'spieltag' ? 'spieltag' : 'live') === wert ? 'aktiv' : ''}
-                  onClick={() => void spieltagSetzen({ tvAnsicht: wert })}
-                >
-                  {name}
-                </button>
-              ))}
-            </span>
-          )}
-          {darfLeiten && turnier.status === 'beendet' && teile.filter((x) => x.id !== turnier.id).every((x) => x.status === 'beendet') && (
-            <TvHerunterfahren vereinId={turnier.verein_id} />
-          )}
           {istAdmin && (
-            // Was verloren geht, steht abgesetzt ganz unten im Kopf
+            // Was verloren geht, steht abgesetzt am Ende der Knopfreihe
             <div className="loeschgruppe">
               <button
                 type="button"
@@ -1738,6 +1643,126 @@ export default function LigaAnsicht({
           )}
           </div>
         </div>
+        <div className="kopfunten">
+          <div>
+            <div className="zeile">
+              <span className="hinweis">Begegnung:</span>
+              <span className="umschalter">
+                {umschalter.map((u) => {
+                  const aktiv = u.id === turnier.id || (u.id === null && u.nummer === eigeneNummer);
+                  const titel = `${u.nummer}. Begegnung${u.doppel ? ' · Doppel' : ''}`;
+                  return (
+                    <button
+                      key={u.id ?? u.nummer}
+                      type="button"
+                      className={aktiv ? 'aktiv' : ''}
+                      disabled={arbeitet}
+                      title={aktiv ? `Die ${titel} wird gerade angezeigt.` : `Die ${titel} anzeigen.`}
+                      onClick={() => {
+                        if (aktiv) return;
+                        if (u.id) return oeffnen(u.id);
+                        void begegnungOeffnen(u.nummer === 1 ? 1 : 2);
+                      }}
+                    >
+                      {titel}
+                      {(aktiv ? turnier.status : u.status) === 'beendet' ? ' ✓' : ''}
+                    </button>
+                  );
+                })}
+              </span>
+              <span className="hinweis">{zeitHinweis}</span>
+              {doppelMoeglich && (
+                <button
+                  type="button"
+                  className="klein"
+                  disabled={arbeitet}
+                  title="Eine Begegnung im Doppel zwischen der 1. und der nächsten Begegnung einschieben. Geht, solange die nächste Begegnung noch nicht gestartet ist."
+                  onClick={() => {
+                    setFehler(null);
+                    setDoppelDialog(DOPPEL_ZEILEN_STANDARD.map((z) => ({ ...z })));
+                  }}
+                >
+                  + Doppel-Begegnung…
+                </button>
+              )}
+            </div>
+            <p className="hinweis">
+              {LIGEN[liga.liga].name} · {liga.spieltag}. Spieltag · {datumLang(turnier.datum)} · {eigenerName} gegen {liga.gegner} · {liga.heim ? 'Heimspiel' : 'Auswärtsspiel'} ·{' '}
+              {istDoppel
+                ? `${spiele.length} Doppel: ${spiele
+                    .map((s) => `${DISZIPLIN_KURZ[s.disziplin]} Race to ${s.ziel}`)
+                    .join(' · ')}`
+                : `14.1 ${liga.ziele.punkte141} Punkte / ${liga.ziele.aufnahmen141} Aufnahmen · 8-Ball ${liga.ziele['8-ball']} · 9-Ball ${liga.ziele['9-ball']} · 10-Ball ${liga.ziele['10-ball']} Gewinnsätze`}
+            </p>
+            {(tvWahl || tvAus) && (
+              // Was die Fernseher zeigen, fuer alle Begegnungen; nach dem Abschluss
+              // der letzten Begegnung stellt CueDesk selbst auf das Ergebnis um
+              <div className="zeile">
+                {tvWahl && (
+                  <>
+                    <span className="hinweis">TV zeigt:</span>
+                    <span className="umschalter">
+                      {(
+                        [
+                          ['live', 'Live-Tische'],
+                          ['spieltag', 'Spieltag-Ergebnis']
+                        ] as const
+                      ).map(([wert, name]) => (
+                        <button
+                          key={wert}
+                          type="button"
+                          className={(einstellungen.tvAnsicht === 'spieltag' ? 'spieltag' : 'live') === wert ? 'aktiv' : ''}
+                          title={`Legt fest, was die TV-Anzeige zeigt: ${name}`}
+                          onClick={() => void spieltagSetzen({ tvAnsicht: wert })}
+                        >
+                          {name}
+                        </button>
+                      ))}
+                    </span>
+                  </>
+                )}
+                {tvAus && <TvHerunterfahren vereinId={turnier.verein_id} />}
+              </div>
+            )}
+          </div>
+          <div className="kopfrechts">
+          {bearbeitbar && turnier.status !== 'beendet' && (
+            <LiveSchalter an={einstellungen.live !== false} schalten={(an) => void spieltagSetzen({ live: an })} />
+          )}
+          {bearbeitbar && turnier.status !== 'beendet' && vereinsEinstellungen(verein?.einstellungen).chat && (
+            <ChatSchalter
+              an={einstellungen.chat === true}
+              gesperrt={einstellungen.live === false}
+              schalten={(an) => void spieltagSetzen({ chat: an })}
+            />
+          )}
+          {bearbeitbar && turnier.status !== 'beendet' && liga && (
+            // Der Link haengt an der 1. Begegnung und zeigt den ganzen Spieltag
+            <OeffentlicherLink
+              turnierId={(liga.art === 'doppel' ? liga.haupt : (liga.begegnung ?? 1) === 1 ? turnier.id : liga.partner) ?? turnier.id}
+              vereinId={turnier.verein_id}
+              turnierDatum={turnier.datum}
+            />
+          )}
+          </div>
+        </div>
+        {fehler && <p className="fehler">{fehler}</p>}
+        {meldung && <p className="meldung">{meldung}</p>}
+      </section>
+
+      <section className="block">
+            {istDoppel && (
+              <p className="hinweis">
+                Doppel zählen nicht {mitRating ? 'fürs Rating und nicht ' : ''}in die Bilanz der Mannschaft. Partie- und
+                Matchpunkte stehen nur hier.
+              </p>
+            )}
+            {mitRating && !turnier.rating_werten && !istDoppel && (
+              <p className="hinweis">
+                Keine Partie dieses Spieltags zählt fürs Rating. Mit „Fürs Rating werten“ zählen die Partien, die rechts
+                angehakt sind.
+              </p>
+            )}
         <div className="kennzahlen">
           <div title="Gewonnene Partien je Mannschaft, Heim zuerst">
             <span>Partiepunkte</span>
@@ -1834,8 +1859,6 @@ export default function LigaAnsicht({
             <strong>Kader:</strong> {hinweiseKader.join(' ')}
           </div>
         )}
-        {fehler && <p className="fehler">{fehler}</p>}
-        {meldung && <p className="meldung">{meldung}</p>}
       </section>
 
       {reihen.map((r) => (

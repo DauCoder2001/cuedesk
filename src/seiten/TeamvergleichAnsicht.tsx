@@ -719,13 +719,20 @@ export default function TeamvergleichAnsicht({
 
   return (
     <div className="einspaltig">
-      <section className="block">
+      {/* Fester Kopf wie im Turnier: Name, Stand und Knoepfe, darunter links Infozeile und
+          TV-Auswahl, rechts Live, Chat und der oeffentliche Link; bleibt beim Scrollen oben */}
+      <section className="block festerkopf">
         <button type="button" title={`Zurück zur Seite „${zurueckText}“`} className="zurueck" onClick={zurueck}>
           ← {zurueckText}
         </button>
-        <div className="bearbeitenkopf">
+        <div className="bearbeitenkopf kopf-umbruch">
           <h2>
-            {turnier.name} <span className="marke">{STATUS_TEXT[turnier.status]}</span>
+            {turnier.name}{' '}
+            {turnier.status === 'beendet' ? (
+              <span className="meldung kopfstatus">Teamvergleich abgeschlossen.</span>
+            ) : (
+              <span className={`marke ${turnier.status === 'laeuft' ? 'livelaeuft' : ''}`}>{STATUS_TEXT[turnier.status]}</span>
+            )}
           </h2>
           {darfLeiten && laeuftJetzt && (
             <div className="knopfpaar">
@@ -766,20 +773,9 @@ export default function TeamvergleichAnsicht({
               </span>
             </div>
           )}
-          {darfLeiten && turnier.status !== 'beendet' && (
-            <div className="kopfrechts">
-              <LiveSchalter an={einstellungen.live !== false} schalten={(an) => void einstellungenSetzen({ live: an })} />
-              {vereinsEinstellungen(verein?.einstellungen).chat && (
-                <ChatSchalter
-                  an={einstellungen.chat === true}
-                  gesperrt={einstellungen.live === false}
-                  schalten={(an) => void einstellungenSetzen({ chat: an })}
-                />
-              )}
-              <OeffentlicherLink turnierId={turnier.id} vereinId={turnier.verein_id} turnierDatum={turnier.datum} />
-            </div>
-          )}
         </div>
+        <div className="kopfunten">
+          <div>
         <p className="hinweis">
           {datumLang(turnier.datum)} · {DISZIPLIN_TEXT[turnier.disziplin]} · Teamvergleich · Sieg bei {tv.ziel} Punkten · Race to{' '}
           {tv.race.team}/{tv.race.doppel}/{tv.race.einzel} (Team-Match/Doppel/Einzel)
@@ -813,6 +809,21 @@ export default function TeamvergleichAnsicht({
             {turnier.status === 'beendet' && <TvHerunterfahren vereinId={turnier.verein_id} />}
           </div>
         )}
+          </div>
+          {darfLeiten && turnier.status !== 'beendet' && (
+            <div className="kopfrechts">
+              <LiveSchalter an={einstellungen.live !== false} schalten={(an) => void einstellungenSetzen({ live: an })} />
+              {vereinsEinstellungen(verein?.einstellungen).chat && (
+                <ChatSchalter
+                  an={einstellungen.chat === true}
+                  gesperrt={einstellungen.live === false}
+                  schalten={(an) => void einstellungenSetzen({ chat: an })}
+                />
+              )}
+              <OeffentlicherLink turnierId={turnier.id} vereinId={turnier.verein_id} turnierDatum={turnier.datum} />
+            </div>
+          )}
+        </div>
         {fehler && <p className="fehler">{fehler}</p>}
         {meldung && <p className="meldung">{meldung}</p>}
       </section>

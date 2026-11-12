@@ -1,5 +1,11 @@
 # Änderungen an CueDesk
 
+## 0.12.0 – 12.11.2026
+
+- Teamvergleich und Liga-Spieltag haben jetzt denselben festen Kopf wie das Turnier: Name, Stand und Knöpfe, Infozeile und **TV zeigt** bleiben beim Scrollen oben stehen, **Live an/aus**, Chat-Schalter und **Öffentlicher Link…** stehen rechts daneben.
+- Liga-Spieltag: Die Knöpfe stehen als Reihe neben dem Titel, die Lösch-Knöpfe abgesetzt am Ende. Die TV-Auswahl heißt **TV zeigt:** mit **Live-Tische** und **Spieltag-Ergebnis**. Auch der Umschalter der Begegnungen bleibt oben stehen.
+- Stand im Kopf: „läuft“ ist im Teamvergleich grün wie im Turnier; nach dem Abschließen steht grün „Teamvergleich abgeschlossen.“ bzw. „Begegnung abgeschlossen.“ statt „beendet“.
+
 ## 0.11.3 – 12.11.2026
 
 - Turnierkopf: mehr Abstand zwischen der Zeile „1 von 36 Partien …“ und **TV zeigt**.

@@ -189,7 +189,7 @@ ul.schlicht { list-style: none; padding: 0; margin: 0; display: flex; flex-direc
 .konto .knopfname { border: none; background: none; padding: 3px 6px; color: var(--text-leise); font-size: 14px; }
 .konto .knopfname:hover:not(:disabled) { background: var(--flaeche-2); color: var(--text); }
 .konto .knopfname.aktiv { background: var(--akzent-hell); color: var(--akzent); }
-/* Rechte Seite im Kopf von Turnier und Liga-Spieltag: Knoepfe, darunter "Live an/aus" */
+/* Rechte Seite im festen Kopf von Turnier, Teamvergleich und Liga-Spieltag: Live, Chat, oeffentlicher Link */
 .kopfrechts { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
 /* Hilfe-Knopf "?" in der Kopfzeile und auf der Zuschauerseite */
 .hilfeknopf { width: 30px; height: 30px; padding: 0; border-radius: 50%; font-weight: 700; font-size: 15px; line-height: 1; }
@@ -340,18 +340,14 @@ h1.seitentitel { margin: 0 0 -4px; }
 .knopfpaar { display: flex; gap: 6px; }
 /* Auswahlfeld neben Knoepfen, z.B. die Saison: nicht zusammenschrumpfen */
 .knopfpaar .feld { min-width: 110px; }
-/* Aktionen im Kopf einer Begegnung: etwas kleiner und in zwei Reihen, damit keine Beschriftung umbricht */
+/* Aktionen im Kopf einer Begegnung: etwas kleiner, als Reihe rechts neben dem Titel; bei wenig Platz bricht die Reihe um */
 /* Wird es zu eng, rutschen die Aktionen unter den Titel statt ueber den Rand */
 .bearbeitenkopf.kopf-umbruch { flex-wrap: wrap; align-items: flex-start; }
 .bearbeitenkopf.kopf-umbruch > div:first-child { flex: 1 1 320px; min-width: 0; }
-.knopfpaar.kopfaktionen { display: grid; grid-template-columns: repeat(3, auto); align-items: center; flex-shrink: 0; }
+.knopfpaar.kopfaktionen { flex-wrap: wrap; justify-content: flex-end; align-items: center; }
 .kopfaktionen button { font-size: 14px; padding: 5px 10px; white-space: nowrap; }
-.bearbeitenkopf .kopfaktionen .marke { margin-left: 0; font-size: 13px; white-space: nowrap; justify-self: center; }
-/* Loeschknoepfe abgesetzt hinter einer gestrichelten Linie, damit sie nicht neben dem naechsten Schritt stehen;
-   rechts im Kopf als eigene Zeile ganz unten */
+/* Loeschknoepfe abgesetzt hinter einer gestrichelten Linie, damit sie nicht neben dem naechsten Schritt stehen */
 .loeschgruppe { display: flex; gap: 6px; align-items: center; margin-left: 10px; padding-left: 16px; border-left: 1px dashed #e7bcbc; }
-.kopfrechts .loeschgruppe { margin-left: 0; padding: 8px 0 0; border-left: 0; border-top: 1px dashed #e7bcbc; }
-.kopfrechts .loeschgruppe button { font-size: 14px; padding: 5px 10px; white-space: nowrap; }
 
 .einspaltig {
   background: var(--flaeche); border: 1px solid var(--rand); border-radius: 0 0 12px 12px;
@@ -402,6 +398,8 @@ h1.seitentitel { margin: 0 0 -4px; }
 .kopfunten { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 6px 16px; }
 .kopfunten > div:first-child { flex: 1 1 320px; min-width: 0; }
 .kopfunten > div:first-child > .zeile { margin-top: 14px; }
+/* Liga-Spieltag: die Begegnungen stehen als erste Zeile direkt unter dem Titel */
+.kopfunten > div:first-child > .zeile:first-child { margin-top: 6px; }
 .kopfstatus { font-weight: 400; margin-left: 6px; }
 .spielfortschritt { display: flex; height: 10px; max-width: 520px; margin: 2px 0; overflow: hidden; background: var(--grund); border: 1px solid var(--rand); border-radius: 5px; }
 /* Im Turnierkopf: Balken genau so breit wie die Zaehlerzeile, beides dicht beieinander */
