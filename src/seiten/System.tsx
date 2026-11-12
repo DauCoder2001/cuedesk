@@ -19,6 +19,7 @@ import { STANDARD_EINSTELLUNGEN } from '../rating';
 import { Modal } from '../modal';
 import Altdaten from './Altdaten';
 import ExcelSerie from './ExcelSerie';
+import GaesteBereinigen from './GaesteBereinigen';
 
 // Seite "System": Einstellungen des Vereins, nur fuer den Vereins-Administrator.
 // Verein (Name, Kuerzel, Logo), Vorgaben fuer neue Turniere und Liga-Spieltage,
@@ -810,6 +811,8 @@ export default function System() {
 
       {einlesen === 'daten' && <Altdaten schliessen={() => setEinlesen(null)} />}
       {einlesen === 'excel' && <ExcelSerie vereinId={verein.id} schliessen={() => setEinlesen(null)} />}
+
+      <GaesteBereinigen vereinId={verein.id} />
 
       <section className="block">
         <h2>Verträge</h2>

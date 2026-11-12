@@ -45,6 +45,16 @@ Der **Rating-Startwert** hilft bei neuen Spielern, die schon gut spielen; sonst 
 - **Spieler löschen** entfernt einen Spieler ganz. Hat er schon Partien, bleibt er erhalten und wird auf **Ausgetreten** gesetzt.
 - **Anonymisieren** (nur Vereins-Administrator) ersetzt den Namen durch „Ehemaliger Spieler …“ und löscht die persönlichen Angaben. Die Ergebnisse bleiben, damit Tabellen und Rating stimmen. Das lässt sich nicht rückgängig machen.
 
+## Gäste bereinigen
+
+Jeder eingelesene Mannschaftspass eines Gegners legt dessen Spieler als Gäste an, auch die, die am Spieltag gar nicht aufgestellt werden. Damit die Gästeliste nicht immer länger wird, räumt der Vereins-Administrator unter **System → Gäste bereinigen** auf:
+
+1. Den Zeitraum wählen (**Angelegt von** … **bis**). Vorgabe ist das letzte Jahr bis heute vor 14 Tagen, damit frisch angelegte Gäste nicht dabei sind.
+2. **Gäste suchen** zeigt alle Gäste aus diesem Zeitraum, die nie gespielt haben, mit Anlegedatum und Herkunft (der Spieltag, für den sie eingelesen wurden).
+3. Wer bleiben soll, bekommt den Haken weg. **… Gäste entfernen…** fragt nach dem Schutzwort und löscht die angehakten endgültig.
+
+Nie in der Liste stehen Gäste mit einer Partie oder Turnierteilnahme, Gäste im Gegner-Kader eines Spieltags, der noch nicht abgeschlossen ist, und Gäste, die angemeldet sind, in einem Mannschaftskader stehen oder ein Konto haben; wie viele deshalb bleiben, steht über der Liste. Ergebnisse gehen also nie verloren. Kommt derselbe Gegner wieder, legt **Aus Pass…** die entfernten Spieler neu an.
+
 ## Gut zu wissen
 
 - Jede Änderung steht im Änderungsprotokoll (wer, wann, was), zwei Jahre lang.

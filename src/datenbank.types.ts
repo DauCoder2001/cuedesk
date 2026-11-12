@@ -519,6 +519,8 @@ export type Database = {
       konsole_datenbank: { Args: Record<string, never>; Returns: KonsoleDatenbank };
       verein_export: { Args: { p_verein: string }; Returns: Record<string, unknown> };
       personen_zusammenfuehren: { Args: { p_behalten: string; p_weg: string }; Returns: { turniere: number; partien: number } };
+      gaeste_ohne_spiel: { Args: { p_verein: string; p_von: string; p_bis: string }; Returns: Record<string, unknown> };
+      gaeste_bereinigen: { Args: { p_verein: string; p_ids: string[] }; Returns: number };
       verein_loeschen_vormerken: { Args: { p_verein: string }; Returns: string };
       verein_loeschen_abbrechen: { Args: { p_verein: string }; Returns: undefined };
       verein_sofort_loeschen: { Args: { p_verein: string; p_name: string }; Returns: undefined };

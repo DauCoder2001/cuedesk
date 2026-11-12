@@ -50,6 +50,7 @@ const AKTION_TEXT: Record<string, string> = {
   support_beendet: 'Support-Zugang beendet',
   verein_exportiert: 'Daten exportiert',
   spieler_zusammengefuehrt: 'Spieler zusammengeführt',
+  gaeste_bereinigt: 'Gäste bereinigt',
   loeschung_vorgemerkt: 'Löschung vorgemerkt',
   loeschung_abgebrochen: 'Löschung abgebrochen',
   verein_geloescht: 'Verein gelöscht',

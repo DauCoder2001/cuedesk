@@ -1,5 +1,11 @@
 # Änderungen an CueDesk
 
+## 0.14.0 – 12.11.2026
+
+- Neu unter **System**: **Gäste bereinigen**. Der Vereins-Administrator sucht Gäste ohne Spiel aus einem Zeitraum (Anlegedatum), hakt ab, wer bleiben soll, und entfernt den Rest mit dem Schutzwort. So wächst die Gästeliste durch eingelesene Mannschaftspässe nicht immer weiter.
+- Gäste mit Partien oder Turnierteilnahme, Gäste eines noch nicht abgeschlossenen Spieltags sowie angemeldete, im Kader stehende oder mit einem Konto verknüpfte Gäste bleiben immer.
+- Braucht eine Datenbank-Migration (neue Funktionen `gaeste_ohne_spiel` und `gaeste_bereinigen`).
+
 ## 0.13.1 – 12.11.2026
 
 - Behoben: Ein Doppelklick auf **Anlegen** im Formular „Neues Turnier“ konnte das Turnier und die Gäste aus dem Mannschaftspass des Gegners doppelt anlegen. Der Knopf ist jetzt während des Speicherns gesperrt und zeigt „Wird angelegt …“.
