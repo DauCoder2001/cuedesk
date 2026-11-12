@@ -1,5 +1,9 @@
 # Änderungen an CueDesk
 
+## 0.11.1 – 12.11.2026
+
+- Turnierkopf: Worauf die Zeitschätzung beruht („36 Partien, 3 Tische, 35 Min. je Partie bei Race to 3“), steht jetzt als Tooltip auf der Schätzung statt als eigene Zeile im Block darunter.
+
 ## 0.11.0 – 12.11.2026
 
 - Ein pausiertes Turnier zeigt hinter dem Stand „läuft“ den Zusatz „(pausiert)“, im Turnierkopf und in der Turnierliste.

@@ -2737,7 +2737,6 @@ export default function TurnierAnsicht({
       (disziplinOffen && turnier.status === 'geplant') ||
       (mitRating && !turnier.rating_werten) ||
       (va.aktiv && turnier.quelle !== 'import' && hinweisKurzesRace) ||
-      (zeitStand && prognoseZusatz(zeitStand)) ||
       (bearbeitbar && turnier.quelle !== 'import' && turnier.status !== 'beendet') ||
       (einstellungen.pausiert && turnier.status === 'laeuft')
   );
@@ -2852,7 +2851,8 @@ export default function TurnierAnsicht({
                 : ` · Race to ${raceTo}`)}
           {va.aktiv && ` · Vorgabe ${va.staerke} %${va.obergrenze > 0 ? `, höchstens ${va.obergrenze}` : ''}`}
           </span>
-          {zeitStand && prognoseText(zeitStand) && <span>{prognoseText(zeitStand)}</span>}
+          {/* Worauf die Schaetzung beruht, steht im Tooltip */}
+          {zeitStand && prognoseText(zeitStand) && <span title={prognoseZusatz(zeitStand) || undefined}>{prognoseText(zeitStand)}</span>}
         </p>
         {/* Balken so breit wie die Zaehlerzeile darunter */}
         {turnier.quelle !== 'import' && turnier.status === 'laeuft' && partien.length > 0 && (
@@ -2982,7 +2982,6 @@ export default function TurnierAnsicht({
             {va.aktiv && turnier.quelle !== 'import' && hinweisKurzesRace && (
               <p className="hinweis">{hinweisKurzesRace}</p>
             )}
-            {zeitStand && prognoseZusatz(zeitStand) && <p className="hinweis">{prognoseZusatz(zeitStand)}</p>}
           </div>
           <div className="kopfrechts">
           {bearbeitbar && turnier.quelle !== 'import' && turnier.status !== 'beendet' && (
