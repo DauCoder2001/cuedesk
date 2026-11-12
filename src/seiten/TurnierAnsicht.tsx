@@ -2730,14 +2730,13 @@ export default function TurnierAnsicht({
         .slice(0, 8)
     : [];
 
-  // Block unter dem festen Kopf: Turnierart, seltene Hinweise, Live/Chat/Link
+  // Block unter dem festen Kopf: Turnierart, seltene Hinweise, Pausenhinweis
   const kopfRest = Boolean(
     (darfLeiten && turnierarten.length > 0) ||
       einstellungen.art ||
       (disziplinOffen && turnier.status === 'geplant') ||
       (mitRating && !turnier.rating_werten) ||
       (va.aktiv && turnier.quelle !== 'import' && hinweisKurzesRace) ||
-      (bearbeitbar && turnier.quelle !== 'import' && turnier.status !== 'beendet') ||
       (einstellungen.pausiert && turnier.status === 'laeuft')
   );
 
@@ -2830,7 +2829,10 @@ export default function TurnierAnsicht({
             )}
           </div>
         </div>
-        {/* Fest im Kopf: Spielweise mit Zeitangabe, Fortschritt und die TV-Auswahl */}
+        {/* Fest im Kopf: links Spielweise mit Zeitangabe, Fortschritt und die TV-Auswahl,
+            rechts Live, Chat und der oeffentliche Link */}
+        <div className="kopfunten">
+          <div>
         <p className="hinweis kopfinfo">
           <span>
           {new Date(`${turnier.datum}T12:00:00`).toLocaleDateString('de-DE', {
@@ -2917,6 +2919,23 @@ export default function TurnierAnsicht({
             {turnier.status === 'beendet' && <TvHerunterfahren vereinId={turnier.verein_id} />}
           </div>
         )}
+          </div>
+          <div className="kopfrechts">
+          {bearbeitbar && turnier.quelle !== 'import' && turnier.status !== 'beendet' && (
+            <LiveSchalter an={einstellungen.live !== false} schalten={(an) => void einstellungenSetzen({ live: an })} />
+          )}
+          {bearbeitbar && turnier.quelle !== 'import' && turnier.status !== 'beendet' && vereinsEinstellungen(verein?.einstellungen).chat && (
+            <ChatSchalter
+              an={einstellungen.chat === true}
+              gesperrt={einstellungen.live === false}
+              schalten={(an) => void einstellungenSetzen({ chat: an })}
+            />
+          )}
+          {bearbeitbar && turnier.quelle !== 'import' && turnier.status !== 'beendet' && (
+            <OeffentlicherLink turnierId={turnier.id} vereinId={turnier.verein_id} turnierDatum={turnier.datum} />
+          )}
+          </div>
+        </div>
         <div ref={setMeldungsZiel} />
         {fehler && <p className="fehler">{fehler}</p>}
         {meldung && <p className="meldung">{meldung}</p>}
@@ -2982,21 +3001,6 @@ export default function TurnierAnsicht({
             {va.aktiv && turnier.quelle !== 'import' && hinweisKurzesRace && (
               <p className="hinweis">{hinweisKurzesRace}</p>
             )}
-          </div>
-          <div className="kopfrechts">
-          {bearbeitbar && turnier.quelle !== 'import' && turnier.status !== 'beendet' && (
-            <LiveSchalter an={einstellungen.live !== false} schalten={(an) => void einstellungenSetzen({ live: an })} />
-          )}
-          {bearbeitbar && turnier.quelle !== 'import' && turnier.status !== 'beendet' && vereinsEinstellungen(verein?.einstellungen).chat && (
-            <ChatSchalter
-              an={einstellungen.chat === true}
-              gesperrt={einstellungen.live === false}
-              schalten={(an) => void einstellungenSetzen({ chat: an })}
-            />
-          )}
-          {bearbeitbar && turnier.quelle !== 'import' && turnier.status !== 'beendet' && (
-            <OeffentlicherLink turnierId={turnier.id} vereinId={turnier.verein_id} turnierDatum={turnier.datum} />
-          )}
           </div>
         </div>
         {einstellungen.pausiert && turnier.status === 'laeuft' && (

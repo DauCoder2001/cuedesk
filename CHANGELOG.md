@@ -1,5 +1,9 @@
 # Änderungen an CueDesk
 
+## 0.11.2 – 12.11.2026
+
+- Turnierkopf: **Live an/aus**, der Chat-Schalter und **Öffentlicher Link…** stehen jetzt rechts im festen Kopf. Der Block darunter entfällt, wenn er sonst nichts enthält, Teilnehmer und Spielplan rücken nach oben.
+
 ## 0.11.1 – 12.11.2026
 
 - Turnierkopf: Worauf die Zeitschätzung beruht („36 Partien, 3 Tische, 35 Min. je Partie bei Race to 3“), steht jetzt als Tooltip auf der Schätzung statt als eigene Zeile im Block darunter.
