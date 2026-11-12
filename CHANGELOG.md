@@ -1,5 +1,11 @@
 # Änderungen an CueDesk
 
+## 0.14.1 – 12.11.2026
+
+- Behoben: **Doppelten Eintrag übernehmen** (Spieler zusammenführen) stellt jetzt auch die Verweise in den Turnier-Einstellungen um: Setzliste beim Doppel-KO, Reihungen und Setzliste bei Gruppen mit KO-Runde, Reihung der Platzierungsduelle, Gegner-Kader beim Liga-Spieltag und Kapitäne beim Teamvergleich. Vorher zeigten sie danach auf den gelöschten Eintrag.
+- Hilfe: Das Thema „Spieler, Einwilligungen und Datenschutz“ beschreibt jetzt **Doppelten Eintrag übernehmen**.
+- Braucht eine Datenbank-Migration (Funktion `personen_zusammenfuehren` ersetzt).
+
 ## 0.14.0 – 12.11.2026
 
 - Neu unter **System**: **Gäste bereinigen**. Der Vereins-Administrator sucht Gäste ohne Spiel aus einem Zeitraum (Anlegedatum), hakt ab, wer bleiben soll, und entfernt den Rest mit dem Schutzwort. So wächst die Gästeliste durch eingelesene Mannschaftspässe nicht immer weiter.

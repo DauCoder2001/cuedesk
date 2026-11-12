@@ -45,6 +45,18 @@ Der **Rating-Startwert** hilft bei neuen Spielern, die schon gut spielen; sonst 
 - **Spieler löschen** entfernt einen Spieler ganz. Hat er schon Partien, bleibt er erhalten und wird auf **Ausgetreten** gesetzt.
 - **Anonymisieren** (nur Vereins-Administrator) ersetzt den Namen durch „Ehemaliger Spieler …“ und löscht die persönlichen Angaben. Die Ergebnisse bleiben, damit Tabellen und Rating stimmen. Das lässt sich nicht rückgängig machen.
 
+## Doppelten Eintrag übernehmen
+
+Steht derselbe Spieler zweimal in der Liste, zum Beispiel nach einem Import unter anderem Namen oder als doppelt angelegter Gast, führt der Vereins-Administrator beide Einträge zusammen:
+
+1. Unter **Spieler** den Eintrag öffnen, der bleiben soll.
+2. Im Kasten **Doppelten Eintrag übernehmen** den doppelten Eintrag wählen. Darunter steht, was übernommen wird: Turniere, Partien, Kader, Einwilligungen und eine Konto-Verknüpfung.
+3. **Zusammenführen** fragt nach dem Schutzwort. Danach gehört alles zum bleibenden Eintrag, der doppelte ist gelöscht. Das lässt sich nicht rückgängig machen.
+
+Mit umgestellt werden auch die Turniere selbst: Setzlisten, Reihungen, der Gegner-Kader eines Liga-Spieltags und die Kapitäne eines Teamvergleichs zeigen danach auf den bleibenden Eintrag. Vertrauliche Angaben des bleibenden Eintrags gelten weiter, leere Felder werden aus dem doppelten ergänzt. Den Rating-Stand danach unter **Rating** mit **Jetzt neu berechnen** auffrischen.
+
+Abgelehnt wird das Zusammenführen, wenn beide Einträge im selben Turnier oder in derselben Partie stehen (sonst spielte jemand gegen sich selbst) oder beide mit einem Konto verknüpft sind. Dann zuerst im Turnier einen der beiden ersetzen bzw. unter **Konten und Rollen** eine Verknüpfung lösen.
+
 ## Gäste bereinigen
 
 Jeder eingelesene Mannschaftspass eines Gegners legt dessen Spieler als Gäste an, auch die, die am Spieltag gar nicht aufgestellt werden. Damit die Gästeliste nicht immer länger wird, räumt der Vereins-Administrator unter **System → Gäste bereinigen** auf:
