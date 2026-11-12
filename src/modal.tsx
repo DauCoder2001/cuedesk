@@ -17,11 +17,13 @@ import type { ReactNode, Ref } from 'react';
 export function Modal({
   abbrechen,
   breit,
+  weit,
   bereich,
   children
 }: {
   abbrechen: () => void;
   breit?: boolean;
+  weit?: boolean; // fast ueber die ganze Seite, z. B. der Turnierbaum
   bereich?: Ref<HTMLDivElement>; // z. B. usePflicht().bereich
   children: ReactNode;
 }) {
@@ -43,7 +45,7 @@ export function Modal({
   return (
     <dialog
       ref={ref}
-      className={breit ? 'modal breit' : 'modal'}
+      className={weit ? 'modal breit weit' : breit ? 'modal breit' : 'modal'}
       onCancel={(e) => {
         // Escape: Der Aufrufer schliesst ueber seinen Zustand
         e.preventDefault();

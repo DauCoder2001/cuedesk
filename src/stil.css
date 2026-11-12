@@ -662,6 +662,7 @@ tr.gestrichen td.disziplin { text-decoration: line-through; }
    unsichtbar und bestimmt nur die Breite, das Aussehen kommt vom inneren .dialog */
 .modal { padding: 0; border: none; background: transparent; width: calc(100% - 32px); max-width: 520px; max-height: none; overflow: visible; color: inherit; }
 .modal.breit { max-width: 820px; }
+.modal.breit.weit { max-width: 1320px; }
 .modal::backdrop { background: rgba(0, 0, 0, 0.35); }
 .dialog { background: var(--flaeche); border-radius: 12px; padding: 18px; width: 100%; max-height: 80vh; overflow: auto; display: flex; flex-direction: column; gap: 12px; }
 .modal.breit > .dialog { max-height: 86vh; }
@@ -755,3 +756,26 @@ button.aktivmarke { color: var(--gut); border-color: var(--gut); }
 .gegnerpass { flex-basis: 100%; }
 .felder > .gegnerpass { grid-column: 1 / -1; }
 .feld > .zeile { flex-wrap: nowrap; }
+
+/* Fenster "Turnierbaum" in der Turnieransicht: wie die TV-Seite, nur hell */
+.baum { display: flex; gap: 18px; align-items: stretch; }
+.baumzonen { flex: 2; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+.baumendrunde { flex: 1; min-width: 0; display: flex; align-items: center; }
+.baumzone { flex: 1; min-width: 0; }
+.baumzone h3 { margin: 0 0 2px; font-size: 13px; font-weight: 700; color: var(--akzent); }
+.baumzone.v h3 { color: #8a5a00; }
+.baumzone.e h3 { color: var(--gut); }
+.baumspalten { display: flex; gap: 10px; }
+.baumspalte { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: space-around; }
+.baumspalte h4 { margin: 0 0 2px; font-size: 12px; font-weight: 400; color: var(--text-leise); }
+.baumspiel { border: 1px solid var(--rand); border-radius: 6px; padding: 3px 8px; margin: 3px 0; font-size: 14px; background: var(--flaeche); }
+.baumkopf { font-size: 11px; color: var(--text-leise); }
+.baumseite { display: flex; justify-content: space-between; gap: 8px; white-space: nowrap; }
+.baumseite > span:first-child { overflow: hidden; text-overflow: ellipsis; }
+.baumseite.sieg { font-weight: 700; }
+.baumseite.raus { color: var(--text-leise); }
+.baumseite.wartet { color: var(--text-leise); font-size: 12px; }
+.baumseite.frei { color: var(--text-leise); font-style: italic; }
+.baumspiel.live { border-color: #e0a030; box-shadow: inset 4px 0 0 #e0a030; background: #fff8e6; }
+.baumspiel.live .baumkopf { color: #8a5a00; }
+.baumstand { font-size: 14px; font-weight: 400; margin-left: 6px; }

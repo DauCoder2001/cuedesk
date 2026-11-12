@@ -1,5 +1,9 @@
 # Änderungen an CueDesk
 
+## 0.13.0 – 12.11.2026
+
+- Neuer Knopf **Turnierbaum** im Turnierkopf, beim Doppel-KO ab der Auslosung und bei Gruppen mit KO-Runde ab dem Start der KO-Runde: Er öffnet den Turnierbaum als Fenster, so wie ihn der Fernseher zeigt, nur hell. Sieger fett, Ausgeschiedene grau, laufende Spiele gelb mit Tisch und Stand. Nur zum Ansehen; die TV-Anzeige bleibt, wie sie ist.
+
 ## 0.12.0 – 12.11.2026
 
 - Teamvergleich und Liga-Spieltag haben jetzt denselben festen Kopf wie das Turnier: Name, Stand und Knöpfe, Infozeile und **TV zeigt** bleiben beim Scrollen oben stehen, **Live an/aus**, Chat-Schalter und **Öffentlicher Link…** stehen rechts daneben.

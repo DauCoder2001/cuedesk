@@ -88,6 +88,10 @@ import type { TurnierEinstellungen } from './Turniere';
 import type { Partie, Person, RatingQuelle, Turnier, TurnierAnmeldung, TurnierTeilnehmer } from '../datenbank.types';
 import { anmeldeLink, anmeldestand } from '../ausschreibung';
 import { Modal } from '../modal';
+import { turnierbaum } from '../turnierbaum';
+import type { BaumSpiel } from '../turnierbaum';
+import type { EndplatzPartie } from '../endplaetze';
+import { TurnierbaumFenster } from './TurnierbaumFenster';
 import { Pflichthinweis, usePflicht } from '../pflicht';
 import { AbschnittHilfe } from '../abschnitthilfe';
 import { REIHENFOLGE_TEXT, spielFolge } from '../reihenfolge';
@@ -182,6 +186,8 @@ export default function TurnierAnsicht({
   const [personen, setPersonen] = useState<Person[]>([]);
   const [ratings, setRatings] = useState<Map<string, { wert: number; quelle: RatingQuelle }>>(new Map());
   const [tische, setTische] = useState<Map<string, number>>(new Map());
+  // Fenster "Turnierbaum" (Doppel-KO, Gruppen mit KO)
+  const [baumOffen, setBaumOffen] = useState(false);
   // Aktive Tische wie auf der TV-Seite; bei 3 oder 5 gibt es "Live + Nächste"
   const [aktiveTische, setAktiveTische] = useState(0);
   const [fehler, setFehler] = useState<string | null>(null);
@@ -2778,6 +2784,15 @@ export default function TurnierAnsicht({
                 Ändern
               </button>
             )}
+            {((mitKo && koFest) || (dko && dkoFest)) && (
+              <button
+                type="button"
+                title="Zeigt den Turnierbaum: wer woher kommt, Ergebnisse, Sieger und laufende Spiele. Nur zum Ansehen; was der Fernseher zeigt, ändert sich dadurch nicht."
+                onClick={() => setBaumOffen(true)}
+              >
+                Turnierbaum
+              </button>
+            )}
             {bearbeitbar && turnier.status === 'laeuft' && (
               <button type="button" title={einstellungen.pausiert ? 'An den Tablets lassen sich wieder neue Spiele starten.' : 'An den Tablets lässt sich kein neues Spiel starten, laufende Spiele gehen weiter.'} onClick={() => void einstellungenSetzen({ pausiert: !einstellungen.pausiert })}>
                 {einstellungen.pausiert ? 'Fortsetzen' : 'Pausieren'}
@@ -4396,6 +4411,23 @@ export default function TurnierAnsicht({
           </button>
         </Modal>
       )}
+      {baumOffen &&
+        (() => {
+          // Gerechnet wie fuer den Fernseher; der laufende Stand kommt vom Tablet
+          const tischText = (id: string) => {
+            const n = tische.get(id);
+            return n === undefined ? null : String(n);
+          };
+          const baum = turnierbaum(turnier.modus, einstellungen, partien as unknown as EndplatzPartie[], tischText);
+          if (!baum) return null;
+          const live = (s: BaumSpiel) => {
+            const t = s.partieId ? laufendeStaende.get(s.partieId) : undefined;
+            if (!t || !s.a.person || !s.b.person) return null;
+            const stand = laufenderStand(t.zustand, t.aktualisiert, anzeige(s.a.person), anzeige(s.b.person));
+            return stand ? { a: stand.a, b: stand.b, tisch: tischText(t.tischId) } : null;
+          };
+          return <TurnierbaumFenster baum={baum} beendet={turnier.status === 'beendet'} name={anzeige} live={live} schliessen={() => setBaumOffen(false)} />;
+        })()}
       {verlauf && (
         <Modal abbrechen={() => setVerlauf(null)}>
           <h2>
