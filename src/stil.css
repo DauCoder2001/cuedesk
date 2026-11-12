@@ -398,6 +398,10 @@ h1.seitentitel { margin: 0 0 -4px; }
 .festerkopf > .zeile { margin-top: 6px; }
 .kopfstatus { font-weight: 400; margin-left: 6px; }
 .spielfortschritt { display: flex; height: 10px; max-width: 520px; margin: 2px 0; overflow: hidden; background: var(--grund); border: 1px solid var(--rand); border-radius: 5px; }
+/* Im Turnierkopf: Balken genau so breit wie die Zaehlerzeile, beides dicht beieinander */
+.fortschrittblock { display: flex; flex-direction: column; width: fit-content; max-width: 100%; }
+.fortschrittblock .spielfortschritt { max-width: none; margin: 0; }
+.fortschrittblock > p { margin: 1px 0 0; }
 .spielfortschritt .fertig { background: var(--gut); }
 .spielfortschritt .laeuft { background: var(--gut-hell); }
 /* Geschaetzte Dauer vor der Auslosung */

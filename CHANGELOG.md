@@ -1,5 +1,9 @@
 # Änderungen an CueDesk
 
+## 0.10.1 – 12.11.2026
+
+- Turnierkopf: Der Fortschrittsbalken ist nur noch so breit wie die Zeile „10 von 12 Partien …“ darunter, und beide stehen dichter zusammen.
+
 ## 0.10.0 – 12.11.2026
 
 - Turnierkopf: Die Zeile mit Datum, Spielweise und Zeitangabe, der Fortschritt und **TV zeigt** gehören jetzt zum festen Kopf und bleiben beim Scrollen oben. Spielweise und Zeitangabe stehen nebeneinander in einer Zeile.

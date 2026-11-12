@@ -2849,7 +2849,9 @@ export default function TurnierAnsicht({
           </span>
           {zeitStand && prognoseText(zeitStand) && <span>{prognoseText(zeitStand)}</span>}
         </p>
+        {/* Balken so breit wie die Zaehlerzeile darunter */}
         {turnier.quelle !== 'import' && turnier.status === 'laeuft' && partien.length > 0 && (
+          <div className="fortschrittblock">
           <div
             className="spielfortschritt"
             role="progressbar"
@@ -2862,8 +2864,6 @@ export default function TurnierAnsicht({
             <span className="fertig" style={{ width: `${(zaehler.beendet / zaehler.gesamt) * 100}%` }} />
             <span className="laeuft" style={{ width: `${(zaehler.laufen / zaehler.gesamt) * 100}%` }} />
           </div>
-        )}
-        {turnier.quelle !== 'import' && turnier.status === 'laeuft' && partien.length > 0 && (
           <p className="hinweis">
             {spielZaehlerText(zaehler)}
             {nichtBeendet.length > 0 && (
@@ -2875,6 +2875,7 @@ export default function TurnierAnsicht({
               </label>
             )}
           </p>
+          </div>
         )}
         {darfLeiten && turnier.quelle !== 'import' && turnier.status !== 'geplant' && (
           <div className="zeile">
