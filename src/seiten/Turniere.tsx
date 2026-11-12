@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '../supabase';
 import { useSitzung } from '../sitzung';
 import LigaAnsicht, { andereBegegnungAnlegen, doppelBegegnungAnlegen } from './LigaAnsicht';
@@ -195,6 +195,11 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
   // danach die Auswahl, die beim Anlegen zu Gaesten wird
   const [gegnerPass, setGegnerPass] = useState<Mannschaftspass | null>(null);
   const [gegnerAuswahl, setGegnerAuswahl] = useState<GegnerAuswahl | null>(null);
+  // Speichern laeuft: ein zweiter Klick auf "Anlegen" darf nichts ein zweites Mal anlegen
+  // (sonst entstehen z. B. die Gaeste aus dem Pass doppelt). Der Ref sperrt sofort,
+  // der Zustand sperrt den Knopf sichtbar.
+  const speichertRef = useRef(false);
+  const [speichert, setSpeichert] = useState(false);
   // Spaß-Liga: eigene Ausspielziele
   const [ziele, setZiele] = useState({ punkte141: '50', aufnahmen141: '20', '8-ball': '4', '9-ball': '5', '10-ball': '4' });
   // Spaß-Liga: Doppel-Begegnung zwischen 1. und 2. Begegnung
@@ -291,6 +296,18 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
   ]);
 
   async function anlegen() {
+    if (speichertRef.current) return;
+    speichertRef.current = true;
+    setSpeichert(true);
+    try {
+      await anlegenLauf();
+    } finally {
+      speichertRef.current = false;
+      setSpeichert(false);
+    }
+  }
+
+  async function anlegenLauf() {
     if (!verein) return;
     setFehler(null);
     const race = Number(raceTo);
@@ -728,8 +745,9 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
                     className={weichtAb(formularStand, ursprung) && pflicht.vollstaendig && !gegnerPass ? 'faellig' : undefined}
                     title={bearbeitet ? 'Die Änderungen speichern und zurück zum Turnier' : 'Legt das Turnier mit diesen Angaben an.'}
                     onClick={() => void anlegen()}
+                    disabled={speichert}
                   >
-                    {bearbeitet ? 'Speichern' : 'Anlegen'}
+                    {speichert ? (bearbeitet ? 'Wird gespeichert …' : 'Wird angelegt …') : bearbeitet ? 'Speichern' : 'Anlegen'}
                   </button>
                 </div>
               </div>

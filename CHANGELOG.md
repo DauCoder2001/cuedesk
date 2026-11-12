@@ -1,5 +1,10 @@
 # Änderungen an CueDesk
 
+## 0.13.1 – 12.11.2026
+
+- Behoben: Ein Doppelklick auf **Anlegen** im Formular „Neues Turnier“ konnte das Turnier und die Gäste aus dem Mannschaftspass des Gegners doppelt anlegen. Der Knopf ist jetzt während des Speicherns gesperrt und zeigt „Wird angelegt …“.
+- Zusätzliche Sicherung: Direkt vor dem Anlegen eines Gastes aus dem Pass sucht CueDesk noch einmal nach seiner DBU- bzw. Pass-Nummer und nimmt einen inzwischen vorhandenen Gast, statt einen zweiten anzulegen.
+
 ## 0.13.0 – 12.11.2026
 
 - Neuer Knopf **Turnierbaum** im Turnierkopf, beim Doppel-KO ab der Auslosung und bei Gruppen mit KO-Runde ab dem Start der KO-Runde: Er öffnet den Turnierbaum als Fenster, so wie ihn der Fernseher zeigt, nur hell. Sieger fett, Ausgeschiedene grau, laufende Spiele gelb mit Tisch und Stand. Nur zum Ansehen; die TV-Anzeige bleibt, wie sie ist.

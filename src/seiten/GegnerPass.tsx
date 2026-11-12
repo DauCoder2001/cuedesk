@@ -245,6 +245,24 @@ export function GegnerPassAuswahl({
   );
 }
 
+// Gibt es inzwischen einen Gast mit dieser DBU- oder Pass-Nummer (etwa von einem
+// zweiten Geraet angelegt, waehrend die Auswahl offen war)? Liest personen_intern;
+// wer das nicht darf, bekommt null.
+async function gastMitNummer(vereinId: string, s: GegnerSpieler): Promise<string | null> {
+  for (const [spalte, wert] of [
+    ['dbu_nummer', s.dbu_nummer],
+    ['passnummer', s.passnummer]
+  ] as const) {
+    if (!wert) continue;
+    const { data: intern } = await supabase.from('personen_intern').select('person_id').eq('verein_id', vereinId).eq(spalte, wert);
+    const ids = (intern ?? []).map((x) => x.person_id);
+    if (ids.length === 0) continue;
+    const { data: gast } = await supabase.from('personen').select('id').in('id', ids).eq('status', 'gast').order('erstellt_am').limit(1);
+    if (gast?.[0]) return gast[0].id;
+  }
+  return null;
+}
+
 // Gaeste anlegen bzw. vorhandene verwenden; Ergebnis sind die Person-IDs in
 // der Reihenfolge der Auswahl. Die Verbandsnummern landen in personen_intern,
 // soweit die Rolle das darf (Vereins-Admin, Sportwart); sonst wird beim
@@ -257,6 +275,11 @@ export async function gegnerGaesteAnlegen(
   for (const s of spieler) {
     if (s.person_id) {
       ids.push(s.person_id);
+      continue;
+    }
+    const schonDa = await gastMitNummer(vereinId, s);
+    if (schonDa) {
+      ids.push(schonDa);
       continue;
     }
     const { data, error } = await supabase
