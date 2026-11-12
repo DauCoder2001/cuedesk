@@ -2757,7 +2757,12 @@ export default function TurnierAnsicht({
             {turnier.status === 'beendet' ? (
               <span className="meldung kopfstatus">Turnier abgeschlossen.</span>
             ) : (
-              <span className={`marke ${turnier.status === 'laeuft' ? 'livelaeuft' : ''}`}>{STATUS_TEXT[turnier.status]}</span>
+              <>
+                <span className={`marke ${turnier.status === 'laeuft' ? 'livelaeuft' : ''}`}>{STATUS_TEXT[turnier.status]}</span>
+                {turnier.status === 'laeuft' && einstellungen.pausiert && (
+                  <span className="pausiertmarke" title="An den Tablets lässt sich kein neues Spiel starten, bis du auf Fortsetzen klickst.">(pausiert)</span>
+                )}
+              </>
             )}
           </h2>
           <div className="knopfpaar">

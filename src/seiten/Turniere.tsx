@@ -1158,6 +1158,9 @@ export default function Turniere({ hervorheben }: { hervorheben?: string | null 
                   <td>{modusText(t)}</td>
                   <td className={stand.status === 'laeuft' ? 'livelaeuft' : ''}>
                     {stand.teilBeendet ? `${stand.teilBeendet}. Begegnung beendet` : STATUS_TEXT[stand.status]}
+                    {stand.status === 'laeuft' && t.status === 'laeuft' && (t.einstellungen as TurnierEinstellungen | null)?.pausiert && (
+                      <span className="pausiertmarke" title="Das Turnier ist pausiert: An den Tablets lässt sich kein neues Spiel starten.">(pausiert)</span>
+                    )}
                     {stand.status === 'laeuft' && fuerTabletsZuAlt(t.datum) && (
                       <span className="hinweis" title="Die Tablets zeigen nur Turniere von heute und gestern. Ein vergessenes Turnier bitte abschließen.">
                         {' '}

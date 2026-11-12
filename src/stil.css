@@ -396,6 +396,8 @@ h1.seitentitel { margin: 0 0 -4px; }
 /* Turnierkopf (fest): Spielweise und Zeitangabe nebeneinander, bei wenig Platz untereinander */
 .kopfinfo { display: flex; flex-wrap: wrap; column-gap: 28px; row-gap: 2px; margin: 6px 0; }
 .festerkopf > .zeile { margin-top: 6px; }
+/* "(pausiert)" hinter dem Stand "läuft", im Turnierkopf und in der Turnierliste */
+.pausiertmarke { color: var(--text); font-weight: 400; font-size: 14px; margin-left: 6px; }
 .kopfstatus { font-weight: 400; margin-left: 6px; }
 .spielfortschritt { display: flex; height: 10px; max-width: 520px; margin: 2px 0; overflow: hidden; background: var(--grund); border: 1px solid var(--rand); border-radius: 5px; }
 /* Im Turnierkopf: Balken genau so breit wie die Zaehlerzeile, beides dicht beieinander */
