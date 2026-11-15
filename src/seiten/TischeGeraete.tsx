@@ -305,7 +305,7 @@ export default function TischeGeraete() {
               )}
               {agentVon(geraet) && (
                 <div className="geraeteknoepfe-zeile geraeteknoepfe-tv">
-                  <TvHerunterfahren vereinId={verein.id} agenten={agenten.length} />
+                  <TvHerunterfahren vereinId={verein.id} />
                 </div>
               )}
             </div>

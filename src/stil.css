@@ -670,6 +670,8 @@ tr.gestrichen td.disziplin { text-decoration: line-through; }
 .umschalter button { border: none; border-right: 1px solid var(--rand); border-radius: 0; font-size: 13px; padding: 5px 10px; }
 .umschalter button:last-child { border-right: none; }
 .umschalter button.aktiv { background: var(--akzent-hell); color: var(--akzent); }
+/* "TV-Gerät herunterfahren": so gross wie die Umschalter daneben in der Zeile "TV zeigt" */
+button.tvaus { font-size: 13px; padding: 5px 10px; }
 .pausehinweis { background: #faeeda; border: 1px solid #e8cfa3; color: #633806; border-radius: var(--radius); padding: 8px 12px; font-size: 14px; }
 
 /* Zuschauerseite fuers Handy (Zuschauen.tsx): eine Spalte, grosse Schrift */

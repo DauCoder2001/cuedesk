@@ -19,6 +19,26 @@ export function agentErreichbar(zuletztGemeldet: string | null, jetzt = Date.now
   return zuletztGemeldet !== null && jetzt - Date.parse(zuletztGemeldet) < AGENT_FRIST_MS;
 }
 
+export type TvAgent = { name: string; zuletzt_gemeldet: string | null };
+
+// "am 08.11.2026 um 14:54 Uhr" (deutsche Zeit)
+function meldezeit(iso: string): string {
+  const d = new Date(iso);
+  const tag = d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Europe/Berlin' });
+  const uhr = d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Berlin' });
+  return `am ${tag} um ${uhr} Uhr`;
+}
+
+// Tooltip des grauen Knopfs "TV-Gerät herunterfahren", wenn kein Agent erreichbar ist
+export function nichtErreichbarText(agenten: TvAgent[]): string {
+  const zuletzt = (a: TvAgent) => (a.zuletzt_gemeldet ? `zuletzt ${meldezeit(a.zuletzt_gemeldet)}` : 'noch nie');
+  const teile =
+    agenten.length === 1
+      ? `Der Agent von „${agenten[0].name}“ hat sich ${zuletzt(agenten[0])} gemeldet.`
+      : `Die Agenten haben sich seit über 2 Minuten nicht gemeldet: ${agenten.map((a) => `„${a.name}“ ${zuletzt(a)}`).join(', ')}.`;
+  return `Kein TV-Gerät erreichbar: ${teile} Ist das Gerät an?`;
+}
+
 // laeuftNoch: z. B. "Das Turnier läuft noch." - dann warnt die Rueckfrage zusaetzlich
 export function herunterfahrenFrage(anzahl: number, laeuftNoch?: string): string {
   const frage =

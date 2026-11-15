@@ -1,5 +1,10 @@
 # Änderungen an CueDesk
 
+## 0.16.2 – 15.11.2026
+
+- **TV-Gerät herunterfahren** ist jetzt auch ausgegraut, wenn sich kein Agent in den letzten 2 Minuten gemeldet hat (Fernseher aus). Der Tooltip nennt, wann sich der Agent zuletzt gemeldet hat; CueDesk sieht jede Minute neu nach.
+- Der Knopf ist so groß wie die Umschalter daneben in der Zeile **TV zeigt**.
+
 ## 0.16.1 – 15.11.2026
 
 - **TV-Gerät herunterfahren** verschwindet nicht mehr, wenn kein TV-Gerät mit Agent eingerichtet ist, sondern ist ausgegraut. Der Tooltip erklärt, wie man den Agenten einrichtet.

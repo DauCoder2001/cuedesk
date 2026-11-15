@@ -45,7 +45,7 @@ Hat der Fernseher ein Gerät wie einen Raspberry Pi, lässt es sich aus CueDesk 
 2. In der Geräteliste steht danach **Agent verbunden**. Meldet sich der Agent zwei Minuten lang nicht, steht dort **Agent nicht erreichbar**.
 3. **TV-Gerät herunterfahren** steht in der Geräteliste und bei Turnier, Teamvergleich und Liga-Spieltag in der Zeile **TV zeigt:**, auch während noch gespielt wird. Dann warnt die Rückfrage zusätzlich, dass das Turnier noch läuft. Beim Liga-Spieltag mit nur einer Begegnung erscheint er erst nach dem Abschluss. Den Knopf sehen Vereins-Administratoren und Turnierleiter.
 
-Nach der Rückfrage fährt das Gerät innerhalb von 30 Sekunden herunter. Der Befehl gilt für alle Fernseher des Vereins mit Agent. Wieder an geht das Gerät erst, wenn der Strom kurz getrennt wird. Ist im Verein kein TV-Gerät mit Agent eingerichtet, ist der Knopf ausgegraut; der Tooltip (Maus darüber halten) sagt, wie man einen einrichtet.
+Nach der Rückfrage fährt das Gerät innerhalb von 30 Sekunden herunter. Der Befehl gilt für alle Fernseher des Vereins mit Agent. Wieder an geht das Gerät erst, wenn der Strom kurz getrennt wird. Ist im Verein kein TV-Gerät mit Agent eingerichtet, ist der Knopf ausgegraut; der Tooltip (Maus darüber halten) sagt, wie man einen einrichtet. Ausgegraut ist er auch, wenn sich kein Agent in den letzten 2 Minuten gemeldet hat, etwa weil der Fernseher aus ist; der Tooltip nennt dann, wann sich der Agent zuletzt gemeldet hat. CueDesk sieht jede Minute neu nach, der Knopf wird also von selbst wieder klickbar.
 
 ## 4. Im Betrieb
 

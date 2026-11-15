@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { agentErreichbar, andereAmTisch, belegtText, herunterfahrenFrage, herunterfahrenMeldung } from '../src/geraete';
+import { agentErreichbar, andereAmTisch, belegtText, herunterfahrenFrage, herunterfahrenMeldung, nichtErreichbarText } from '../src/geraete';
 
 const g = (id: string, name: string, tisch_id: string | null) => ({ id, name, tisch_id, zuletzt_gesehen: null });
 const geraete = [g('a', 'Tablet A', 't1'), g('b', 'Tablet B', 't2'), g('c', 'Fernseher', null)];
@@ -39,5 +39,15 @@ describe('TV-Gerät herunterfahren', () => {
     expect(herunterfahrenFrage(1, 'Das Turnier läuft noch.')).toContain('Achtung: Das Turnier läuft noch.');
     expect(herunterfahrenMeldung(1)).toBe('Das TV-Gerät fährt in den nächsten 30 Sekunden herunter.');
     expect(herunterfahrenMeldung(3)).toBe('3 TV-Geräte fahren in den nächsten 30 Sekunden herunter.');
+    expect(nichtErreichbarText([{ name: 'Tablet als TV', zuletzt_gemeldet: '2026-11-08T13:54:35Z' }])).toBe(
+      'Kein TV-Gerät erreichbar: Der Agent von „Tablet als TV“ hat sich zuletzt am 08.11.2026 um 14:54 Uhr gemeldet. Ist das Gerät an?'
+    );
+    expect(nichtErreichbarText([{ name: 'TV', zuletzt_gemeldet: null }])).toContain('hat sich noch nie gemeldet');
+    expect(
+      nichtErreichbarText([
+        { name: 'A', zuletzt_gemeldet: null },
+        { name: 'B', zuletzt_gemeldet: '2026-11-08T13:54:35Z' }
+      ])
+    ).toContain('„A“ noch nie, „B“ zuletzt am 08.11.2026 um 14:54 Uhr');
   });
 });
