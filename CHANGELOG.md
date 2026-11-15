@@ -1,5 +1,9 @@
 # Änderungen an CueDesk
 
+## 0.16.0 – 15.11.2026
+
+- **TV-Gerät herunterfahren** steht jetzt immer in der Zeile **TV zeigt:** von Turnier, Teamvergleich und Liga-Spieltag, nicht erst nach dem Abschluss. Solange noch gespielt wird, warnt die Rückfrage zusätzlich („Achtung: Das Turnier läuft noch.“).
+
 ## 0.15.0 – 12.11.2026
 
 - Die Datenbank von app.cuedesk.de wird jetzt **jede Nacht** gesichert statt nur montags. Im Ernstfall geht damit höchstens ein Tag verloren statt einer Woche. Die Test-Datenbank wird weiter montags gesichert.

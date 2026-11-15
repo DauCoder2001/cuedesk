@@ -2931,7 +2931,7 @@ export default function TurnierAnsicht({
                 </button>
               ))}
             </span>
-            {turnier.status === 'beendet' && <TvHerunterfahren vereinId={turnier.verein_id} />}
+            <TvHerunterfahren vereinId={turnier.verein_id} laeuftNoch={turnier.status === 'beendet' ? undefined : 'Das Turnier läuft noch.'} />
           </div>
         )}
           </div>

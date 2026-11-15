@@ -19,10 +19,15 @@ export function agentErreichbar(zuletztGemeldet: string | null, jetzt = Date.now
   return zuletztGemeldet !== null && jetzt - Date.parse(zuletztGemeldet) < AGENT_FRIST_MS;
 }
 
-export function herunterfahrenFrage(anzahl: number): string {
-  return anzahl === 1
-    ? 'TV-Gerät herunterfahren?\nEs startet erst wieder, wenn der Strom kurz getrennt wird.'
-    : `Alle ${anzahl} TV-Geräte herunterfahren?\nSie starten erst wieder, wenn der Strom kurz getrennt wird.`;
+// laeuftNoch: z. B. "Das Turnier läuft noch." - dann warnt die Rueckfrage zusaetzlich
+export function herunterfahrenFrage(anzahl: number, laeuftNoch?: string): string {
+  const frage =
+    anzahl === 1
+      ? 'TV-Gerät herunterfahren?\nEs startet erst wieder, wenn der Strom kurz getrennt wird.'
+      : `Alle ${anzahl} TV-Geräte herunterfahren?\nSie starten erst wieder, wenn der Strom kurz getrennt wird.`;
+  return laeuftNoch
+    ? `${frage}\n\nAchtung: ${laeuftNoch} Bis zum Neustart zeigt der Fernseher keine Spielstände mehr.`
+    : frage;
 }
 
 export function herunterfahrenMeldung(anzahl: number): string {

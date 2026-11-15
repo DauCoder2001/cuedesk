@@ -36,7 +36,7 @@ Geplant werden höchstens so viele Matches, wie bis zum Sieg nötig sind. Die Za
 - Danach gibt **Block 2 freigeben**, **Block 3 freigeben** usw. jeweils den nächsten Block frei. Die Tablets bieten nur freigegebene Matches an.
 - Der Kopf bleibt beim Scrollen oben stehen: Name, Stand und Knöpfe, die Infozeile und **TV zeigt**, rechts daneben **Live an** / **Live aus**, der Chat-Schalter und **Öffentlicher Link…**. Der Teamstand und die Blöcke scrollen darunter. Nach dem Abschließen steht neben dem Namen grün „Teamvergleich abgeschlossen.“
 - **TV zeigt:** schaltet zwischen **Teams**, **Live-Tische**, **Live + Nächste** (bei 3 bis 6 Tischen), **Nächste Spiele** und **Teamstand** um.
-- Nach dem Abschließen steht in dieser Zeile auch **TV-Gerät herunterfahren** (siehe Thema **Tablets und Fernseher**).
+- In dieser Zeile steht auch **TV-Gerät herunterfahren** (siehe Thema **Tablets und Fernseher**). Solange der Teamvergleich läuft, warnt die Rückfrage davor.
 - Hat ein Team das Ziel erreicht, entfallen die offenen Matches. Ein Match, das dann noch läuft, wird zu Ende gespielt und gespeichert, zählt aber nicht mehr zum Teamstand.
 
 ## 5. Abschließen

@@ -35,6 +35,8 @@ describe('TV-Gerät herunterfahren', () => {
   test('Texte richten sich nach der Anzahl', () => {
     expect(herunterfahrenFrage(1)).toContain('TV-Gerät herunterfahren?');
     expect(herunterfahrenFrage(2)).toContain('Alle 2 TV-Geräte herunterfahren?');
+    expect(herunterfahrenFrage(1)).not.toContain('Achtung');
+    expect(herunterfahrenFrage(1, 'Das Turnier läuft noch.')).toContain('Achtung: Das Turnier läuft noch.');
     expect(herunterfahrenMeldung(1)).toBe('Das TV-Gerät fährt in den nächsten 30 Sekunden herunter.');
     expect(herunterfahrenMeldung(3)).toBe('3 TV-Geräte fahren in den nächsten 30 Sekunden herunter.');
   });

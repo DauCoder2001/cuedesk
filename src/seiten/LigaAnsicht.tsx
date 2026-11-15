@@ -1530,9 +1530,11 @@ export default function LigaAnsicht({
       ? 'zuerst gespielt'
       : 'danach gespielt, mit getauschtem Heimrecht';
 
-  // TV-Zeile im Kopf: Auswahl ab zwei Begegnungen, Herunterfahren nach dem Abschluss aller
+  // TV-Zeile im Kopf: Auswahl ab zwei Begegnungen; Herunterfahren immer daneben, solange
+  // noch gespielt wird mit Warnung. Bei nur einer Begegnung steht es erst nach dem Abschluss da.
   const tvWahl = darfLeiten && teile.length >= 2 && turnier.status !== 'geplant';
-  const tvAus = darfLeiten && turnier.status === 'beendet' && teile.filter((x) => x.id !== turnier.id).every((x) => x.status === 'beendet');
+  const alleBeendet = turnier.status === 'beendet' && teile.filter((x) => x.id !== turnier.id).every((x) => x.status === 'beendet');
+  const tvAus = darfLeiten && (tvWahl || alleBeendet);
 
   return (
     <div className="einspaltig">
@@ -1721,7 +1723,9 @@ export default function LigaAnsicht({
                     </span>
                   </>
                 )}
-                {tvAus && <TvHerunterfahren vereinId={turnier.verein_id} />}
+                {tvAus && (
+                  <TvHerunterfahren vereinId={turnier.verein_id} laeuftNoch={alleBeendet ? undefined : 'Der Spieltag läuft noch.'} />
+                )}
               </div>
             )}
           </div>

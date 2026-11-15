@@ -806,7 +806,7 @@ export default function TeamvergleichAnsicht({
                 </button>
               ))}
             </span>
-            {turnier.status === 'beendet' && <TvHerunterfahren vereinId={turnier.verein_id} />}
+            <TvHerunterfahren vereinId={turnier.verein_id} laeuftNoch={turnier.status === 'beendet' ? undefined : 'Der Teamvergleich läuft noch.'} />
           </div>
         )}
           </div>
