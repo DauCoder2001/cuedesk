@@ -1,5 +1,9 @@
 # Änderungen an CueDesk
 
+## 0.16.1 – 15.11.2026
+
+- **TV-Gerät herunterfahren** verschwindet nicht mehr, wenn kein TV-Gerät mit Agent eingerichtet ist, sondern ist ausgegraut. Der Tooltip erklärt, wie man den Agenten einrichtet.
+
 ## 0.16.0 – 15.11.2026
 
 - **TV-Gerät herunterfahren** steht jetzt immer in der Zeile **TV zeigt:** von Turnier, Teamvergleich und Liga-Spieltag, nicht erst nach dem Abschluss. Solange noch gespielt wird, warnt die Rückfrage zusätzlich („Achtung: Das Turnier läuft noch.“).
