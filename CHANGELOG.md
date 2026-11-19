@@ -1,5 +1,10 @@
 # Änderungen an CueDesk
 
+## 0.16.4 – 19.11.2026
+
+- Liga-Spieltag: Kann die Begegnung beim Speichern der Bemerkung nicht gelesen werden, erscheint jetzt eine Fehlermeldung, statt dass die Bemerkung still verloren geht.
+- Entwicklungswerkzeug vite auf 7.3.8 aktualisiert (behebt gemeldete Sicherheitslücken des lokalen Entwicklungsservers; die ausgelieferte App ist davon nicht betroffen).
+
 ## 0.16.3 – 19.11.2026
 
 - Sicherheit: Die Tablets setzen Spielernamen und Gegner in der Spielauswahl jetzt geschützt ein. Vorher hätte ein präparierter Name (etwa aus einem fremden Mannschaftspass) auf dem Tablet als Programmcode laufen können.

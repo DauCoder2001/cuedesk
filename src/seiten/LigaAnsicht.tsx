@@ -1178,8 +1178,9 @@ export default function LigaAnsicht({
   // Bemerkungen zur Begegnung (Formular P-01), gespeichert beim Verlassen des Felds
   async function bemerkungSpeichern(text: string) {
     if (!turnier) return;
-    const { data } = await supabase.from('turniere').select('einstellungen').eq('id', turnier.id).maybeSingle();
-    const aktuell = (data?.einstellungen ?? {}) as TurnierEinstellungen;
+    const { data, error: lesefehler } = await supabase.from('turniere').select('einstellungen').eq('id', turnier.id).maybeSingle();
+    if (lesefehler || !data) return setFehler(lesefehler?.message ?? 'Begegnung nicht gefunden. Bitte die Seite neu laden.');
+    const aktuell = (data.einstellungen ?? {}) as TurnierEinstellungen;
     if (!aktuell.liga || (aktuell.liga.bemerkung ?? '') === text) return;
     const { error } = await supabase
       .from('turniere')
