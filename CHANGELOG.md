@@ -1,5 +1,11 @@
 # Änderungen an CueDesk
 
+## 0.16.3 – 19.11.2026
+
+- Sicherheit: Die Tablets setzen Spielernamen und Gegner in der Spielauswahl jetzt geschützt ein. Vorher hätte ein präparierter Name (etwa aus einem fremden Mannschaftspass) auf dem Tablet als Programmcode laufen können.
+- **TV-Gerät herunterfahren**: Bei einer kurzen Netzstörung steht nicht mehr fälschlich „Kein TV-Gerät mit Agent eingerichtet“ im Tooltip.
+- Liga-Spieltag: Kann die Begegnung beim Ändern von Aufstellung, „zu dritt“, „nicht angetreten“ oder den Doppel-Partien nicht gelesen werden, erscheint jetzt eine Fehlermeldung, statt dass der Klick still nichts bewirkt. Beim Ändern der Doppel-Partien wird dabei kein älterer Stand mehr gespeichert.
+
 ## 0.16.2 – 15.11.2026
 
 - **TV-Gerät herunterfahren** ist jetzt auch ausgegraut, wenn sich kein Agent in den letzten 2 Minuten gemeldet hat (Fernseher aus). Der Tooltip nennt, wann sich der Agent zuletzt gemeldet hat; CueDesk sieht jede Minute neu nach.

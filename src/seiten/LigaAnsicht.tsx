@@ -805,8 +805,9 @@ export default function LigaAnsicht({
   // in den Einstellungen ueberschrieben wird.
   async function halbeAufstellungMerken(nr: number, eintrag: Wahl | null) {
     if (!turnier) return;
-    const { data } = await supabase.from('turniere').select('einstellungen').eq('id', turnier.id).maybeSingle();
-    const aktuell = (data?.einstellungen ?? {}) as TurnierEinstellungen;
+    const { data, error: lesefehler } = await supabase.from('turniere').select('einstellungen').eq('id', turnier.id).maybeSingle();
+    if (lesefehler || !data) return setFehler(lesefehler?.message ?? 'Begegnung nicht gefunden. Bitte die Seite neu laden.');
+    const aktuell = (data.einstellungen ?? {}) as TurnierEinstellungen;
     if (!aktuell.liga) return;
     const bisher = aktuell.liga.aufstellung ?? {};
     const schluessel = String(nr);
@@ -1022,8 +1023,14 @@ export default function LigaAnsicht({
       }
     }
     // Plan und halbe Aufstellung frisch lesen und gemeinsam speichern
-    const { data } = await supabase.from('turniere').select('einstellungen').eq('id', turnier.id).maybeSingle();
-    const aktuell = (data?.einstellungen ?? einstellungen) as TurnierEinstellungen;
+    const { data, error: lesefehler } = await supabase.from('turniere').select('einstellungen').eq('id', turnier.id).maybeSingle();
+    if (lesefehler || !data) {
+      setArbeitet(false);
+      return setFehler(lesefehler?.message ?? 'Begegnung nicht gefunden. Bitte die Seite neu laden.');
+    }
+    // Nur der frisch gelesene Stand, nie der aeltere im Browser: sonst ginge eine
+    // Aenderung von einem anderen Geraet verloren
+    const aktuell = (data.einstellungen ?? {}) as TurnierEinstellungen;
     const bisher = aktuell.liga?.aufstellung ?? {};
     const aufstellung: NonNullable<NonNullable<TurnierEinstellungen['liga']>['aufstellung']> = {};
     folgen.forEach((f) => {
@@ -1106,8 +1113,9 @@ export default function LigaAnsicht({
       if (error) return setFehler(error.message);
     }
     setFehler(null);
-    const { data } = await supabase.from('turniere').select('einstellungen').eq('id', turnier.id).maybeSingle();
-    const aktuell = (data?.einstellungen ?? {}) as TurnierEinstellungen;
+    const { data, error: lesefehler } = await supabase.from('turniere').select('einstellungen').eq('id', turnier.id).maybeSingle();
+    if (lesefehler || !data) return setFehler(lesefehler?.message ?? 'Begegnung nicht gefunden. Bitte die Seite neu laden.');
+    const aktuell = (data.einstellungen ?? {}) as TurnierEinstellungen;
     if (!aktuell.liga) return;
     const dritt = {
       ...(aktuell.liga.dritt ?? {}),
@@ -1151,8 +1159,9 @@ export default function LigaAnsicht({
       }
     }
     setFehler(null);
-    const { data } = await supabase.from('turniere').select('einstellungen').eq('id', turnier.id).maybeSingle();
-    const aktuell = (data?.einstellungen ?? {}) as TurnierEinstellungen;
+    const { data, error: lesefehler } = await supabase.from('turniere').select('einstellungen').eq('id', turnier.id).maybeSingle();
+    if (lesefehler || !data) return setFehler(lesefehler?.message ?? 'Begegnung nicht gefunden. Bitte die Seite neu laden.');
+    const aktuell = (data.einstellungen ?? {}) as TurnierEinstellungen;
     if (!aktuell.liga) return;
     const dritt = { ...(aktuell.liga.dritt ?? {}) };
     if (an) dritt.nicht = seite;

@@ -1006,7 +1006,7 @@ async function newGame() {
     const current = pickerFilterEl.value;
     const sorted = filterNamen(tournament);
     pickerFilterEl.innerHTML = '<option value="">— alle offenen Spiele —</option>' +
-      sorted.map(n => `<option value="${n}">${n}</option>`).join('');
+      sorted.map(n => `<option value="${escHtml(n)}">${escHtml(n)}</option>`).join('');
     if (sorted.includes(current)) pickerFilterEl.value = current;
   }
 
@@ -1056,7 +1056,7 @@ async function newGame() {
     const raceTo = (tournament && tournament.raceTo) || 0;
     pickerListEl.innerHTML = pend.map((m, i) => {
       const kopf = begegnungUeberschrift(pend, i);
-      return (kopf ? `<span class="pick-begegnung">${kopf}</span>` : '') + pickEintrag(m);
+      return (kopf ? `<span class="pick-begegnung">${escHtml(kopf)}</span>` : '') + pickEintrag(m);
     }).join('');
     function pickEintrag(m) {
       if (m._waiting) {
@@ -1068,7 +1068,7 @@ async function newGame() {
         // Freilos: kampflos gewertet, kein Spiel am Tisch
         const real = isFL(m.player1) ? m.player2 : m.player1;
         return `<button class="pick-item pick-freilos" data-id="${m.id}" data-freilos="1">`
-          + `<span class="pick-p1">${real}</span><span class="pick-vs">—</span><span class="pick-p2">Freilos</span>`
+          + `<span class="pick-p1">${escHtml(real)}</span><span class="pick-vs">—</span><span class="pick-p2">Freilos</span>`
           + ` <span class="busy-note" style="color:#888;">(kampflos ${m.raceTo || raceTo}:0)</span></button>`;
       }
       const note = m._playable ? '' : ' <span class="busy-note">(Spieler aktiv)</span>';
@@ -1080,7 +1080,7 @@ async function newGame() {
       let left = m.player1, right = m.player2;
       if (filter && m.player2 === filter) { left = m.player2; right = m.player1; }
       return `<button class="pick-item${m._playable ? '' : ' busy'}" data-id="${m.id}" ${m._playable ? '' : 'disabled'}>`
-        + `<span class="pick-p1">${left}</span><span class="pick-vs">vs</span><span class="pick-p2">${right}</span>${disNote}${rtNote}${note}</button>`;
+        + `<span class="pick-p1">${escHtml(left)}</span><span class="pick-vs">vs</span><span class="pick-p2">${escHtml(right)}</span>${disNote}${rtNote}${note}</button>`;
     }
     pickerListEl.querySelectorAll('.pick-item:not(.busy)').forEach(btn => {
       if (btn.dataset.freilos) {
@@ -1093,6 +1093,13 @@ async function newGame() {
     zeigeHaengende();
   }
 
+  // Namen kommen aus CueDesk (auch Gaeste aus dem PDF-Pass des Gegners, frei
+  // eingetippte Gegner) - nie ungeprueft als HTML einsetzen (Audit 18.11.2026)
+  function escHtml(t) {
+    return String(t == null ? '' : t).replace(/[&<>"]/g, (c) =>
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  }
+
   // Partien, die laut Spielplan an diesem Tisch laufen, deren Stand aber fehlt
   // (Tisch ueberschrieben oder Absturz): oben anbieten, neu zu beginnen.
   function zeigeHaengende() {
@@ -1101,8 +1108,8 @@ async function newGame() {
     const block = document.createElement('div');
     block.innerHTML = '<span class="pick-notiz">Läuft an diesem Tisch, der Spielstand fehlt:</span>'
       + liste.map(m => '<button class="pick-item pick-haengt" type="button" data-id="' + m.id + '">'
-          + '<span class="pick-p1">' + m.player1 + '</span><span class="pick-vs">vs</span>'
-          + '<span class="pick-p2">' + m.player2 + '</span>'
+          + '<span class="pick-p1">' + escHtml(m.player1) + '</span><span class="pick-vs">vs</span>'
+          + '<span class="pick-p2">' + escHtml(m.player2) + '</span>'
           + ' <span class="busy-note" style="color:#b8860b;">neu beginnen</span></button>').join('');
     block.querySelectorAll('.pick-item').forEach(btn => {
       btn.addEventListener('click', () => void haengendesNeuBeginnen(btn.getAttribute('data-id')));
@@ -1129,8 +1136,8 @@ async function newGame() {
     const zeile = document.createElement('div');
     zeile.innerHTML = '<span class="pick-notiz">' + kopf + '</span>'
       + offen.map(m => '<button class="pick-item" type="button" data-id="' + m.id + '">'
-          + '<span class="pick-p1">' + m.player1 + '</span><span class="pick-vs">vs</span>'
-          + '<span class="pick-p2">' + m.player2 + '</span>'
+          + '<span class="pick-p1">' + escHtml(m.player1) + '</span><span class="pick-vs">vs</span>'
+          + '<span class="pick-p2">' + escHtml(m.player2) + '</span>'
           + ' <span class="busy-note" style="color:#1f3b73; font-weight:bold;">14.1</span></button>').join('')
       + '<button class="pick-wechsel" type="button">🎯 Zum 14.1-Board</button>';
     // Eine Paarung antippen fuehrt gleich in dieses Spiel

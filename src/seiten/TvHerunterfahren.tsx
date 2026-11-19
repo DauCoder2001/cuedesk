@@ -38,7 +38,9 @@ export default function TvHerunterfahren({
   useEffect(() => {
     let abgebrochen = false;
     const laden = async () => {
-      const { data } = await supabase.rpc('tv_agenten', { p_verein: vereinId });
+      const { data, error } = await supabase.rpc('tv_agenten', { p_verein: vereinId });
+      // Netzfehler: bisherigen Stand behalten, in einer Minute neu versuchen
+      if (error || abgebrochen) return;
       const liste = data ?? [];
       // Namen fuer den Tooltip ("Tablet als TV")
       const namen = new Map<string, string>();
