@@ -12,7 +12,7 @@ import { DISZIPLIN_TEXT, STATUS_TEXT } from './Turniere';
 import LiveSchalter from './LiveSchalter';
 import ChatSchalter from './ChatSchalter';
 import OeffentlicherLink from './OeffentlicherLink';
-import TvHerunterfahren from './TvHerunterfahren';
+import TvZeile, { mitLiveNaechste } from './TvZeile';
 import { andererLaufender, laeuftSchonText } from '../laufend';
 import { ratingAn, vereinsEinstellungen } from '../vereinseinstellungen';
 import type { TurnierEinstellungen } from './Turniere';
@@ -782,32 +782,19 @@ export default function TeamvergleichAnsicht({
           {ratingAn(verein) && (tv.einzelFuersRating ? ' · Einzel zählen fürs Rating' : ' · zählt nicht fürs Rating')}
         </p>
         {darfLeiten && !vorbereitung && (
-          <div className="zeile">
-            <span className="hinweis">TV zeigt:</span>
-            <span className="umschalter">
-              {(
-                [
-                  ['auslosung', 'Teams'],
-                  ['live', 'Live-Tische'],
-                  // 3 und 5 Tische: freie Kachel im TV-Raster, 4 und 6: Spalte rechts
-                  ...(aktiveTische >= 3 && aktiveTische <= 6 ? ([['livenaechste', 'Live + Nächste']] as const) : []),
-                  ['naechste', 'Nächste Spiele'],
-                  ['teamstand', 'Teamstand']
-                ] as const
-              ).map(([wert, text]) => (
-                <button
-                  key={wert}
-                  type="button"
-                  className={(einstellungen.tvAnsicht ?? 'live') === wert ? 'aktiv' : ''}
-                  title={`Legt fest, was die TV-Anzeige zeigt: ${text}`}
-                  onClick={() => void tvSetzen(wert)}
-                >
-                  {text}
-                </button>
-              ))}
-            </span>
-            <TvHerunterfahren vereinId={turnier.verein_id} laeuftNoch={turnier.status === 'beendet' ? undefined : 'Der Teamvergleich läuft noch.'} />
-          </div>
+          <TvZeile
+            vereinId={turnier.verein_id}
+            optionen={[
+              ['auslosung', 'Teams'],
+              ['live', 'Live-Tische'],
+              ...(mitLiveNaechste(aktiveTische) ? ([['livenaechste', 'Live + Nächste']] as const) : []),
+              ['naechste', 'Nächste Spiele'],
+              ['teamstand', 'Teamstand']
+            ]}
+            aktiv={einstellungen.tvAnsicht ?? 'live'}
+            setzen={(wert) => void tvSetzen(wert)}
+            laeuftNoch={turnier.status === 'beendet' ? undefined : 'Der Teamvergleich läuft noch.'}
+          />
         )}
           </div>
           {darfLeiten && turnier.status !== 'beendet' && (

@@ -38,7 +38,7 @@ import SpieltagAendern from './SpieltagAendern';
 import LiveSchalter from './LiveSchalter';
 import ChatSchalter from './ChatSchalter';
 import OeffentlicherLink from './OeffentlicherLink';
-import TvHerunterfahren from './TvHerunterfahren';
+import TvZeile from './TvZeile';
 import { andererLaufender, laeuftSchonText } from '../laufend';
 import { ratingAn, vereinsEinstellungen } from '../vereinseinstellungen';
 import ZuruecksetzenDialog from './ZuruecksetzenDialog';
@@ -1706,37 +1706,24 @@ export default function LigaAnsicht({
                     .join(' · ')}`
                 : `14.1 ${liga.ziele.punkte141} Punkte / ${liga.ziele.aufnahmen141} Aufnahmen · 8-Ball ${liga.ziele['8-ball']} · 9-Ball ${liga.ziele['9-ball']} · 10-Ball ${liga.ziele['10-ball']} Gewinnsätze`}
             </p>
-            {(tvWahl || tvAus) && (
+            {tvAus && (
               // Was die Fernseher zeigen, fuer alle Begegnungen; nach dem Abschluss
-              // der letzten Begegnung stellt CueDesk selbst auf das Ergebnis um
-              <div className="zeile">
-                {tvWahl && (
-                  <>
-                    <span className="hinweis">TV zeigt:</span>
-                    <span className="umschalter">
-                      {(
-                        [
-                          ['live', 'Live-Tische'],
-                          ['spieltag', 'Spieltag-Ergebnis']
-                        ] as const
-                      ).map(([wert, name]) => (
-                        <button
-                          key={wert}
-                          type="button"
-                          className={(einstellungen.tvAnsicht === 'spieltag' ? 'spieltag' : 'live') === wert ? 'aktiv' : ''}
-                          title={`Legt fest, was die TV-Anzeige zeigt: ${name}`}
-                          onClick={() => void spieltagSetzen({ tvAnsicht: wert })}
-                        >
-                          {name}
-                        </button>
-                      ))}
-                    </span>
-                  </>
-                )}
-                {tvAus && (
-                  <TvHerunterfahren vereinId={turnier.verein_id} laeuftNoch={alleBeendet ? undefined : 'Der Spieltag läuft noch.'} />
-                )}
-              </div>
+              // der letzten Begegnung stellt CueDesk selbst auf das Ergebnis um.
+              // Ohne Auswahl (eine Begegnung) steht nur "TV-Gerät herunterfahren" da.
+              <TvZeile
+                vereinId={turnier.verein_id}
+                optionen={
+                  tvWahl
+                    ? [
+                        ['live', 'Live-Tische'],
+                        ['spieltag', 'Spieltag-Ergebnis']
+                      ]
+                    : []
+                }
+                aktiv={einstellungen.tvAnsicht === 'spieltag' ? 'spieltag' : 'live'}
+                setzen={(wert) => void spieltagSetzen({ tvAnsicht: wert })}
+                laeuftNoch={alleBeendet ? undefined : 'Der Spieltag läuft noch.'}
+              />
             )}
           </div>
           <div className="kopfrechts">

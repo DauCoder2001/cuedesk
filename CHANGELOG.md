@@ -1,5 +1,9 @@
 # Änderungen an CueDesk
 
+## 0.16.7 – 19.11.2026
+
+- Intern: Die Zeile **TV zeigt** mit **TV-Gerät herunterfahren** ist jetzt ein gemeinsamer Baustein für Turnier, Teamvergleich und Liga-Spieltag statt dreimal einzeln gebaut. Aussehen und Bedienung bleiben gleich; künftige Änderungen gelten automatisch für alle drei, auch für neue Turniermodi.
+
 ## 0.16.6 – 19.11.2026
 
 - Testwerkzeug vitest von 3 auf 5 aktualisiert. Damit meldet `npm audit` keine Sicherheitslücken mehr. Die ausgelieferte App ist davon nicht betroffen.

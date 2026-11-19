@@ -19,7 +19,7 @@ import LiveSchalter from './LiveSchalter';
 import SpielerErsetzen from './SpielerErsetzen';
 import ChatSchalter from './ChatSchalter';
 import OeffentlicherLink from './OeffentlicherLink';
-import TvHerunterfahren from './TvHerunterfahren';
+import TvZeile, { mitLiveNaechste } from './TvZeile';
 import { andererLaufender, laeuftSchonText } from '../laufend';
 import Platz from './Platz';
 import { diffText, LEERE_BILANZ, turnierBilanz } from '../turnier-bilanz';
@@ -2900,39 +2900,26 @@ export default function TurnierAnsicht({
           </div>
         )}
         {darfLeiten && turnier.quelle !== 'import' && turnier.status !== 'geplant' && (
-          <div className="zeile">
-            <span className="hinweis">TV zeigt:</span>
-            <span className="umschalter">
-              {(
-                [
-                  ['auslosung', 'Auslosung'],
-                  ['live', 'Live-Tische'],
-                  // 3 und 5 Tische: freie Kachel im TV-Raster, 4 und 6: Spalte rechts
-                  ...(aktiveTische >= 3 && aktiveTische <= 6 ? ([['livenaechste', 'Live + Nächste']] as const) : []),
-                  ['naechste', 'Nächste Spiele'],
-                  // Gruppenturniere: Gruppenstand ab dem Start, Endplaetze sobald Duelle bzw. KO-Runde angesetzt sind
-                  ...(mehrgruppig ? ([['gruppenstand', 'Gruppenstand']] as const) : []),
-                  ...((zwei && einstellungen.phase2) || (mitKo && koFest) || (dko && dkoFest)
-                    ? ([['endplaetze', turnier.status === 'beendet' ? 'Endplätze' : 'Endplätze (vorläufig)']] as const)
-                    : []),
-                  // Doppel-KO ab der Auslosung, Gruppen mit KO ab dem KO-Start
-                  ...((mitKo && koFest) || (dko && dkoFest) ? ([['turnierbaum', 'Turnierbaum']] as const) : []),
-                  ['results', 'Ergebnis']
-                ] as const
-              ).map(([wert, name]) => (
-                <button
-                  key={wert}
-                  type="button"
-                  className={(einstellungen.tvAnsicht ?? 'live') === wert ? 'aktiv' : ''}
-                  title={`Legt fest, was die TV-Anzeige zeigt: ${name}`}
-                  onClick={() => void einstellungenSetzen({ tvAnsicht: wert })}
-                >
-                  {name}
-                </button>
-              ))}
-            </span>
-            <TvHerunterfahren vereinId={turnier.verein_id} laeuftNoch={turnier.status === 'beendet' ? undefined : 'Das Turnier läuft noch.'} />
-          </div>
+          <TvZeile
+            vereinId={turnier.verein_id}
+            optionen={[
+              ['auslosung', 'Auslosung'],
+              ['live', 'Live-Tische'],
+              ...(mitLiveNaechste(aktiveTische) ? ([['livenaechste', 'Live + Nächste']] as const) : []),
+              ['naechste', 'Nächste Spiele'],
+              // Gruppenturniere: Gruppenstand ab dem Start, Endplaetze sobald Duelle bzw. KO-Runde angesetzt sind
+              ...(mehrgruppig ? ([['gruppenstand', 'Gruppenstand']] as const) : []),
+              ...((zwei && einstellungen.phase2) || (mitKo && koFest) || (dko && dkoFest)
+                ? ([['endplaetze', turnier.status === 'beendet' ? 'Endplätze' : 'Endplätze (vorläufig)']] as const)
+                : []),
+              // Doppel-KO ab der Auslosung, Gruppen mit KO ab dem KO-Start
+              ...((mitKo && koFest) || (dko && dkoFest) ? ([['turnierbaum', 'Turnierbaum']] as const) : []),
+              ['results', 'Ergebnis']
+            ]}
+            aktiv={einstellungen.tvAnsicht ?? 'live'}
+            setzen={(wert) => void einstellungenSetzen({ tvAnsicht: wert })}
+            laeuftNoch={turnier.status === 'beendet' ? undefined : 'Das Turnier läuft noch.'}
+          />
         )}
           </div>
           <div className="kopfrechts">
