@@ -1,5 +1,9 @@
 # Änderungen an CueDesk
 
+## 0.16.8 – 19.11.2026
+
+- Neu: Workflow **Datenbank-Tests**. Er prüft gegen die Test-Datenbank, dass alle Tabellen geschützt sind, dass ohne Anmeldung und ohne passende Rolle keine heiklen Funktionen aufrufbar sind und dass Gäste bereinigen, Spieler zusammenführen und Anonymisieren richtig arbeiten. Jeder Test legt einen eigenen Probeverein an und nimmt am Ende alles zurück. Er läuft von Hand und bei jeder Änderung an den Migrationen oder Tests; gegen app.cuedesk.de läuft er nie.
+
 ## 0.16.7 – 19.11.2026
 
 - Intern: Die Zeile **TV zeigt** mit **TV-Gerät herunterfahren** ist jetzt ein gemeinsamer Baustein für Turnier, Teamvergleich und Liga-Spieltag statt dreimal einzeln gebaut. Aussehen und Bedienung bleiben gleich; künftige Änderungen gelten automatisch für alle drei, auch für neue Turniermodi.

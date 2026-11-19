@@ -45,6 +45,7 @@ Workflow „Produktion“ in die Produktion.
 | Produktion | von Hand, Modus `probelauf` oder `veroeffentlichen` | Probelauf zeigt ausstehende Migrationen; Veröffentlichen spielt sie ein und legt die App in `cuedesk-app` |
 | Scoreboards offline | bei Änderungen in `scoreboards/` | baut die Offline-Boards und legt sie in `DauCoder2001/scoreboards` |
 | Sicherung | täglich 03:23 Uhr (UTC) | verschlüsselter Auszug der Produktion in das private Repo `cuedesk-sicherung-produktion`, montags auch der Test-Datenbank in `cuedesk-sicherung`; jeder Auszug bleibt 14 Tage, Montags-Auszüge 12 Wochen |
+| Datenbank-Tests | von Hand und bei Änderungen in `supabase/migrations/` oder `test/sql/` | prüft Rechte und die Funktionen, die Daten löschen oder umschreiben, gegen die Test-Datenbank; jede Datei in `test/sql/` läuft in eigener Transaktion mit Probeverein und endet mit `rollback` |
 | Datenbank wachhalten | alle drei Tage | verhindert, dass Supabase (Gratisstufe) die Datenbanken pausiert |
 
 ## Lokal arbeiten

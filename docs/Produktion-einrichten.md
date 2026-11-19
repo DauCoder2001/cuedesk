@@ -277,7 +277,10 @@ Datenbanken angekommen.
 ## Danach: Ablauf bei jeder Änderung
 
 1. Änderung wie bisher in die Testfassung (Push), dort prüfen.
-2. Neue Migrationen: erst Test-DB (Probelauf, „einspielen“).
+2. Neue Migrationen: erst Test-DB (Probelauf, „einspielen“). Danach laufen die
+   Datenbank-Tests (`test/sql/`, Workflow „Datenbank-Tests“) automatisch mit;
+   sie müssen grün sein, bevor „Produktion“ läuft. Neue Funktionen, die Daten
+   löschen oder umschreiben, bekommen dort eine eigene Testdatei.
 3. Workflow **Produktion** (Actions → Run workflow, seit 13.10.2026; ersetzt
    „Produktion veröffentlichen“):
    - Modus **probelauf** (Vorgabe): zeigt in der Zusammenfassung die

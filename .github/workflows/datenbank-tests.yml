@@ -1,0 +1,58 @@
+name: Datenbank-Tests
+
+# Prueft die Datenbankfunktionen gegen die Test-Datenbank (Audit-Befund 6,
+# 19.11.2026): Rechte, Gaeste bereinigen, Spieler zusammenfuehren,
+# Anonymisieren. Jede Datei unter test/sql/ (ausser _vorbereitung.sql) laeuft
+# in einer eigenen Transaktion mit eigenem Probeverein und endet mit rollback;
+# es bleibt nichts zurueck. Bricht ein Test ab, ist der Lauf rot und nennt
+# die Stelle ("TEST FEHLGESCHLAGEN: ...").
+#
+# Nie gegen app.cuedesk.de: Der Lauf bricht ab, wenn die Verbindung auf die
+# Produktions-Datenbank zeigt.
+#
+# Geheimnis: SUPABASE_DB_URL (Test-DB, dasselbe wie fuer die Sicherung).
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/migrations/**'
+      - 'test/sql/**'
+      - '.github/workflows/datenbank-tests.yml'
+
+jobs:
+  testen:
+    runs-on: ubuntu-latest
+    env:
+      DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verbindung pruefen
+        run: |
+          if [ -z "$DB_URL" ]; then
+            echo "::error::SUPABASE_DB_URL fehlt."
+            exit 1
+          fi
+          case "$DB_URL" in
+            *dfagdegjsedeahktklul*)
+              echo "::error::SUPABASE_DB_URL zeigt auf die Produktion (app.cuedesk.de). Tests laufen nur gegen die Test-Datenbank."
+              exit 1 ;;
+          esac
+
+      - name: Tests ausfuehren
+        run: |
+          fehler=0
+          for datei in test/sql/*.sql; do
+            case "$(basename "$datei")" in _*) continue ;; esac
+            echo "::group::$(basename "$datei")"
+            if psql "$DB_URL" -X -q -v ON_ERROR_STOP=1 -f "$datei"; then
+              echo "::endgroup::"
+            else
+              echo "::endgroup::"
+              echo "::error file=$datei::$(basename "$datei") fehlgeschlagen"
+              fehler=1
+            fi
+          done
+          exit $fehler
