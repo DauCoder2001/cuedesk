@@ -1,5 +1,9 @@
 # Änderungen an CueDesk
 
+## 0.16.5 – 19.11.2026
+
+- Entwicklungswerkzeuge: Unterpakete source-map-js (1.2.3) und undici (8.12.4) aktualisiert, behebt zwei gemeldete Sicherheitslücken beim Bauen und Testen. Die ausgelieferte App ist davon nicht betroffen.
+
 ## 0.16.4 – 19.11.2026
 
 - Liga-Spieltag: Kann die Begegnung beim Speichern der Bemerkung nicht gelesen werden, erscheint jetzt eine Fehlermeldung, statt dass die Bemerkung still verloren geht.
