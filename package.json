@@ -1,7 +1,7 @@
 {
   "name": "cuedesk",
   "private": true,
-  "version": "0.16.5",
+  "version": "0.16.6",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -26,6 +26,6 @@
     "typescript": "^5.9.2",
     "vite": "^7.1.5",
     "vite-plugin-singlefile": "^2.3.3",
-    "vitest": "^3.2.4"
+    "vitest": "^5.1.1"
   }
 }

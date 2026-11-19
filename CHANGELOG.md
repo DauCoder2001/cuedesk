@@ -1,5 +1,9 @@
 # Änderungen an CueDesk
 
+## 0.16.6 – 19.11.2026
+
+- Testwerkzeug vitest von 3 auf 5 aktualisiert. Damit meldet `npm audit` keine Sicherheitslücken mehr. Die ausgelieferte App ist davon nicht betroffen.
+
 ## 0.16.5 – 19.11.2026
 
 - Entwicklungswerkzeuge: Unterpakete source-map-js (1.2.3) und undici (8.12.4) aktualisiert, behebt zwei gemeldete Sicherheitslücken beim Bauen und Testen. Die ausgelieferte App ist davon nicht betroffen.
