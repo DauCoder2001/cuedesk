@@ -413,3 +413,46 @@ export function siegerText(player1: string, player2: string, stand1: number, sta
   const sieger = stand1 > stand2 ? player1 : player2;
   return `🏁 ${sieger} gewinnt ${Math.max(stand1, stand2)}:${Math.min(stand1, stand2)}`;
 }
+
+// ---------- 14.1: Aufnahmen zaehlen ----------
+// DBU-Spielregeln Pool 2.12: Eine Aufnahme endet erst, wenn der Sportler nicht
+// mehr stossen darf. Nach dem dritten Foul (7.11 (3)) und beim wiederholten
+// Eroeffnungsstoss (7.3 (2) b) stoesst derselbe Sportler weiter - seine
+// Aufnahme laeuft also weiter. Die Strafe wird darin vorgemerkt und landet in
+// der Zeile, mit der die Aufnahme endet.
+export type OffeneStrafe = { p: 1 | 2; pkt: number; mark: string; kind: string };
+
+export function strafeVormerken(offen: OffeneStrafe | null | undefined, p: 1 | 2, pkt: number, mark: string, kind: string): OffeneStrafe {
+  if (!offen || offen.p !== p) return { p, pkt, mark, kind };
+  const drei = offen.kind === 'foul3' || kind === 'foul3';
+  return { p, pkt: offen.pkt + pkt, mark: drei ? '3F' : mark, kind: drei ? 'foul3' : kind };
+}
+
+// Zeile fuer das Ende der Aufnahme: vorgemerkte Strafe dazu. Eine Drei-Foul-
+// Strafe bestimmt Zeichen und Art der Zeile (Protokoll "3F", Statistik
+// "Drei-Foul-Strafen"), sonst das Zeichen der vorgemerkten Strafe ("-2").
+export function aufnahmeAbschluss(
+  offen: OffeneStrafe | null | undefined,
+  p: 1 | 2,
+  foulPts: number,
+  mark: string,
+  kind: string
+): { foulPts: number; mark: string; kind: string } {
+  if (!offen || offen.p !== p) return { foulPts, mark, kind };
+  const drei = offen.kind === 'foul3' || kind === 'foul3';
+  return { foulPts: foulPts + offen.pkt, mark: drei ? '3F' : offen.mark, kind: drei ? 'foul3' : offen.kind };
+}
+
+// Wer kommt nach einer beendeten Aufnahme an den Tisch? Normal der Gegner.
+// Absicherung beim Aufnahmen-Limit: Hat der Gegner das Limit schon erreicht,
+// der Spieler am Tisch aber noch nicht, spielt dieser nach (keine 31. Aufnahme
+// fuer den einen, waehrend der andere bei 29 steht).
+export function naechsterAmTisch(amTisch: 1 | 2, inn1: number, inn2: number, limit: number): 1 | 2 {
+  const andere: 1 | 2 = amTisch === 1 ? 2 : 1;
+  if (limit > 0) {
+    const innAndere = andere === 1 ? inn1 : inn2;
+    const innAm = amTisch === 1 ? inn1 : inn2;
+    if (innAndere >= limit && innAm < limit) return amTisch;
+  }
+  return andere;
+}

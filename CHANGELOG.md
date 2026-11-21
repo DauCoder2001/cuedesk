@@ -1,5 +1,10 @@
 # Änderungen an CueDesk
 
+## 0.17.1 – 21.11.2026
+
+- 14.1-Board: Nach dem dritten Foul in Folge stößt derselbe Spieler neu an – das zählte bisher als neue Aufnahme, er bekam also eine Aufnahme mehr als der Gegner (am Ende z. B. 31 zu 30). Jetzt gehört der Neuanstoß nach DBU-Spielregeln 2.12 und 7.11 noch zu seiner Aufnahme; die −16 stehen in der Zeile, mit der sie endet. Dasselbe gilt, wenn nach einem Eröffnungsfoul derselbe Spieler wiederholen muss.
+- 14.1-Board: Am Aufnahmen-Limit beginnt niemand mehr eine Aufnahme über das Limit hinaus; wer zurückliegt, spielt nach. Bereits gespeicherte Partien bleiben unverändert.
+
 ## 0.17.0 – 21.11.2026
 
 - Liegengebliebene Spielstände (Tablet aus, Ergebnis nie gespeichert) bleiben nicht mehr unbegrenzt in der Live-Übersicht stehen: Ein Stand, der 48 Stunden unverändert ist, wird nachts automatisch gelöscht. Laufende Spiele sind nie betroffen.

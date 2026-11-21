@@ -1,6 +1,9 @@
 import { describe, expect, test } from 'vitest';
 import {
   abschlussAbgelehnt,
+  aufnahmeAbschluss,
+  naechsterAmTisch,
+  strafeVormerken,
   ausspielziel,
   begegnungUeberschrift,
   belegteSpieler,
@@ -405,5 +408,39 @@ describe('Auswahl mit mehreren Liga-Begegnungen', () => {
     const liste = poolAuswahl(turnier, '');
     expect(liste.map((_, i) => begegnungUeberschrift(liste, i))).toEqual(['1. Begegnung', '2. Begegnung', null]);
     expect(begegnungUeberschrift([{ player1: 'A', player2: 'B' }], 0)).toBeNull();
+  });
+});
+
+describe('14.1: Aufnahmen nach drittem Foul und wiederholtem Anstoss', () => {
+  test('drittes Foul: Strafe laeuft in der Aufnahme weiter und landet in deren Zeile', () => {
+    const offen = strafeVormerken(null, 1, 16, '3F', 'foul3');
+    // Neuanstoss, 3 Baelle, dann verschossen: eine Zeile mit -16 und Zeichen 3F
+    expect(aufnahmeAbschluss(offen, 1, 0, '', 'run')).toEqual({ foulPts: 16, mark: '3F', kind: 'foul3' });
+    // Strafe gehoert nur zum Verursacher
+    expect(aufnahmeAbschluss(offen, 2, 0, '', 'run')).toEqual({ foulPts: 0, mark: '', kind: 'run' });
+    expect(aufnahmeAbschluss(null, 1, 1, '/', 'foul')).toEqual({ foulPts: 1, mark: '/', kind: 'foul' });
+  });
+  test('wiederholter Eroeffnungsstoss: -2 je Wiederholung in derselben Aufnahme', () => {
+    const zweimal = strafeVormerken(strafeVormerken(null, 2, 2, '-2', 'break'), 2, 2, '-2', 'break');
+    expect(aufnahmeAbschluss(zweimal, 2, 0, '', 'run')).toEqual({ foulPts: 4, mark: '-2', kind: 'break' });
+  });
+  test('Aufnahmen-Limit: wer 30 hat, beginnt keine 31., der andere spielt nach', () => {
+    expect(naechsterAmTisch(1, 8, 7, 30)).toBe(2);
+    expect(naechsterAmTisch(2, 29, 29, 30)).toBe(1);
+    // Rainer 30, Matthias 29: nach Rainers Aufnahme kommt Matthias
+    expect(naechsterAmTisch(1, 30, 29, 30)).toBe(2);
+    // Matthias' Aufnahme beendet (29), Rainer hat 30: Matthias spielt nach
+    expect(naechsterAmTisch(2, 30, 29, 30)).toBe(2);
+    expect(naechsterAmTisch(2, 30, 29, 0)).toBe(1);
+  });
+  test('Partie vom 21.11.: drittes Foul in Aufnahme 8 bringt Rainer keine Extra-Aufnahme', () => {
+    // Abwechselnd ab Rainer; Aufnahme 8 von Rainer enthaelt das dritte Foul und den Neuanstoss
+    let inn1 = 0, inn2 = 0, amTisch: 1 | 2 = 1;
+    for (let zug = 0; zug < 60; zug += 1) {
+      if (amTisch === 1) inn1 += 1; else inn2 += 1;
+      amTisch = naechsterAmTisch(amTisch, inn1, inn2, 30);
+      if (inn1 >= 30 && inn2 >= 30) break;
+    }
+    expect([inn1, inn2]).toEqual([30, 30]);
   });
 });
