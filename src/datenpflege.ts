@@ -9,7 +9,7 @@ export const AUFRAEUMEN_ARTEN = [
   { art: 'tablet_konten', text: 'Tablet-Anmeldungen ohne Gerät (entfernte Tablets, abgebrochene Kopplungen)', vorgewaehlt: true },
   { art: 'tablets_alt', text: 'Tablets, die sich seit 90 Tagen nicht gemeldet haben', vorgewaehlt: false },
   { art: 'einladungen', text: 'Einladungen, 30 Tage nicht angenommen', vorgewaehlt: true },
-  { art: 'tischstaende', text: 'Tischstände, 14 Tage unverändert', vorgewaehlt: true },
+  { art: 'tischstaende', text: 'Tischstände, 48 Stunden unverändert (sonst nachts automatisch)', vorgewaehlt: true },
   { art: 'aenderungen', text: 'Änderungsprotokoll älter als 2 Jahre', vorgewaehlt: false },
   { art: 'aenderungen_verwaist', text: 'Änderungsprotokoll von Vereinen, die es nicht mehr gibt', vorgewaehlt: true },
   { art: 'ereignisse', text: 'Meldungen der Sicherung älter als 1 Jahr', vorgewaehlt: true }

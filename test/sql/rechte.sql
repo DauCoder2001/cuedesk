@@ -39,7 +39,7 @@ begin
    where p.pronamespace = 'public'::regnamespace
      and p.proname in ('gast_bindung', 'protokollieren', 'aufraeumen_intern', 'fristen_loeschen',
                        'verein_endgueltig_loeschen', 'vereine_loeschen_faellig', 'rating_nachts',
-                       'einladungen_uebernehmen', 'letzter_vereinsadmin')
+                       'einladungen_uebernehmen', 'letzter_vereinsadmin', 'tischstaende_loeschen')
      and has_function_privilege('authenticated', p.oid, 'execute');
   perform pg_temp.erwarte(v_offen is null, 'intern, aber angemeldet aufrufbar: ' || coalesce(v_offen, ''));
 end $$;

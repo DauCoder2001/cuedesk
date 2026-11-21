@@ -1,5 +1,12 @@
 # Änderungen an CueDesk
 
+## 0.17.0 – 21.11.2026
+
+- Liegengebliebene Spielstände (Tablet aus, Ergebnis nie gespeichert) bleiben nicht mehr unbegrenzt in der Live-Übersicht stehen: Ein Stand, der 48 Stunden unverändert ist, wird nachts automatisch gelöscht. Laufende Spiele sind nie betroffen.
+- Die Live-Übersicht nennt bei jedem nicht gespeicherten Stand die Nacht, in der er entfernt wird. Bis dahin lässt sich ein freies Pool-Ergebnis noch mit **Ergebnis speichern** übernehmen.
+- Konsole → Aufräumen: Tischstände gelten nach 48 Stunden statt 14 Tagen als verwaist.
+- Braucht eine Datenbank-Migration (Funktion `tischstaende_loeschen` mit nächtlichem Lauf).
+
 ## 0.16.8 – 19.11.2026
 
 - Neu: Workflow **Datenbank-Tests**. Er prüft gegen die Test-Datenbank, dass alle Tabellen geschützt sind, dass ohne Anmeldung und ohne passende Rolle keine heiklen Funktionen aufrufbar sind und dass Gäste bereinigen, Spieler zusammenführen und Anonymisieren richtig arbeiten. Jeder Test legt einen eigenen Probeverein an und nimmt am Ende alles zurück. Er läuft von Hand und bei jeder Änderung an den Migrationen oder Tests; gegen app.cuedesk.de läuft er nie.

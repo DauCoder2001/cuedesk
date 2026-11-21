@@ -50,7 +50,7 @@ Nach der Rückfrage fährt das Gerät innerhalb von 30 Sekunden herunter. Der Be
 ## 4. Im Betrieb
 
 - Die Seite **Live** zeigt alle Tische mit Spielstand und ob das Tablet an ist.
-- Ein Spielstand, an dem drei Stunden lang nichts passiert ist, gilt als liegengeblieben; der Tisch zeigt dann „Kein Spiel“. Wurde das Ergebnis vorher nicht gespeichert, sieht die Turnierleitung stattdessen den alten Stand mit **nicht gespeichert** und kann den Tisch ohne Tablet freigeben:
+- Ein Spielstand, an dem drei Stunden lang nichts passiert ist, gilt als liegengeblieben; der Tisch zeigt dann „Kein Spiel“. Wurde das Ergebnis vorher nicht gespeichert, sieht die Turnierleitung stattdessen den alten Stand mit **nicht gespeichert** (und der Nacht, in der er automatisch entfernt wird: Ein Stand, der 48 Stunden unverändert ist, wird nachts gelöscht) und kann den Tisch ohne Tablet freigeben:
   - **Ergebnis speichern**: Disziplin wählen, das Spiel wird als Einzelspiel gespeichert (ohne Rating; ist das Race nicht erreicht, als abgebrochen). Das geht nur bei Pool und wenn beide Spieler aus der Liste gewählt waren. Ein 14.1-Spiel wird nur am Tablet mit vollem Protokoll gespeichert.
   - **Verwerfen**: Der Stand wird gelöscht, ohne zu speichern.
 - Mitglieder und der Fernseher sehen Spielstände nur, solange ein Turnier oder Liga-Spieltag mit **Live an** läuft – dann an allen Tischen, auch freie Spiele. Sonst sieht sie nur die Turnierleitung; der Fernseher zeigt „Tisch nicht besetzt“.

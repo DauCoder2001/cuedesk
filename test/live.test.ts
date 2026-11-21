@@ -1,5 +1,15 @@
 import { describe, expect, test } from 'vitest';
-import { dauerText, einzelspielAusStand, kachel, laufenderStand, laufenderStandText, liveAktiv, nichtGespeichert } from '../src/live';
+import {
+  dauerText,
+  einzelspielAusStand,
+  kachel,
+  laufenderStand,
+  laufenderStandText,
+  liveAktiv,
+  nichtGespeichert,
+  tischstandEntferntAm,
+  tischstandEntferntText
+} from '../src/live';
 
 const jetzt = Date.parse('2026-09-22T20:00:00Z');
 const frisch = '2026-09-22T19:59:00Z';
@@ -144,5 +154,22 @@ describe('Live-Uebertragung', () => {
     expect(liveAktiv([{ status: 'laeuft', einstellungen: { live: false } }])).toBe(false);
     expect(liveAktiv([{ status: 'laeuft', einstellungen: { live: false } }, { status: 'laeuft', einstellungen: { live: true } }])).toBe(true);
     expect(liveAktiv([{ status: 'beendet', einstellungen: { live: true } }])).toBe(false);
+  });
+});
+
+describe('Liegengebliebener Stand wird nachts entfernt', () => {
+  test('erste Nacht (03:45 UTC), in der der Stand 48 Stunden alt ist', () => {
+    // Fr 21.11. 20:00 UTC -> 48 h = So 23.11. 20:00 -> Lauf Mo 24.11. 03:45 UTC
+    expect(tischstandEntferntAm('2026-11-21T20:00:00Z').toISOString()).toBe('2026-11-24T03:45:00.000Z');
+    // Fr 21.11. 02:00 UTC -> So 23.11. 02:00 -> Lauf noch am 23.11. 03:45
+    expect(tischstandEntferntAm('2026-11-21T02:00:00Z').toISOString()).toBe('2026-11-23T03:45:00.000Z');
+    // genau auf der Grenze: der Lauf um 03:45 ist schon zu frueh (nur aelter als 48 h)
+    expect(tischstandEntferntAm('2026-11-21T03:45:00Z').toISOString()).toBe('2026-11-24T03:45:00.000Z');
+  });
+  test('Text nennt die Nacht in deutscher Zeit', () => {
+    const jetztHier = Date.parse('2026-11-22T10:00:00Z');
+    expect(tischstandEntferntText('2026-11-21T20:00:00Z', jetztHier)).toBe('Wird in der Nacht zum 24.11. automatisch entfernt.');
+    // Frist laengst vorbei (z. B. Stand vom 10.11.): in der kommenden Nacht
+    expect(tischstandEntferntText('2026-11-10T20:53:00Z', jetztHier)).toBe('Wird in der kommenden Nacht automatisch entfernt.');
   });
 });

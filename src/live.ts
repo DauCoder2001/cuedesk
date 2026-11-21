@@ -123,6 +123,33 @@ export function nichtGespeichert(
   return k.art === 'frei' ? null : k;
 }
 
+// Wann der naechtliche Lauf tischstaende_loeschen (03:45 UTC, siehe
+// supabase/migrations/..._tischstaende_loeschen.sql) einen Stand entfernt:
+// die erste Nacht, in der er schon 48 Stunden unveraendert ist. Ergebnis ist
+// der Zeitpunkt des Laufs.
+export const TISCHSTAND_FRIST_MS = 48 * 60 * 60 * 1000;
+
+export function tischstandEntferntAm(aktualisiert: string): Date {
+  const grenze = Date.parse(aktualisiert) + TISCHSTAND_FRIST_MS;
+  const lauf = new Date(grenze);
+  lauf.setUTCHours(3, 45, 0, 0);
+  if (lauf.getTime() <= grenze) lauf.setUTCDate(lauf.getUTCDate() + 1);
+  return lauf;
+}
+
+// "in der Nacht zum 23.11." (deutsche Zeit). Ist die Nacht schon vorbei (der Lauf
+// war noch nicht eingerichtet oder ist ausgefallen), kommt er in der naechsten.
+export function tischstandEntferntText(aktualisiert: string, jetzt = Date.now()): string {
+  const lauf = tischstandEntferntAm(aktualisiert);
+  if (lauf.getTime() <= jetzt) return 'Wird in der kommenden Nacht automatisch entfernt.';
+  const tag = lauf.toLocaleDateString('de-DE', {
+    day: '2-digit',
+    month: '2-digit',
+    timeZone: 'Europe/Berlin'
+  });
+  return `Wird in der Nacht zum ${tag} automatisch entfernt.`;
+}
+
 // Liegengebliebenes Pool-Einzelspiel ohne Tablet speichern (Seite Live): die
 // Zeile fuer "partien", genau wie ergebnisSpeichernPool am Tablet sie schreibt.
 // Zeitpunkt ist der letzte Stand, nicht der Moment des Speicherns. null, wenn

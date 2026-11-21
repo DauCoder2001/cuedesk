@@ -2,7 +2,7 @@ import { useEffect, useState, type CSSProperties } from 'react';
 import { supabase } from '../supabase';
 import { useSitzung } from '../sitzung';
 import { ratingAn } from '../vereinseinstellungen';
-import { KEIN_LIVE_TEXT, dauerText, einzelspielAusStand, kachel, liveAktiv, nichtGespeichert } from '../live';
+import { KEIN_LIVE_TEXT, dauerText, einzelspielAusStand, kachel, liveAktiv, nichtGespeichert, tischstandEntferntText } from '../live';
 import { schutzwortPruefen } from '../schutzwort';
 import { datumText } from '../auskunft';
 import type { Kachel, PoolDisziplin } from '../live';
@@ -477,7 +477,10 @@ export function Tischkachel({
       </div>
       {ungespeichertSeit && (
         <div className="livefuss ungespeichert">
-          Ergebnis nicht gespeichert, Stand vom {datumText(ungespeichertSeit, true)} Uhr.
+          Ergebnis nicht gespeichert, Stand vom {datumText(ungespeichertSeit, true)} Uhr.{' '}
+          <span title="Ein Tischstand, der 48 Stunden unverändert ist, wird nachts gelöscht. Wer das Ergebnis behalten will, speichert es vorher.">
+            {tischstandEntferntText(ungespeichertSeit)}
+          </span>
         </div>
       )}
       <div className="livefuss">
