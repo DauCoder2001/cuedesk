@@ -16,5 +16,8 @@ public/Serien*/
 *.xlsx
 # Vereins-Export aus System (cuedesk-<verein>-JJJJ-MM-TT.json)
 cuedesk-*-[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9].json
+# Regelwerke (DBU, BLVN, WPA, Ausschreibungen): fremde Werke, Ausschreibungen mit
+# Kontaktdaten der Staffelleitung. Nur lokal zum Nachschlagen, cuedesk ist oeffentlich.
+docs/Regeln/
 # Claude Code: freigegebene Befehle (koennen Zugangsdaten enthalten) nie ins Repository
 .claude/settings.local.json

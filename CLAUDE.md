@@ -100,3 +100,7 @@ Firebase-Projekt "Pool-TS" ab. Mandantenfaehig, ein Verein je `verein_id`.
   Aufbau).
 - Entwicklungsserver: `npm run dev` auf Port 5173. Im Claude-Desktop laeuft
   er ueber die Konfiguration `cuedesk` in `Documents/Claude/.claude/launch.json`.
+
+## Regelwerke
+
+Regelfragen (14.1, 8/9/10-Ball, Liga) zuerst in `docs/Regeln/` nachlesen (PDFs, Textfassung in `docs/Regeln/text/`) und mit Abschnitt zitieren: DBU-Spielregeln Pool, Spielregularien, BLVN-Sport- und Turnierordnung, Ausschreibungen 2026-27, WPA Rules/Regulations 2026-10-21. `docs/Regeln/` liegt nur lokal und steht in `.gitignore`: Auch `cuedesk` ist öffentlich, und die Regelwerke sind fremde Werke, die Ausschreibungen enthalten Kontaktdaten. Nie einchecken, auch nicht in cuedesk-app oder scoreboards.
