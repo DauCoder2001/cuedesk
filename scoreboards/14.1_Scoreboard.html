@@ -740,7 +740,7 @@
     <div id="log-legend">
       <span><b class="pz-f">/</b> 1. Foul</span>
       <span><b class="pz-f">//</b> 2. Foul</span>
-      <span><b class="pz-f3">3F</b> drei Fouls (−15)</span>
+      <span><b class="pz-f3">3F</b> drittes Foul (−1 und zusätzlich −15)</span>
       <span><b class="pz-f">−2</b> Eröffnungsfoul</span>
       <span><b style="color:#1a7a1a;">S</b> Sicherheit</span>
       <span><b style="color:#1133cc;">V</b> Verschossen</span>
@@ -1603,7 +1603,7 @@
   function foulInfo(consec) {
     if (consec <= 0) return { text: "", warn: false };
     if (consec === 1) return { text: "1 Foul ( / )", warn: false };
-    if (consec === 2) return { text: "⚠ 2 Fouls – nächstes −15", warn: true };
+    if (consec === 2) return { text: "⚠ 2 Fouls – nächstes zusätzlich −15", warn: true };
     return { text: "", warn: false };
   }
 

@@ -1,5 +1,9 @@
 # Änderungen an CueDesk
 
+## 0.17.2 – 22.11.2026
+
+- 14.1-Board: Die Warnung nach dem zweiten Foul heißt jetzt „⚠ 2 Fouls – nächstes zusätzlich −15“, damit klar ist, dass das normale −1 noch dazukommt. In der Zeichenerklärung von Protokoll und 14.1-Protokollseite steht bei „3F“ jetzt „drittes Foul (−1 und zusätzlich −15)“.
+
 ## 0.17.1 – 21.11.2026
 
 - 14.1-Board: Nach dem dritten Foul in Folge stößt derselbe Spieler neu an – das zählte bisher als neue Aufnahme, er bekam also eine Aufnahme mehr als der Gegner (am Ende z. B. 31 zu 30). Jetzt gehört der Neuanstoß nach DBU-Spielregeln 2.12 und 7.11 noch zu seiner Aufnahme; die −16 stehen in der Zeile, mit der sie endet. Dasselbe gilt, wenn nach einem Eröffnungsfoul derselbe Spieler wiederholen muss.
