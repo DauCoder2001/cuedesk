@@ -43,7 +43,18 @@ async function kennung(ip: string, salz: string) {
   return Array.from(new Uint8Array(hash), (b) => b.toString(16).padStart(2, '0')).join('');
 }
 
+// Unerwartete Fehler mit CORS-Kopfzeilen beantworten. Sonst sieht der Browser
+// nur "Keine Verbindung" statt einer Fehlermeldung.
 Deno.serve(async (anfrage) => {
+  try {
+    return await bearbeiten(anfrage);
+  } catch (e) {
+    console.error(e);
+    return antwort({ fehler: 'Die Nachricht konnte nicht gesendet werden. Bitte schreib direkt eine E-Mail.' }, 500);
+  }
+});
+
+async function bearbeiten(anfrage: Request): Promise<Response> {
   if (anfrage.method === 'OPTIONS') return new Response('ok', { headers: KOPFZEILEN });
   if (anfrage.method !== 'POST') return antwort({ fehler: 'Nur POST' }, 405);
 
@@ -112,9 +123,13 @@ Deno.serve(async (anfrage) => {
   // Nur im Test-Projekt gesetzt (z. B. TEST): Betreff "[TEST] …" und
   // Absender "CueDesk-Test", damit man Mails aus dem Test-System sofort
   // erkennt. In der Produktion fehlt die Einstellung, dort bleibt es bei "CueDesk".
-  const kennung = (Deno.env.get('MAIL_KENNUNG') ?? '').trim();
-  const absenderName = kennung ? `CueDesk-${kennung.charAt(0).toUpperCase()}${kennung.slice(1).toLowerCase()}` : 'CueDesk';
-  const betreffVorsatz = kennung ? `[${kennung}] ` : '';
+  // Eigener Name, nicht "kennung": die gleichnamige Funktion oben wuerde
+  // sonst ueberdeckt und schon beim Aufruf weiter oben abstuerzen.
+  const mailKennung = (Deno.env.get('MAIL_KENNUNG') ?? '').trim();
+  const absenderName = mailKennung
+    ? `CueDesk-${mailKennung.charAt(0).toUpperCase()}${mailKennung.slice(1).toLowerCase()}`
+    : 'CueDesk';
+  const betreffVorsatz = mailKennung ? `[${mailKennung}] ` : '';
   let fehler: string | null = null;
   if (!host || !benutzer || !passwort || !an) {
     fehler = 'Secrets für den Mailversand fehlen (SMTP_HOST, SMTP_USER, SMTP_PASS, KONTAKT_AN).';
@@ -149,4 +164,4 @@ Deno.serve(async (anfrage) => {
     .eq('id', zeile.id);
 
   return antwort({ stand: 'angekommen' });
-});
+}
